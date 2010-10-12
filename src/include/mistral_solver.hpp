@@ -153,7 +153,12 @@ namespace Mistral {
     int level;
 
     /// The set of variables, in the initial order, that is as loaded from the model
+    #ifdef _STATIC_CAST
+    Vector< Variable > variables;
+    #else
     Vector< IntVar > variables;
+    #endif
+
     /// The set of constraints
     Vector< Constraint* > constraints;
 

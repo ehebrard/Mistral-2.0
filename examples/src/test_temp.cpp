@@ -217,6 +217,11 @@ public:
 int main(int argc, char *argv[])
 {  
   
+  thing *tt = (thing*)45;
+
+  std::cout << ((int)tt) << std::endl;
+
+
   thing *truc_normal = new thing();
   case_thing *truc_a_cas0 = new case_thing(0);
   case_thing *truc_a_cas6 = new case_thing(6);
