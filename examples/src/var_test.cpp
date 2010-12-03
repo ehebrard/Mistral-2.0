@@ -13,87 +13,67 @@ using namespace Mistral;
 int main(int argc, char *argv[])
 {  
   
-  IntegerVar x1(0,10);
-  IntegerVar x2(-50,20);
-  IntegerVar x3(58,107);
+  IntegerVar x0(0,10);
+  IntegerVar x1(-50,20);
+  IntegerVar x2(58,107);
 
   cout << "start (level 0)" << endl;
 
   Solver s;
 
+  s.add(&x0);
   s.add(&x1);
   s.add(&x2);
-  s.add(&x3);
 
   s.initialise();
 
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
 
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
 
+  x0._assert_();
   x1._assert_();
   x2._assert_();
-  x3._assert_();
-
-  cout << "change x0, x1 and x2" << endl;
-
-
-  x1.remove(5);
-  x2.setMax(50);
-  x3.removeRange(-10, 75);
-    
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
-
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
-
-  x1._assert_();
-  x2._assert_();
-  x3._assert_();
-
-  cout << "change x1 and x2" << endl;
-
-  x2.remove(10);
-  x3.removeRange(91, 101);
-    
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
-
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
-
-  x1._assert_();
-  x2._assert_();
-  x3._assert_();
 
   cout << "up one level (level 1)" << endl;
 
   s.make_node();
 
-  //s.debug_print();
+  cout << "change x0, x1 and x2" << endl;
 
-  //cout << (s.trail_size) << endl;
 
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
+  x0.remove(5);
+  x1.setMax(50);
+  x2.removeRange(-10, 75);
+    
 
-//   cout << x1 << endl
-//        << x2 << endl
-//        << x3 << endl << endl;
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
 
-//   x1._assert_();
-//   x2._assert_();
-//   x3._assert_();
+  x0._assert_();
+  x1._assert_();
+  x2._assert_();
+
+  cout << "change x1 and x2" << endl;
+
+  x1.remove(10);
+  x2.removeRange(91, 101);
+    
+
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
+
+  x0._assert_();
+  x1._assert_();
+  x2._assert_();
+
+  cout << "up one level (level 2)" << endl;
+
+  s.make_node();
+
 
   cout << "change x0 and x2" << endl;
 
@@ -103,145 +83,234 @@ int main(int argc, char *argv[])
   e.insert(97);
   e.insert(107);  
 
-  x1.setMin(3);
-  x3.removeSet(e);
-  x3.setMin(80);
 
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
+  cout << e << endl;
 
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
+  x0.setMin(3);
+  x2.removeSet(e);
+  x2.setMin(80);
 
+
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
+
+  x0._assert_();
   x1._assert_();
   x2._assert_();
-  x3._assert_();
 
-  cout << "up one level (level 2)" << endl;
+  cout << "up one level (level 3)" << endl;
 
   s.make_node();
     
-  //s.debug_print();
-
-  //cout << (s.trail_size) << endl;
-
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
-
-//   cout << x1 << endl
-//        << x2 << endl
-//        << x3 << endl << endl;
-
-//   x1._assert_();
-//   x2._assert_();
-//   x3._assert_();
 
   cout << "change x0 and x1" << endl;
 
-  //x2.setMin(11);
-  //x2.setMax(12);
-  x2.setDomain(11);
-  x1.setMax(2);
+  x1.setDomain(11);
+  x0.setMax(2);
     
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
 
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
 
+  x0._assert_();
   x1._assert_();
   x2._assert_();
-  x3._assert_();
+
+  cout << "backtrack to level 2" << endl;
+
+  s.backtrack();
+    
+
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
+
+  x0._assert_();
+  x1._assert_();
+  x2._assert_();
+
 
   cout << "backtrack to level 1" << endl;
 
   s.backtrack();
     
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
 
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
 
+  x0._assert_();
   x1._assert_();
   x2._assert_();
-  x3._assert_();
 
 
   cout << "backtrack to level 0" << endl;
 
   s.backtrack();
-    
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
 
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
+  cout << x0 << " in " << x0.domain << endl
+       << x1 << " in " << x1.domain << endl
+       << x2 << " in " << x2.domain << endl << endl;
 
+  x0._assert_();
   x1._assert_();
   x2._assert_();
-  x3._assert_();
 
-  // cout << "backtrack!!" << endl;
+
+
+
+
+
+
+
+  Variable y0(0,10);
+  Variable y1(-50,20);
+  Variable y2(58,107);
+
+
+//   cout << "start (level 0)" << endl;
+
+//   Solver s;
+
+//   s.add(&x0);
+//   s.add(&x1);
+//   s.add(&x2);
+
+//   s.initialise();
+
+
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
+
+//   x0._assert_();
+//   x1._assert_();
+//   x2._assert_();
+
+//   cout << "up one level (level 1)" << endl;
+
+//   s.make_node();
+
+//   cout << "change x0, x1 and x2" << endl;
+
+
+//   x0.remove(5);
+//   x1.setMax(50);
+//   x2.removeRange(-10, 75);
+    
+
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
+
+//   x0._assert_();
+//   x1._assert_();
+//   x2._assert_();
+
+//   cout << "change x1 and x2" << endl;
+
+//   x1.remove(10);
+//   x2.removeRange(91, 101);
+    
+
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
+
+//   x0._assert_();
+//   x1._assert_();
+//   x2._assert_();
+
+//   cout << "up one level (level 2)" << endl;
+
+//   s.make_node();
+
+
+//   cout << "change x0 and x2" << endl;
+
+//   BitSet e(76,107,BitSet::empt);
+//   e.insert(77);
+//   e.insert(87);
+//   e.insert(97);
+//   e.insert(107);  
+
+
+//   cout << e << endl;
+
+//   x0.setMin(3);
+//   x2.removeSet(e);
+//   x2.setMin(80);
+
+
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
+
+//   x0._assert_();
+//   x1._assert_();
+//   x2._assert_();
+
+//   cout << "up one level (level 3)" << endl;
+
+//   s.make_node();
+    
+
+//   cout << "change x0 and x1" << endl;
+
+//   x1.setDomain(11);
+//   x0.setMax(2);
+    
+
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
+
+//   x0._assert_();
+//   x1._assert_();
+//   x2._assert_();
+
+//   cout << "backtrack to level 2" << endl;
 
 //   s.backtrack();
     
-//   //x1.debug_print();
-//   //x2.debug_print();
-//   //x3.debug_print();
 
-//   cout << x1 << endl
-//        << x2 << endl
-//        << x3 << endl << endl;
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
 
+//   x0._assert_();
 //   x1._assert_();
 //   x2._assert_();
-//   x3._assert_();
 
 
-  cout << "backtrack to level -1" << endl;
-
-  s.backtrack();
-    
-  //x1.debug_print();
-  //x2.debug_print();
-  //x3.debug_print();
-
-  cout << x1 << " in " << x1.domain << endl
-       << x2 << " in " << x2.domain << endl
-       << x3 << " in " << x3.domain << endl << endl;
-
-  x1._assert_();
-  x2._assert_();
-  x3._assert_();
-
-  // cout << "backtrack!!" << endl;
+//   cout << "backtrack to level 1" << endl;
 
 //   s.backtrack();
     
-//   //x1.debug_print();
-//   //x2.debug_print();
-//   //x3.debug_print();
 
-//   cout << x1 << endl
-//        << x2 << endl
-//        << x3 << endl << endl;
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
 
+//   x0._assert_();
 //   x1._assert_();
 //   x2._assert_();
-//   x3._assert_();
 
-  
-  
+
+//   cout << "backtrack to level 0" << endl;
+
+//   s.backtrack();
+
+//   cout << x0 << " in " << x0.domain << endl
+//        << x1 << " in " << x1.domain << endl
+//        << x2 << " in " << x2.domain << endl << endl;
+
+//   x0._assert_();
+//   x1._assert_();
+//   x2._assert_();
+
 
 }
 

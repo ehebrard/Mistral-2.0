@@ -24,6 +24,7 @@
 #include <mistral_constraint.hpp>
 #include <mistral_structure.hpp>
 #include <mistral_variable.hpp>
+#include <mistral_variable_2.hpp>
 #include <mistral_global.hpp>
 
 
@@ -274,6 +275,14 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& 
   return x.display(os);
 }
 
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Variable& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitsetDomain& x) {
+  return x.display(os);
+}
+
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::SolverStatistics& x) {
   return x.display(os);
 }
@@ -297,6 +306,14 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTr
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint* x) {
+  return x->display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Variable* x) {
+  return x->display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitsetDomain* x) {
   return x->display(os);
 }
 

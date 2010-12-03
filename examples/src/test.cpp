@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 
   Vector< VariableInt< unsigned int > > pigeons;
   
+
   for(int i=0; i<N/2; ++i) {
     VariableWord< unsigned int, 1 > pigeon(1,N-1);
     pigeons.add(pigeon);
@@ -27,6 +28,11 @@ int main(int argc, char *argv[])
     VariableInt< unsigned int > pigeon(1,N-1);
     pigeons.add(pigeon);
   }
+
+  cout << "P: " << pigeons << endl;
+
+  exit(1);
+
 
   Solver s;
 

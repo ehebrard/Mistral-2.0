@@ -12,6 +12,7 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
+
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
@@ -22,6 +23,7 @@
 
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
+#include <mistral_variable_2.hpp>
 #include <mistral_constraint.hpp>
 #include <sstream>
 
@@ -189,9 +191,9 @@ void Mistral::Solver::initialise() {
   trail_aux.initialise(0, variables.size);
   decision.initialise(0, variables.size);
 
-  triggered_constraints.initialise(constraints.size);
+  triggered_constraints.initialise(constraints.size+1);
 
-  // trigger evrything in order to achieve a full propagation round 
+  // trigger everything in order to achieve a full propagation round 
 
   for(i=0; i<variables.size; ++i) {
     var = variables[i];
@@ -208,6 +210,10 @@ void Mistral::Solver::initialise() {
 //     while(j --> 1) cons->event_type[j] = (cons->scope[j]->isGround() ? VALUE_EVENT : RANGE_EVENT);
 //   }
 
+  auxilliary.fill();
+  for(unsigned int i=variables.size; i;)
+    variables[--i]->var_list = &auxilliary;
+
   heuristic = new NoOrder(this);
   policy = new NoRestart();
 }
@@ -219,6 +225,12 @@ void Mistral::Solver::add(Mistral::IntVar x) {
     x->constraints.solver = this;
     variables.add(x);
     solution.add(x->domain.min);
+  }
+}
+
+void Mistral::Solver::add(Mistral::Variable x) { 
+  if(x.initialise(this, variables_2.size)) {
+    variables_2.add(x);
   }
 }
 
@@ -245,12 +257,9 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< IntVar >& seq,
 
   if(statistics.start_time == 0.0) statistics.start_time = getRunTime();
 
-  auxilliary.fill();
-  for(unsigned int i=variables.size; i;)
-    variables[--i]->var_list = &auxilliary;
   sequence.clear();
   for(unsigned int i=seq.size; i;) {
-    sequence.insert(seq[--i]);
+    sequence.add(seq[--i]);
     sequence.back()->var_list = &sequence;
   }
 
@@ -300,6 +309,20 @@ Mistral::Solver::~Solver() {
   delete policy;
 }
 
+
+void Mistral::Solver::triggerEvent(const int var, 
+			      const Mistral::Event evt) {
+
+  std::cout << "event on "<< variables_2[var] << ": ";
+  if((evt & VALUE_EVENT) == VALUE_EVENT) std::cout << " it was assigned a value ";
+  if((evt & LB_EVENT) == LB_EVENT) std::cout << " its lower bound was increased ";
+  if((evt & UB_EVENT) == UB_EVENT) std::cout << " its upper bound was decreased ";
+  if((evt & DOMAIN_EVENT) == DOMAIN_EVENT) std::cout << " its domain lost at least one value ";
+  if(evt == NO_EVENT) std::cout << " (no change)";
+
+}
+
+
 void Mistral::Solver::trigger(Constraint* cons,
 			      const int var, 
 			      const Mistral::Event evt) {
@@ -345,12 +368,15 @@ void Mistral::Solver::make_node() {
 
   trail_seq.add(sequence.size);
   trail_aux.add(auxilliary.size);
-  decision.add(heuristic->select());
+  //decision.add(heuristic->select());
 
   ++statistics.num_nodes;
   ++level;
 }
 
+void Mistral::Solver::save(Variable x) { 
+  saved_variables.add(x); 
+}
 
 void Mistral::Solver::backtrack() {
   unsigned int previous_level;
@@ -377,6 +403,7 @@ void Mistral::Solver::backtrack() {
   }
 
   previous_level = sequence.size;
+
   trail_seq.pop(sequence.size);
   while(previous_level < sequence.size) {
     //std::cout << "unassign " << (sequence[previous_level]) << std::endl;
@@ -396,6 +423,7 @@ void Mistral::Solver::backtrack() {
   ++statistics.num_backtracks;
   --level;
 }
+
 
 void Mistral::Solver::backtrack(const int& lvl) {
   while(lvl < level) backtrack();
@@ -522,7 +550,7 @@ void Mistral::Solver::debug_print() {
 //   std::cout << triggered_constraints.triggers[2] << std::endl;
 
   for(unsigned int i=0; i<3; ++i) {
-    if(triggered_constraints.active.member(i)) {
+    if(!triggered_constraints.triggers[i].empty()) {
       std::cout << "priority " << i << std::endl;
       int elt = triggered_constraints.triggers[i].first();
       while(elt != triggered_constraints.triggers[i]._head) {
@@ -608,7 +636,10 @@ void Mistral::Solver::branchRight() {
 
 void Mistral::Solver::branchLeft() {
   make_node();
-  Mistral::IntVar x = decision.back(); //search.make_node();
+  //decision.add(heuristic->select());
+  //Mistral::IntVar x = decision.back(); //search.make_node();
+  Mistral::IntVar x = heuristic->select(); //search.make_node();
+  decision.add(x);
 
 #ifdef _DEBUG_SEARCH
   std::cout << "c";
@@ -673,10 +704,10 @@ Mistral::Outcome Mistral::Solver::iterative_dfs()
   while(status == UNKNOWN) {
     if(propagate()) {
       
-      //std::cout << (*this) << std::endl;
-      for(unsigned int i=0; i<variables.size; ++i) {
-	variables[i]->_assert_constraints_();
-      }
+//       //std::cout << (*this) << std::endl;
+//       for(unsigned int i=0; i<variables.size; ++i) {
+// 	variables[i]->_assert_constraints_();
+//       }
 
       
       if( sequence.empty() ) status = satisfied();

@@ -37,7 +37,6 @@
 
 
 
-
 namespace Mistral {
 
 
@@ -138,7 +137,7 @@ namespace Mistral {
   template< int N >
   class MultiQueue;
   typedef MultiQueue< 3 > ACQueue;
-
+  class Variable;
   class Solver {
 
   public:
@@ -153,11 +152,12 @@ namespace Mistral {
     int level;
 
     /// The set of variables, in the initial order, that is as loaded from the model
-    #ifdef _STATIC_CAST
-    Vector< Variable > variables;
-    #else
+    //#ifdef _STATIC_CAST
+    Vector< Variable > variables_2;
+    Vector< Variable > boolean_variables;
+    //#else
     Vector< IntVar > variables;
-    #endif
+    //#endif
 
     /// The set of constraints
     Vector< Constraint* > constraints;
@@ -169,6 +169,7 @@ namespace Mistral {
 
 
     /// For each level, the list of reversible objects that changed at this level, and will need to be restored
+    Vector< Variable > saved_variables;
     Vector< Reversible* > saved_objects;
     /// The delimitation between different levels is kept by this vector of integers
     Vector< int > obj_trail_size;
@@ -203,6 +204,9 @@ namespace Mistral {
     /// These are the variables we do not want to branch on.
     Stack< IntVar > auxilliary;
 
+
+
+
     Vector< unsigned int > trail_seq;
     Vector< unsigned int > trail_aux;
     Vector< IntVar > decision;
@@ -230,6 +234,10 @@ namespace Mistral {
     void add(IntVar x);
     /// add a constraint
     void add(Constraint* x); 
+
+
+
+    void add(Variable x);
     //@}
 
     /*!@name Trail accessors*/
@@ -238,12 +246,18 @@ namespace Mistral {
     inline void save(Reversible* object) { saved_objects.add(object); }
     inline void save(IntVar x) { saved_vars.add(x); }
     inline void save(Constraint* c) { saved_cons.add(c); }
+//     inline void save(VariableImplementation* v, int type) { 
+//       Variable x(v,type);
+//       std::cout << "saving " << x << std::endl;
+//     }
+    void save(Variable x); // { saved_variables.add(x); }
     //@}
 
     /*!@name Propagation accessors*/
     //@{
     /// called when the var'th variable of constraint cons changes (with event type evt)
     void trigger(Constraint* cons, const int var, const Event evt);
+    void triggerEvent(const int var, const Event evt);
     /// achieve propagation closure
     bool propagate(); 
     //@}

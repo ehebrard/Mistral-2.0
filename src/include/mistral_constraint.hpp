@@ -571,12 +571,15 @@ namespace Mistral {
   public:
 
     Queue triggers[NUM_PRIORITY];
-    IntStack active;
+    //IntStack active;
+    //bool active[NUM_PRIORITY+1];
+    int num_actives;
     BitSet _set_;
     
     MultiQueue()
     {
-      active.initialise(0, NUM_PRIORITY-1, false);
+      num_actives = 0;
+      //active.initialise(0, NUM_PRIORITY-1, false);
     }
     void initialise(const int n)
     {
@@ -585,11 +588,11 @@ namespace Mistral {
     }
     virtual ~MultiQueue() {}
     
-    inline bool empty() { return !active.size; }//;
+    inline bool empty() { return !num_actives; }
+      //return !active.size; }//;
     inline void trigger(Constraint* cons, const int var, const Event evt)//;
     {
       int priority = cons->priority, cons_id = cons->id;
-      //if(triggers[priority].member(cons->id)) {
       if(_set_.fastMember(cons_id)) {
 	if(cons->events.member(var)) {
 	  cons->event_type[var] |= evt;
@@ -599,9 +602,10 @@ namespace Mistral {
 	}
       } else {
 	_set_.fastInsert(cons_id);
-	if(triggers[priority].empty()) active.ordered_insert(priority);
+	//if(triggers[priority].empty()) active.ordered_insert(priority);
 	//if(triggers[priority].empty()) active.insert(priority);
 	triggers[priority].add(cons_id);
+	++num_actives;
 	cons->events.clear();
 	cons->events.insert(var);
 	cons->event_type[var] = evt;
@@ -609,17 +613,21 @@ namespace Mistral {
     }
     inline int pop()//;
     {
-      int priority = active.back();
+      //int priority = active.back();
       //Constraint *cons = Solver::constraints[triggers[priority].pop()];
+      int priority = NUM_PRIORITY;
+      while(--priority) if(!triggers[priority].empty()) break;
       int cons = triggers[priority].pop();
       _set_.fastErase(cons);
-      if(triggers[priority].empty()) active.erase(priority);
+      --num_actives;
+      //if(triggers[priority].empty()) active.erase(priority);
       return cons;
     }
     inline void clear() {
       if(!empty()) {
 	for(int i=0; i<NUM_PRIORITY; ++i) triggers[i].clear();
-	active.clear();
+	//active.clear();
+	num_actives = 0;
 	_set_.clear();
       }
     }

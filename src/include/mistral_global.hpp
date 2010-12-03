@@ -36,31 +36,57 @@
 
 namespace Mistral {
 
+
+
   typedef int Event;
   typedef int Outcome;
+  
 
+  
   const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-
+  
   const int MIN_CAPACITY   = 16;  
   const int NOVAL          = (int)((~(unsigned int)0)/2);
   const int MAXINT         =  NOVAL;
   const int MININT         = -NOVAL;
 
-  const int NOTYPE         = 0;
-  const int BITSET         = 1;
-  const int RANGE          = 2;
-  const int LIST           = 4;
-  const int VIRTUAL_REV    = 8;
-  const int VIRTUAL_DOM    = 16;
-  const int CONSTANT       = 32;
+//   //#ifdef _STATIC_CAST
 
-  const int BITSET_VAR     = (BITSET  | RANGE | VIRTUAL_REV);
-  const int BOOL_VAR       = (BITSET  | RANGE);
-  const int RANGE_VAR      = (RANGE   | VIRTUAL_REV);
-  const int LIST_VAR       = (BITSET  | RANGE | VIRTUAL_REV | VIRTUAL_DOM | LIST);
-  const int VIRTUAL_VAR    = (VIRTUAL_REV | VIRTUAL_DOM | RANGE);
-  const int CONSTANT_VAR   = (BITSET  | RANGE | CONSTANT);
+// #define BITSET_VAR  0xe0000000;
+// #define LIST_VAR    0xc0000000;
+// #define RANGE_VAR   0xa0000000;
+// #define VIRTUAL_VAR 0x60000000;
+// #define CONST_VAR   0x40000000;
 
+//   //#else
+
+//   const int NOTYPE         = 0;
+//   const int BITSET         = 1;
+//   const int RANGE          = 2;
+//   const int LIST           = 4;
+//   const int VIRTUAL_REV    = 8;
+//   const int VIRTUAL_DOM    = 16;
+//   const int CONSTANT       = 32;
+  
+//   const int BITSET_VAR     = (BITSET  | RANGE | VIRTUAL_REV);
+//   const int BOOL_VAR       = (BITSET  | RANGE);
+//   const int RANGE_VAR      = (RANGE   | VIRTUAL_REV);
+//   const int LIST_VAR       = (BITSET  | RANGE | VIRTUAL_REV | VIRTUAL_DOM | LIST);
+//   const int VIRTUAL_VAR    = (VIRTUAL_REV | VIRTUAL_DOM | RANGE);
+//   const int CONST_VAR      = (BITSET  | RANGE | CONSTANT);
+//   const int DYN_VAR        = 1111111
+
+  const int CONST_VAR      = 1;
+  const int BOOL_VAR       = 2;
+  const int RANGE_VAR      = 4;
+  const int BITSET_VAR     = 8;
+  const int LIST_VAR       = 16;
+  const int VIRTUAL_VAR    = 0;
+  const int DYN_VAR        = (CONST_VAR | BOOL_VAR | RANGE_VAR | BITSET_VAR | LIST_VAR);
+  const int EXPRESSION     = 3;
+
+
+    //#endif
 
   //       fnvrlu
   //fail   000000
@@ -71,13 +97,13 @@ namespace Mistral {
   //ub     100101
   // value 101100
 
-  const Event NO_EVENT     = 32;
+  const Event NO_EVENT     = 0;
   const Event DOMAIN_EVENT = 1;
   const Event RANGE_EVENT  = 1+2;
   const Event UB_EVENT     = 1+2+4;
   const Event LB_EVENT     = 1+2+8;
   const Event VALUE_EVENT  = 1+2+16;
-  const Event FAIL_EVENT   = 0;
+  const Event FAIL_EVENT   = 32;
 
   const Outcome SAT = 1;
   const Outcome OPT = 3;
@@ -168,6 +194,12 @@ namespace Mistral {
   class Constraint;
   std::ostream& operator<< (std::ostream& os, const Constraint& x);
 
+  class Variable;
+  std::ostream& operator<< (std::ostream& os, const Variable& x);
+
+  class BitsetDomain;
+  std::ostream& operator<< (std::ostream& os, const BitsetDomain& x);
+
   class SolverStatistics;
   std::ostream& operator<< (std::ostream& os, const SolverStatistics& x);
 
@@ -181,6 +213,10 @@ namespace Mistral {
   std::ostream& operator<< (std::ostream& os, const ConstraintTrigger* x);
 
   std::ostream& operator<< (std::ostream& os, const Constraint* x);
+
+  std::ostream& operator<< (std::ostream& os, const Variable* x);
+
+  std::ostream& operator<< (std::ostream& os, const BitsetDomain* x);
 
   std::ostream& operator<< (std::ostream& os, const SolverStatistics* x);
 

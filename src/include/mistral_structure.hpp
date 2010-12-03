@@ -182,14 +182,19 @@ namespace Mistral {
       size = 0;
     }
 
-    inline void remove(DATA_TYPE& elt)
-    {
-      unsigned int j=size;
-      while(j && stack_[--j] != elt);
-      stack_[j] = stack_[--size];
-    }
+//     inline void remove(DATA_TYPE& elt)
+//     {
+//       unsigned int j=size;
+//       while(j && stack_[--j] != elt);
+//       stack_[j] = stack_[--size];
+//     }
   
-    inline void erase(const unsigned int i)
+//     inline void erase(const unsigned int i)
+//     {  
+//       stack_[i] = stack_[--size];
+//     }
+
+    inline void remove(const unsigned int i)
     {  
       stack_[i] = stack_[--size];
     }
@@ -397,7 +402,7 @@ namespace Mistral {
     //@}    
 
 
-    inline void erase(const int elt)
+    inline void remove(const int elt)
     {
       --size;
       --occurrence_[elt];
@@ -725,6 +730,7 @@ namespace Mistral {
   };
 
 
+
   /**********************************************
    * Stack
    **********************************************/
@@ -754,10 +760,9 @@ namespace Mistral {
     Stack()
     {
       size = 0;
-      offset = 0;
       capacity = 0;
-
       list_ = NULL;
+      offset = 0;
       index_ = NULL;
     }
 
@@ -852,7 +857,7 @@ namespace Mistral {
       index_[idx] = 0;
     }
 
-    inline void erase(const PTR_TYPE elt)
+    inline void remove(const PTR_TYPE elt)
     {
       int idx = elt->id;
       --size;
@@ -862,7 +867,7 @@ namespace Mistral {
       index_[idx] = size;
     }
 
-    inline void erase(const int idx)
+    inline void remove(const int idx)
     {
       PTR_TYPE elt = list_[index_[idx]];
       --size;
@@ -903,7 +908,7 @@ namespace Mistral {
       return list_[size-1];
     }
 
-    inline void insert(const PTR_TYPE elt)
+    inline void add(const PTR_TYPE elt)
     {
       int idx = elt->id;
       index_[list_[size]->id] = index_[idx];
@@ -956,6 +961,421 @@ namespace Mistral {
       
 //       return return_str;
 //     }
+
+    std::ostream& display(std::ostream& os) const {
+      os << "(";
+      if(size) os << list_[0];
+      for(unsigned int i=1; i<size; ++i)
+	os << " " << list_[i];
+      os << ")";
+      return os;
+    }
+    //@}
+  };
+
+
+  /**********************************************
+   * VarStack
+   **********************************************/
+  /// Sparse set representation
+
+  template< class VAR_TYPE >
+  class VarStack 
+  {
+  public:
+
+    /*!@name Parameters*/
+    //@{
+    /// list of values
+    VAR_TYPE *list_;
+    /// current max capacity
+    unsigned int capacity;
+    /// current size
+    unsigned int size;
+    /// values' indices
+    unsigned int *index_;
+    int offset;
+    //unsigned int *start_;
+    //@}
+
+    /*!@name Constructors*/
+    //@{
+    VarStack()
+    {
+      size = 0;
+      capacity = 0;
+      list_ = NULL;
+      offset = 0;
+      index_ = NULL;
+    }
+
+    VarStack(Vector< VAR_TYPE >& obj, bool full=true)
+    {
+      initialise(obj, full);
+    }
+
+    virtual ~VarStack()
+    {
+      delete [] list_;
+      index_  += offset;
+      delete [] index_;
+    }
+
+    void initialise(Vector< VAR_TYPE >& obj, const bool full=true)
+    {
+      assert((obj.size == 0) || ((unsigned int)(obj.back().id() - obj[0].id() + 1) == obj.size));
+
+      capacity = (obj.size ? obj.size : obj.capacity);
+      list_ = new VAR_TYPE[capacity];
+      offset = (obj.size ? obj[0].id() : 0);
+      index_ = new unsigned int[capacity];
+      index_ -= offset;
+      for(unsigned int i=0; i<capacity; ++i) 
+	{
+	  index_[i+offset] = i;
+	  list_[i] = obj[i];
+	}
+      
+      size = (full ? capacity : 0);
+    }
+    //@}    
+
+    /*!@name Accessors*/
+    //@{  
+    inline bool member(const VAR_TYPE elt) const 
+    {
+      return index_[elt.id()]<size;
+    } 
+    inline bool member(const int elt) const 
+    {
+      return index_[elt]<size;
+    } 
+  
+    inline bool empty()const 
+    {
+      return !size;
+    } 
+
+    inline VAR_TYPE next(const VAR_TYPE elt) const
+    {
+      unsigned int idx = index_[elt.id()]+1;
+      return (idx < size ? list_[idx] : elt);
+    }
+    inline VAR_TYPE next(const int elt) const
+    {
+      unsigned int idx = index_[elt]+1;
+      return (idx < size ? list_[idx] : elt);
+    }
+    
+    inline VAR_TYPE operator[](const unsigned int idx) const
+    {
+      return list_[idx];
+    }
+
+    inline VAR_TYPE& operator[](const unsigned int idx)
+    {
+      return list_[idx];
+    }
+    //@}
+
+    /*!@name List Manipulation*/
+    //@{
+    inline void fill()
+    {
+      size = capacity;
+    }
+
+    inline void clear()
+    {
+      size = 0;
+    }
+  
+    inline void setTo(const VAR_TYPE elt)
+    {
+      int idx = elt.id();
+      size=1;
+      index_[(*list_).id()] = index_[idx];
+      list_[index_[idx]] = *list_;
+      *list_ = elt;
+      index_[idx] = 0;
+    }
+
+    inline void remove(const VAR_TYPE elt)
+    {
+      int idx = elt.id();
+      --size;
+      index_[list_[size].id()] = index_[idx];
+      list_[index_[idx]] = list_[size];
+      list_[size] = elt;
+      index_[idx] = size;
+    }
+
+    inline void remove(const int idx)
+    {
+      VAR_TYPE elt = list_[index_[idx]];
+      --size;
+      index_[list_[size].id()] = index_[idx];
+      list_[index_[idx]] = list_[size];
+      list_[size] = elt;
+      index_[idx] = size;
+    }
+
+    inline VAR_TYPE next()
+    {
+      return list_[size];
+    }
+
+    inline VAR_TYPE pop()
+    {
+      return list_[--size];
+    }
+
+    inline VAR_TYPE popHead()
+    {
+      --size;
+      index_[list_[size].id()] = 0;
+      const VAR_TYPE elt = *list_;
+      *list_ = list_[size];
+      list_[size] = elt;
+      index_[elt.id()] = size;
+      return elt;
+    }
+
+    inline VAR_TYPE head()
+    {
+      return *list_;
+    }
+    
+    inline VAR_TYPE back()
+    {
+      return list_[size-1];
+    }
+
+    inline void add(const VAR_TYPE elt)
+    {
+      int idx = elt.id();
+      index_[list_[size].id()] = index_[idx];
+      list_[index_[idx]] = list_[size];
+      list_[size] = elt;
+      index_[idx] = size;
+      ++size;
+    }
+
+    inline void ordered_insert(const VAR_TYPE elt)
+    {
+      int idx = elt.id();
+
+      // the first non-element goes where elt was
+      index_[list_[size].id()] = index_[idx];
+      list_[index_[idx]] = list_[size];
+
+      int rank = size;
+      while(idx && list_[rank-1].id() > elt.id()) { // push every values greater than elt above elt
+	list_[rank] = list_[rank-1];
+	index_[list_[rank-1].id()] = rank;
+	--rank;
+      }
+
+      list_[rank] = elt;
+      index_[idx] = rank;
+      ++size;
+    }
+
+    inline void revertTo(const int level)
+    {
+      size = level;
+    }
+
+    inline void index()
+    {
+      for(unsigned int i=0; i<capacity; ++i)
+	index_[list_[i].id()] = list_[i].id();
+    }
+    //@}
+
+    /*!@name Miscellaneous*/
+    //@{
+//     std::string getString() const {
+//       std::string return_str = "(";
+//       if(size) return_str += toString(list_[0]);
+//       for(unsigned int i=1; i<size; ++i)
+// 	return_str += (" "+toString(list_[i]));
+//       return_str += ")";
+      
+//       return return_str;
+//     }
+
+    std::ostream& display(std::ostream& os) const {
+      os << "(";
+      if(size) os << list_[0];
+      for(unsigned int i=1; i<size; ++i)
+	os << " " << list_[i];
+      os << ")";
+      return os;
+    }
+    //@}
+  };
+
+
+  /**********************************************
+   * IdStack
+   **********************************************/
+  /// Sparse set representation
+  template< class DATA_TYPE >
+  class IdStack 
+  {
+  public:
+
+    /*!@name Parameters*/
+    //@{
+    /// list of values
+    DATA_TYPE *list_;
+    /// current max capacity
+    unsigned int capacity;
+    /// current size
+    unsigned int size;
+    //@}
+
+    /*!@name Constructors*/
+    //@{
+    IdStack()
+    {
+      size = 0;
+      capacity = 0;
+      list_ = NULL;
+    }
+
+    IdStack(Vector< DATA_TYPE >& obj, bool full=true)
+    {
+      initialise(obj, full);
+    }
+
+    virtual ~IdStack()
+    {
+      delete [] list_;
+    }
+
+    void initialise(Vector< DATA_TYPE >& obj, const bool full=true)
+    {
+      capacity = obj.size;
+      size = (full ? capacity : 0);
+      list_ = new DATA_TYPE[capacity];
+      for(unsigned int i=0; i<capacity; ++i) 
+	{
+	  list_[i] = obj[i];
+	  list_[i].set_stack_id(i);
+	}
+    }
+    //@}    
+
+    /*!@name Accessors*/
+    //@{  
+    inline bool member(const DATA_TYPE elt) const 
+    {
+      return elt.get_stack_id()<size;
+    } 
+  
+    inline bool empty()const 
+    {
+      return !size;
+    } 
+
+    inline DATA_TYPE next(const DATA_TYPE elt) const
+    {
+      unsigned int idx = elt.get_stack_id()+1;
+      return (idx < size ? list_[idx] : elt);
+    }
+    
+    inline DATA_TYPE operator[](const unsigned int idx) const
+    {
+      return list_[idx];
+    }
+
+    inline DATA_TYPE& operator[](const unsigned int idx)
+    {
+      return list_[idx];
+    }
+    //@}
+
+    /*!@name List Manipulation*/
+    //@{
+    inline void fill()
+    {
+      size = capacity;
+    }
+
+    inline void clear()
+    {
+      size = 0;
+    }
+  
+    inline void setTo(DATA_TYPE elt)
+    {
+      int idx = elt.get_stack_id();
+      size=1;
+      
+      (*list_).set_stack_id(idx);
+      elt.set_stack_id(0);
+
+      list_[idx] = *list_;
+      *list_ = elt;
+    }
+
+    inline void remove(DATA_TYPE elt)
+    {
+      int idx = elt.get_stack_id();
+
+      list_[--size].set_stack_id(idx);
+      elt.set_stack_id(size);
+      
+      list_[idx] = list_[size];
+      list_[size] = elt;
+    }
+
+    inline DATA_TYPE pop()
+    {
+      return list_[--size];
+    }
+
+    inline DATA_TYPE popHead()
+    {
+      --size;
+      const DATA_TYPE elt = *list_;
+
+      list_[size].set_stack_id(0);
+      elt.set_stack_id(size);
+
+      *list_ = list_[size];
+      list_[size] = elt;
+    }
+
+    inline DATA_TYPE head()
+    {
+      return *list_;
+    }
+    
+    inline DATA_TYPE back(const int offset=0)
+    {
+      return list_[size-1+offset];
+    }
+
+    inline void add(DATA_TYPE elt)
+    {
+      int idx = elt.get_stack_id();
+      
+      elt.set_stack_id(size);
+      list_[size].set_stack_id(idx);
+
+      list_[idx] = list_[size];
+      list_[size] = elt;
+      
+      ++size;
+    }
+
+    inline void revertTo(const int level)
+    {
+      size = level;
+    }
 
     std::ostream& display(std::ostream& os) const {
       os << "(";
@@ -1242,7 +1662,6 @@ namespace Mistral {
     {
       neg_words = (lb >> EXP);
       pos_words = (ub >> EXP)+1;
-
       if(pool==NULL) table = new WORD_TYPE[pos_words-neg_words];
       else table = pool;
       for(int i=0; i<pos_words-neg_words; ++i) 
@@ -1466,6 +1885,11 @@ namespace Mistral {
 	table[i] |= s.table[i];
     }
 
+    inline void unionWith(const int s) 
+    {
+      if(pos_words>0 && neg_words<=0) table[0] |= s;
+    }
+
     inline void unionTo(Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
     {
       s.unionWith( *this );
@@ -1486,6 +1910,15 @@ namespace Mistral {
       }
       while( k-- > neg_words )
 	table[k] = empt;
+    }
+
+    inline void intersectWith(const int s) 
+    {
+      int i=pos_words;
+      while(i-- > 1) table[i] = empt;
+      i = 0;
+      while(i-- > neg_words) table[i] = empt;
+      if(pos_words>0 && neg_words<=0) table[0] &= s;
     }
 
     inline void intersectTo(Bitset<WORD_TYPE,FLOAT_TYPE>& s) const
@@ -1563,6 +1996,25 @@ namespace Mistral {
 	if( table[i] != s.table[i] ) return false;
   
       return true;
+    }
+    
+    inline bool includes(const WORD_TYPE s) const 
+    {
+      return( pos_words && neg_words<1 && (table[0] & s) == s );
+    }
+
+    inline bool included(const WORD_TYPE s) const 
+    {
+      bool inc = true;
+      int k = pos_words;
+      if(neg_words>0 || pos_words<1) {
+	while(k>neg_words && inc) inc = !(table[--k]);
+      } else {
+	while(k>1 && inc) inc = !(table[--k]);
+	inc = ((table[--k] & s) == table[0]);
+	while(k>neg_words && inc) inc = !(table[--k]);
+      }
+      return inc;
     }
 
     inline bool included(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
@@ -1783,6 +2235,14 @@ namespace Mistral {
       while( i-- > j )
 	if(table[i] & s.table[i]) return true;
       return false;
+    }
+
+    /*!
+      Return true iff the calling object intersect s (s is assumed to be a bitset in {0,..,31}) [O(N/32)]
+    */
+    inline bool intersect(const int s) const
+    {
+      return(pos_words && neg_words<1 && (table[0]&s));
     }
 
     inline bool wordIntersect(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
@@ -2332,6 +2792,11 @@ namespace Mistral {
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Stack< DATA_TYPE >& x) {
+    return x.display(os);
+  }
+
+  template < class DATA_TYPE > 
+  std::ostream& operator<< (std::ostream& os, const IdStack< DATA_TYPE >& x) {
     return x.display(os);
   }
 

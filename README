@@ -1,1 +1,86 @@
 This is an embryonic readme, saying nothing useful whatsoever.
+
+
+Key ideas:
+    - The most important part of the code (efficiency-wise) 
+      is the variables' domain implementation. In particular,
+      is is extremely important that:
+      1/ The memory consumption should stay as low as possible
+      2/ The read/write access should be very fast
+      3/ Backtracking should be fast
+      Note that the order _is_ important.
+
+      1/ and 2/ plead for specialized implementations of variables.
+      However, using inheritence and therefore virtual calls is 
+      very inefficient. 
+      Therefore we use a "pointer class" [Variable] which simply
+      keeps a pointer to the implementation, and a type.
+      When doing a method call, the type is checked and the 
+      corresponding cast is applied to the implementation before
+      the real method call.
+
+      For Reversibility, however, there are too many reversible 
+      objects 
+
+
+
+Variables must have:
+	  an id
+	  some methods to read/write on domains
+	  some methods to save/restore
+	  a way to notify the solver of a change
+	    - assignment
+	    - lower bound and/or upper bound
+	    - domain
+	  a way to answer queries on the last change
+	    - list of removed value 
+	    - old lower bound
+
+	  
+
+
+
+Constraints must have:
+	    an id
+	    a method propagate
+	    a method check
+	    a way to suscribe to a range of events
+		  - 1/ removal of any value
+		  - 2/ change of bound
+		  - 5/ assignment
+		  - 6/ assignment to a given value
+	      	  - 7/ removal of a given value 
+		  - 8/ lower bound above a threshold
+		  - 9/ upper bound below a threshold
+	    a way to unsuscribe with or without restore on backtrack
+	    a way to suscribe with or without restore on backtrack
+
+Variable Ordering must have:
+	 a method select() that returns a variable
+	 
+Value Ordering must have:
+      a method that returns a constraint
+           - a literal on a given variable (x==k, x!=k, x<=k, x>k)
+	   - a standard constraint
+	   
+
+The solver links everything together:
+    - For each trigger that has been suscribed to it keeps a list of constraints
+    - The structure is organised as follows:
+      - One entry point per variable (good enough for 1/)
+      	- For each variable One entry point
+
+
+
+
+
+    - When a variable change, it queries
+
+
+
+
+
+
+
+
+

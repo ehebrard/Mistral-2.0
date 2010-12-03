@@ -114,76 +114,18 @@ void Mistral::Constraint::relax() {
 void Mistral::Constraint::assign(const int var) {
   active.erase(var);
   if(active.size == 1) {
-
-    //if(id == 113) std::cout << _scope[var] << " was the penultimate variable, removing " << this << " from " << _scope[active.back()] << std::endl;
-
     int i = active.back();
     _scope[i]->constraints.erase(self[i], trigger[i]);
   }
-
-//   if(id == 113) {
-//     for(int i=0; i<active.size; ++i)
-//       std::cout << " " << _scope[active[i]];
-//     std::cout << std::endl;
-//   }
-
-  //std::cout << this; //_scope[var] ;
-//   std::cout << "==> " ;
-//   for(int i=0; i<active.size; ++i)
-//     std::cout << " " << _scope[active[i]];
-//   std::cout << std::endl;
-// //   std::cout << ": "<< active << " in " << (*this) << std::endl << std::endl;
-
 }
 
 void Mistral::Constraint::unassign(const int var) {
-
-//   std::cout << "add " << _scope[var] << " into" ;
-//   for(int i=0; i<active.size; ++i)
-//     std::cout << " " << _scope[active[i]];
-//   std::cout << " in " << (*this) ;//<< std::endl;
-
-  //assert(!(active.member(var)));
-
-  //std::cout << " " ;
-
   if(active.size == 1) {
-
-    //if(id == 113) std::cout << "re-insert " << this << " to " << _scope[active.back()] << std::endl;
-
     int i = active.back();
     _scope[i]->constraints.insert(self[i], trigger[i]);
-    //std::cout << "*"; 
   } 
   if(!(active.member(var))) active.insert(var);
-
-//   if(id == 113) {
-//     for(int i=0; i<active.size; ++i)
-//       std::cout << " " << _scope[active[i]];
-//     std::cout << std::endl;
-//   }
-  
-
-  //std::cout << this; //_scope[var] ;
-
-
-//   std::cout << "==> " ;
-//   for(int i=0; i<active.size; ++i)
-//     std::cout << " " << _scope[active[i]];
-//   std::cout << std::endl;
 }
-
-// void Mistral::Constraint::assign(const int var) {
-//   active.erase(var);
-//   if(active.size == 1) {
-//     int i = active.back();
-//     _scope[i]->constraints.reversible_erase(self[i], trigger[i]);
-//   }
-// }
-
-// void Mistral::Constraint::unassign(const int var) {
-//   active.insert(var);
-// }
 
 bool Mistral::Constraint::firstSupport(const int vri, const int vli) 
 {
