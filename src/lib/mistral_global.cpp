@@ -21,10 +21,10 @@
 */
 
 
-#include <mistral_constraint.hpp>
-#include <mistral_structure.hpp>
-#include <mistral_variable.hpp>
-#include <mistral_variable_2.hpp>
+//#include <mistral_constraint.hpp>
+//#include <mistral_structure.hpp>
+//include <mistral_backtrack.hpp>
+//#include <mistral_variable.hpp>
 #include <mistral_global.hpp>
 
 
@@ -253,72 +253,5 @@ int Mistral::log2( const unsigned int v ) {
 // // std::string Mistral::toString(const Mistral::VariableInt* x) {
 // //   return x->getString();
 // // }
-
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTrigger& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Variable& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitsetDomain& x) {
-  return x.display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::SolverStatistics& x) {
-  return x.display(os);
-}
-
-
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTrigger* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Variable* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitsetDomain* x) {
-  return x->display(os);
-}
-
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::SolverStatistics* x) {
-  return x->display(os);
-}
 
 

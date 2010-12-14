@@ -26,12 +26,14 @@
 */
 
 
-#include <mistral_solver.hpp>
-#include <mistral_global.hpp>
+//#include <mistral_solver.hpp>
+
 
 
 #ifndef __BACKTRACK_HPP
 #define __BACKTRACK_HPP
+
+#include <mistral_global.hpp>
 
 
 /*!
@@ -53,6 +55,19 @@
 namespace Mistral {
 
 
+  class Reversible;
+  class Environment {
+    public:
+    
+    int level;
+    
+    Vector< Reversible* > saved_objs;
+
+    void save(Reversible *r);
+
+  };
+
+
   /********************************************
    * Reversible Objects
    ********************************************/
@@ -63,18 +78,19 @@ namespace Mistral {
     state during search implement the methods 
     save() and restore(). 
   */
-  class Solver;
+  //class Environment;
   class Reversible {
   public:
     /*!@name Parameters*/
     //@{
-    Solver *solver;
+    Environment *env;
     //bool first_change;
     //@}
 
     /*!@name Constructors*/
     //@{
     Reversible() {}
+    Reversible(Environment *s) {env=s;}
     virtual ~Reversible() {}
     //@}
 
@@ -85,7 +101,7 @@ namespace Mistral {
     /*!@name Backtrack method*/
     //@{
     virtual void restore() = 0; 
-    virtual void save() = 0; 
+    //virtual void save() = 0; 
     //@}
 
     /*!@name Miscellaneous*/
@@ -96,7 +112,6 @@ namespace Mistral {
     }
     //@}
   };
-
 
   /********************************************
    * Reversible Primitive Type
@@ -113,22 +128,20 @@ namespace Mistral {
     //@{  
     /// value trail
     Vector< PRIMITIVE_TYPE > trail_;
-    Vector< int > lvl_;
     /// current value
     PRIMITIVE_TYPE value;
     //@}
 
     /*!@name Constructors*/
     //@{  
-    ReversibleNum() : Reversible() {}
-    virtual ~ReversibleNum() {}
-    void initialise( const PRIMITIVE_TYPE x ) {
-      trail_.initialise(8, false);
-      trail_.initialise(8, false);
-      value = x;
-      trail_.add(x);
-      lvl_.add(-1);
+    ReversibleNum(PRIMITIVE_TYPE& v, Environment *s) : Reversible(s)
+    {
+      value = v;
+      trail_.initialise(0, 16);
+      trail_.add(value);
+      trail_.add(-1);
     }
+    virtual ~ReversibleNum() {}
     //@}
 
     /*!@name Accessors*/
@@ -138,24 +151,45 @@ namespace Mistral {
 
     /*!@name Backtrack*/
     //@{
-    inline void _save_() { if(lvl_.back() != solver->level) { solver->save(this); trail_.add(value); lvl_.add(solver->level); } }
-    void restore() { lvl_.pop(); trail_.pop(value); }
+    inline void save() { 
+//       int lvl = env->level;
+//       if(current_level != lvl) { 
+// 	env->save(this); 
+// 	trail_.add(value); 
+// 	trail_.add(lvl); 
+//       } 
+//       if(current_level != env->level) { 
+// 	env->save(this); 
+// 	trail_.add(value); 
+// 	trail_.add(env->level); 
+//       } 
+
+      if(trail_.back() != env->level) { 
+	env->save(this); 
+	trail_.add(value); 
+	trail_.add(env->level); 
+      } 
+    }
+    void restore() { 
+      trail_.pop();//current_level); 
+      trail_.pop(value); 
+    }
     //@}
 
     /*!@name Manipulation*/
     //@{  
-    //inline void operator!() { return !value; }
-    //inline void operator-() { return -value; }
-    inline void operator=  ( const PRIMITIVE_TYPE x ) { _save_(); value  = x; }
-    inline void operator+= ( const PRIMITIVE_TYPE x ) { _save_(); value += x; }
-    inline void operator-= ( const PRIMITIVE_TYPE x ) { _save_(); value -= x; }
-    inline void operator*= ( const PRIMITIVE_TYPE x ) { _save_(); value *= x; }
-    inline void operator/= ( const PRIMITIVE_TYPE x ) { _save_(); value /= x; }
-    inline void operator|= ( const PRIMITIVE_TYPE x ) { _save_(); value |= x; }
-    inline void operator&= ( const PRIMITIVE_TYPE x ) { _save_(); value &= x; }
-    inline void operator^= ( const PRIMITIVE_TYPE x ) { _save_(); value ^= x; }
-    inline ReversibleNum< PRIMITIVE_TYPE >& operator++ () { _save_(); ++value; return *this; }
-    inline ReversibleNum< PRIMITIVE_TYPE >& operator-- () { _save_(); --value; return *this; } 
+    inline bool operator!() { return !value; }
+    inline PRIMITIVE_TYPE operator-() { return -value; }
+    inline void operator=  ( const PRIMITIVE_TYPE x ) { save(); value  = x; }
+    inline void operator+= ( const PRIMITIVE_TYPE x ) { save(); value += x; }
+    inline void operator-= ( const PRIMITIVE_TYPE x ) { save(); value -= x; }
+    inline void operator*= ( const PRIMITIVE_TYPE x ) { save(); value *= x; }
+    inline void operator/= ( const PRIMITIVE_TYPE x ) { save(); value /= x; }
+    inline void operator|= ( const PRIMITIVE_TYPE x ) { save(); value |= x; }
+    inline void operator&= ( const PRIMITIVE_TYPE x ) { save(); value &= x; }
+    inline void operator^= ( const PRIMITIVE_TYPE x ) { save(); value ^= x; }
+    inline ReversibleNum< PRIMITIVE_TYPE >& operator++ () { save(); ++value; return *this; }
+    inline ReversibleNum< PRIMITIVE_TYPE >& operator-- () { save(); --value; return *this; } 
     //@}
   };
 
@@ -171,6 +205,7 @@ namespace Mistral {
     
   public:
     Vector< unsigned int > trail_;
+    Vector< int > lvl_;
     
     ReversibleIntStack(const int lb, const int ub, bool full=true)
     {
@@ -216,7 +251,8 @@ namespace Mistral {
 
     /*!@name Constructors*/
     //@{
-    ReversibleMultiList() : MultiList< DATA_TYPE, NUM_HEAD >(), Reversible() {
+    ReversibleMultiList(Environment *env) 
+      : MultiList< DATA_TYPE, NUM_HEAD >(), Reversible(env) {
       trail_.initialise(0, 4+4*NUM_HEAD);
       trail_.add(-1);
     }
@@ -229,9 +265,13 @@ namespace Mistral {
       MultiList< DATA_TYPE, NUM_HEAD >::erase(idx, k);      
       _save_(idx, k);
     }
-    inline int reversible_add(const int idx, const int k=0) {
+//     inline int reversible_add(const int idx, const int k=0) {
+//       _notify_();
+//       return MultiList< DATA_TYPE, NUM_HEAD >::create(idx, k);
+//     }
+    inline int reversible_add(DATA_TYPE elt, const int k=0) {
       _notify_();
-      return MultiList< DATA_TYPE, NUM_HEAD >::create(idx, k);
+      return MultiList< DATA_TYPE, NUM_HEAD >::create(elt, k);
     }
     //@}
 
@@ -239,6 +279,10 @@ namespace Mistral {
     /*!@name Backtrack method*/
     //@{
     virtual void restore() {
+      _restore_();
+    }
+
+    inline void _restore_() {
       //first_change = true;
       int k, idx_start, idx_end, succ;
 
@@ -279,13 +323,13 @@ namespace Mistral {
     virtual void save() {}
 
     inline void _notify_() {
-      if(trail_.back() != solver->level) {
-	solver->save(this);
+      if(trail_.back() != env->level) {
+	env->save(this);
 	trail_.add(MultiList< DATA_TYPE, NUM_HEAD >::data.size);
 	trail_.add(MultiList< DATA_TYPE, NUM_HEAD >::degree);
 	for(int k=0; k<NUM_HEAD; ++k)
 	  trail_.add(0);
-	trail_.add(solver->level);
+	trail_.add(env->level);
       }
     }
 
@@ -315,8 +359,9 @@ namespace Mistral {
     /// Print on out stream
     void reversible_debug_print(std::ostream& o) const 
     {
-      for(unsigned int i=MultiList< DATA_TYPE, NUM_HEAD >::head[0]; i<MultiList< DATA_TYPE, NUM_HEAD >::data.size; ++i)
-	o << MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[i];
+      //for(unsigned int i=MultiList< DATA_TYPE, NUM_HEAD >::head[0]; i<MultiList< DATA_TYPE, NUM_HEAD >::data.size; ++i)
+      //o << MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[i];
+      MultiList<int,NUM_HEAD>::debug_print(o);
       o << " / " << trail_
 	<< " ("  << MultiList< DATA_TYPE, NUM_HEAD >::degree << ")";
     }
@@ -366,6 +411,9 @@ namespace Mistral {
   typedef Node< ConstraintTrigger > ConstraintNode;
   typedef ReversibleMultiList< ConstraintTrigger, 3 > ConstraintList;
 
+  std::ostream& operator<< (std::ostream& os, const ConstraintTrigger& x);
+
+  std::ostream& operator<< (std::ostream& os, const ConstraintTrigger* x);
 
 
 

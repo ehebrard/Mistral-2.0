@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
 
   cout << "add 12 to 1" << endl;
   unsigned int elt12 = alist.create(12);
+  //cout << elt12 << endl;
   alist.reversible_debug_print(cout);
   cout << endl;
   alist.flat_print(cout);

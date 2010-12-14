@@ -25,3 +25,13 @@
 
 
 //void _save_() { if(first_change) { solver->save(this); first_change=false; trail_.push(value); } }
+
+void Mistral::Environment::save(Mistral::Reversible *r) { saved_objs.add(r); }
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTrigger& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTrigger* x) {
+  return x->display(os);
+}

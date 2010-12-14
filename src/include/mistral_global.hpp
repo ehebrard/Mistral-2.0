@@ -26,12 +26,14 @@
 */
 
 
-#ifndef __GLOBAL_HPP
-#define __GLOBAL_HPP
+#ifndef _MISTRAL_GLOBAL_HPP
+#define _MISTRAL_GLOBAL_HPP
 
 
 #include <string>
 #include <iostream>
+
+#include <mistral_structure.hpp>
 
 
 namespace Mistral {
@@ -40,53 +42,67 @@ namespace Mistral {
 
   typedef int Event;
   typedef int Outcome;
+  typedef int PropagationOutcome;
   
 
   
-  const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
+//   const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
   
-  const int MIN_CAPACITY   = 16;  
-  const int NOVAL          = (int)((~(unsigned int)0)/2);
-  const int MAXINT         =  NOVAL;
-  const int MININT         = -NOVAL;
 
-//   //#ifdef _STATIC_CAST
 
-// #define BITSET_VAR  0xe0000000;
-// #define LIST_VAR    0xc0000000;
-// #define RANGE_VAR   0xa0000000;
-// #define VIRTUAL_VAR 0x60000000;
-// #define CONST_VAR   0x40000000;
+//   const int NOVAL          = (int)((~(unsigned int)0)/2);
 
-//   //#else
+#define INFTY  NOVAL
+#define MAXINT NOVAL
+#define MININT -NOVAL
+#define MIN_CAPACITY 16
 
-//   const int NOTYPE         = 0;
-//   const int BITSET         = 1;
-//   const int RANGE          = 2;
-//   const int LIST           = 4;
-//   const int VIRTUAL_REV    = 8;
-//   const int VIRTUAL_DOM    = 16;
-//   const int CONSTANT       = 32;
+  //   //#ifdef _STATIC_CAST
+
+  // #define BITSET_VAR  0xe0000000;
+  // #define LIST_VAR    0xc0000000;
+  // #define RANGE_VAR   0xa0000000;
+  // #define VIRTUAL_VAR 0x60000000;
+  // #define CONST_VAR   0x40000000;
+
+  //   //#else
+
+  //   const int NOTYPE         = 0;
+  //   const int BITSET         = 1;
+  //   const int RANGE          = 2;
+  //   const int LIST           = 4;
+  //   const int VIRTUAL_REV    = 8;
+  //   const int VIRTUAL_DOM    = 16;
+  //   const int CONSTANT       = 32;
   
-//   const int BITSET_VAR     = (BITSET  | RANGE | VIRTUAL_REV);
-//   const int BOOL_VAR       = (BITSET  | RANGE);
-//   const int RANGE_VAR      = (RANGE   | VIRTUAL_REV);
-//   const int LIST_VAR       = (BITSET  | RANGE | VIRTUAL_REV | VIRTUAL_DOM | LIST);
-//   const int VIRTUAL_VAR    = (VIRTUAL_REV | VIRTUAL_DOM | RANGE);
-//   const int CONST_VAR      = (BITSET  | RANGE | CONSTANT);
-//   const int DYN_VAR        = 1111111
+  //   const int BITSET_VAR     = (BITSET  | RANGE | VIRTUAL_REV);
+  //   const int BOOL_VAR       = (BITSET  | RANGE);
+  //   const int RANGE_VAR      = (RANGE   | VIRTUAL_REV);
+  //   const int LIST_VAR       = (BITSET  | RANGE | VIRTUAL_REV | VIRTUAL_DOM | LIST);
+  //   const int VIRTUAL_VAR    = (VIRTUAL_REV | VIRTUAL_DOM | RANGE);
+  //   const int CONST_VAR      = (BITSET  | RANGE | CONSTANT);
+  //   const int DYN_VAR        = 1111111
 
-  const int CONST_VAR      = 1;
-  const int BOOL_VAR       = 2;
-  const int RANGE_VAR      = 4;
-  const int BITSET_VAR     = 8;
-  const int LIST_VAR       = 16;
-  const int VIRTUAL_VAR    = 0;
-  const int DYN_VAR        = (CONST_VAR | BOOL_VAR | RANGE_VAR | BITSET_VAR | LIST_VAR);
-  const int EXPRESSION     = 3;
+//   const int CONST_VAR      = 1;
+//   const int BOOL_VAR       = 2;
+//   const int RANGE_VAR      = 4;
+//   const int BITSET_VAR     = 8;
+//   const int LIST_VAR       = 16;
+//   const int VIRTUAL_VAR    = 0;
+//   const int DYN_VAR        = (CONST_VAR | BOOL_VAR | RANGE_VAR | BITSET_VAR | LIST_VAR);
+//   const int EXPRESSION     = 3;
+
+  #define CONST_VAR   1
+  #define BOOL_VAR    2
+  #define RANGE_VAR   4
+  #define BITSET_VAR  8
+  #define LIST_VAR    16
+  #define VIRTUAL_VAR 0
+  #define DYN_VAR     31
+  #define EXPRESSION  3
 
 
-    //#endif
+  //#endif
 
   //       fnvrlu
   //fail   000000
@@ -97,31 +113,71 @@ namespace Mistral {
   //ub     100101
   // value 101100
 
-  const Event NO_EVENT     = 0;
-  const Event DOMAIN_EVENT = 1;
-  const Event RANGE_EVENT  = 1+2;
-  const Event UB_EVENT     = 1+2+4;
-  const Event LB_EVENT     = 1+2+8;
-  const Event VALUE_EVENT  = 1+2+16;
-  const Event FAIL_EVENT   = 32;
 
-  const Outcome SAT = 1;
-  const Outcome OPT = 3;
-  const Outcome UNSAT = 0;
-  const Outcome UNKNOWN = 2;
-  const Outcome LIMITOUT = 4;
+  //   const Event NO_EVENT     = 0;
+  //   const Event DOMAIN_EVENT = 1;
+  //   const Event RANGE_EVENT  = 1+2;
+  //   const Event UB_EVENT     = 1+2+4;
+  //   const Event LB_EVENT     = 1+2+8;
+  //   const Event VALUE_EVENT  = 1+2+16;
+  //   const Event FAIL_EVENT   = 32;
 
-//   const Event NO_EVENT     = 32;
-//   const Event DOMAIN_EVENT = 1;
-//   const Event RANGE_EVENT  = 3;
-//   const Event UB_EVENT     = 7;
-//   const Event LB_EVENT     = 11;
-//   const Event VALUE_EVENT  = 19;
-//   const Event FAIL_EVENT   = 0;
 
-  const int _value_  = 0;
-  const int _range_  = 1;
-  const int _domain_ = 2;
+#define NO_EVENT     0
+#define DOMAIN_EVENT 1
+#define RANGE_EVENT  3
+#define UB_EVENT     7
+#define LB_EVENT     11
+#define VALUE_EVENT  19
+#define FAIL_EVENT   32
+
+
+
+  //   inline bool DomainChanged(Event e) {return (e&DOMAIN_EVENT) == DOMAIN_EVENT;}
+  //   inline bool RangeChanged (Event e) {return (e&RANGE_EVENT)  == RANGE_EVENT;}
+  //   inline bool LbChanged    (Event e) {return (e&LB_EVENT)     == LB_EVENT;}
+  //   inline bool UbChanged    (Event e) {return (e&UB_EVENT)     == UB_EVENT;}
+  //   inline bool ValueChanged (Event e) {return (e&VALUE_EVENT)  == VALUE_EVENT;}
+
+#define DOMAIN_CHANGED(e) ((e&DOMAIN_EVENT) == DOMAIN_EVENT)
+#define BOUND_CHANGED(e)  ((e&RANGE_EVENT)  == RANGE_EVENT)
+#define LB_CHANGED(e)     ((e&LB_EVENT)     == LB_EVENT)
+#define UB_CHANGED(e)     ((e&UB_EVENT)     == UB_EVENT)
+#define ASSIGNED(e)       ((e&VALUE_EVENT)  == VALUE_EVENT)
+
+#define IS_FAIL(e)    (e & FAIL_EVENT)
+#define IS_REMOVAL(e) (e == DOMAIN_EVENT)
+#define IS_RANGE(e)   (e == RANGE_EVENT)
+#define IS_LB(e)      (e == LB_EVENT)
+#define IS_UB(e)      (e == UB_EVENT)
+#define IS_ASSIGN(e)  (e == VALUE_EVENT)
+
+
+#define SAT      1
+#define OPT      3
+#define UNSAT    0
+#define UNKNOWN  2
+#define LIMITOUT 4
+
+#define IS_OK(o) (o<0)
+
+#define FAILURE(x) x
+#define CONSISTENT -1
+  
+
+  //   const Event NO_EVENT     = 32;
+  //   const Event DOMAIN_EVENT = 1;
+  //   const Event RANGE_EVENT  = 3;
+  //   const Event UB_EVENT     = 7;
+  //   const Event LB_EVENT     = 11;
+  //   const Event VALUE_EVENT  = 19;
+  //   const Event FAIL_EVENT   = 0;
+
+#define _value_ 0
+#define _range_ 1
+#define _domain_ 2
+
+#define EVENT_TYPE(e) (2-BOUND_CHANGED(e)-ASSIGNED(e))
 
   inline bool is_domain(Event e) {
     return ((e & DOMAIN_EVENT) == DOMAIN_EVENT);
@@ -143,6 +199,8 @@ namespace Mistral {
     return ((e & VALUE_EVENT) == VALUE_EVENT);
   }
 
+
+
   /**********************************************
    * Timing Memory and Command line utilities 
    *********************************************/
@@ -152,73 +210,34 @@ namespace Mistral {
   void getCommandLine(const char**,int*,int,const char**,const char**,int,char**,int);
 
 
-//   std::string toString(const int x);
+  //   std::string toString(const int x);
 
 
-//   std::string toString(const IntStack& x);
+  //   std::string toString(const IntStack& x);
 
 
-//   std::string toString(const Queue& x);
+  //   std::string toString(const Queue& x);
 
 
-//   std::string toString(const MultiSet& x);
+  //   std::string toString(const MultiSet& x);
 
 
-//   std::string toString(const ConstraintTrigger& x);
+  //   std::string toString(const ConstraintTrigger& x);
 
 
-//   std::string toString(const Constraint* x);
+  //   std::string toString(const Constraint* x);
 
 
-//   std::string toString(const SolverStatistics& x);
+  //   std::string toString(const SolverStatistics& x);
 
-// //   class VariableInt;
-// //   std::string toString(const VariableInt* x);
+  // //   class VariableInt;
+  // //   std::string toString(const VariableInt* x);
 
-//   //class Goal;
-//   //std::string toString(const Goal* x);
-
-
-  class IntStack;
-  std::ostream& operator<< (std::ostream& os, const IntStack& x);
-  
-  class Queue;
-  std::ostream& operator<< (std::ostream& os, const Queue& x);
-
-  class MultiSet;
-  std::ostream& operator<< (std::ostream& os, const MultiSet& x);
-
-  class ConstraintTrigger;
-  std::ostream& operator<< (std::ostream& os, const ConstraintTrigger& x);
-
-  class Constraint;
-  std::ostream& operator<< (std::ostream& os, const Constraint& x);
-
-  class Variable;
-  std::ostream& operator<< (std::ostream& os, const Variable& x);
-
-  class BitsetDomain;
-  std::ostream& operator<< (std::ostream& os, const BitsetDomain& x);
-
-  class SolverStatistics;
-  std::ostream& operator<< (std::ostream& os, const SolverStatistics& x);
+  //   //class Goal;
+  //   //std::string toString(const Goal* x);
 
 
-  std::ostream& operator<< (std::ostream& os, const IntStack* x);
 
-  std::ostream& operator<< (std::ostream& os, const Queue* x);
-
-  std::ostream& operator<< (std::ostream& os, const MultiSet* x);
-
-  std::ostream& operator<< (std::ostream& os, const ConstraintTrigger* x);
-
-  std::ostream& operator<< (std::ostream& os, const Constraint* x);
-
-  std::ostream& operator<< (std::ostream& os, const Variable* x);
-
-  std::ostream& operator<< (std::ostream& os, const BitsetDomain* x);
-
-  std::ostream& operator<< (std::ostream& os, const SolverStatistics* x);
 
   //std::ostream& operator<< (std::ostream& os, const VariableInt* x);
 
@@ -237,9 +256,9 @@ namespace Mistral {
   template <class WORD_TYPE>
   void printBitset(WORD_TYPE n, const int idx, std::ostream& os) {
 
-//     os << std::endl;
-//     showUint(n, os);
-//     os << std::endl;
+    //     os << std::endl;
+    //     showUint(n, os);
+    //     os << std::endl;
 
     int offset = 8*sizeof(WORD_TYPE)*idx;
     WORD_TYPE mask=1;
@@ -307,36 +326,36 @@ namespace Mistral {
    Word: 5 bits for the min, 5 bits for the max, 5 bits for the size, 32 bits for the domain, 17 bits for the offset
    Integer: 32 bits for the min, 32 bits for the max, 32 bits for a ptr to the rest of the domain 
 
-00
-01
-10
-11
+   00
+   01
+   10
+   11
 */
 
 /**
-class Intvar {
-public:
-  char type;
-  void *_ptr;
+   class Intvar {
+   public:
+   char type;
+   void *_ptr;
 
 
 
 
 
-  int min(, Variable *X) {
-    if(type == BOOLEAN) {
-      int x = (int)(*X);
-      return (x&1 && x>>1 <= level); 
-    } else {
-      VariableFDomain *x = (VariableFDomain*)X;
-      return X->min;
-    }
-}
+   int min(, Variable *X) {
+   if(type == BOOLEAN) {
+   int x = (int)(*X);
+   return (x&1 && x>>1 <= level); 
+   } else {
+   VariableFDomain *x = (VariableFDomain*)X;
+   return X->min;
+   }
+   }
   
-}
+   }
 
--- Variables are read only structs.
--- WriteManager class takes care of the reversibility.
+   -- Variables are read only structs.
+   -- WriteManager class takes care of the reversibility.
 */
 
 

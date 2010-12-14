@@ -54,7 +54,8 @@ Mistral::Luby::Luby(const unsigned int b)
 Mistral::Luby::~Luby() {}
 
 Mistral::VarOrdering::VarOrdering(Mistral::Solver *s) 
-  : length(s->sequence.size), variables(s->sequence.list_) { solver = s; }
+//: length(s->sequence.size), variables(s->sequence.list_) 
+{ solver = s; }
 
 Mistral::VarOrdering::~VarOrdering() {}
 
@@ -63,8 +64,8 @@ Mistral::NoOrder::NoOrder(Solver *s)
 
 Mistral::NoOrder::~NoOrder() {}
 
-Mistral::IntVar Mistral::NoOrder::select() {
-  return variables[length-1];
+Mistral::Variable Mistral::NoOrder::select() {
+  return solver->sequence.back();
 }
 
 // Mistral::IntVar Mistral::Search::backtrack() {

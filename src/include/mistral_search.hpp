@@ -27,14 +27,13 @@
 
 #include <mistral_global.hpp>
 #include <mistral_structure.hpp>
-#include <mistral_constraint.hpp>
+#include <mistral_variable.hpp>
 
 
 namespace Mistral {
 
 
   class Solver;
-  //class Search;
   class RestartPolicy {
     
   public:
@@ -103,58 +102,128 @@ namespace Mistral {
     
   };
 
+
+  /**********************************************
+   * Variable Selection
+   **********************************************/
+
+  class BranchingHeuristic {
+
+  public:
+    
+    Solver *solver;
+    //unsigned int& length;
+    //Variable *variables;
+
+    BranchingHeuristic(Solver *s) {solver = s;}
+    virtual ~BranchingHeuristic() {}
+    
+    virtual Decision branch() = 0;
+
+  };
+
+
   class VarOrdering {
 
   public: 
-
     Solver *solver;
-    unsigned int& length;
-    IntVar *variables;
 
+    VarOrdering() {}
     VarOrdering(Solver *s);
+    void initialise(Solver *s) { solver = s; }
     virtual ~VarOrdering();
     
-    virtual IntVar select() = 0;
-
   };
 
   class NoOrder : public VarOrdering {
 
   public: 
 
+    NoOrder() {}
     NoOrder(Solver *s);
     virtual ~NoOrder();
     
-    virtual IntVar select();
+    Variable select();
 
   };
 
 
   /**********************************************
+   * Variable Selection
+   **********************************************/
+
+  class MinDomain 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinDomain() {d_ = NOVAL;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    int d_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return 1.0/((double)d_); } 
+    inline bool operator<( MinDomain& x ) const { return d_ < x.d_; }
+    inline void operator=( MinDomain& x ) { d_ = x.d_; }
+    inline void operator=( Variable x ) { d_ = x.get_size(); }
+    //@}  
+  };
+
+  /**********************************************
+   * Value Selection
+   **********************************************/
+
+  class MinValue {
+
+  public: 
+    
+    MinValue() {}
+    MinValue(Solver *s) {}
+    virtual ~MinValue() {};
+    
+    inline Decision make(Variable x) {
+      Decision d(x, Decision::ASSIGNMENT, x.get_min());
+      return d;
+    }
+
+  };
+
+  /**********************************************
    * Generic heuristic
    **********************************************/
   
-  template < class Selector >
+  template < class VarSelector >
   class GenericDVO : public VarOrdering
   {
   public: 
     
     /**@name Parameters*/
     //@{ 
-    Selector best;
-    Selector current;
+    VarSelector best;
+    VarSelector current;
+
+    //ValSelector choice;
     //@}
 
     /**@name Constructors*/
     //@{
+    GenericDVO() : VarOrdering() {}
     GenericDVO(Solver* s) : VarOrdering(s) {}
     //@}
     
     /**@name Utils*/
     //@{ 
-    inline IntVar select()
+    Variable select()
     {    
-      IntVar var = variables[0];
+      Variable *variables = solver->sequence.list_;
+      unsigned int length = solver->sequence.size;
+      Variable var = variables[0];
       best = var;
       for(unsigned int i=1; i<length; ++i) {
 	current = variables[i];
@@ -173,26 +242,29 @@ namespace Mistral {
    * GenericRandom heuristic
    **********************************************/
   
-  template < class Selector >
+  template < class VarSelector, int RAND >
   class GenericRandomDVO : public VarOrdering
   {
   public: 
 
     /**@name Parameters*/
     //@{ 
-    Selector *bests;
-    Selector current;
-    IntVar *bestvars;
-    int size;
+    VarSelector   bests[RAND+1];
+    VarSelector current;
+    Variable   bestvars[RAND+1];
     //@}
 
     /**@name Constructors*/
     //@{
-    GenericRandomDVO(Solver* s, const int sz)  : VarOrdering(s) 
+    GenericRandomDVO() : VarOrdering()
     {
-      size = sz;
-      bests = new Selector[size+1];
-      bestvars = new IntVar[size+1];
+      bests = NULL;
+      bestvars = NULL;
+    }
+    GenericRandomDVO(Solver* s)  : VarOrdering(s) 
+    {
+      bests = new VarSelector[RAND+1];
+      bestvars = new Variable[RAND+1];
     }
 
     virtual ~GenericRandomDVO() 
@@ -204,8 +276,10 @@ namespace Mistral {
 
     /**@name Utils*/
     //@{ 
-    inline IntVar select()
+    Variable select()
     {
+      Variable *variables = solver->sequence.list_;
+      unsigned int length = solver->sequence.size;
       unsigned int realsize=1, i, j;
       bests[0] = bestvars[0] = variables[0];
       for(j=1; j<length; ++j)
@@ -220,7 +294,7 @@ namespace Mistral {
 	  bests[i] = current;
 	  bestvars[i] = variables[j];
 	  
-	  if(realsize<size) ++realsize;
+	  if(realsize<RAND) ++realsize;
 	}
       return bestvars[randint(realsize)];
     }
@@ -228,7 +302,24 @@ namespace Mistral {
   };
 
 
+  template < class VarSelector, class ValSelector >
+  class GenericHeuristic : public BranchingHeuristic {
+  public:
 
+    VarSelector var;
+    ValSelector choice;
+
+    GenericHeuristic(Solver *s) : BranchingHeuristic(s) 
+    {
+      var.initialise(s);
+      choice = ValSelector(s);
+    }
+
+    virtual Decision branch() {
+      return choice.make(var.select());
+    }
+
+  };
   
 //   class Search {
 

@@ -28,9 +28,9 @@
 
 #include <string>
 
-
-#include <mistral_structure.hpp>
 #include <mistral_global.hpp>
+#include <mistral_backtrack.hpp>
+#include <mistral_structure.hpp>
 
 
 #ifndef __CONSTRAINT_HPP
@@ -39,22 +39,10 @@
 
 namespace Mistral {
 
-  template < class WORD_TYPE >
-  class VariableInt;
-
-#ifdef _BIT64
-  
-  typedef VariableInt< unsigned long long int >* IntVar;
-
-#else
-
-  typedef VariableInt< unsigned int >* IntVar;
-
-#endif
-  
-
-  //typedef VariableInt* IntVar;
-
+ 
+  //class ConstraintList;
+  class Solver;
+  class Variable;
   /**********************************************
    * Constraint
    **********************************************/
@@ -63,35 +51,47 @@ namespace Mistral {
 
     The constrained variables are stored in the array _scope[]. 
     The method propagate() is called during preprocessing.
-    The method propagate(const Event, const Vector) is
-    called when computing the GAC closure. 
     Generic propagate methods, using AC3
     with residual supports are implemented in
     the class Constraint.
   */
   class Constraint {
 
+  protected:
+
+    // used to post/relax the constraints on the right triggers
+    int *trigger;
+    int *self;
+
+    /// The trail, used for backtracking
+    Vector< int > trail_;
+
+    /// 
+    int   *solution;
+    int ***supports;
+
+    ///
+    
+
   public:
 
     /*!@name Parameters*/
     //@{
+    ///
+    Solver *solver;
+    /// The constrained variables.
+    Vector<Variable> scope;
+    //Vector<int> trigger;
+
+
     /// Whether the propagation is delayed
     int priority;
     /// An unique id
     int id;
-    /// The number of constrained variables
-    int arity;
+
     /// The indices of unassigned variables
     IntStack active;
-    IntStack trail_act;
-    /// Weight, used in some heuristics
-    float weight;
 
-    /// The constrained 'real' variables.
-    IntVar* _scope;
-    /// The variables whose domains are filtered (may be references)
-    IntVar* scope;
-    /// The list of modified variables' indices
     /// We use two lists so that the active constraint can add events to its own 
     /// list (events) without changing the one used during propagation (changes)
     IntStack changes; // this is the list that is accessible from a propagator
@@ -99,29 +99,16 @@ namespace Mistral {
     /// The type of event for each modified variable
     Event *event_type;
 
-    /// For each variable in the scope, the constraint list containing self
-    //ConstraintList** self_list;
-    /// The element of the list corresponding to this constraint
-    int* self;
-    /// The type of trigger (domain/range/value)
-    int* trigger;
-
-    /// residual supports used for generic ac propagation
-    int ***supports;
-    int *solution;
     //@}
 
 
     /*!@name Constructors*/
     //@{
     /// The _scope is build by copying an array "scp" containing "l" variables
-    void initialise(Vector< IntVar >& scp, const float w=1.0);
-    void triggerOn(const int t, const int x);
-    void notifyAssignment(const int var);
-    void entail();
-    void restore();
+    virtual void initialise();
+    //void initialise(Vector< Variable >& scp);
     Constraint();
-    Constraint(Vector< IntVar >& scp, const float w=1.0);
+    Constraint(Vector< Variable >& scp);
     virtual ~Constraint();
 
     /// An idempotent constraint should not be called on events triggered by itself.
@@ -129,17 +116,20 @@ namespace Mistral {
     inline void set_idempotent(const bool idp) {
       if(idp) {
 	events.size = 0;
-	events.capacity = arity;
+	events.capacity = scope.size;
 	events.list_ = changes.list_;
 	events.index_ = changes.index_;
 	events.start_ = NULL;
       } else {
-	events.initialise(0, arity-1, false);
+	events.initialise(0, scope.size-1, false);
       }
     }
 
     // called 
     inline Constraint* freeze() {
+
+      //if(active.size == 1) relax();
+
       changes.size = events.size;
       // before each propagation, the lists events and changes are swapped 
       if(changes.list_ != events.list_) {
@@ -160,18 +150,81 @@ namespace Mistral {
     }
 
     inline void defrost() {
+
+      if(active.size == 1) relax();
+
       if(changes.list_ == events.list_) 
 	// if idempotent, clear the events list
 	events.size = 0;      
     }
 
 
-    void post();
-    void relax();
-    //@}
 
-    void assign(const int var);
-    void unassign(const int var);
+// void Mistral::Constraint::post(Solver *s) {
+//   solver = s;
+//   unsigned int i, j;
+//   // for each of its variables
+//   for(i=0; i<scope.size; ++i) {
+//     // add the constraint to the list of constraints on that variable
+//     j = scope[i].id();
+//     ConstraintTrigger ct(this, i);
+//     int trg = trigger[i];
+//     ConstraintList *lst = solver->constraint_graph[j];
+//     unsigned int elt = lst->reversible_add(ct, trg);
+//     self[i] = elt;
+//   }
+// }
+
+// void Mistral::Constraint::relax() {
+//   unsigned int i, j;
+//   int k;
+
+// #ifdef _DEBUG_AC
+//   std::cout << "relax " << this << " from ";
+// #endif
+
+
+//   for(i=0; i<active.size; ++i) {
+//     j = active[i];
+//     k = scope[j].id();
+
+// #ifdef _DEBUG_AC
+//     std::cout << scope[j] << "'s c-list " ;
+// #endif
+
+//     solver->constraint_graph[k]->reversible_erase(self[j], trigger[j]);
+//   }
+
+// #ifdef _DEBUG_AC
+//   std::cout << std::endl;
+// #endif
+  
+// }
+
+
+    inline void trigger_on(const int t, const int x) {
+      trigger[x] = t;
+    }
+
+    inline Constraint* notify_assignment(const int var, const int level) {
+      Constraint *r = NULL;
+      if(trail_.back() != level) {
+	trail_.add(active.size);
+	trail_.add(level);
+	r = this;
+      }
+      active.erase(var);
+      return r;
+    }
+
+    void post(Solver *s);
+    void relax();
+    
+    inline void restore() {
+      trail_.pop();
+      active.size = trail_.pop();
+    }
+
 
     /*!@name Propagators*/
     //@{
@@ -189,7 +242,7 @@ namespace Mistral {
      *  returned on success (there is still at least one consistent
      *  assignment) or a ptr to the wiped-out variable otherwise. 
      */
-    virtual IntVar propagate() { return NULL; }
+    virtual PropagationOutcome propagate() { return NULL; }
     /*!
      *  Check if the cached support is valid.
      *  Otherwise initialize an iterator on supports
@@ -225,9 +278,13 @@ namespace Mistral {
   public:  
     /**@name Constructors*/
     //@{
-    ConstraintNotEqual(Vector< IntVar >& scp) : Constraint(scp) {
-      triggerOn(_value_, 0);
-      triggerOn(_value_, 1);
+    ConstraintNotEqual() : Constraint() {}
+    ConstraintNotEqual(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    virtual void initialise() {
+      Constraint::initialise();
+      trigger_on(_value_, 0);
+      trigger_on(_value_, 1);
       set_idempotent(true);
     }
     virtual ~ConstraintNotEqual() {}
@@ -236,7 +293,7 @@ namespace Mistral {
     /**@name Solving*/
     //@{
     virtual int check(const int* sol) const { return (sol[0] == sol[1]); }
-    virtual IntVar propagate();
+    virtual PropagationOutcome propagate();
     //@}
 
     /**@name Miscellaneous*/
@@ -263,10 +320,14 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    ConstraintLess(Vector< IntVar >& scp, const int ofs=0) : Constraint(scp) {
-      offset = ofs;
-      triggerOn(_range_, 0);
-      triggerOn(_range_, 1);
+    ConstraintLess() : Constraint() {}
+    ConstraintLess(Vector< Variable >& scp, const int ofs=0) 
+      : Constraint(scp) { offset = ofs; }
+
+    virtual void initialise() {
+      Constraint::initialise();
+      trigger_on(_range_, 0);
+      trigger_on(_range_, 1);
       set_idempotent(true);
     }
     virtual ~ConstraintLess() {}
@@ -275,7 +336,7 @@ namespace Mistral {
     /**@name Solving*/
     //@{
     virtual int check( const int* sol ) const { return (sol[0]+offset > sol[1]); }
-    virtual IntVar propagate();
+    virtual PropagationOutcome propagate();
     //@}
 
     /**@name Miscellaneous*/
@@ -303,11 +364,15 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    PredicateEqual(Vector< IntVar >& scp, const int sp=1) : Constraint(scp) {
-      spin = sp;
-      triggerOn(_domain_, 0);
-      triggerOn(_domain_, 1);
-      triggerOn(_value_, 2);
+    PredicateEqual() : Constraint() {}
+    PredicateEqual(Vector< Variable >& scp, const int sp=1) 
+      : Constraint(scp) { spin = sp; }
+
+    virtual void initialise() {
+      Constraint::initialise();
+      trigger_on(_domain_, 0);
+      trigger_on(_domain_, 1);
+      trigger_on(_value_, 2);
       set_idempotent(false);
     }
     virtual ~PredicateEqual() {}
@@ -316,7 +381,7 @@ namespace Mistral {
     /**@name Solving*/
     //@{
     virtual int check( const int* sol ) const { return((sol[0] == sol[1]) == (sol[2] ^ spin)); }
-    virtual IntVar propagate();
+    virtual PropagationOutcome propagate();
     //@}
 
     /**@name Miscellaneous*/
@@ -340,10 +405,15 @@ namespace Mistral {
   public:
     /**@name Constructors*/
     //@{
-    PredicateAdd(Vector< IntVar >& scp) : Constraint(scp) {
-      triggerOn(_range_, 0);
-      triggerOn(_range_, 1);
-      triggerOn(_range_, 2);
+    PredicateAdd() : Constraint() {}
+    PredicateAdd(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+
+    virtual void initialise() {
+      Constraint::initialise();
+      trigger_on(_range_, 0);
+      trigger_on(_range_, 1);
+      trigger_on(_range_, 2);
       set_idempotent(true);
     }
     virtual ~PredicateAdd() {}
@@ -351,8 +421,8 @@ namespace Mistral {
     
     /**@name Solving*/
     //@{
-    inline int check( const int* sol ) const { return (sol[2] != (sol[0]+sol[1])); }
-    inline IntVar propagate();
+    virtual int check( const int* sol ) const { return (sol[2] != (sol[0]+sol[1])); }
+    virtual PropagationOutcome propagate();
     //@}
     
     /**@name Miscellaneous*/
@@ -364,44 +434,77 @@ namespace Mistral {
   };
 
 
-// /**********************************************
-//  * Substraction Predicate
-//  **********************************************/
-// /*! \class PredicateSub
-//  \brief  Binary Substraction predicate (x0 - x1 = y)
-// */
-// class PredicateSub : public Constraint
-//   {
+  // /**********************************************
+  //  * Substraction Predicate
+  //  **********************************************/
+  // /*! \class PredicateSub
+  //  \brief  Binary Substraction predicate (x0 - x1 = y)
+  // */
+  // class PredicateSub : public Constraint
+  //   {
     
-//   public:
-//     /**@name Constructors*/
-//     //@{
-//     PredicateSub(Vector< IntVar >& scp) : Constraint(scp) {
-//       triggerOn(_range_, 0);
-//       triggerOn(_range_, 1);
-//       triggerOn(_range_, 2);
-//       set_idempotent(true);
-//     }
-//     virtual ~PredicateSub() {}
-//     //@}
+  //   public:
+  //     /**@name Constructors*/
+  //     //@{
+  //     PredicateSub(Vector< Variable >& scp) : Constraint(scp) {
+  //       trigger_on(_range_, 0);
+  //       trigger_on(_range_, 1);
+  //       trigger_on(_range_, 2);
+  //       set_idempotent(true);
+  //     }
+  //     virtual ~PredicateSub() {}
+  //     //@}
     
-//     /**@name Solving*/
-//     //@{
-//     inline int check( const int* sol ) const { return (sol[2] != (sol[0]-sol[1])); }
-//     inline IntVar propagate();
-//     //@}
+  //     /**@name Solving*/
+  //     //@{
+  //     inline int check( const int* sol ) const { return (sol[2] != (sol[0]-sol[1])); }
+  //     inline PropagationOutcome propagate();
+  //     //@}
     
-//     /**@name Miscellaneous*/
-//     //@{  
-//     virtual std::string getString() const ;
-//     virtual std::string name() const { return "minus"; }
-//     //@}
-//   };
+  //     /**@name Miscellaneous*/
+  //     //@{  
+  //     virtual std::string getString() const ;
+  //     virtual std::string name() const { return "minus"; }
+  //     //@}
+  //   };
+
+  /***********************************************
+   * All Different Constraint (forward checking).
+   ***********************************************/
+  /*! \class ConstraintCliqueNotEqual
+    \brief  Clique of NotEqual Constraint.
+  */
+  class ConstraintCliqueNotEqual : public Constraint {
+
+  public:
+    
+    /**@name Constructors*/
+    //@{
+    ConstraintCliqueNotEqual() : Constraint() {}
+    ConstraintCliqueNotEqual(Vector< Variable >& scp);
+    virtual void initialise();
+    virtual ~ConstraintCliqueNotEqual();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    //virtual std::string getString() const ;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "alldiff"; }
+    //@}
+    
+  };
 
 
-/***********************************************
- * All Different Constraint (bounds consistency).
- ***********************************************/
+  /***********************************************
+   * All Different Constraint (bounds consistency).
+   ***********************************************/
   typedef struct {
     int min, max;		// start, end of interval
     int minrank, maxrank; // rank of min & max in bounds[] of an adcsp
@@ -440,7 +543,9 @@ namespace Mistral {
   public:
     /**@name Constructors*/
     //@{
-    ConstraintAllDiff(Vector< IntVar >& scp);
+    ConstraintAllDiff() : Constraint() {}
+    ConstraintAllDiff(Vector< Variable >& scp);
+    virtual void initialise();
     virtual ~ConstraintAllDiff();
     void init();
     //@}
@@ -448,7 +553,7 @@ namespace Mistral {
     /**@name Solving*/
     //@{
     virtual int check( const int* sol ) const ;
-    virtual IntVar propagate();
+    virtual PropagationOutcome propagate();
     //@}
 
     /**@name Miscellaneous*/
@@ -460,99 +565,99 @@ namespace Mistral {
   };
 
 
-// /***********************************************
-//  * Global Cardinality Constraint (bounds consistency).
-//  ***********************************************/
-// typedef struct {
-//   int firstValue;
-//   int lastValue;
-//   int* sum;
-//   int* ds;
-// } partialSum;
+  // /***********************************************
+  //  * Global Cardinality Constraint (bounds consistency).
+  //  ***********************************************/
+  // typedef struct {
+  //   int firstValue;
+  //   int lastValue;
+  //   int* sum;
+  //   int* ds;
+  // } partialSum;
    
 
-// /*! \class ConstraintGlobalCardinality
-//  \brief  Global Cardinality Constraint.
+  // /*! \class ConstraintGlobalCardinality
+  //  \brief  Global Cardinality Constraint.
 
-//  User defined propagator for enforcing bounds consistency
-//  on the restricted gcc constraint when bounds on
-//  occurrences are [a_i,b_i].
-//  A value "v" must be assigned to at least
-//  minOccurrences[v - firstDomainValue] variables and at most
-//  maxOccurrences[v - firstDomainValue] variables
-//  The code is from Lopez-Ortiz, Quimper, Tromp and van Beek
-// */   
-// class ConstraintGlobalCardinality : public Constraint
-// {
+  //  User defined propagator for enforcing bounds consistency
+  //  on the restricted gcc constraint when bounds on
+  //  occurrences are [a_i,b_i].
+  //  A value "v" must be assigned to at least
+  //  minOccurrences[v - firstDomainValue] variables and at most
+  //  maxOccurrences[v - firstDomainValue] variables
+  //  The code is from Lopez-Ortiz, Quimper, Tromp and van Beek
+  // */   
+  // class ConstraintGlobalCardinality : public Constraint
+  // {
 
-//  private:
-//   /**@name Parameters*/
-//   //@{  
-//   int lastLevel;
-//   int *t;			// tree links
-//   int *d;			// diffs between critical capacities
-//   int *h;			// hall interval links
-//   int *stableInterval;	// stable sets
-//   int *potentialStableSets;	// links elements that potentialy belong to same stable set
-//   int *newMin;
-//   Interval *iv;
-//   Interval **minsorted;
-//   Interval **maxsorted;
-//   int *bounds;  // bounds[1..nb] hold set of min & max of the n intervals
-//   // while bounds[0] and bounds[nb+1] allow sentinels
-//   int nb;
+  //  private:
+  //   /**@name Parameters*/
+  //   //@{  
+  //   int lastLevel;
+  //   int *t;			// tree links
+  //   int *d;			// diffs between critical capacities
+  //   int *h;			// hall interval links
+  //   int *stableInterval;	// stable sets
+  //   int *potentialStableSets;	// links elements that potentialy belong to same stable set
+  //   int *newMin;
+  //   Interval *iv;
+  //   Interval **minsorted;
+  //   Interval **maxsorted;
+  //   int *bounds;  // bounds[1..nb] hold set of min & max of the n intervals
+  //   // while bounds[0] and bounds[nb+1] allow sentinels
+  //   int nb;
   
-//   partialSum* l; 
-//   partialSum* u;
-//   partialSum* initializePartialSum(const int firstValue, 
-// 				   int count, const int* elements);
-//   void destroyPartialSum(partialSum *p);
-//   int  sum(partialSum *p, int from, int to);
-//   int  searchValue(partialSum *p, int value);
-//   int  minValue(partialSum *p);
-//   int  maxValue(partialSum *p);
-//   int  skipNonNullElementsRight(partialSum *p, int value);
-//   int  skipNonNullElementsLeft(partialSum *p, int value);
+  //   partialSum* l; 
+  //   partialSum* u;
+  //   partialSum* initializePartialSum(const int firstValue, 
+  // 				   int count, const int* elements);
+  //   void destroyPartialSum(partialSum *p);
+  //   int  sum(partialSum *p, int from, int to);
+  //   int  searchValue(partialSum *p, int value);
+  //   int  minValue(partialSum *p);
+  //   int  maxValue(partialSum *p);
+  //   int  skipNonNullElementsRight(partialSum *p, int value);
+  //   int  skipNonNullElementsLeft(partialSum *p, int value);
   
-//   void sortit();
-//   int  filterLowerMax();
-//   int  filterUpperMax();
-//   int  filterLowerMin(int *tl, int *c,
-// 		      int* stableAndUnstableSets,
-// 		      int* stableInterval,
-// 		      int* potentialStableSets,
-// 		      int* newMin);
-//   int  filterUpperMin(int *tl, int *c,
-// 		      int* stableAndUnstableSets,
-// 		      int* stableInterval,
-// 		      int* newMax);
-//   //@}  
+  //   void sortit();
+  //   int  filterLowerMax();
+  //   int  filterUpperMax();
+  //   int  filterLowerMin(int *tl, int *c,
+  // 		      int* stableAndUnstableSets,
+  // 		      int* stableInterval,
+  // 		      int* potentialStableSets,
+  // 		      int* newMin);
+  //   int  filterUpperMin(int *tl, int *c,
+  // 		      int* stableAndUnstableSets,
+  // 		      int* stableInterval,
+  // 		      int* newMax);
+  //   //@}  
 
-//  public:
-//   /**@name Constructors*/
-//   //@{
-//   ConstraintGlobalCardinality( Solver *s,
-// 			       VariableInt **v,
-// 			       const int n,
-// 			       const int firstDomainValue,
-// 			       const int lastDomainValue,
-// 			       const int* minOccurrences,
-// 			       const int* maxOccurrences);
-//   ~ConstraintGlobalCardinality();
-//   //@}
+  //  public:
+  //   /**@name Constructors*/
+  //   //@{
+  //   ConstraintGlobalCardinality( Solver *s,
+  // 			       VariableInt **v,
+  // 			       const int n,
+  // 			       const int firstDomainValue,
+  // 			       const int lastDomainValue,
+  // 			       const int* minOccurrences,
+  // 			       const int* maxOccurrences);
+  //   ~ConstraintGlobalCardinality();
+  //   //@}
 
-//   /**@name Solving*/
-//   //@{  
-//   inline int check( const int* ) const ;
-//   inline bool propagate();
-//   inline bool propagate(const int changedIdx, const int e); 
-//   //@}
+  //   /**@name Solving*/
+  //   //@{  
+  //   inline int check( const int* ) const ;
+  //   inline bool propagate();
+  //   inline bool propagate(const int changedIdx, const int e); 
+  //   //@}
 
-//   /**@name Miscellaneous*/
-//   //@{    
-//   virtual void print(std::ostream& o) const ;
-//   //@}
-// };
+  //   /**@name Miscellaneous*/
+  //   //@{    
+  //   virtual void print(std::ostream& o) const ;
+  //   //@}
+  // };
 
 
 
@@ -571,8 +676,6 @@ namespace Mistral {
   public:
 
     Queue triggers[NUM_PRIORITY];
-    //IntStack active;
-    //bool active[NUM_PRIORITY+1];
     int num_actives;
     BitSet _set_;
     
@@ -589,25 +692,26 @@ namespace Mistral {
     virtual ~MultiQueue() {}
     
     inline bool empty() { return !num_actives; }
-      //return !active.size; }//;
+    //return !active.size; }//;
     inline void trigger(Constraint* cons, const int var, const Event evt)//;
     {
       int priority = cons->priority, cons_id = cons->id;
-      if(_set_.fastMember(cons_id)) {
-	if(cons->events.member(var)) {
+      if(_set_.fastContain(cons_id)) {
+	//if(triggers[priority].contain(cons_id)) {
+	if(cons->events.contain(var)) {
 	  cons->event_type[var] |= evt;
 	} else {
-	  cons->events.insert(var);
+	  cons->events.add(var);
 	  cons->event_type[var] = evt;
 	}
       } else {
-	_set_.fastInsert(cons_id);
-	//if(triggers[priority].empty()) active.ordered_insert(priority);
-	//if(triggers[priority].empty()) active.insert(priority);
+	_set_.fastAdd(cons_id);
+	//if(triggers[priority].empty()) active.ordered_add(priority);
+	//if(triggers[priority].empty()) active.add(priority);
 	triggers[priority].add(cons_id);
 	++num_actives;
 	cons->events.clear();
-	cons->events.insert(var);
+	cons->events.add(var);
 	cons->event_type[var] = evt;
       }
     }
@@ -633,8 +737,14 @@ namespace Mistral {
     }
   };
 
+  std::ostream& operator<< (std::ostream& os, const Constraint& x);
+  std::ostream& operator<< (std::ostream& os, const Constraint* x);
 
 
 }
 
 #endif //__CONSTRAINT_HPP
+
+
+
+

@@ -30,15 +30,14 @@
 #define __SOLVER_HPP
 
 
-#include <mistral_search.hpp>
+//#include <mistral_search.hpp>
 #include <mistral_global.hpp>
+#include <mistral_backtrack.hpp>
 #include <mistral_structure.hpp>
 #include <mistral_constraint.hpp>
 
 
-
 namespace Mistral {
-
 
   class SolverParameters {
 
@@ -114,9 +113,117 @@ namespace Mistral {
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::ostream& print_full(std::ostream&) const ;
   };
-
-
   
+
+
+  class Solver;
+  /**********************************************
+   * MultiQueue
+   **********************************************/
+  
+  /*! \class MultiQueue
+    \brief MultiQueue Class
+  */
+  class ConstraintQueue // : public Vector<Constraint*>
+  {
+
+  private:
+    Solver *solver;
+    int min_priority;
+    /// The constraint being processed
+    Constraint *taboo_constraint;
+    //Constraint **stack_;
+
+  public:
+
+    int      cardinality;
+    Queue      *triggers;
+    int  higher_priority;
+
+    BitSet _set_;
+    
+    ConstraintQueue();
+    void initialise(Solver *s);
+    void initialise(const int min_p, const int max_p, const int size);
+    virtual ~ConstraintQueue();
+    inline bool empty() { return higher_priority<min_priority; }
+    inline void trigger(Constraint* cons, const int var, const Event evt)
+    //void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Event evt)//;
+{
+
+#ifdef _DEBUG_AC
+  std::cout << "  triggers " << cons << "(" << (cons->id) << ") by " 
+	    << cons->scope[var] << std::endl;
+#endif
+
+
+  if(cons != taboo_constraint) {
+    int priority = cons->priority, cons_id = cons->id;
+    if(_set_.fastContain(cons_id)) {
+
+// #ifdef _DEBUG_AC
+//       std::cout << "update " << std::endl;
+// #endif
+
+      if(cons->events.contain(var)) {
+	cons->event_type[var] |= evt;
+      } else {
+	cons->events.add(var);
+	cons->event_type[var] = evt;
+      }
+    } else {
+
+// #ifdef _DEBUG_AC
+//       std::cout << "add " << std::endl;
+// #endif
+
+      _set_.fastAdd(cons_id);
+      if(priority > higher_priority) higher_priority = priority;
+      triggers[priority].add(cons_id);
+      cons->events.setTo(var);
+      //cons->events.clear();
+      //cons->events.add(var);
+      cons->event_type[var] = evt;
+    }
+  } 
+
+ #ifdef _DEBUG_AC
+  else
+    std::cout << cons << "(" << (cons->id) 
+	      << ") is currently being processed " 
+	      << std::endl;
+#endif
+
+ #ifdef _DEBUG_AC
+  std::cout << " => " << cons->events << std::endl;
+//   else
+//     std::cout << cons << "(" << (cons->id) 
+// 	      << ") is currently being processed " 
+// 	      << std::endl;
+#endif
+
+}
+
+    inline void reset_higher_priority() {
+      while(--higher_priority>=min_priority && triggers[higher_priority].empty());
+    }
+    inline Constraint* select(Vector<Constraint*>& constraints) {
+      int cons_id = triggers[higher_priority].pop();
+      Constraint *cons = constraints[cons_id];
+      _set_.fastErase(cons_id);
+      if(triggers[higher_priority].empty()) reset_higher_priority();
+      taboo_constraint = cons;
+      return cons;
+    }
+    inline void clear() {
+      while(higher_priority>=min_priority) triggers[higher_priority--].clear();
+      _set_.clear();
+      taboo_constraint = NULL;
+    }
+    virtual std::ostream& display(std::ostream&) ;
+  };
+
+
 
   /**********************************************
    * Solver
@@ -133,12 +240,12 @@ namespace Mistral {
     - the search stack
   */
 
+  class BranchingHeuristic;
+  class RestartPolicy;
   class Reversible;
-  template< int N >
-  class MultiQueue;
-  typedef MultiQueue< 3 > ACQueue;
+  class Decision;
   class Variable;
-  class Solver {
+  class Solver : public Environment {
 
   public:
     /*!@name Parameters*/
@@ -149,48 +256,31 @@ namespace Mistral {
       level 0: level at wich constraints are added (+ initial propagation)
       level k: after k decisions
     */
-    int level;
+    //int level;
 
     /// The set of variables, in the initial order, that is as loaded from the model
-    //#ifdef _STATIC_CAST
-    Vector< Variable > variables_2;
-    Vector< Variable > boolean_variables;
-    //#else
-    Vector< IntVar > variables;
-    //#endif
+    Vector< Variable > variables;
 
-    /// The set of constraints
-    Vector< Constraint* > constraints;
+    /// The set of constraints, with special accessors for triggers
+    Vector< Constraint* >         constraints;
+    ConstraintQueue        active_constraints;
+    
+    Vector< ConstraintList* > constraint_graph;
+    Vector< Vector <ConstraintTrigger> > triggers;
 
-    /// The constraints queue, used for achieving the propagation closure
-    ACQueue triggered_constraints;
-    /// The constraint being processed
-    Constraint *taboo_constraint;
-
-
-    /// For each level, the list of reversible objects that changed at this level, and will need to be restored
-    Vector< Variable > saved_variables;
-    Vector< Reversible* > saved_objects;
-    /// The delimitation between different levels is kept by this vector of integers
-    Vector< int > obj_trail_size;
-
-    /// For each level, the list of reversible objects that changed at this level, and will need to be restored
-    Vector< IntVar > saved_vars;
-    /// The delimitation between different levels is kept by this vector of integers
-    Vector< int > var_trail_size;
-
-
-    /// For each level, the list of reversible objects that changed at this level, and will need to be restored
+    /// For each level, the list of reversible objects that changed at this level, 
+    /// and will need to be restored
+    //Vector< Reversible* > saved_objs;
+    /// For each level, the list of reversible objects that changed at this level, 
+    /// and will need to be restored
+    Vector< Variable > saved_vars;
+    /// For each level, the list of reversible objects that changed at this level, 
+    /// and will need to be restored
     Vector< Constraint* > saved_cons;
-    /// The delimitation between different levels is kept by this vector of integers
-    Vector< int > con_trail_size;
-
-    /// There is only one goal at a time, but one can solve several goals back to back
-    /// (or force backtracking to start back from a previous state) externally
-    ///Search search;
 
     /// Stores the last solution
-    Vector< int > solution;
+    Vector< int > last_solution_lb;
+    Vector< int > last_solution_ub;
 
     /// Set of parameters for the solver
     SolverParameters parameters;
@@ -200,27 +290,48 @@ namespace Mistral {
 
     /// The search part
     /// These are the search variables.
-    Stack< IntVar > sequence;
-    /// These are the variables we do not want to branch on.
-    Stack< IntVar > auxilliary;
+    VarStack < Variable > sequence;
+    Vector< Decision > decisions;
 
+    /// The delimitation between different levels is kept by this vector of integers
+    Vector< int > trail_;
 
+    BranchingHeuristic *heuristic;
+    RestartPolicy *policy; 
 
+    /// the constraint responsible for the last fail (NULL otherwise) 
+    Constraint *culprit;
+    /// the constraint-index of the last wiped_out variable in the culprit constraint (-1 otherwise)
+    int wiped_idx;
+    /// the overall-index of the variable responsible for the last trigger before a failure
+    int wiper_idx;
 
-    Vector< unsigned int > trail_seq;
-    Vector< unsigned int > trail_aux;
-    Vector< IntVar > decision;
-
-    VarOrdering *heuristic;   
-    RestartPolicy *policy;   
-
-    //void assign(IntVar x);
     Outcome satisfied();
 
     /*!@name Constructor*/
     //@{
     Solver();
     void initialise();
+
+
+    class BooleanMemoryManager {
+    public:
+      Vector<int*> slots;
+
+      BooleanMemoryManager() {}
+      virtual ~BooleanMemoryManager() {
+	while(!slots.empty()) 
+	  delete [] slots.pop();
+      }
+
+      int* get_next() { 
+	slots.add(new int[1]);
+	return slots.back();
+      }
+    };
+    BooleanMemoryManager booleans;
+
+    int* getNextBooleanSlot() { return booleans.get_next(); }
     //@}
 
     /*!@name Destructor*/
@@ -231,33 +342,85 @@ namespace Mistral {
     /*!@name Declarations*/
     //@{
     /// add a variable (prior to search!!!)
-    void add(IntVar x);
+    void add(Variable x);
+    int declare(Variable x);
     /// add a constraint
     void add(Constraint* x); 
-
-
-
-    void add(Variable x);
     //@}
 
     /*!@name Trail accessors*/
     //@{
+    inline void save() {
+      trail_.add(sequence.size);
+      trail_.add(saved_objs.size);
+      trail_.add(saved_cons.size);
+      trail_.add(saved_vars.size);
+
+      ++statistics.num_nodes;
+      ++level;
+    }
     /// called by reversible objects when they want to be restored when backtrack to this level
-    inline void save(Reversible* object) { saved_objects.add(object); }
-    inline void save(IntVar x) { saved_vars.add(x); }
+    inline void save(Reversible* object) { saved_objs.add(object); }
     inline void save(Constraint* c) { saved_cons.add(c); }
-//     inline void save(VariableImplementation* v, int type) { 
-//       Variable x(v,type);
-//       std::cout << "saving " << x << std::endl;
-//     }
-    void save(Variable x); // { saved_variables.add(x); }
+    void save(Variable x); 
     //@}
 
     /*!@name Propagation accessors*/
     //@{
+    void notify_failure();
+    void notify_success();
+    void notify_decision();
     /// called when the var'th variable of constraint cons changes (with event type evt)
-    void trigger(Constraint* cons, const int var, const Event evt);
-    void triggerEvent(const int var, const Event evt);
+    //void trigger(Constraint* cons, const int var, const Event evt);
+    //void activate_constraint(Constraint* cons, const int var, const Event evt);
+    inline void trigger_event(const int var, const Event evt) 
+
+// void Mistral::Solver::trigger_event(const int var, 
+// 				    const Mistral::Event evt) 
+{
+
+//   std::cout << "event on "<< variables_2[var] << ": ";
+//   if((evt & VALUE_EVENT) == VALUE_EVENT) std::cout << " it was assigned a value ";
+//   if((evt & LB_EVENT) == LB_EVENT) std::cout << " its lower bound was increased ";
+//   if((evt & UB_EVENT) == UB_EVENT) std::cout << " its upper bound was decreased ";
+//   if((evt & DOMAIN_EVENT) == DOMAIN_EVENT) std::cout << " its domain lost at least one value ";
+//   if(evt == NO_EVENT) std::cout << " (no change)";
+//   std::cout << std::endl;
+
+
+ #ifdef _DEBUG_AC
+  std::cout << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
+	    << " event on " << variables[var] << std::endl;
+  //std::cout << "trigger " << cons << "(" << (cons->id) << ") by a " << (is_value(evt) ? "value" : (is_range(evt) ? "range" : "domain")) << " event on " << cons->scope[var] << std::endl;
+#endif
+
+
+  Constraint *c;
+  ConstraintNode nd;
+
+//   if(ASSIGNED(evt))
+//     nd = constraint_graph[var].first(_value_);
+//   else if(BOUND_CHANGED(evt))
+//     nd = constraint_graph[var].first(_range_);
+//   else 
+//     nd = constraint_graph[var].first(_domain_);
+  nd = constraint_graph[var]->first(EVENT_TYPE(evt));
+
+  if(ASSIGNED(evt)) {
+    while(constraint_graph[var]->next(nd)) {
+      active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+      c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
+      if(c) saved_cons.add(c);
+    }
+    if(sequence.contain(variables[var])) sequence.remove(variables[var]);
+  } else while(constraint_graph[var]->next(nd)) {
+      active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+    }
+
+  wiper_idx = var;
+  
+}
+
     /// achieve propagation closure
     bool propagate(); 
     //@}
@@ -265,54 +428,34 @@ namespace Mistral {
     /*!@name Search accesors*/
     //@{
     /// make a branching decision
-    void branchLeft();
+    void branch_left();
     /// undo the previous branching decision and enforce the complementary constraint
-    void branchRight();
-    /// do the necessary setup of the trailling structures in order to advance in search
-    void make_node();
+    void branch_right();
+
+
     /// backtrack one level
-    void backtrack();
+    void restore();
     /// backtrack to a given level
-    void backtrack(const int&);
+    void restore(const int);
     /*!
       Launches a depth first search on the sequence 'seq' of variables
       with variable ordering 'heu' and restart policy 'pol'.
       Returns an outcome (SAT/UNSAT/OPT/UNKNOWN) and undo all decisions before returning.
     */
-    Outcome depth_first_search(Vector< IntVar >& seq, 
-			       VarOrdering *heu=NULL, 
+    Outcome depth_first_search(Vector< Variable >& seq, 
+			       BranchingHeuristic *heu=NULL, 
 			       RestartPolicy *pol=NULL);
     /*!
       Launches a depth first search on all variables
       with variable ordering 'heu' and restart policy 'pol'.
       Returns an outcome (SAT/UNSAT/OPT/UNKNOWN) and undo all decisions before returning.
     */
-    Outcome depth_first_search(VarOrdering *heu=NULL, 
+    Outcome depth_first_search(BranchingHeuristic *heu=NULL, 
 			       RestartPolicy *pol=NULL);
     ///
-    bool limitsExpired();
+    bool limits_expired();
     /// depth first search algorithm
-    
     Outcome iterative_dfs();
-    
-//     inline Outcome iterative_dfs() 
-//     {
-//       int status = UNKNOWN;
-//       while(status == UNKNOWN) {
-// 	if(propagate()) {
-
-// 	  std::cout << (*this) << std::endl;
-
-// 	  if( sequence.empty() ) status = satisfied();
-// 	  else branchLeft();
-// 	} else {
-// 	  if( decision.empty() ) status = UNSAT;
-// 	  else if( limitsExpired() ) status = LIMITOUT;
-// 	  else branchRight();
-// 	}
-//       }
-//       return status;
-//     }
     //@}
 
 
@@ -320,13 +463,19 @@ namespace Mistral {
     //@{
     void debug_print();
     void full_print();
-    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::ostream& display(std::ostream&) ;
     //@}
   };
 
 
-  std::ostream& operator<< (std::ostream& os, const Solver& x);
-  std::ostream& operator<< (std::ostream& os, const Solver* x);
+  std::ostream& operator<< (std::ostream& os, Solver& x);
+  std::ostream& operator<< (std::ostream& os, Solver* x);
+
+  std::ostream& operator<< (std::ostream& os, ConstraintQueue& x);
+  std::ostream& operator<< (std::ostream& os, ConstraintQueue* x);
+
+  std::ostream& operator<< (std::ostream& os, const SolverStatistics& x);
+  std::ostream& operator<< (std::ostream& os, const SolverStatistics* x);
 
 }
 

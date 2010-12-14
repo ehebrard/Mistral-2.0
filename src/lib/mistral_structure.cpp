@@ -26,3 +26,27 @@
 // std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitSet& s) {
 //   return (os << (std::string)s);
 // }
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack* x) {
+  return x->display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue* x) {
+  return x->display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet* x) {
+  return x->display(os);
+}
