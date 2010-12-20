@@ -37,7 +37,7 @@ Mistral::Constraint::Constraint(Vector< Variable >& scp) {
   //weight = 1.0;
   //initialise(scp);
   for(unsigned int i=0; i<scp.size; ++i) {
-    scope.add(scp[i]);
+    scope.add(scp[i].get_var());
   }
 }
 
@@ -527,7 +527,8 @@ void Mistral::ConstraintCliqueNotEqual::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i)
     trigger_on(_value_, i);
-  set_idempotent(false);
+  //set_idempotent(false);
+  set_idempotent(true);
 }
 
 Mistral::ConstraintCliqueNotEqual::~ConstraintCliqueNotEqual() 
@@ -536,17 +537,76 @@ Mistral::ConstraintCliqueNotEqual::~ConstraintCliqueNotEqual()
 
 Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate() 
 {
-  unsigned int i, j;
-  int ground_var, active_var, value;
+  
+// //
+// //    
+
+//   if(scope[0].id() == 0) {
+//     std::cout << std::endl;
+//     std::cout << "propagate " << this << std::endl;
+//     std::cout << scope[0] << " " << scope[0].get_domain() ;
+//     for(int x=0; x<scope.size; ++x) {
+//       std::cout << ", " << scope[x] << " " << scope[x].get_domain() ;
+//     }
+//     std::cout << std::endl;
+//     std::cout << "changes: " << changes << std::endl;
+//     std::cout << "active: " << active << std::endl;
+//   }
+
+  unsigned int i, j, n=active.size, m;
+  int active_var, value;
+  //Event evt;
   for(i=0; i<changes.size; ++i) {
-    ground_var = changes[i];
-    value = scope[ground_var].get_min();
+    //ground_var = changes[i];
+    value = scope[changes[i]].get_min();
     
-    for(j=0; j<active.size; ++j) {
-      active_var = active[j];
-      if(scope[active_var].remove(value) == FAIL_EVENT) return FAILURE(active_var);
+    for(j=i+1; j<changes.size; ++j) {
+      if(scope[changes[j]].get_min() == value) {
+	return FAILURE(changes[j]);
+      } 
+    }
+
+    // since the set of active variables my change while
+    // processing this loop, we do it backward
+    for(j=n; j; --j) {
+    //for(j=0; j<active.size; ++j) {
+      active_var = active[j-1];
+      //evt = scope[active_var].remove(value);
+      if(scope[active_var].remove(value) == FAIL_EVENT) 
+	return FAILURE(active_var);
     }
   }
+
+
+  /// The following is to ensure idempotency
+  m = active.size;
+//   if(scope[0].id() == 0) {
+//   std::cout << m << " . " << n << std::endl; 
+//   }
+  while(m < n) {
+    for(i=m; i<n; ++i) {
+      value = scope[active[i]].get_min();
+      for(j=i+1; j<n; ++j)
+	if(scope[active[j]].get_min() == value)
+	  return FAILURE(active[j]);
+      for(j=m; j; --j) {
+	active_var = active[j-1];
+	if(scope[active_var].remove(value) == FAIL_EVENT) 
+	  return FAILURE(active_var);
+      }
+    }
+    n = m;
+    m = active.size;
+  }
+
+//   if(scope[0].id() == 0) {
+//   std::cout << scope[0] << " " << scope[0].get_domain() ;
+//   for(int x=1; x<scope.size; ++x) {
+//     std::cout << ", " << scope[x] << " " << scope[x].get_domain() ;
+//   }
+//   std::cout << std::endl;
+//   }
+
   return CONSISTENT;
 }
 
@@ -562,7 +622,7 @@ int Mistral::ConstraintCliqueNotEqual::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const {
-  os << "alldiff(" << scope[0] ;
+  os << "cliqueNE(" << scope[0] ;
   for(unsigned int i=1; i<scope.size; ++i) 
     os << " ," << scope[i];
   os << ")" ;
@@ -791,42 +851,13 @@ int Mistral::ConstraintAllDiff::filterupper()
 
 Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate() 
 {
-  unsigned int i; //, a, b;
+  unsigned int i, a, b;
 
   int status_lower, status_upper;
   int l, u;
 
-//   a = 0;
-//   b = scope.size;
-
-//   //if( lastLevel != ((solver->level) - 1) ) {
-//   if( lastLevel != ((*level) - 1) ) {
-//     // not incremental
-//     status_lower = CHANGES;
-//     status_upper = CHANGES;
-//     i = 0;
-//     while (i < scope.size) {
-//       iv[i].min = scope[i].get_min();
-//       iv[i].max = scope[i].get_max();
-//       i++;
-//     }
-//   }
-//   else {
-//     // incremental
-//     status_lower = NO_CHANGES;
-//     status_upper = NO_CHANGES;
-//     for( i = a; i < b; i++ ) {
-//       l = iv[i].min;
-//       u = iv[i].max;
-//       iv[i].min = scope[i].get_min();
-//       iv[i].max = scope[i].get_max();
-//       if( l != iv[i].min ) status_lower = CHANGES;
-//       if( u != iv[i].max ) status_upper = CHANGES;
-//     }
-//   }
-
-  //a = 0;
-  //b = scope.size;
+   a = 0;
+   b = scope.size;
 
   //if( lastLevel != ((solver->level) - 1) ) {
   if( lastLevel != ((*level) - 1) ) {
@@ -844,30 +875,59 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
     // incremental
     status_lower = NO_CHANGES;
     status_upper = NO_CHANGES;
-    //for( i = a; i < b; i++ ) {
-
-    //std::cout << "ccc " ;
-    for(unsigned int j=0; j<changes.size; ++j) {
-      i = changes[j];
-//       std::cout << i << " ";
-//     }
-//     std::cout << std::endl;
-
-//     std::cout << "rrr " ;
-//     for( i = a; i < b; i++ ) {
-
+    for( i = a; i < b; i++ ) {
       l = iv[i].min;
       u = iv[i].max;
       iv[i].min = scope[i].get_min();
       iv[i].max = scope[i].get_max();
-
-      //      if( l != iv[i].min || u != iv[i].max ) std::cout << i << " ";
-
       if( l != iv[i].min ) status_lower = CHANGES;
       if( u != iv[i].max ) status_upper = CHANGES;
     }
-    //    std::cout << std::endl << std::endl;
   }
+
+//   //a = 0;
+//   //b = scope.size;
+
+//   //if( lastLevel != ((solver->level) - 1) ) {
+//   if( lastLevel != ((*level) - 1) ) {
+//     // not incremental
+//     status_lower = CHANGES;
+//     status_upper = CHANGES;
+//     i = 0;
+//     while (i < scope.size) {
+//       iv[i].min = scope[i].get_min();
+//       iv[i].max = scope[i].get_max();
+//       i++;
+//     }
+//   }
+//   else {
+//     // incremental
+//     status_lower = NO_CHANGES;
+//     status_upper = NO_CHANGES;
+//     //for( i = a; i < b; i++ ) {
+
+//     //std::cout << "ccc " ;
+//     for(unsigned int j=0; j<changes.size; ++j) {
+//       i = changes[j];
+// //       std::cout << i << " ";
+// //     }
+// //     std::cout << std::endl;
+
+// //     std::cout << "rrr " ;
+// //     for( i = a; i < b; i++ ) {
+
+//       l = iv[i].min;
+//       u = iv[i].max;
+//       iv[i].min = scope[i].get_min();
+//       iv[i].max = scope[i].get_max();
+
+//       //      if( l != iv[i].min || u != iv[i].max ) std::cout << i << " ";
+
+//       if( l != iv[i].min ) status_lower = CHANGES;
+//       if( u != iv[i].max ) status_upper = CHANGES;
+//     }
+//     //    std::cout << std::endl << std::endl;
+//   }
 
   lastLevel = *level;//(solver->level);
   //lastLevel = (solver->level);
@@ -876,6 +936,8 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
     return CONSISTENT;
 
   sortit();
+
+
 
   status_lower = filterlower();
   if( status_lower != INCONSISTENT )

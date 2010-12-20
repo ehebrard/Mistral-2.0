@@ -59,10 +59,6 @@ namespace Mistral {
 
   protected:
 
-    // used to post/relax the constraints on the right triggers
-    int *trigger;
-    int *self;
-
     /// The trail, used for backtracking
     Vector< int > trail_;
 
@@ -77,6 +73,10 @@ namespace Mistral {
 
     /*!@name Parameters*/
     //@{
+    // used to post/relax the constraints on the right triggers
+    int *trigger;
+    int *self;
+
     ///
     Solver *solver;
     /// The constrained variables.
@@ -133,6 +133,7 @@ namespace Mistral {
       changes.size = events.size;
       // before each propagation, the lists events and changes are swapped 
       if(changes.list_ != events.list_) {
+
 	// make the changes list points to the events list, and clear the other
 	events.size = 0;
 	

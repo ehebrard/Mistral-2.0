@@ -43,6 +43,13 @@ Mistral::Variable::Variable(VariableImplementation* impl, const int type) {
 Mistral::Variable::Variable(Expression* impl) {
   domain_type = EXPRESSION;
   implementation = (VariableImplementation*)impl;
+
+  
+
+//   std::cout << "create a new expression: "
+// 	    << impl << " " << domain_type << std::endl;
+//   //this << std::endl;
+
 }
 
 Mistral::Variable::Variable(const int lo, const int up, const int type) {
@@ -70,12 +77,21 @@ Mistral::Variable::Variable(const int lo, const int up, const int type) {
   }
 }
 
+
+Mistral::Variable Mistral::Variable::get_var() {
+  if(domain_type == EXPRESSION)
+    return ((Expression*)implementation)->self;
+  return *this;
+}
+
 std::ostream& Mistral::Variable::display(std::ostream& os) const {
   if(domain_type == EXPRESSION) {
     Expression *exp = (Expression*)implementation;
+    if(exp->is_initialised())
+      os << exp->self << ":";
     os << exp->get_name()
        << "(" << exp->children[0];
-    for(unsigned int i=1; i<exp->children.size; ++i) {
+    for(unsigned int i=1; i<exp->children.size-exp->is_initialised(); ++i) {
       os << ", " << exp->children[i];
     }
     os << ")";
@@ -108,20 +124,36 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
   if(domain_type == EXPRESSION) {
 
 //     std::cout << "Add a new expression: " << this 
-// 	      << (top ? " at top-level" : " nested")
-// 	      << std::endl;
-
+//  	      << (top ? " at top-level" : " nested")
+//  	      << std::endl;
+    
     Expression *exp = (Expression*)implementation;
-    for(unsigned int i=0; i<exp->children.size; ++i) 
-      exp->children[i].initialise(s, false);
-    if(top) s->add(exp->extract_constraint());
-    else {
-      //if()
-      exp->extract_variable(*this);
-      this->initialise(s,false);
-
-      s->add(exp->extract_predicate());
+    if(!exp->is_initialised()) {
+      for(unsigned int i=0; i<exp->children.size; ++i) {
+	//	std::cout << this << " add child" << std::endl; 
+	exp->children[i].initialise(s, false);
+	exp->children[i] = exp->children[i].get_var();
+      }
+      if(top) {
+	//Constraint *con = 
+	  exp->extract_constraint(s);
+	//	std::cout << this << " extract constraint: " << con << std::endl; 
+	  //s->add(con);
+      } else {
+	
+	//	std::cout << this << " extract variable " << std::endl;
+	exp->extract_variable(s);
+	//exp->self.initialise(s,false);
+	
+	//	std::cout << "now: " << this << std::endl;
+	
+	//s->add(
+	exp->extract_predicate(s);//);
+      }
     }
+
+    //    else std::cout << this << " is known " << std::endl;
+
   } else {
     if(domain_type != CONST_VAR && implementation->solver != s) {
 
@@ -130,12 +162,17 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
       implementation->solver = s;
       implementation->id = s->declare(*this);
 
-      //std::cout << "declare a new variable: " << (*this) << std::endl;
-
       if(domain_type == BOOL_VAR) domain_type = 
 				    //(int)(new int[1]);
 				    (int)(s->getNextBooleanSlot());
-    }
+
+      s->sequence.declare(*this);
+
+//       std::cout << "declare a new variable: " << this 
+// 		<< " in " << this->get_domain() << std::endl;
+    } 
+
+    //    else std::cout << this << " is known " << std::endl;
   }
 }
 
@@ -597,7 +634,8 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitsetDomain
   }
 Mistral::Expression::~Expression() {}
 
-  Mistral::BinaryExpression::BinaryExpression(Variable X, Variable Y) {
+  Mistral::BinaryExpression::BinaryExpression(Variable X, Variable Y) 
+    : Expression() {
     children.add(X);
     children.add(Y);
   }
@@ -608,26 +646,28 @@ Mistral::Expression::~Expression() {}
   : BinaryExpression(X,Y) {}
   Mistral::AddExpression::~AddExpression() {}
   
-Mistral::Constraint* Mistral::AddExpression::extract_constraint() {
-    return NULL;
-  }
+void Mistral::AddExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Add predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
 
-  void Mistral::AddExpression::extract_variable(Variable& x) {
-    int lb = children[0].get_min()+children[1].get_min();
-    int ub = children[0].get_max()+children[1].get_max();
+  void Mistral::AddExpression::extract_variable(Solver *s) {
+    int lb = children[0].get_var().get_min()+children[1].get_var().get_min();
+    int ub = children[0].get_var().get_max()+children[1].get_var().get_max();
     
     Variable aux(lb, ub, (RANGE_VAR | BOOL_VAR));
-    x = aux;
+    self = aux;
 
-    children.add(x);
+    children.add(self);
+    self.initialise(s, false);
   }
 
 const char* Mistral::AddExpression::get_name() {
   return "add";
 }
 
-  Mistral::Constraint* Mistral::AddExpression::extract_predicate() {
-    return new PredicateAdd(children);
+  void Mistral::AddExpression::extract_predicate(Solver *s) {
+    s->add(new PredicateAdd(children));
   }
 
 Mistral::Variable Mistral::Variable::operator+(Variable x) {
@@ -640,25 +680,29 @@ Mistral::Variable Mistral::Variable::operator+(Variable x) {
   : BinaryExpression(X,Y) {}
   Mistral::SubExpression::~SubExpression() {}
   
-Mistral::Constraint* Mistral::SubExpression::extract_constraint() {
-    return NULL;
+void Mistral::SubExpression::extract_constraint(Solver *s) {
+      std::cerr << "Error: Sub predicate can't be used as a constraint" << std::endl;
+  exit(0);
   }
 
-  void Mistral::SubExpression::extract_variable(Variable& x) {
-    int lb = children[0].get_min()-children[1].get_max();
-    int ub = children[0].get_max()-children[1].get_min();
+  void Mistral::SubExpression::extract_variable(Solver *s) {
+    int lb = children[0].get_var().get_min()-children[1].get_var().get_max();
+    int ub = children[0].get_var().get_max()-children[1].get_var().get_min();
     
     Variable aux(lb, ub, (RANGE_VAR | BOOL_VAR));
-    x = aux;
+    self = aux;
 
-    children.add(x);
+    children.add(self);
+    self.initialise(s, false);
   }
 
-  Mistral::Constraint* Mistral::SubExpression::extract_predicate() {
+  void Mistral::SubExpression::extract_predicate(Solver *s) {
     Constraint *sub = new PredicateAdd();
-    for(int i=3; i;) sub->scope.add(children[--i]);
-    sub->initialise();
-    return sub;
+    for(int i=3; i;) sub->scope.add(children[--i]// .get_var()
+				    );
+    //sub->initialise();
+    //return sub;
+    s->add(sub);
   }
 
 const char* Mistral::SubExpression::get_name() {
@@ -677,23 +721,26 @@ Mistral::Variable Mistral::Variable::operator-(Variable x) {
   : BinaryExpression(X,Y) {}
   Mistral::NeqExpression::~NeqExpression() {}
   
-Mistral::Constraint* Mistral::NeqExpression::extract_constraint() {
-    Constraint *neq = new ConstraintNotEqual(children);
-    neq->initialise();
-    return neq;
+void Mistral::NeqExpression::extract_constraint(Solver *s) {
+//     Constraint *neq = new ConstraintNotEqual(children);
+//     neq->initialise();
+//     return neq;
+  s->add(new ConstraintNotEqual(children));
   }
 
-  void Mistral::NeqExpression::extract_variable(Variable& x) {
+  void Mistral::NeqExpression::extract_variable(Solver *s) {
     Variable aux(0, 1, BOOL_VAR);
-    x = aux;
+    self = aux;
 
-    children.add(x);
+    children.add(self);
+    self.initialise(s, false);
   }
 
-  Mistral::Constraint* Mistral::NeqExpression::extract_predicate() {
-    Constraint *neq = new PredicateEqual(children, false);
-    neq->initialise();
-    return neq;
+  void Mistral::NeqExpression::extract_predicate(Solver *s) {
+//     Constraint *neq = new PredicateEqual(children, false);
+//     neq->initialise();
+//     return neq;
+    s->add(new PredicateEqual(children, false));
   }
 
 const char* Mistral::NeqExpression::get_name() {
@@ -706,30 +753,97 @@ Mistral::Variable Mistral::Variable::operator!=(Variable x) {
 }
 
 
-Mistral::AllDiffExpression::AllDiffExpression(Vector< Variable >& args) 
-  : Expression(args) {}
+
+
+Mistral::PrecedenceExpression::PrecedenceExpression(Variable X, Variable Y, const int of) 
+  : BinaryExpression(X,Y) { offset = of; }
+Mistral::PrecedenceExpression::~PrecedenceExpression() {offset = 0;}
+  
+void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
+  s->add(new ConstraintLess(children, offset));
+  }
+
+  void Mistral::PrecedenceExpression::extract_variable(Solver *s) {
+    Variable aux(0, 1, BOOL_VAR);
+    self = aux;
+
+    children.add(self);
+    self.initialise(s, false);
+  }
+
+  void Mistral::PrecedenceExpression::extract_predicate(Solver *s) {
+//     Constraint *prec = new PredicateLess(children, offset);
+//     prec->initialise();
+//     return prec;
+//    return NULL;
+      std::cerr << "Error: Precedence constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+  }
+
+const char* Mistral::PrecedenceExpression::get_name() {
+  return "prec";
+}
+
+Mistral::Variable Mistral::Variable::operator<(Variable x) {
+  Variable exp(new PrecedenceExpression(*this,x,1));
+  return exp;
+}
+
+Mistral::Variable Mistral::Variable::operator>(Variable x) {
+  Variable exp(new PrecedenceExpression(x,*this,1));
+  return exp;
+}
+
+Mistral::Variable Mistral::Variable::operator<=(Variable x) {
+  Variable exp(new PrecedenceExpression(*this,x));
+  return exp;
+}
+
+Mistral::Variable Mistral::Variable::operator>=(Variable x) {
+  Variable exp(new PrecedenceExpression(x,*this));
+  return exp;
+}
+
+
+
+Mistral::AllDiffExpression::AllDiffExpression(Vector< Variable >& args, const int ct) 
+  : Expression(args) { consistency_level = ct; }
 
 Mistral::AllDiffExpression::~AllDiffExpression() {}
 
-Mistral::Constraint* Mistral::AllDiffExpression::extract_constraint() { 
-  Constraint *con = new ConstraintAllDiff(children); 
-  con->initialise();
-  return con;
+void Mistral::AllDiffExpression::extract_constraint(Solver *s) { 
+//   Constraint *con = new ConstraintAllDiff(children); 
+//   con->initialise();
+//   return con;
+  if(consistency_level == BOUND_CONSISTENCY)
+    s->add(new ConstraintAllDiff(children)); 
+  s->add(new ConstraintCliqueNotEqual(children)); 
+//   Vector< Variable > pair;
+//   for(unsigned int i=0; i<children.size-1; ++i)
+//     for(unsigned int j=i+1; j<children.size; ++j) {
+//       pair.clear();
+//       pair.add(children[i]);
+//       pair.add(children[j]);
+//       s->add(new ConstraintNotEqual(pair));
+//     }
 }
 
-void Mistral::AllDiffExpression::extract_variable(Variable& x) {
+void Mistral::AllDiffExpression::extract_variable(Solver *s) {
+      std::cerr << "Error: Precedence constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
 }
 
-Mistral::Constraint* Mistral::AllDiffExpression::extract_predicate() { 
-  return NULL; 
+void Mistral::AllDiffExpression::extract_predicate(Solver *s) { 
+      std::cerr << "Error: Precedence constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
 }
 
 const char* Mistral::AllDiffExpression::get_name() {
   return "alldiff";
 }
 
-Mistral::Variable Mistral::AllDiff(Vector< Variable >& args) {
-  Variable exp(new AllDiffExpression(args));
+Mistral::Variable Mistral::AllDiff(Vector< Variable >& args, const int ct) {
+  Variable exp(new AllDiffExpression(args,ct));
   return exp;
 }
 
@@ -815,5 +929,6 @@ Mistral::Variable Mistral::AllDiff(Vector< Variable >& args) {
 //   }
 
 // };
+
 
 

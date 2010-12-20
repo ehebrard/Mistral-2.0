@@ -25,46 +25,58 @@
     \brief Header for the reversible structures
 */
 
-
-//#include <mistral_solver.hpp>
-
-
-
-#ifndef __BACKTRACK_HPP
-#define __BACKTRACK_HPP
+#ifndef _MISTRAL_BACKTRACK_HPP
+#define _MISTRAL_BACKTRACK_HPP
 
 #include <mistral_global.hpp>
 
 
-/*!
-  A reversible structure implements:
-  - a pointer to the store of reversible objects
-  - a pointer to the current level
-  - the level of last modification
-  - a function save
-  - a function restore
 
-  Upon the first modification, it should:
-  1/ put itself on the store for the current level
-  
-  When a new node is open, the save() function will be called on every stored object
-  
-  Upon backtrack over the current level, the restore() function will be called
- */
 
 namespace Mistral {
 
 
+  /*!
+  A reversible structure keeps a pointer to an
+  "Environment" (i.e., Solver) that manages the
+  backtracking process.
+  Second, it implements a virtual function restore
+  that "undo" the last change. 
+  Most reversible structures work this way:
+  A Vector<int> trail_ is used to encode the
+  delta-information used to undo. The last
+  integer stored on the trail_ Vector is the
+  value of solver->level when the last change
+  occured. It is used, when changing the object,
+  to decide if one should "save" the current state,
+  or simply replace the current value.
+
+  It is still undecided if this process can be 
+  made generic enough so that we can make 
+  restore() a static method.
+ */
+
+
+  /*! \class Environment
+    \brief The minimal structures used to control the backtracking process
+  */
+  /********************************************
+   * Environement Objects
+   ********************************************/
   class Reversible;
   class Environment {
-    public:
+  public:
     
+    /*!@name Parameters*/
+    //@{
     int level;
-    
     Vector< Reversible* > saved_objs;
+    //@}
 
+    /*!@name Backtrack method*/
+    //@{
     void save(Reversible *r);
-
+    //@}
   };
 
 
@@ -89,27 +101,15 @@ namespace Mistral {
 
     /*!@name Constructors*/
     //@{
-    Reversible() {}
-    Reversible(Environment *s) {env=s;}
+    Reversible() { env=NULL; }
+    Reversible(Environment *s) {initialise(s);}
+    void initialise(Environment *s) {env=s;}
     virtual ~Reversible() {}
-    //@}
-
-    /*!@name Modification method*/
-    //@{
     //@}
 
     /*!@name Backtrack method*/
     //@{
     virtual void restore() = 0; 
-    //virtual void save() = 0; 
-    //@}
-
-    /*!@name Miscellaneous*/
-    //@{
-    /// Print on out stream
-    virtual void debug_print() const {
-      std::cout << "r" << std::endl;
-    }
     //@}
   };
 
@@ -133,8 +133,24 @@ namespace Mistral {
     //@}
 
     /*!@name Constructors*/
-    //@{  
-    ReversibleNum(PRIMITIVE_TYPE& v, Environment *s) : Reversible(s)
+    //@{ 
+    ReversibleNum() : Reversible() {
+      value = NOVAL;
+    }
+    ReversibleNum(const PRIMITIVE_TYPE v, Environment *s) 
+      : Reversible(s)
+    {
+      Reversible::initialise(s);
+      initialise(v);
+    }
+
+    void initialise(const PRIMITIVE_TYPE v, Environment *s) 
+    {
+      Reversible::initialise(s);
+      initialise(v);
+    }
+
+    void initialise(const PRIMITIVE_TYPE v) 
     {
       value = v;
       trail_.initialise(0, 16);
@@ -152,27 +168,15 @@ namespace Mistral {
     /*!@name Backtrack*/
     //@{
     inline void save() { 
-//       int lvl = env->level;
-//       if(current_level != lvl) { 
-// 	env->save(this); 
-// 	trail_.add(value); 
-// 	trail_.add(lvl); 
-//       } 
-//       if(current_level != env->level) { 
-// 	env->save(this); 
-// 	trail_.add(value); 
-// 	trail_.add(env->level); 
-//       } 
-
-      if(trail_.back() != env->level) { 
+      if((int)trail_.back() != env->level) { 
 	env->save(this); 
-	trail_.add(value); 
+	trail_.add((int)value); 
 	trail_.add(env->level); 
       } 
     }
     void restore() { 
       trail_.pop();//current_level); 
-      trail_.pop(value); 
+      value = (PRIMITIVE_TYPE)(trail_.pop()); 
     }
     //@}
 
@@ -200,12 +204,10 @@ namespace Mistral {
   /*! \class ReversibleIntStack
     \brief Backtrackable IntStack
   */
-  //typedef IntegerStack< ReversibleNum< unsigned int > > ReversibleIntStack;
   class ReversibleIntStack : public Reversible, public IntStack {
     
   public:
-    Vector< unsigned int > trail_;
-    Vector< int > lvl_;
+    Vector< int > trail_;
     
     ReversibleIntStack(const int lb, const int ub, bool full=true)
     {
@@ -219,16 +221,43 @@ namespace Mistral {
     virtual void initialise(const int lb, const int ub, const bool full=true)
     {
       IntStack::initialise(lb, ub, full);
-      trail_.initialise(0, (ub-lb+1));
+      trail_.initialise(0, 2*(ub-lb+1));
+      trail_.add(-1);
     }
     
-    virtual void restore() { trail_.pop(size); } 
-    virtual void save() {}
-
-    void _save_() {
-
+    virtual void restore() { size = trail_.pop(); } 
+    inline void save() { 
+      if(trail_.back() != env->level) {
+	trail_.add(size);
+	trail_.add(env->level);
+	env->save(this);
+      }
     }
- 
+
+    // it's either 'add's...
+    inline void reversible_add(const int elt) {
+      save();
+      add(elt);
+    }
+
+    // ...or erase, but not both!!
+    inline void reversible_erase(const int elt) {
+      save();
+      erase(elt);
+    }
+
+    inline int reversible_pop()
+    {
+      save();
+      return pop();
+    }
+
+    inline int reversible_popHead()
+    {
+      save();
+      return popHead();
+    }
+    
 
   };
 
@@ -396,9 +425,6 @@ namespace Mistral {
       return *this;
     }
 
-//     std::string getString() const {
-//       return (constraint ? constraint->getString() : ".");
-//     }
     virtual std::ostream& display(std::ostream& os) const {
       if(constraint) 
 	os << constraint;

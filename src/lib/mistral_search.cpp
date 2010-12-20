@@ -68,6 +68,25 @@ Mistral::Variable Mistral::NoOrder::select() {
   return solver->sequence.back();
 }
 
+Mistral::Lexicographic::Lexicographic(Solver *s) 
+  : VarOrdering(s) {
+  last.initialise(0,s);
+}
+
+void Mistral::Lexicographic::initialise(Solver *s) {
+  VarOrdering::initialise(s);
+  last.initialise(0,s);
+}
+
+Mistral::Lexicographic::~Lexicographic() {}
+
+Mistral::Variable Mistral::Lexicographic::select() {
+  while(last<solver->variables.size && solver->variables[last].isGround()) { 
+    ++last;
+  }
+  return solver->variables[last];
+}
+
 // Mistral::IntVar Mistral::Search::backtrack() {
 //   unsigned int i = sequence.size;
 //   trail_.pop(sequence.size);

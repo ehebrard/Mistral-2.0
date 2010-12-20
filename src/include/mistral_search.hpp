@@ -147,6 +147,21 @@ namespace Mistral {
 
   };
 
+  class Lexicographic : public VarOrdering {
+
+  public: 
+    
+    ReversibleNum< unsigned int > last;
+
+    Lexicographic() {}
+    Lexicographic(Solver *s);
+    void initialise(Solver *s);
+    virtual ~Lexicographic();
+    
+    Variable select();
+
+  };
+
 
   /**********************************************
    * Variable Selection

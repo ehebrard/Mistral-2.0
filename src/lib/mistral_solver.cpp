@@ -20,13 +20,26 @@
   The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 */
 
+#include <sstream>
+#include <signal.h>
 
 #include <mistral_search.hpp>
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
-#include <sstream>
 
+
+Mistral::Solver* active_solver;
+static void Mistral_SIGINT_handler(int signum) {
+  std::cout << std::endl 
+	    << " c ********************************* INTERRUPTED *********************************" 
+	    << std::endl;
+  //mistral_solver->closeSearch();
+  std::cout << active_solver->statistics << std::endl
+	    << " c ********************************* INTERRUPTED *********************************" 
+	    << std::endl;
+  exit(1);
+}
 
 
 Mistral::SolverParameters::SolverParameters() {}
@@ -58,7 +71,7 @@ void Mistral::SolverParameters::copy(const SolverParameters& sp) {
 Mistral::SolverStatistics::SolverStatistics() {}
 Mistral::SolverStatistics::~SolverStatistics() {}
 void Mistral::SolverStatistics::initialise() {
-  num_nodes = 0; 
+  num_nodes = -1; 
   num_restarts = 0; 
   num_backtracks = 0;
   num_failures = 0; 
@@ -154,7 +167,121 @@ Mistral::ConstraintQueue::ConstraintQueue()
   higher_priority  = -1;
   triggers = NULL;
   taboo_constraint = NULL;
+//   min_index = NULL;
+//   max_index = NULL;
 }
+
+
+// void Mistral::ConstraintQueue::initialise()
+// {
+// //   cardinality = 1;
+// //   triggers = new Queue[cardinality];
+// // //   min_index = new int[cardinality];
+// // //   max_index = new int[cardinality];
+
+// //   for(int i=0; i<cardinality; ++i) {
+// //     triggers[i].initialise(8);
+// // //     min_index[i] = 0;
+// // //     max_index[i] = size-1;
+// //   }
+
+// //   _set_.initialise(0,size,BitSet::empt);
+// }
+
+void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
+  int cons_idx = c->id;
+  int cons_priority = c->priority;
+
+  int new_min_p = min_priority;
+  int new_max_p = min_priority+cardinality-1;
+
+  if(cons_idx == 0) solver = s;
+
+//   std::cout << std::endl << "declare " << cons_idx << " ("
+// 	    << cons_priority << ") was: [" 
+// 	    << min_priority << ":" << min_priority+cardinality-1
+// 	    << "]" << std::endl;
+//   std::cout << this << std::endl;
+  
+  if(cons_priority < new_min_p || cons_priority > new_max_p) {
+    if(cons_priority < new_min_p) new_min_p = cons_priority;
+    if(cons_priority > new_max_p) new_max_p = cons_priority;
+
+    int new_cardinality = (new_max_p-new_min_p+1);
+
+//     int *aux_min_idx = min_index;
+//     min_index = new int[new_cardinality];
+//     int *aux_max_idx = max_index;
+//     max_index = new int[new_cardinality];
+
+    Queue *aux_triggers = triggers;
+    triggers = new Queue[new_cardinality];
+    triggers -= new_min_p;
+//     min_index -= new_min_p;
+//     max_index -= new_min_p;
+
+    for(int i=min_priority; i<cardinality; ++i) {
+
+      //std::cout << "make a copy of " << i << ": "<< aux_triggers[i] << std::endl;
+      triggers[i] = aux_triggers[i];
+      aux_triggers[i].cancel();
+
+      //std::cout << "=> " << i << ": " << triggers[i] << std::endl;
+//       min_index[i] = aux_min_idx[i];
+//       max_index[i] = aux_max_idx[i];
+    }
+
+// //     for(int i=new_min_p; i<min_priority; ++i) {
+// //       //min_index
+// //       //triggers[i].initialise(cons_idx, cons_idx, true);
+// //     }
+
+//     std::cout << triggers[cons_priority] 
+// 	      << " cannot hold " << cons_idx
+// 	      << std::endl;
+
+    triggers[cons_priority].initialise(cons_idx, cons_idx+7);
+
+//     std::cout << "now it can: " << triggers[cons_priority] 
+// 	      << std::endl;
+
+    //triggers[cons_priority].add(cons_idx);
+
+//     std::cout << "now it does: " << triggers[cons_priority] 
+// 	      << std::endl;
+
+    aux_triggers += min_priority;
+    delete [] aux_triggers;
+
+    min_priority = new_min_p;
+    cardinality = new_cardinality;
+  } else {
+
+    
+//     std::cout << triggers[cons_priority] 
+// 	      << " can hold " << cons_idx
+// 	      << std::endl;
+
+    //triggers[cons_priority].declare(cons_idx);
+    triggers[cons_priority].extend(cons_idx);
+  }
+
+  //_set_.declare(cons_idx);
+
+  _set_.extend(cons_idx);
+  
+//   std::cout << _set_ << std::endl;
+
+//   //_set_.fastAdd(cons_idx);
+
+//   std::cout << _set_ << std::endl;
+
+  trigger(c);
+
+
+  //std::cout << this << std::endl << std::endl;
+}
+
 void Mistral::ConstraintQueue::initialise(Solver *s)
 {
   solver = s;
@@ -168,6 +295,7 @@ void Mistral::ConstraintQueue::initialise(Solver *s)
   }
   initialise(min_p, max_p, s->constraints.size);
 }
+
 void Mistral::ConstraintQueue::initialise(const int min_p, 
 					  const int max_p,
 					  const int size)
@@ -186,75 +314,106 @@ Mistral::ConstraintQueue::~ConstraintQueue() {
   delete [] triggers;
 }
 
-// void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Event evt)//;
-// {
+void Mistral::ConstraintQueue::trigger(Constraint* cons)//;
+{
+#ifdef _DEBUG_AC
+  std::cout << " initial trigger for " << cons << "(" << (cons->id) << ")" << std::endl;
+#endif
+
+  int priority = cons->priority, cons_id = cons->id, triggered=false;
+  Event evt;
+  
+
+  for(unsigned int i=0; i<cons->scope.size; ++i) {
+    evt = (cons->scope[i].isGround() ? VALUE_EVENT : RANGE_EVENT);
+    if(EVENT_TYPE(evt) < cons->trigger[i]) {
+      cons->events.add(i);
+      cons->event_type[i] = evt;
+      triggered=true;
+    }
+  }
+  if(triggered) {
+    _set_.fastAdd(cons_id);
+    if(priority > higher_priority) higher_priority = priority;
+    triggers[priority].add(cons_id);
+  }
+  
+}
+
+void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Event evt)//;
+{
+
+#ifdef _DEBUG_AC
+  std::cout << "  triggers " << cons << "(" << (cons->id) << ") by " 
+	    << cons->scope[var] << std::endl;
+#endif
+
+
+  if(cons != taboo_constraint) {
+    int priority = cons->priority, cons_id = cons->id;
+    if(_set_.fastContain(cons_id)) {
 
 // #ifdef _DEBUG_AC
-//   std::cout << "  triggers " << cons << "(" << (cons->id) << ") by " 
-// 	    << cons->scope[var] << std::endl;
+//       std::cout << "update " << std::endl;
 // #endif
 
+      if(cons->events.contain(var)) {
+	cons->event_type[var] |= evt;
+      } else {
+	cons->events.add(var);
+	cons->event_type[var] = evt;
+      }
+    } else {
 
-//   if(cons != taboo_constraint) {
-//     int priority = cons->priority, cons_id = cons->id;
-//     if(_set_.fastContain(cons_id)) {
+// #ifdef _DEBUG_AC
+//       std::cout << "add " << std::endl;
+// #endif
 
-// // #ifdef _DEBUG_AC
-// //       std::cout << "update " << std::endl;
-// // #endif
+      _set_.fastAdd(cons_id);
+      if(priority > higher_priority) higher_priority = priority;
+      triggers[priority].add(cons_id);
+      cons->events.setTo(var);
+      //cons->events.clear();
+      //cons->events.add(var);
+      cons->event_type[var] = evt;
+    }
+  } 
 
-//       if(cons->events.contain(var)) {
-// 	cons->event_type[var] |= evt;
-//       } else {
-// 	cons->events.add(var);
-// 	cons->event_type[var] = evt;
-//       }
-//     } else {
+ #ifdef _DEBUG_AC
+  else
+    std::cout << cons << "(" << (cons->id) 
+	      << ") is currently being processed " 
+	      << std::endl;
+#endif
 
-// // #ifdef _DEBUG_AC
-// //       std::cout << "add " << std::endl;
-// // #endif
-
-//       _set_.fastAdd(cons_id);
-//       if(priority > higher_priority) higher_priority = priority;
-//       triggers[priority].add(cons_id);
-//       cons->events.setTo(var);
-//       //cons->events.clear();
-//       //cons->events.add(var);
-//       cons->event_type[var] = evt;
-//     }
-//   } 
-
-//  #ifdef _DEBUG_AC
+ #ifdef _DEBUG_AC
+  std::cout << " => " << cons->events << std::endl;
 //   else
 //     std::cout << cons << "(" << (cons->id) 
 // 	      << ") is currently being processed " 
 // 	      << std::endl;
-// #endif
+#endif
 
-//  #ifdef _DEBUG_AC
-//   std::cout << " => " << cons->events << std::endl;
-// //   else
-// //     std::cout << cons << "(" << (cons->id) 
-// // 	      << ") is currently being processed " 
-// // 	      << std::endl;
-// #endif
+}
 
-// }
 
 std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
   int elt;
   int end;
   for(int i=0; i<cardinality; ++i) {
     if(!triggers[i+min_priority].empty()) {
+
+      os << (i+min_priority) << std::endl;
+      os << triggers[i+min_priority] << std::endl;
+
       elt = triggers[i+min_priority].first();
       end = triggers[i+min_priority]._head;
       os << "P" << (i+min_priority) << ": " 
 	 << solver->constraints[elt];
       while(triggers[i+min_priority].next[elt] != end) {
 	elt = triggers[i+min_priority].next[elt];
-	os << elt << " ";
-	os.flush();
+	//os << elt << " ";
+	//os.flush();
 	os << ", " << solver->constraints[elt];
       }
       os << std::endl;
@@ -271,13 +430,15 @@ Mistral::Solver::Solver() {
   // variables & constraints
   variables.initialise(0,128);
   constraints.initialise(0,256);
+  sequence.initialise(128);
 
   // trail stuff
-  level = 0;
+  level = -1;
   saved_objs.initialise(0,4096); 
   saved_vars.initialise(0,4096); 
   saved_cons.initialise(0,4096); 
-  trail_.initialise(0,4096);
+  trail_.initialise    (0,4096);
+  decisions.initialise (0,4096);
 
   // params
   parameters.initialise();
@@ -285,30 +446,26 @@ Mistral::Solver::Solver() {
   // statistics
   statistics.initialise();
 
+  heuristic = NULL; //new GenericHeuristic< GenericDVO< MinDomain >, MinValue >(this);
+  //policy = new NoRestart();
+  policy = NULL; //new Geometric();
+
+  save();
+
   // other stuff
   //taboo_constraint = NULL;
 }
 
-void Mistral::Solver::initialise() {
-  Mistral::Variable var;
-  unsigned int i;
+// void Mistral::Solver::initialise() {
+// //   // THE IDEA IS TO HAVE LESS AND LESS STUFF IN HERE
+// //   // WHEN IT'S EMPTY WE CAN DO EVERYTHING DYNAMICALLY
+// //   //sequence.initialise(variables, false);
+// //   active_constraints.initialise(this);
 
-  sequence.initialise(variables, false);
-  trail_.initialise(0, 4*variables.size);
-  decisions.initialise(0, variables.size);
-  active_constraints.initialise(this);
-
-  // trigger everything in order to achieve a full propagation round 
-  for(i=0; i<variables.size; ++i) {
-    var = variables[i];
-    if(var.isGround()) trigger_event(i, VALUE_EVENT);
-    else               trigger_event(i, RANGE_EVENT);
-  }    
-
-  heuristic = NULL; //new GenericHeuristic< GenericDVO< MinDomain >, MinValue >(this);
-  //policy = new NoRestart();
-  policy = NULL; //new Geometric();
-}
+// //   // trigger everything in order to achieve a full propagation round 
+// //   for(unsigned int i=0; i<constraints.size; ++i) 
+// //     active_constraints.trigger(constraints[i]);
+// }
 
 // void Mistral::Solver::add(Mistral::Variable x) { 
 //  if(x.initialise(this, variables.size)) {    
@@ -322,7 +479,13 @@ void Mistral::Solver::initialise() {
 // }
 
 void Mistral::Solver::add(Variable x) { 
+  //std::cout << x << std::endl;
+
   x.initialise(this); 
+
+  //std::cout << x << std::endl;
+
+  //sequence.create(x);
 }
 
 int Mistral::Solver::declare(Variable x) {
@@ -343,6 +506,7 @@ void Mistral::Solver::add(Constraint* c) {
   if(c->id < 0) {
 
     //std::cout << "Add a new constraint: " << c << std::endl;
+    c->initialise();
 
     // get a name for the constraint and add it to the list
     c->id = constraints.size; 
@@ -350,7 +514,12 @@ void Mistral::Solver::add(Constraint* c) {
 
     // then post it on the constraint graph
     c->post(this);
+
+    //
+    active_constraints.declare(c, this);
+    
   }
+  //active_constraints.trigger(c);
 }
 
 
@@ -360,41 +529,13 @@ Mistral::Outcome Mistral::Solver::depth_first_search(BranchingHeuristic *heu,
   return depth_first_search(variables, heu, pol);
 }
 
-
 Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq, 
 						     BranchingHeuristic *heu, 
 						     RestartPolicy *pol) 
 {
-
-  if(statistics.start_time == 0.0) statistics.start_time = getRunTime();
-
-  sequence.clear();
-  for(unsigned int i=seq.size; i;) {
-    sequence.add(seq[--i]);
-    //sequence.back()->var_list = &sequence;
-  }
-
-  if(heu) { delete heuristic; heuristic = heu; }
-  else if(!heuristic) heuristic = new GenericHeuristic< NoOrder, MinValue >(this);
-  if(pol) { delete policy;    policy    = pol; }
-  else if(!policy) policy = new NoRestart();
-
-  //if(heuristic) delete heuristic;
-  //if(policy) delete policy;
-  //heuristic = (heu ? heu : new NoOrder(this));
-  //policy = (pol ? pol : new NoRestart());
-
-  parameters.fail_limit = policy->base;
-  parameters.limit = (policy->base > 0);
-
-  statistics.num_constraints = constraints.size;
+  initialise_search(seq, heu, pol);
 
   Outcome satisfiability = UNKNOWN;
-
-  std::cout << " c +=============================================================================+" << std::endl 
-	    << " c |      INSTANCE STATS       |                    SEARCH STATS                 |" << std::endl 
-	    << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |" << std::endl;
-
   while(satisfiability == UNKNOWN) {
 
     statistics.num_variables = sequence.size;
@@ -402,7 +543,7 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
     for(unsigned int i=0; i<sequence.size; ++i)
       statistics.num_values += sequence[i].get_size();
 
-    std::cout << statistics << std::endl;
+    if(parameters.verbosity) std::cout << statistics << std::endl;
 
     satisfiability = iterative_dfs();
 
@@ -418,6 +559,62 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
   statistics.end_time = getRunTime();
   return satisfiability;
 }
+
+Mistral::Outcome Mistral::Solver::get_next_solution()  
+{
+//   std::cout << "level: " << level << std::endl;
+//   std::cout << "num nodes: " << statistics.num_nodes << std::endl;
+//   std::cout << "decision size: " << decisions.size << std::endl;
+
+  Outcome satisfiability = UNSAT;
+  if(/*it is the first call OR there are choices to undo*/
+     statistics.num_nodes <= 1 || decisions.size
+     ) {
+    if(decisions.size) branch_right();
+    statistics.num_variables = sequence.size;
+    statistics.num_values = 0;
+    for(unsigned int i=0; i<sequence.size; ++i)
+      statistics.num_values += sequence[i].get_size();
+    
+    satisfiability = iterative_dfs();
+    
+    if(parameters.verbosity) std::cout << statistics << std::endl;
+  }
+  return satisfiability;
+}
+
+void Mistral::Solver::initialise_search(Vector< Variable >& seq, 
+					BranchingHeuristic *heu, 
+					RestartPolicy *pol) 
+{
+  if(level < 0) save();
+
+  active_solver = this;
+  signal(SIGINT,Mistral_SIGINT_handler);
+
+  if(statistics.start_time == 0.0) statistics.start_time = getRunTime();
+
+  sequence.clear();
+  for(unsigned int i=seq.size; i;) {
+    sequence.add(seq[--i]);
+  }
+
+  if(heu) { delete heuristic; heuristic = heu; }
+  else if(!heuristic) heuristic = new GenericHeuristic< NoOrder, MinValue >(this);
+  if(pol) { delete policy;    policy    = pol; }
+  else if(!policy) policy = new NoRestart();
+
+  parameters.fail_limit = policy->base;
+  parameters.limit = (policy->base > 0);
+
+  statistics.num_constraints = constraints.size;
+
+  if(parameters.verbosity)  std::cout << " c +=============================================================================+" << std::endl 
+				  << " c |      INSTANCE STATS       |                    SEARCH STATS                 |" << std::endl 
+				  << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |" << std::endl;
+}
+
+
 
 Mistral::Solver::~Solver() {
   delete heuristic;
@@ -436,50 +633,50 @@ Mistral::Solver::~Solver() {
 }
 
 
-// void Mistral::Solver::trigger_event(const int var, 
-// 				    const Mistral::Event evt) {
+void Mistral::Solver::trigger_event(const int var, 
+				    const Mistral::Event evt) {
 
-// //   std::cout << "event on "<< variables_2[var] << ": ";
-// //   if((evt & VALUE_EVENT) == VALUE_EVENT) std::cout << " it was assigned a value ";
-// //   if((evt & LB_EVENT) == LB_EVENT) std::cout << " its lower bound was increased ";
-// //   if((evt & UB_EVENT) == UB_EVENT) std::cout << " its upper bound was decreased ";
-// //   if((evt & DOMAIN_EVENT) == DOMAIN_EVENT) std::cout << " its domain lost at least one value ";
-// //   if(evt == NO_EVENT) std::cout << " (no change)";
-// //   std::cout << std::endl;
-
-
-//  #ifdef _DEBUG_AC
-//   std::cout << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
-// 	    << " event on " << variables[var] << std::endl;
-//   //std::cout << "trigger " << cons << "(" << (cons->id) << ") by a " << (is_value(evt) ? "value" : (is_range(evt) ? "range" : "domain")) << " event on " << cons->scope[var] << std::endl;
-// #endif
+//   std::cout << "event on "<< variables_2[var] << ": ";
+//   if((evt & VALUE_EVENT) == VALUE_EVENT) std::cout << " it was assigned a value ";
+//   if((evt & LB_EVENT) == LB_EVENT) std::cout << " its lower bound was increased ";
+//   if((evt & UB_EVENT) == UB_EVENT) std::cout << " its upper bound was decreased ";
+//   if((evt & DOMAIN_EVENT) == DOMAIN_EVENT) std::cout << " its domain lost at least one value ";
+//   if(evt == NO_EVENT) std::cout << " (no change)";
+//   std::cout << std::endl;
 
 
-//   Constraint *c;
-//   ConstraintNode nd;
+ #ifdef _DEBUG_AC
+  std::cout << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
+	    << " event on " << variables[var] << std::endl;
+  //std::cout << "trigger " << cons << "(" << (cons->id) << ") by a " << (is_value(evt) ? "value" : (is_range(evt) ? "range" : "domain")) << " event on " << cons->scope[var] << std::endl;
+#endif
 
-// //   if(ASSIGNED(evt))
-// //     nd = constraint_graph[var].first(_value_);
-// //   else if(BOUND_CHANGED(evt))
-// //     nd = constraint_graph[var].first(_range_);
-// //   else 
-// //     nd = constraint_graph[var].first(_domain_);
-//   nd = constraint_graph[var]->first(EVENT_TYPE(evt));
 
-//   if(ASSIGNED(evt)) {
-//     while(constraint_graph[var]->next(nd)) {
-//       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-//       c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
-//       if(c) saved_cons.add(c);
-//     }
-//     if(sequence.contain(variables[var])) sequence.remove(variables[var]);
-//   } else while(constraint_graph[var]->next(nd)) {
-//       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-//     }
+  Constraint *c;
+  ConstraintNode nd;
 
-//   wiper_idx = var;
+//   if(ASSIGNED(evt))
+//     nd = constraint_graph[var].first(_value_);
+//   else if(BOUND_CHANGED(evt))
+//     nd = constraint_graph[var].first(_range_);
+//   else 
+//     nd = constraint_graph[var].first(_domain_);
+  nd = constraint_graph[var]->first(EVENT_TYPE(evt));
+
+  if(ASSIGNED(evt)) {
+    while(constraint_graph[var]->next(nd)) {
+      active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+      c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
+      if(c) saved_cons.add(c);
+    }
+    if(sequence.contain(variables[var])) sequence.remove(variables[var]);
+  } else while(constraint_graph[var]->next(nd)) {
+      active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+    }
+
+  wiper_idx = var;
   
-// }
+}
 
 
 // void Mistral::Solver::trigger(Constraint* cons,
@@ -539,7 +736,7 @@ void Mistral::Solver::save(Variable x) {
 
 void Mistral::Solver::restore() {
   unsigned int previous_level;
-  
+
   previous_level = trail_.pop();
   while( saved_vars.size > previous_level ) 
     saved_vars.pop().restore();
@@ -609,8 +806,8 @@ bool Mistral::Solver::propagate()
     std::ostringstream o_propag;
 
     o_propag << "propagate " << (culprit) << " b/c" ;
-    for(unsigned int i=0; i<culprit->events.size; ++i) 
-      o_propag << " " << culprit->scope[culprit->events[i]];
+    for(unsigned int i=0; i<culprit->changes.size; ++i) 
+      o_propag << " " << culprit->scope[culprit->changes[i]];
     o_propag << std::endl;
     for(unsigned int i=0; i<culprit->scope.size; ++i) {
       size_before += culprit->scope[i].get_size();
@@ -621,19 +818,22 @@ bool Mistral::Solver::propagate()
 
     ++statistics.num_propagations;
 
-    //std::cout << "before freeze: " << culprit->events << std::endl;
 
-    culprit->freeze();
-    
-    //std::cout << "after freeze:  " << culprit->changes << std::endl;
+    //culprit->freeze();
+
+//     std::cout << "events of " << culprit << " after freeze: " 
+// 	      << culprit->events << std::endl;
+//     std::cout << "changes of " << culprit << " after freeze: " 
+// 	      << culprit->changes << std::endl;
 
     wiped_idx = culprit->propagate();
 
-    //std::cout << "after propagate: " << culprit->events << std::endl;
-
     culprit->defrost();
 
-    //std::cout << "after defrost: " << culprit->events << std::endl;
+//     std::cout << "events of " << culprit << " after defrost: " 
+// 	      << culprit->events << std::endl;
+//     std::cout << "changes of " << culprit << " after defrost: " 
+// 	      << culprit->changes << std::endl;
    
 #ifdef _DEBUG_PROPAG
     if(!IS_OK(wiped_idx)) {

@@ -568,9 +568,43 @@ namespace Mistral {
       size = (full ? capacity : 0);
     }
 
-    void extend()
+    void extend(const int new_elt)
     {
-      unsigned int new_capacity = capacity*2;
+      int lb = (int)(start_-index_), new_lb = lb;
+      int ub = capacity+lb-1, new_ub = ub;
+
+
+//       std::cout << "create a new element: " << new_elt << std::endl;
+
+      if(new_elt < lb) {
+	new_lb = new_elt;
+// 	std::cout << "   new lb" << std::endl; 
+      } else if(new_elt > ub) {
+	new_ub = new_elt;
+// 	std::cout << "   new ub" << std::endl; 
+      } else {
+// 	std::cout << "   already in" << std::endl; 
+	return;
+      }
+      
+      unsigned int new_capacity = new_ub-new_lb+1;
+
+//       std::cout << "requires a capacity of at least " << new_capacity
+// 		<< " (was: " << capacity << ")" << std::endl;
+
+      if(new_capacity < capacity*2) new_capacity = capacity*2;
+
+//       std::cout << "   allocate: " << new_capacity << std::endl;
+
+      if(new_lb < lb) {
+	new_lb = ub-new_capacity+1;
+      } else {
+	new_ub = lb+new_capacity-1;
+      }
+
+//       std::cout << "extend to: [" << new_lb 
+// 		<< ".." << new_ub << "]" << std::endl; 
+
       int *aux_list = list_;
       list_ = new int[new_capacity];
       std::memcpy(list_, aux_list, capacity*sizeof(int));
@@ -578,8 +612,19 @@ namespace Mistral {
 
       unsigned int *aux_start = start_;
       start_ = new unsigned int[new_capacity];
-      std::memcpy(start_, aux_start, capacity*sizeof(unsigned int));
+      std::memcpy(start_+(lb-new_lb), aux_start, capacity*sizeof(unsigned int));
       delete [] aux_start;
+
+      index_ = start_ - new_lb;
+      int k = 0;
+      for(int i=new_lb; i<lb; ++i) {
+	index_[i] = size+k;
+	list_[capacity+k++] = i;
+      }
+      for(int i=ub+1; i<=new_ub; ++i) {
+	index_[i] = size+k;
+	list_[capacity+k++] = i;
+      }
 
       capacity = new_capacity;
     }
@@ -682,6 +727,13 @@ namespace Mistral {
       list_[size] = elt;
       index_[elt] = size;
       ++size;
+    }
+
+    // create a new element that can potentially be outside the bounds
+    inline void create(const int elt)
+    {
+      extend(elt);
+      add(elt);
     }
 
     inline void ordered_add(const int elt)
@@ -1028,6 +1080,62 @@ namespace Mistral {
       delete [] list_;
       index_  += offset;
       delete [] index_;
+    }
+
+    void initialise(const int n)
+    {
+      capacity = n;
+      list_ = new VAR_TYPE[capacity];
+      offset = 0;
+      index_ = new unsigned int[capacity];
+      for(unsigned int i=0; i<capacity; ++i) 
+	{
+	  index_[i] = i;
+	}
+      index_ -= offset;
+      size = 0;
+    }
+
+    void extend(const int idx) {
+      //int idx = elt.id();
+      int new_lb = offset;
+      int new_ub = capacity-offset-1;
+      
+      if(idx < new_lb || idx > new_ub) {
+
+	if(idx < new_lb) new_lb = idx;
+	else if(idx > new_ub) new_ub = idx;
+	
+	unsigned int new_capacity = new_ub=new_lb+1;
+	if(new_capacity < 2*capacity) new_capacity = capacity;
+	
+	unsigned int *aux_index = index_+offset;
+	index_ = new unsigned int[new_capacity];
+	std::memcpy(index_, aux_index, capacity*sizeof(unsigned int));
+	delete [] aux_index;
+	
+	VAR_TYPE *aux_list = list_;
+	list_ = new VAR_TYPE[new_capacity];
+	std::memcpy(list_, aux_list, capacity*sizeof(VAR_TYPE));
+	delete [] aux_list;
+
+	index_ -= new_lb;
+	capacity = new_capacity;
+      }
+    }
+
+    void declare(VAR_TYPE elt) {
+     int idx = elt.id();
+      extend(idx);
+      
+      if(idx < offset || idx >= offset+(int)size) {
+	list_[index_[idx+offset]] = list_[size];
+	list_[size] = elt;
+	index_[idx+offset] = size;
+	++size;
+      } else {
+	add(elt);
+      }
     }
 
     void initialise(Vector< VAR_TYPE >& obj, const bool full=true)
@@ -1737,6 +1845,57 @@ namespace Mistral {
 	table[i].initialise(s.table+i, s.size(i));
     }
 
+    inline void declare(const int elt)
+    {
+      int i = (elt >> EXP);
+      if( (i < neg_words) ||
+	  (i >=  pos_words) ) 
+	{
+	  extend(elt);
+	}
+      fastAdd(elt);
+    }
+
+
+    void extend(const int elt) 
+    {
+      int nval = (elt >> EXP);
+      if( (nval < neg_words) ||
+	  (nval >=  pos_words) ) 
+	{
+	  int new_neg_words = neg_words;
+	  //nval;
+	  int new_pos_words = pos_words;
+	  //nval+1;
+	  bool need_to_extend = false;
+	  if(nval < new_neg_words) {
+	    new_neg_words = nval;
+	    need_to_extend = true;
+	  }
+	  if(nval >= new_pos_words) {
+	    new_pos_words = nval+1;
+	    need_to_extend = true;
+	  }
+
+	  if(need_to_extend) {
+	    //std::cout << "extend" << std::endl;
+
+	    WORD_TYPE *aux = table;
+	    table = new WORD_TYPE[new_pos_words-new_neg_words];
+	    table -= new_neg_words;
+	    
+	    std::memcpy(table+new_neg_words, aux+neg_words, 
+			(pos_words-neg_words)*sizeof(WORD_TYPE));
+	    
+	    aux += neg_words;
+	    delete [] aux;
+	    
+	    pos_words = new_pos_words; 
+	    neg_words = new_neg_words; 
+	  }
+	}
+    }
+
     Bitset(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       clone( s );
@@ -2240,6 +2399,9 @@ namespace Mistral {
 
     inline  void fastAdd(const int elt)
     {
+
+      //std::cout << neg_words << " " << pos_words << " " << (elt >> EXP) << std::endl;
+
       table[(elt >> EXP)] |= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
@@ -2709,19 +2871,29 @@ namespace Mistral {
     /**@name Parameters*/
     //@{
     //BitSet _set_;
-    int *next;
-    int _head;
-    int _tail;
+    int *next; // next element in the list (one for each elt + one for the head)
+    int _head; // last_index+1
+    int _tail; // last element
+    int offset; // first index
     //@}
 
     /**@name Constructors*/
     //@{
     Queue() {
       next = NULL;
+      _head = NOVAL;
+      _tail = NOVAL;
+      offset = 0;
     }
     ~Queue()
     {
+      next += offset;
       delete [] next;
+    }
+    void cancel()
+    {
+      next = NULL;
+      offset = 0;
     }
     void initialise(const int n)
     {
@@ -2729,6 +2901,94 @@ namespace Mistral {
       std::fill( next, next+n, NOVAL );
       _head = _tail = n;
       next[n] = n;
+      offset = 0;
+    }
+    void initialise(const int lb, const int ub)
+    {
+      next = new int[ub-lb+2];
+      next-=lb;
+      std::fill( next+lb, next+ub+1, NOVAL );
+      _head = _tail = ub+1;
+      next[ub+1] = ub+1;
+      offset = lb;
+    }
+    void extend(const int elt)
+    {
+      int new_lb = (elt < offset ? elt : offset);
+      int new_ub = (elt >= _head ? elt : _head-1);
+
+      if(new_lb < offset || new_ub >= _head) {
+	int *aux = next;
+	next = new int[new_ub-new_lb+2];
+	next-=new_lb;
+	std::memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
+
+// 	for(int i=new_lb; i<=new_ub+1; ++i)
+// 	  if(next[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+
+
+	for(int i=new_lb; i<offset; ++i)
+	  next[i] = NOVAL;
+
+	for(int i=_head+1; i<new_ub+1; ++i)
+	  next[i] = NOVAL;
+
+// 	for(int i=new_lb; i<=new_ub+1; ++i)
+// 	  if(next[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+
+	//exit(1);
+
+	next[_tail] = new_ub+1;
+	if(_head <= new_ub) {
+	  next[new_ub+1] = aux[_head];
+	  next[_head] = NOVAL;
+	}
+
+// 	for(int i=new_lb; i<=new_ub+1; ++i)
+// 	  if(next[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+// 	    std::cout << std::setw(3) << aux[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+
+// 	//exit(1);
+
+	aux += offset;
+	delete [] aux;
+
+	offset = new_lb;
+	_head = new_ub+1;
+      }
+    }
+    void declare(const int elt) {
+      extend(elt);
+      add(elt);
     }
     //@}
   
@@ -2768,22 +3028,50 @@ namespace Mistral {
       _tail = _head;
     }
     //@}
+    
+     Queue& operator=(const Queue& q) {
+       _head = q._head;
+       _tail = q._tail;
+       next = q.next;
+       offset = q.offset;
+       return *this;
+     }
 
     /*!@name Miscellanous*/
     //@{ 
     std::ostream& display(std::ostream& os) const {
-      int i;
-      os << "(";
-      i = next[_head];
-      if(i != _head) {
-	os << i;
-	i = next[i];
-	while( i != _head ) {
-	  os << " " << i;
-	  i = next[i];
+
+      os << _head << " " << _tail << " " << offset << ": ";
+      if(_head != NOVAL){
+	for(int i=offset; i<=_head; ++i) {
+	  if(next[i] != NOVAL)
+	    os << next[i] << " ";
+	  else 
+	    os << ". ";
 	}
       }
-      os << ")";
+      os << "\n" ;
+
+      if(_head != NOVAL){
+	int i;
+	os << _head << "(";
+	os.flush();
+	i = next[_head];
+	if(i != _head) {
+	  os << i;
+	  i = next[i];
+	  while( i != _head ) {
+	    os << " " << i;
+	    
+	    if(i == NOVAL) break;
+	    
+	    i = next[i];
+	  }
+	}
+	os << ")";
+      }
+
+
       return os;
     }
     //@}

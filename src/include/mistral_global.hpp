@@ -57,6 +57,9 @@ namespace Mistral {
 #define MININT -NOVAL
 #define MIN_CAPACITY 16
 
+#define BOUND_CONSISTENCY 1
+#define FORWARD_CHECKING 0
+
   //   //#ifdef _STATIC_CAST
 
   // #define BITSET_VAR  0xe0000000;
@@ -125,11 +128,11 @@ namespace Mistral {
 
 #define NO_EVENT     0
 #define DOMAIN_EVENT 1
-#define RANGE_EVENT  3
-#define UB_EVENT     7
-#define LB_EVENT     11
-#define VALUE_EVENT  19
-#define FAIL_EVENT   32
+#define UB_EVENT     3
+#define LB_EVENT     5
+#define RANGE_EVENT  7
+#define VALUE_EVENT  15
+#define FAIL_EVENT   16
 
 
 

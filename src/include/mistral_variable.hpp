@@ -112,6 +112,9 @@ namespace Mistral {
     Variable(Expression* impl);
     Variable(const int lo, const int up, const int type=DYN_VAR);
 
+    //Variable get_children();
+    Variable get_var();
+
     Variable operator+(Variable);
     Variable operator-(Variable);
 //     //Variable operator*(Variable);
@@ -122,10 +125,10 @@ namespace Mistral {
 //     //Variable operator->(Variable);
 //     Variable operator==(Variable);
     Variable operator!=(Variable);
-//     Variable operator<(Variable);
-//     Variable operator<=(Variable);
-//     Variable operator>(Variable);
-//     Variable operator>=(Variable);
+    Variable operator<(Variable);
+    Variable operator<=(Variable);
+    Variable operator>(Variable);
+    Variable operator>=(Variable);
 //     //Variable operator-();
 //     //Variable operator!();
 
@@ -853,16 +856,20 @@ class Expression {
 
 public :
 
-  //Solver *solver;
+  Variable self;
   Vector< Variable > children;
 
   Expression() {}
   Expression(Vector< Variable >& args);
   ~Expression();
+
+  bool is_initialised() { 
+    return (self.domain_type != DYN_VAR && self.implementation != NULL);
+  }
   
-  virtual Constraint* extract_constraint()=0;
-  virtual Constraint* extract_predicate()=0;
-  virtual void extract_variable(Variable& x)=0;
+  virtual void extract_constraint(Solver*)=0;
+  virtual void extract_predicate(Solver*)=0;
+  virtual void extract_variable(Solver*)=0;
   virtual const char* get_name()=0;
 
 };
@@ -883,9 +890,9 @@ public:
   AddExpression(Variable X, Variable Y);
   ~AddExpression();
 
-  virtual Constraint* extract_constraint();
-  virtual void extract_variable(Variable& x);
-  virtual Constraint* extract_predicate();
+  virtual void extract_constraint(Solver*);
+  virtual void extract_variable(Solver*);
+  virtual void extract_predicate(Solver*);
   virtual const char* get_name();
 
 };
@@ -897,9 +904,9 @@ public:
   SubExpression(Variable X, Variable Y);
   ~SubExpression();
 
-  virtual Constraint* extract_constraint();
-  virtual void extract_variable(Variable& x);
-  virtual Constraint* extract_predicate();
+  virtual void extract_constraint(Solver*);
+  virtual void extract_variable(Solver*);
+  virtual void extract_predicate(Solver*);
   virtual const char* get_name();
 
 };
@@ -912,9 +919,24 @@ public:
   NeqExpression(Variable X, Variable Y);
   ~NeqExpression();
 
-  virtual Constraint* extract_constraint();
-  virtual void extract_variable(Variable& x);
-  virtual Constraint* extract_predicate();
+  virtual void extract_constraint(Solver*);
+  virtual void extract_variable(Solver*);
+  virtual void extract_predicate(Solver*);
+  virtual const char* get_name();
+
+};
+
+class PrecedenceExpression : public BinaryExpression {
+
+public:
+  int offset;
+
+  PrecedenceExpression(Variable X, Variable Y, const int of=0);
+  ~PrecedenceExpression();
+
+  virtual void extract_constraint(Solver*);
+  virtual void extract_variable(Solver*);
+  virtual void extract_predicate(Solver*);
   virtual const char* get_name();
 
 };
@@ -924,20 +946,46 @@ class AllDiffExpression : public Expression {
 
 public:
 
-  AllDiffExpression(Vector< Variable >& args);
+  int consistency_level;
+
+  AllDiffExpression(Vector< Variable >& args, const int ct);
   ~AllDiffExpression();
 
-  virtual Constraint* extract_constraint();
-  virtual void extract_variable(Variable& x);
-  virtual Constraint* extract_predicate();
+  virtual void extract_constraint(Solver*);
+  virtual void extract_variable(Solver*);
+  virtual void extract_predicate(Solver*);
   virtual const char* get_name();
 
 };
 
-  Variable AllDiff(Vector< Variable >& args);
+  Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 
 
 
+  class VarArray : public Vector< Variable > {
+  public:
+    
+    VarArray() : Vector< Variable >() {}
+    VarArray(const int n, int lb=NOVAL, int ub=NOVAL) : Vector< Variable >() 
+    {
+      if(lb==NOVAL) { lb=0; ub=1; }
+      else if(ub==NOVAL) { lb=0; ub=lb-1; }
+
+      for(int i=0; i<n; ++i) {
+	Variable x(lb, ub);
+	add(x);
+      }
+    }
+
+    ~VarArray() {}
+
+    // std::ostream& display(std::ostream& os) const;
+
+  };
+
+//   std::ostream& operator<< (std::ostream& os, const VarArray& x);
+//   std::ostream& operator<< (std::ostream& os, const VarArray* x);
+  
 
 }
 
