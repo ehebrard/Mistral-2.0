@@ -81,9 +81,29 @@ void Mistral::Lexicographic::initialise(Solver *s) {
 Mistral::Lexicographic::~Lexicographic() {}
 
 Mistral::Variable Mistral::Lexicographic::select() {
-  while(last<solver->variables.size && solver->variables[last].isGround()) { 
+
+  //std::cout << "pick from " << solver->variables << endl;
+  //std::cout << "start at var " << (int)last << " out of " << (solver->variables.size) << std::endl;
+  
+  
+//   for(int i=0; i<solver->variables.size; ++i) {
+//     std::cout << i << ": " << solver->variables[i]
+// 	      << " in " << solver->variables[i].get_domain()
+// 	      << std::endl;
+//   }
+//   std::cout << solver->sequence << std::endl;
+
+
+  while(last<solver->variables.size && solver->variables[last].is_ground()) { 
+    //std::cout << solver->variables[last] << "?" << std::endl;
     ++last;
   }
+
+//   if((int)last >= solver->variables.size) {
+//     std::cout << "BUG!" << std::endl;
+//   }
+
+
   return solver->variables[last];
 }
 

@@ -25,12 +25,12 @@
     \brief Header for the reversible structures
 */
 
+
 #ifndef _MISTRAL_BACKTRACK_HPP
 #define _MISTRAL_BACKTRACK_HPP
 
+
 #include <mistral_global.hpp>
-
-
 
 
 namespace Mistral {
@@ -96,7 +96,6 @@ namespace Mistral {
     /*!@name Parameters*/
     //@{
     Environment *env;
-    //bool first_change;
     //@}
 
     /*!@name Constructors*/
@@ -165,7 +164,7 @@ namespace Mistral {
     inline operator const PRIMITIVE_TYPE() const { return value; }
     //@}  
 
-    /*!@name Backtrack*/
+    /*!@name Backtrack method*/
     //@{
     inline void save() { 
       if((int)trail_.back() != env->level) { 
@@ -207,8 +206,15 @@ namespace Mistral {
   class ReversibleIntStack : public Reversible, public IntStack {
     
   public:
+
+    /*!@name Parameters*/
+    //@{  
+    /// value trail
     Vector< int > trail_;
-    
+    //@}
+
+    /*!@name Constructors*/
+    //@{ 
     ReversibleIntStack(const int lb, const int ub, bool full=true)
     {
       initialise(lb, ub, full);
@@ -224,7 +230,10 @@ namespace Mistral {
       trail_.initialise(0, 2*(ub-lb+1));
       trail_.add(-1);
     }
-    
+    //@}
+
+    /*!@name Backtrack method*/
+    //@{    
     virtual void restore() { size = trail_.pop(); } 
     inline void save() { 
       if(trail_.back() != env->level) {
@@ -233,7 +242,10 @@ namespace Mistral {
 	env->save(this);
       }
     }
+    //@}
 
+    /*!@name Manipulation*/
+    //@{  
     // it's either 'add's...
     inline void reversible_add(const int elt) {
       save();
@@ -257,7 +269,7 @@ namespace Mistral {
       save();
       return popHead();
     }
-    
+    //@}    
 
   };
 
@@ -294,10 +306,6 @@ namespace Mistral {
       MultiList< DATA_TYPE, NUM_HEAD >::erase(idx, k);      
       _save_(idx, k);
     }
-//     inline int reversible_add(const int idx, const int k=0) {
-//       _notify_();
-//       return MultiList< DATA_TYPE, NUM_HEAD >::create(idx, k);
-//     }
     inline int reversible_add(DATA_TYPE elt, const int k=0) {
       _notify_();
       return MultiList< DATA_TYPE, NUM_HEAD >::create(elt, k);
@@ -349,8 +357,6 @@ namespace Mistral {
       }
     } 
 
-    virtual void save() {}
-
     inline void _notify_() {
       if(trail_.back() != env->level) {
 	env->save(this);
@@ -388,8 +394,8 @@ namespace Mistral {
     /// Print on out stream
     void reversible_debug_print(std::ostream& o) const 
     {
-      //for(unsigned int i=MultiList< DATA_TYPE, NUM_HEAD >::head[0]; i<MultiList< DATA_TYPE, NUM_HEAD >::data.size; ++i)
-      //o << MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[i];
+      for(unsigned int i=MultiList< DATA_TYPE, NUM_HEAD >::head[0]; i<MultiList< DATA_TYPE, NUM_HEAD >::data.size; ++i)
+	o << MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[i];
       MultiList<int,NUM_HEAD>::debug_print(o);
       o << " / " << trail_
 	<< " ("  << MultiList< DATA_TYPE, NUM_HEAD >::degree << ")";
@@ -398,13 +404,29 @@ namespace Mistral {
 
   };
 
-  
+
+  /********************************************
+   * Constraint Trigger
+   ********************************************/
+  /*! \class ConstraintTrigger 
+    \brief Element of a Constraints list
+    
+    Holds a pointer to a constraint and the index 
+    (in the scope) of the variable that owns the list 
+  */  
   class Constraint;
   class ConstraintTrigger {
+
   public:
+
+    /*!@name Parameters*/
+    //@{  
     Constraint *constraint;
     int index;
+    //@}
 
+    /*!@name Constructors*/
+    //@{
     ConstraintTrigger(Constraint* con, const int id) {
       constraint = con;
       index = id;
@@ -414,7 +436,10 @@ namespace Mistral {
       constraint = (Constraint*)c;
       index = -1;
     }
+    //@}
 
+    /*!@name Accessors*/
+    //@{  
     bool operator!() { return !constraint; }
     ConstraintTrigger& operator=(Constraint *con) { 
       constraint = con; 
@@ -424,7 +449,10 @@ namespace Mistral {
       index = id; 
       return *this;
     }
+    //@}
 
+    /*!@name Miscellaneous*/
+    //@{
     virtual std::ostream& display(std::ostream& os) const {
       if(constraint) 
 	os << constraint;
@@ -432,6 +460,7 @@ namespace Mistral {
 	os << ".";
       return os;
     }
+    //@}
   };
 
   typedef Node< ConstraintTrigger > ConstraintNode;

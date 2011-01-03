@@ -172,8 +172,9 @@ public:
   
   int size;
   int consistency;
+  int domain;
   
-  CostasAllDiffAllSolutions(const int sz, const int ct);
+  CostasAllDiffAllSolutions(const int sz, const int ct, const int dt=DYN_VAR);
   ~CostasAllDiffAllSolutions();
 
   virtual void run();
@@ -227,6 +228,16 @@ public:
   virtual void run();
 };
 
+class ModelTest : public UnitTest {
+
+public:
+  
+  ModelTest();
+  ~ModelTest();
+
+  virtual void run();
+};
+
 
 int main(int argc, char *argv[])
 {  
@@ -249,10 +260,17 @@ int main(int argc, char *argv[])
 
   //tests.push_back(new VarStackDynamicTest());
 
+  int N = 8; //atoi(argv[1]);
+  //tests.push_back(new ModelTest());
+
+  //tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
+
   tests.push_back(new Pigeons(10));
-  tests.push_back(new CostasAllDiffAllSolutions(8, FORWARD_CHECKING));
-  tests.push_back(new CostasAllDiffAllSolutions(8, BOUND_CONSISTENCY));
-  tests.push_back(new CostasNotEqualAllSolutions(8)); 
+  tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
+  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
+  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
+  tests.push_back(new CostasNotEqualAllSolutions(N)); 
+  
   tests.push_back(new RandomCListRandomEraseAndRestore<4>());
   tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
   tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
@@ -266,10 +284,12 @@ int main(int argc, char *argv[])
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
-  //tests[1]->Verbosity = EXTREME;
+  //tests[0]->Verbosity = EXTREME;
 
   while(tests.size() > 0) {
     UnitTest *t = tests.back();
+
+    //t->Verbosity = EXTREME;
     
     double TIME = getRunTime();
     t->run();
@@ -394,6 +414,7 @@ void RandomDomainRandomRemove::run() {
       }
 
       for(int i=0; i<N; ++i) {
+
 	int lb = randint(dom_min) - (dom_min/2);
 	int ub = randint(dom_size) + lb;
 	
@@ -413,12 +434,13 @@ void RandomDomainRandomRemove::run() {
 	}
 
 	for(int j=0; j<nvalues; ++j) { 
-
+	  
 	  if(Verbosity > HIGH) {
 	    cout << "      remove " << rand_values[j] << " from " 
 		 << X << " in " << X.get_domain() << " => "; 
 	  }
-	  if( X.remove(rand_values[j]) != FAIL_EVENT) {
+	  Event evt = X.remove(rand_values[j]);
+	  if( evt != FAIL_EVENT) {
 	    if(Verbosity > HIGH) {
 	      cout << "    " << X << " in " << X.get_domain() << endl; 
 	    }
@@ -1243,8 +1265,8 @@ void RandomRevNumAffectations< T >::run() {
 }
   
   
-CostasAllDiffAllSolutions::CostasAllDiffAllSolutions(const int sz, const int ct) 
-  : UnitTest(LOW, LOW, LOW) { size=sz; consistency=ct; }
+CostasAllDiffAllSolutions::CostasAllDiffAllSolutions(const int sz, const int ct, const int dt) 
+  : UnitTest(LOW, LOW, LOW) { size=sz; consistency=ct; domain=dt; }
 CostasAllDiffAllSolutions::~CostasAllDiffAllSolutions() {}
 
 void CostasAllDiffAllSolutions::run() {
@@ -1253,7 +1275,7 @@ void CostasAllDiffAllSolutions::run() {
 		     << (consistency==FORWARD_CHECKING ? "FC" : "BC" )
 		     << "), look for all solutions "; 
    
-  VarArray X(size, 1, size);
+  VarArray X(size, 1, size, domain);
   Solver s;
 
   s.add( AllDiff(X) );
@@ -1267,6 +1289,8 @@ void CostasAllDiffAllSolutions::run() {
     s.add( AllDiff(scope, consistency) );
   }
 
+  //cout << s << endl;
+
   //s.initialise();
   s.initialise_search(X, 
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -1279,7 +1303,7 @@ void CostasAllDiffAllSolutions::run() {
   if(Verbosity) cout << "(" << num_solutions << ") " ;
   if(num_solutions != 444) {
     cout << "Error: wrong number of solutions!" << endl;
-    exit(1);
+    //exit(1);
   }
 }
 
@@ -1311,7 +1335,7 @@ void CostasNotEqualAllSolutions::run() {
       }
   }
 
-  //cout << X << endl;
+  //cout << s << endl;
 
   //s.initialise();
 
@@ -1327,7 +1351,7 @@ void CostasNotEqualAllSolutions::run() {
   if(Verbosity) cout << "(" << num_solutions << ") " ;
   if(num_solutions != 444) {
     cout << "Error: wrong number of solutions!" << endl;
-    exit(1);
+    //exit(1);
   }
 
 }
@@ -1419,6 +1443,22 @@ void Pigeons::run() {
 
 }
 
+
+ModelTest::ModelTest() : UnitTest() {}
+ModelTest::~ModelTest() {}
+
+void ModelTest::run() {
+
+  if(Verbosity) cout << "Run pigeon-hole of order 10: "; 
+
+  VarArray X(4,1,3);
+  Solver s;
+
+  s.add((X[0]+X[1]) != (X[2]+X[3]));
+
+  cout << s << endl;
+
+}
 
 VarStackDynamicTest::VarStackDynamicTest() : UnitTest() {}
 

@@ -59,30 +59,23 @@ namespace Mistral {
 
   protected:
 
+    /*!@name Parameters*/
+    //@{
     /// The trail, used for backtracking
     Vector< int > trail_;
 
     /// 
     int   *solution;
     int ***supports;
-
-    ///
+    //@}
     
 
   public:
 
     /*!@name Parameters*/
     //@{
-    // used to post/relax the constraints on the right triggers
-    int *trigger;
-    int *self;
-
     ///
     Solver *solver;
-    /// The constrained variables.
-    Vector<Variable> scope;
-    //Vector<int> trigger;
-
 
     /// Whether the propagation is delayed
     int priority;
@@ -99,6 +92,9 @@ namespace Mistral {
     /// The type of event for each modified variable
     Event *event_type;
 
+    // used to post/relax the constraints on the right triggers
+    int *trigger;
+    int *self;
     //@}
 
 
@@ -127,10 +123,8 @@ namespace Mistral {
 
     // called 
     inline Constraint* freeze() {
-
-      //if(active.size == 1) relax();
-
       changes.size = events.size;
+
       // before each propagation, the lists events and changes are swapped 
       if(changes.list_ != events.list_) {
 
@@ -158,50 +152,6 @@ namespace Mistral {
 	// if idempotent, clear the events list
 	events.size = 0;      
     }
-
-
-
-// void Mistral::Constraint::post(Solver *s) {
-//   solver = s;
-//   unsigned int i, j;
-//   // for each of its variables
-//   for(i=0; i<scope.size; ++i) {
-//     // add the constraint to the list of constraints on that variable
-//     j = scope[i].id();
-//     ConstraintTrigger ct(this, i);
-//     int trg = trigger[i];
-//     ConstraintList *lst = solver->constraint_graph[j];
-//     unsigned int elt = lst->reversible_add(ct, trg);
-//     self[i] = elt;
-//   }
-// }
-
-// void Mistral::Constraint::relax() {
-//   unsigned int i, j;
-//   int k;
-
-// #ifdef _DEBUG_AC
-//   std::cout << "relax " << this << " from ";
-// #endif
-
-
-//   for(i=0; i<active.size; ++i) {
-//     j = active[i];
-//     k = scope[j].id();
-
-// #ifdef _DEBUG_AC
-//     std::cout << scope[j] << "'s c-list " ;
-// #endif
-
-//     solver->constraint_graph[k]->reversible_erase(self[j], trigger[j]);
-//   }
-
-// #ifdef _DEBUG_AC
-//   std::cout << std::endl;
-// #endif
-  
-// }
-
 
     inline void trigger_on(const int t, const int x) {
       trigger[x] = t;
@@ -261,7 +211,326 @@ namespace Mistral {
     /*!@name Miscellanous methods*/
     //@{
     /// Print the constraint
-    //virtual std::string getString() const ;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "c"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * DynamicConstraint
+   **********************************************/
+  /*! \class DynamicConstraint
+    \brief Representation of DynamicConstraints.
+
+    The constrained variables are stored in the array _scope[]. 
+    The method propagate() is called during preprocessing.
+    Generic propagate methods, using AC3
+    with residual supports are implemented in
+    the class DynamicConstraint.
+  */
+  class DynamicConstraint : public Constraint {
+
+  public:
+
+    /*!@name Parameters*/
+    //@{
+    /// The constrained variables.
+    Vector<Variable> scope;
+    //@}
+
+
+    /*!@name Constructors*/
+    //@{
+    /// The _scope is build by copying an array "scp" containing "l" variables
+    virtual void initialise();
+    //void initialise(Vector< Variable >& scp);
+    DynamicConstraint();
+    DynamicConstraint(Vector< Variable >& scp);
+    virtual ~DynamicConstraint();
+
+    /// An idempotent constraint should not be called on events triggered by itself.
+    /// To forbid that, the lists 'events' and 'changes' are merged
+    inline void set_idempotent(const bool idp) {
+      if(idp) {
+	events.size = 0;
+	events.capacity = scope.size;
+	events.list_ = changes.list_;
+	events.index_ = changes.index_;
+	events.start_ = NULL;
+      } else {
+	events.initialise(0, scope.size-1, false);
+      }
+    }
+
+    // called 
+    inline Constraint* freeze() {
+      changes.size = events.size;
+
+      // before each propagation, the lists events and changes are swapped 
+      if(changes.list_ != events.list_) {
+
+	// make the changes list points to the events list, and clear the other
+	events.size = 0;
+	
+	int *iaux = events.list_;
+	events.list_ = changes.list_;
+	changes.list_ = iaux;
+	
+	unsigned int *uaux = events.index_;
+	events.index_ = changes.index_;
+	changes.index_ = uaux;
+	
+	return NULL;
+      }
+      return this;
+    }
+
+    inline void defrost() {
+
+      if(active.size == 1) relax();
+
+      if(changes.list_ == events.list_) 
+	// if idempotent, clear the events list
+	events.size = 0;      
+    }
+
+    inline void trigger_on(const int t, const int x) {
+      trigger[x] = t;
+    }
+
+    inline Constraint* notify_assignment(const int var, const int level) {
+      Constraint *r = NULL;
+      if(trail_.back() != level) {
+	trail_.add(active.size);
+	trail_.add(level);
+	r = this;
+      }
+      active.erase(var);
+      return r;
+    }
+
+    void post(Solver *s);
+    void relax();
+    
+    inline void restore() {
+      trail_.pop();
+      active.size = trail_.pop();
+    }
+
+
+    /*!@name Propagators*/
+    //@{
+    /*!
+     * This methods returns 0 if the constraint is satisfied
+     * by the combination and any positive value otherwise.  
+     */
+    virtual int check(const int*) const = 0;
+    /*!
+     *  This method is called when the domain of at least one   
+     *  variable in _scope has been modified. The list of 
+     *  changed variables is in 'modified', and the type
+     *  of event in 'event_type'.
+     *  Some domains in _scope may be reduced, and NULL is
+     *  returned on success (there is still at least one consistent
+     *  assignment) or a ptr to the wiped-out variable otherwise. 
+     */
+    virtual PropagationOutcome propagate() { return NULL; }
+    /*!
+     *  Check if the cached support is valid.
+     *  Otherwise initialize an iterator on supports
+     */
+    bool firstSupport(const int, const int);
+    /*!
+     *  Find the first valid support. 
+     *  Return true if a support has been found, 
+     *  or false if no such support exists.
+     */
+    bool findSupport(const int, const int);
+    //@}
+
+
+    /*!@name Miscellanous methods*/
+    //@{
+    /// Print the constraint
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "c"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * StaticConstraint
+   **********************************************/
+  /*! \class StaticConstraint
+    \brief Representation of StaticConstraints.
+
+    The constrained variables are stored in the array _scope[]. 
+    The method propagate() is called during preprocessing.
+    Generic propagate methods, using AC3
+    with residual supports are implemented in
+    the class StaticConstraint.
+  */
+  class StaticConstraint {
+
+  protected:
+
+    /*!@name Parameters*/
+    //@{
+    /// The trail, used for backtracking
+    Vector< int > trail_;
+
+    /// 
+    int   *solution;
+    int ***supports;
+    //@}
+    
+
+  public:
+
+    /*!@name Parameters*/
+    //@{
+    // used to post/relax the constraints on the right triggers
+    int *trigger;
+    int *self;
+
+    ///
+    Solver *solver;
+    /// The constrained variables.
+    Vector<Variable> scope;
+    //Vector<int> trigger;
+
+
+    /// Whether the propagation is delayed
+    int priority;
+    /// An unique id
+    int id;
+
+    /// The indices of unassigned variables
+    IntStack active;
+
+    /// We use two lists so that the active constraint can add events to its own 
+    /// list (events) without changing the one used during propagation (changes)
+    IntStack changes; // this is the list that is accessible from a propagator
+    IntStack events; // this is the list that collects the events
+    /// The type of event for each modified variable
+    Event *event_type;
+    //@}
+
+
+    /*!@name Constructors*/
+    //@{
+    /// The _scope is build by copying an array "scp" containing "l" variables
+    virtual void initialise();
+    //void initialise(Vector< Variable >& scp);
+    StaticConstraint();
+    StaticConstraint(Vector< Variable >& scp);
+    virtual ~StaticConstraint();
+
+    /// An idempotent constraint should not be called on events triggered by itself.
+    /// To forbid that, the lists 'events' and 'changes' are merged
+    inline void set_idempotent(const bool idp) {
+      if(idp) {
+	events.size = 0;
+	events.capacity = scope.size;
+	events.list_ = changes.list_;
+	events.index_ = changes.index_;
+	events.start_ = NULL;
+      } else {
+	events.initialise(0, scope.size-1, false);
+      }
+    }
+
+    // called 
+    inline StaticConstraint* freeze() {
+      changes.size = events.size;
+
+      // before each propagation, the lists events and changes are swapped 
+      if(changes.list_ != events.list_) {
+
+	// make the changes list points to the events list, and clear the other
+	events.size = 0;
+	
+	int *iaux = events.list_;
+	events.list_ = changes.list_;
+	changes.list_ = iaux;
+	
+	unsigned int *uaux = events.index_;
+	events.index_ = changes.index_;
+	changes.index_ = uaux;
+	
+	return NULL;
+      }
+      return this;
+    }
+
+    inline void defrost() {
+
+      if(active.size == 1) relax();
+
+      if(changes.list_ == events.list_) 
+	// if idempotent, clear the events list
+	events.size = 0;      
+    }
+
+    inline void trigger_on(const int t, const int x) {
+      trigger[x] = t;
+    }
+
+    inline Constraint* notify_assignment(const int var, const int level) {
+      Constraint *r = NULL;
+      if(trail_.back() != level) {
+	trail_.add(active.size);
+	trail_.add(level);
+	r = this;
+      }
+      active.erase(var);
+      return r;
+    }
+
+    void post(Solver *s);
+    void relax();
+    
+    inline void restore() {
+      trail_.pop();
+      active.size = trail_.pop();
+    }
+
+
+    /*!@name Propagators*/
+    //@{
+    /*!
+     * This methods returns 0 if the constraint is satisfied
+     * by the combination and any positive value otherwise.  
+     */
+    virtual int check(const int*) const = 0;
+    /*!
+     *  This method is called when the domain of at least one   
+     *  variable in _scope has been modified. The list of 
+     *  changed variables is in 'modified', and the type
+     *  of event in 'event_type'.
+     *  Some domains in _scope may be reduced, and NULL is
+     *  returned on success (there is still at least one consistent
+     *  assignment) or a ptr to the wiped-out variable otherwise. 
+     */
+    virtual PropagationOutcome propagate() { return NULL; }
+    /*!
+     *  Check if the cached support is valid.
+     *  Otherwise initialize an iterator on supports
+     */
+    bool firstSupport(const int, const int);
+    /*!
+     *  Find the first valid support. 
+     *  Return true if a support has been found, 
+     *  or false if no such support exists.
+     */
+    bool findSupport(const int, const int);
+    //@}
+
+
+    /*!@name Miscellanous methods*/
+    //@{
+    /// Print the constraint
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "c"; }
     //@}
@@ -342,7 +611,6 @@ namespace Mistral {
 
     /**@name Miscellaneous*/
     //@{  
-    //virtual std::string getString() const ;
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "less_than"; }
     //@}
@@ -387,7 +655,6 @@ namespace Mistral {
 
     /**@name Miscellaneous*/
     //@{  
-    //virtual std::string getString() const ;
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "are_equal"; }
     //@}
@@ -428,46 +695,12 @@ namespace Mistral {
     
     /**@name Miscellaneous*/
     //@{  
-    //virtual std::string getString() const ;
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "plus"; }
     //@}
   };
 
 
-  // /**********************************************
-  //  * Substraction Predicate
-  //  **********************************************/
-  // /*! \class PredicateSub
-  //  \brief  Binary Substraction predicate (x0 - x1 = y)
-  // */
-  // class PredicateSub : public Constraint
-  //   {
-    
-  //   public:
-  //     /**@name Constructors*/
-  //     //@{
-  //     PredicateSub(Vector< Variable >& scp) : Constraint(scp) {
-  //       trigger_on(_range_, 0);
-  //       trigger_on(_range_, 1);
-  //       trigger_on(_range_, 2);
-  //       set_idempotent(true);
-  //     }
-  //     virtual ~PredicateSub() {}
-  //     //@}
-    
-  //     /**@name Solving*/
-  //     //@{
-  //     inline int check( const int* sol ) const { return (sol[2] != (sol[0]-sol[1])); }
-  //     inline PropagationOutcome propagate();
-  //     //@}
-    
-  //     /**@name Miscellaneous*/
-  //     //@{  
-  //     virtual std::string getString() const ;
-  //     virtual std::string name() const { return "minus"; }
-  //     //@}
-  //   };
 
   /***********************************************
    * All Different Constraint (forward checking).
@@ -495,9 +728,8 @@ namespace Mistral {
 
     /**@name Miscellaneous*/
     //@{  
-    //virtual std::string getString() const ;
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "alldiff"; }
+    virtual std::string name() const { return "clique_ne"; }
     //@}
     
   };
@@ -676,10 +908,15 @@ namespace Mistral {
 
   public:
 
+    /**@name Parameters*/
+    //@{  
     Queue triggers[NUM_PRIORITY];
     int num_actives;
     BitSet _set_;
-    
+    //@}
+
+    /**@name Constructors*/
+    //@{    
     MultiQueue()
     {
       num_actives = 0;
@@ -691,14 +928,16 @@ namespace Mistral {
       for(int i=0; i<NUM_PRIORITY; ++i) triggers[i].initialise(n);
     }
     virtual ~MultiQueue() {}
-    
+    //@}
+
+    /**@name Accessors*/
+    //@{    
     inline bool empty() { return !num_actives; }
-    //return !active.size; }//;
+
     inline void trigger(Constraint* cons, const int var, const Event evt)//;
     {
       int priority = cons->priority, cons_id = cons->id;
       if(_set_.fastContain(cons_id)) {
-	//if(triggers[priority].contain(cons_id)) {
 	if(cons->events.contain(var)) {
 	  cons->event_type[var] |= evt;
 	} else {
@@ -707,8 +946,6 @@ namespace Mistral {
 	}
       } else {
 	_set_.fastAdd(cons_id);
-	//if(triggers[priority].empty()) active.ordered_add(priority);
-	//if(triggers[priority].empty()) active.add(priority);
 	triggers[priority].add(cons_id);
 	++num_actives;
 	cons->events.clear();
@@ -716,26 +953,26 @@ namespace Mistral {
 	cons->event_type[var] = evt;
       }
     }
+
     inline int pop()//;
     {
-      //int priority = active.back();
-      //Constraint *cons = Solver::constraints[triggers[priority].pop()];
       int priority = NUM_PRIORITY;
       while(--priority) if(!triggers[priority].empty()) break;
       int cons = triggers[priority].pop();
       _set_.fastErase(cons);
       --num_actives;
-      //if(triggers[priority].empty()) active.erase(priority);
       return cons;
     }
+
     inline void clear() {
       if(!empty()) {
 	for(int i=0; i<NUM_PRIORITY; ++i) triggers[i].clear();
-	//active.clear();
 	num_actives = 0;
 	_set_.clear();
       }
     }
+    //@}
+
   };
 
   std::ostream& operator<< (std::ostream& os, const Constraint& x);

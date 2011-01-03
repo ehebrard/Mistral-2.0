@@ -163,10 +163,11 @@ void Mistral::SolverStatistics::update(const SolverStatistics& sp) {
 Mistral::ConstraintQueue::ConstraintQueue()
 {
   min_priority = 0;
-  cardinality = 0;
+  cardinality = -1;
   higher_priority  = -1;
   triggers = NULL;
   taboo_constraint = NULL;
+  _set_.initialise();
 //   min_index = NULL;
 //   max_index = NULL;
 }
@@ -197,17 +198,26 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
 
   if(cons_idx == 0) solver = s;
 
-//   std::cout << std::endl << "declare " << cons_idx << " ("
+//   std::cout << "declare " << c << ": (" << cons_idx << ", "
 // 	    << cons_priority << ") was: [" 
 // 	    << min_priority << ":" << min_priority+cardinality-1
-// 	    << "]" << std::endl;
-//   std::cout << this << std::endl;
+// 	    << "], " ;//<< std::endl;
+//   //std::cout << this ;
   
   if(cons_priority < new_min_p || cons_priority > new_max_p) {
-    if(cons_priority < new_min_p) new_min_p = cons_priority;
-    if(cons_priority > new_max_p) new_max_p = cons_priority;
-
+    if(cardinality > 0) {
+      if(cons_priority < new_min_p) new_min_p = cons_priority;
+      if(cons_priority > new_max_p) new_max_p = cons_priority;
+    } else {
+      new_min_p = cons_priority;
+      new_max_p = cons_priority;
+    }
     int new_cardinality = (new_max_p-new_min_p+1);
+
+//     std::cout << "now: [" << new_min_p
+// 	      << ".. " << new_max_p
+// 	      << "]" << std::endl;
+
 
 //     int *aux_min_idx = min_index;
 //     min_index = new int[new_cardinality];
@@ -257,6 +267,9 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
     cardinality = new_cardinality;
   } else {
 
+
+//     std::cout << "no need to change" << std::endl;
+
     
 //     std::cout << triggers[cons_priority] 
 // 	      << " can hold " << cons_idx
@@ -267,8 +280,11 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
   }
 
   //_set_.declare(cons_idx);
-
-  _set_.extend(cons_idx);
+  
+  if(_set_.table)
+    _set_.extend(cons_idx);
+  else 
+    _set_.initialise(cons_idx, cons_idx, BitSet::empt);
   
 //   std::cout << _set_ << std::endl;
 
@@ -279,7 +295,7 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
   trigger(c);
 
 
-  //std::cout << this << std::endl << std::endl;
+  //std::cout << this  << std::endl;
 }
 
 void Mistral::ConstraintQueue::initialise(Solver *s)
@@ -325,18 +341,22 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons)//;
   
 
   for(unsigned int i=0; i<cons->scope.size; ++i) {
-    evt = (cons->scope[i].isGround() ? VALUE_EVENT : RANGE_EVENT);
-    if(EVENT_TYPE(evt) < cons->trigger[i]) {
+    evt = (cons->scope[i].is_ground() ? VALUE_EVENT : RANGE_EVENT);
+    if(EVENT_TYPE(evt) <= cons->trigger[i]) {
       cons->events.add(i);
       cons->event_type[i] = evt;
       triggered=true;
     }
   }
   if(triggered) {
+    //std::cout << "triggered! " ; 
     _set_.fastAdd(cons_id);
     if(priority > higher_priority) higher_priority = priority;
     triggers[priority].add(cons_id);
-  }
+    //std::cout << higher_priority << " " << _set_ << " " << triggers[priority] << std::endl;
+  } // else {
+//     std::cout << "not triggered! " << std::endl;
+//   }
   
 }
 
@@ -398,22 +418,26 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Ev
 
 
 std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
+
+//   for(int i=0; i<cardinality; ++i) {
+//       os << triggers[i+min_priority] << std::endl;
+//   }
+
   int elt;
   int end;
+
   for(int i=0; i<cardinality; ++i) {
     if(!triggers[i+min_priority].empty()) {
-
-      os << (i+min_priority) << std::endl;
-      os << triggers[i+min_priority] << std::endl;
-
+//       os << (i+min_priority) << std::endl;
+//       os << triggers[i+min_priority] << std::endl;
       elt = triggers[i+min_priority].first();
       end = triggers[i+min_priority]._head;
       os << "P" << (i+min_priority) << ": " 
 	 << solver->constraints[elt];
       while(triggers[i+min_priority].next[elt] != end) {
 	elt = triggers[i+min_priority].next[elt];
-	//os << elt << " ";
-	//os.flush();
+	os << " " << elt ;
+	os.flush();
 	os << ", " << solver->constraints[elt];
       }
       os << std::endl;
@@ -478,6 +502,53 @@ Mistral::Solver::Solver() {
 //   }
 // }
 
+// void Mistral::Solver::initialise_boolean_pool() {
+//   Vector< Variable > bools;
+//   ConstraintNode nd;
+//   int i,k;
+//   for(i=0; i<variables.size; ++i)
+//     if(variables[i].domain_type == BOOL_VAR)
+//       bools.add(variables[i]);
+
+//   if(bools.size) {
+//     booleans = new int [bools.size];
+
+//     for(i=0; i<bools.size; ++i) {
+//       k = bools[i].id();
+//       variables[k].domain_type = (int)(booleans+i);
+//       variables[k].implementation = new VariableImplementation(this);
+
+//       nd = constraint_graph[k]->first(_value_);
+//       while(constraint_graph[var]->next(nd)) 
+// 	nd.elt.constraint->scope[nd.elt.index] = variables[k];
+//     }
+//   }
+// }
+
+// void Mistral::Solver::finalize() {
+//   Variable x;
+//   ConstraintNode nd;
+//   Constraint *c;
+//   int i, j, k;
+//   bool range;
+//   Vector< Variable > bools;
+//   for(i=0; i<variables.size; ++i) {
+//     if(variables[i].domain_type == BOOL_VAR) {
+//       // Boolean variable
+//       bools.add(variables[i]);
+//     } else {
+//       // Non-Boolean, we check if it can be 
+//       range = true;
+//       k = variables[i].id();
+//       nd = constraint_graph[k]->first(_value_);
+//       while(range && constraint_graph[var]->next(nd)) 
+// 	range = nd.elt.constraint->bc();
+//       if(!range) {
+// 	//
+//       }
+//   }
+// }
+
 void Mistral::Solver::add(Variable x) { 
   //std::cout << x << std::endl;
 
@@ -503,6 +574,9 @@ int Mistral::Solver::declare(Variable x) {
 
 
 void Mistral::Solver::add(Constraint* c) { 
+
+  //std::cout << "add " << c << std::endl;
+
   if(c->id < 0) {
 
     //std::cout << "Add a new constraint: " << c << std::endl;
@@ -519,7 +593,11 @@ void Mistral::Solver::add(Constraint* c) {
     active_constraints.declare(c, this);
     
   }
-  //active_constraints.trigger(c);
+//   //active_constraints.trigger(c);
+
+//   std::cout << c->id << std::endl;
+//   std::cout << active_constraints << std::endl;
+
 }
 
 
@@ -541,6 +619,7 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
     statistics.num_variables = sequence.size;
     statistics.num_values = 0;
     for(unsigned int i=0; i<sequence.size; ++i)
+      //statistics.num_values += variables[sequence[i]].get_size();
       statistics.num_values += sequence[i].get_size();
 
     if(parameters.verbosity) std::cout << statistics << std::endl;
@@ -575,6 +654,7 @@ Mistral::Outcome Mistral::Solver::get_next_solution()
     statistics.num_values = 0;
     for(unsigned int i=0; i<sequence.size; ++i)
       statistics.num_values += sequence[i].get_size();
+    //statistics.num_values += variables[sequence[i]].get_size();
     
     satisfiability = iterative_dfs();
     
@@ -587,6 +667,23 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
 					BranchingHeuristic *heu, 
 					RestartPolicy *pol) 
 {
+  //  if(!initialised) {
+//     for(int i=0; i<non_convex.size; ++i) {
+//       non_convex->initialise_bitset_domain();
+//     }
+//     boolean_pool.add(new int[booleans.size]);
+//     for(int i=0; i<booleans.size; ++i) {
+//       booleans->initialise_boolean_domain(boolean_pool.back()+i);
+//     }
+//     for(unsigned int i=0; i<constraints.size; ++i) {
+//       //constraints[i]->initialise_scope();
+//       for(unsigned int j=0; j<constraints[i]->scope.size; ++j) {
+// 	constraints[i]->scope[j] = constraints[i]->scope[j].get_var();
+//       }
+//     }
+    //  }
+
+
   if(level < 0) save();
 
   active_solver = this;
@@ -597,6 +694,7 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   sequence.clear();
   for(unsigned int i=seq.size; i;) {
     sequence.add(seq[--i]);
+    //sequence.add(seq[--i].id());
   }
 
   if(heu) { delete heuristic; heuristic = heu; }
@@ -669,7 +767,14 @@ void Mistral::Solver::trigger_event(const int var,
       c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
       if(c) saved_cons.add(c);
     }
+
+    //std::cout << "ASSIGN EVENT ON " << variables[var] << std::endl;
+
     if(sequence.contain(variables[var])) sequence.remove(variables[var]);
+    //if(sequence.contain(var)) sequence.remove(var);
+
+    //std::cout << sequence << std::endl;
+
   } else while(constraint_graph[var]->next(nd)) {
       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
     }
@@ -731,6 +836,11 @@ void Mistral::Solver::trigger_event(const int var,
 // }
 
 void Mistral::Solver::save(Variable x) { 
+  saved_vars.add(x); 
+}
+
+void Mistral::Solver::save(VariableImplementation *impl, int dtype) { 
+  Variable x(impl, dtype);
   saved_vars.add(x); 
 }
 
@@ -983,9 +1093,12 @@ std::ostream& Mistral::Solver::display(std::ostream& os) {
   for(unsigned int i=0; i<variables.size; ++i) {
     os << "\t" << variables[i] << " in " << variables[i].get_domain() ; //<< "\n";
     nd = constraint_graph[i]->first(_value_);
-    while( constraint_graph[i]->next(nd) ) 
-      os << " " << nd.elt.constraint;
-    os << "\n";
+    if(constraint_graph[i]->next(nd)) {
+      os << ": " << nd.elt.constraint;
+      while( constraint_graph[i]->next(nd) ) 
+	os << " & " << nd.elt.constraint;
+    }
+      os << "\n";
   }
 
 //   os << "\nConstraints:\n";
@@ -1040,9 +1153,14 @@ void Mistral::Solver::branch_left() {
       tmp_sol.add(constraints[i]->scope[j].get_value());
     if(constraints[i]->check(tmp_sol.stack_))
       {
-	std::cerr << "Error: solution does not satisfies " << constraints[i] 
-		  << tmp_sol << std::endl;
-	exit(0);
+	//std::cerr << "\nError: solution does not satisfies " << constraints[i] << tmp_sol << " (backtracking)"<< std::endl;
+	//exit(0);
+	if( decisions.empty() ) return UNSAT;
+	else if( limits_expired() ) return LIMITOUT;
+	else {
+	  branch_right();
+	  return UNKNOWN;
+	}
       }
     tmp_sol.clear();
   }

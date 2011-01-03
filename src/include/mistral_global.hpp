@@ -44,88 +44,24 @@ namespace Mistral {
   typedef int Outcome;
   typedef int PropagationOutcome;
   
-
   
-//   const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-  
-
-
-//   const int NOVAL          = (int)((~(unsigned int)0)/2);
-
 #define INFTY  NOVAL
 #define MAXINT NOVAL
 #define MININT -NOVAL
 #define MIN_CAPACITY 16
-
+  
 #define BOUND_CONSISTENCY 1
 #define FORWARD_CHECKING 0
 
-  //   //#ifdef _STATIC_CAST
-
-  // #define BITSET_VAR  0xe0000000;
-  // #define LIST_VAR    0xc0000000;
-  // #define RANGE_VAR   0xa0000000;
-  // #define VIRTUAL_VAR 0x60000000;
-  // #define CONST_VAR   0x40000000;
-
-  //   //#else
-
-  //   const int NOTYPE         = 0;
-  //   const int BITSET         = 1;
-  //   const int RANGE          = 2;
-  //   const int LIST           = 4;
-  //   const int VIRTUAL_REV    = 8;
-  //   const int VIRTUAL_DOM    = 16;
-  //   const int CONSTANT       = 32;
+#define CONST_VAR   1
+#define BOOL_VAR    2
+#define RANGE_VAR   4
+#define BITSET_VAR  8
+#define LIST_VAR    16
+#define VIRTUAL_VAR 0
+#define DYN_VAR     27
+#define EXPRESSION  3
   
-  //   const int BITSET_VAR     = (BITSET  | RANGE | VIRTUAL_REV);
-  //   const int BOOL_VAR       = (BITSET  | RANGE);
-  //   const int RANGE_VAR      = (RANGE   | VIRTUAL_REV);
-  //   const int LIST_VAR       = (BITSET  | RANGE | VIRTUAL_REV | VIRTUAL_DOM | LIST);
-  //   const int VIRTUAL_VAR    = (VIRTUAL_REV | VIRTUAL_DOM | RANGE);
-  //   const int CONST_VAR      = (BITSET  | RANGE | CONSTANT);
-  //   const int DYN_VAR        = 1111111
-
-//   const int CONST_VAR      = 1;
-//   const int BOOL_VAR       = 2;
-//   const int RANGE_VAR      = 4;
-//   const int BITSET_VAR     = 8;
-//   const int LIST_VAR       = 16;
-//   const int VIRTUAL_VAR    = 0;
-//   const int DYN_VAR        = (CONST_VAR | BOOL_VAR | RANGE_VAR | BITSET_VAR | LIST_VAR);
-//   const int EXPRESSION     = 3;
-
-  #define CONST_VAR   1
-  #define BOOL_VAR    2
-  #define RANGE_VAR   4
-  #define BITSET_VAR  8
-  #define LIST_VAR    16
-  #define VIRTUAL_VAR 0
-  #define DYN_VAR     31
-  #define EXPRESSION  3
-
-
-  //#endif
-
-  //       fnvrlu
-  //fail   000000
-  //no     010000
-  //domain 100000
-  //range  100100
-  //lb     100110
-  //ub     100101
-  // value 101100
-
-
-  //   const Event NO_EVENT     = 0;
-  //   const Event DOMAIN_EVENT = 1;
-  //   const Event RANGE_EVENT  = 1+2;
-  //   const Event UB_EVENT     = 1+2+4;
-  //   const Event LB_EVENT     = 1+2+8;
-  //   const Event VALUE_EVENT  = 1+2+16;
-  //   const Event FAIL_EVENT   = 32;
-
-
 #define NO_EVENT     0
 #define DOMAIN_EVENT 1
 #define UB_EVENT     3
@@ -133,14 +69,6 @@ namespace Mistral {
 #define RANGE_EVENT  7
 #define VALUE_EVENT  15
 #define FAIL_EVENT   16
-
-
-
-  //   inline bool DomainChanged(Event e) {return (e&DOMAIN_EVENT) == DOMAIN_EVENT;}
-  //   inline bool RangeChanged (Event e) {return (e&RANGE_EVENT)  == RANGE_EVENT;}
-  //   inline bool LbChanged    (Event e) {return (e&LB_EVENT)     == LB_EVENT;}
-  //   inline bool UbChanged    (Event e) {return (e&UB_EVENT)     == UB_EVENT;}
-  //   inline bool ValueChanged (Event e) {return (e&VALUE_EVENT)  == VALUE_EVENT;}
 
 #define DOMAIN_CHANGED(e) ((e&DOMAIN_EVENT) == DOMAIN_EVENT)
 #define BOUND_CHANGED(e)  ((e&RANGE_EVENT)  == RANGE_EVENT)
@@ -155,7 +83,6 @@ namespace Mistral {
 #define IS_UB(e)      (e == UB_EVENT)
 #define IS_ASSIGN(e)  (e == VALUE_EVENT)
 
-
 #define SAT      1
 #define OPT      3
 #define UNSAT    0
@@ -163,44 +90,34 @@ namespace Mistral {
 #define LIMITOUT 4
 
 #define IS_OK(o) (o<0)
-
 #define FAILURE(x) x
 #define CONSISTENT -1
   
-
-  //   const Event NO_EVENT     = 32;
-  //   const Event DOMAIN_EVENT = 1;
-  //   const Event RANGE_EVENT  = 3;
-  //   const Event UB_EVENT     = 7;
-  //   const Event LB_EVENT     = 11;
-  //   const Event VALUE_EVENT  = 19;
-  //   const Event FAIL_EVENT   = 0;
-
 #define _value_ 0
 #define _range_ 1
 #define _domain_ 2
 
 #define EVENT_TYPE(e) (2-BOUND_CHANGED(e)-ASSIGNED(e))
 
-  inline bool is_domain(Event e) {
-    return ((e & DOMAIN_EVENT) == DOMAIN_EVENT);
-  }
+//   inline bool is_domain(Event e) {
+//     return ((e & DOMAIN_EVENT) == DOMAIN_EVENT);
+//   }
 
-  inline bool is_range(Event e) {
-    return ((e & RANGE_EVENT) == RANGE_EVENT);
-  }
+//   inline bool is_range(Event e) {
+//     return ((e & RANGE_EVENT) == RANGE_EVENT);
+//   }
 
-  inline bool is_upper_bound(Event e) {
-    return ((e & UB_EVENT) == UB_EVENT);
-  }
+//   inline bool is_upper_bound(Event e) {
+//     return ((e & UB_EVENT) == UB_EVENT);
+//   }
 
-  inline bool is_lower_bound(Event e) {
-    return ((e & LB_EVENT) == LB_EVENT);
-  }
+//   inline bool is_lower_bound(Event e) {
+//     return ((e & LB_EVENT) == LB_EVENT);
+//   }
 
-  inline bool is_value(Event e) {
-    return ((e & VALUE_EVENT) == VALUE_EVENT);
-  }
+//   inline bool is_value(Event e) {
+//     return ((e & VALUE_EVENT) == VALUE_EVENT);
+//   }
 
 
 

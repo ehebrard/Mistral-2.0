@@ -36,13 +36,9 @@
 #define __STRUCTURE_HPP
 
 
-//#include <mistral_global.hpp>
+const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 
-  const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
-  
-
-
-  const int NOVAL          = (int)((~(unsigned int)0)/2);
+const int NOVAL = (int)((~(unsigned int)0)/2);
 
 
 namespace Mistral {
@@ -188,18 +184,6 @@ namespace Mistral {
     {
       size = 0;
     }
-
-//     inline void remove(DATA_TYPE& elt)
-//     {
-//       unsigned int j=size;
-//       while(j && stack_[--j] != elt);
-//       stack_[j] = stack_[--size];
-//     }
-  
-//     inline void erase(const unsigned int i)
-//     {  
-//       stack_[i] = stack_[--size];
-//     }
 
     inline void remove(const unsigned int i)
     {  
@@ -1801,6 +1785,13 @@ namespace Mistral {
       return !equal(s);
     }
 
+//     Bitset<WORD_TYPE,FLOAT_TYPE>& operator=(const Bitset<WORD_TYPE,FLOAT_TYPE>& q) 
+//     {
+//       pos_words = q.pos_words;
+//       neg_words = q.neg_words;
+//       table = q.table;
+//     }
+
     void reinitialise(const int lb, const int ub, const WORD_TYPE p) 
     {
       table += neg_words;
@@ -1878,6 +1869,7 @@ namespace Mistral {
 	  }
 
 	  if(need_to_extend) {
+	    
 	    //std::cout << "extend" << std::endl;
 
 	    WORD_TYPE *aux = table;
@@ -2918,51 +2910,108 @@ namespace Mistral {
       int new_ub = (elt >= _head ? elt : _head-1);
 
       if(new_lb < offset || new_ub >= _head) {
-	int *aux = next;
-	next = new int[new_ub-new_lb+2];
-	next-=new_lb;
-	std::memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
 
-// 	for(int i=new_lb; i<=new_ub+1; ++i)
-// 	  if(next[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
-// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
-// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
+// 	std::cout << "EXTEND QUEUE" << std::endl;
+	
+	int *old_next = next;
+	int old_head = _head;
+	int old_tail = _tail;
+	int old_offset = offset;
+
+// 	std::cout << "before: "
+// 		  << _head << " " 
+// 		  << _tail << " "
+// 		  << next[_head] 
+// 		  << std::endl;
+
+	initialise(new_lb, new_ub);
+
+// 	std::cout << "afteri: "
+// 		  << _head << " " 
+// 		  << _tail << " "
+// 		  << next[_head] 
+// 		  << std::endl;
 
 
-	for(int i=new_lb; i<offset; ++i)
-	  next[i] = NOVAL;
-
-	for(int i=_head+1; i<new_ub+1; ++i)
-	  next[i] = NOVAL;
-
-// 	for(int i=new_lb; i<=new_ub+1; ++i)
-// 	  if(next[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
-// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
-// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
-
-	//exit(1);
-
-	next[_tail] = new_ub+1;
-	if(_head <= new_ub) {
-	  next[new_ub+1] = aux[_head];
-	  next[_head] = NOVAL;
+// 	std::cout << " saved: "
+// 		  << old_head << " " 
+// 		  << old_tail << " "
+// 		  << old_next[old_head] 
+// 		  << std::endl;
+	
+	if(old_tail != old_head) {
+	  int elt = old_next[old_head];
+	  while(elt != old_head) {
+	    //std::cout << "ADD " << elt << std::endl;
+ 	    add(elt);
+	    elt = old_next[elt];
+	  }
 	}
+
+// 	std::cout << " after: "
+// 		  << _head << " " 
+// 		  << _tail << " "
+// 		  << next[_head] 
+// 		  << std::endl;
+
+
+// 	int *aux = next;
+// 	next = new int[new_ub-new_lb+2];
+// 	std::fill(next, next+new_ub-new_lb+2, NOVAL);
+// 	next-=new_lb;
+// 	//std::memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
+
+	
+	
+
+// // 	for(int i=new_lb; i<=new_ub+1; ++i)
+// // 	  if(next[i] != NOVAL)
+// // 	    std::cout << std::setw(3) << next[i] ;
+// // 	  else 
+// // 	    std::cout << " . ";
+// // 	std::cout << std::endl;
+// // 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+// // 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+// // 	    std::cout << std::setw(3) << next[i] ;
+// // 	  else 
+// // 	    std::cout << " . ";
+// // 	std::cout << std::endl;
+
+
+// 	for(int i=new_lb; i<offset; ++i)
+// 	  next[i] = NOVAL;
+
+// 	for(int i=_head+1; i<new_ub+1; ++i)
+// 	  next[i] = NOVAL;
+
+// 	if(_tail == _head) {
+// 	  _tail = new_ub+1;
+// 	}
+	
+// 	next[_tail] = new_ub+1;
+// 	next[new_ub+1] = next[_head];
+	
+
+// 	for(int i=new_lb; i<=new_ub+1; ++i)
+// 	  if(next[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+// 	    std::cout << std::setw(3) << next[i] ;
+// 	  else 
+// 	    std::cout << " . ";
+// 	std::cout << std::endl;
+
+// 	//exit(1);
+
+	
+// // 	if(_head <= new_ub) {
+// // 	  next[new_ub+1] = aux[_head];
+// // 	  next[_head] = NOVAL;
+// // 	}
 
 // 	for(int i=new_lb; i<=new_ub+1; ++i)
 // 	  if(next[i] != NOVAL)
@@ -2977,13 +3026,18 @@ namespace Mistral {
 // 	    std::cout << " . ";
 // 	std::cout << std::endl;
 
-// 	//exit(1);
+// // 	//exit(1);
 
-	aux += offset;
-	delete [] aux;
+// 	aux += offset;
+// 	delete [] aux;
 
-	offset = new_lb;
-	_head = new_ub+1;
+// 	offset = new_lb;
+// 	_head = new_ub+1;
+
+	old_next += old_offset;
+	delete [] old_next;
+
+	//	display(std::cout);
       }
     }
     void declare(const int elt) {
@@ -3233,5 +3287,38 @@ namespace Mistral {
 
 }
 
+
+// class IntervalList {
+
+// public:
+
+//   unsigned int size;
+//   Vector<int> min;
+//   Vector<int> max;
+
+//   bool contain(const int v) {
+//     int lmin=0;
+//     int lmax=0;
+
+//     bool is_in = true;
+
+//     while(is_in) {
+//       if(v < min[lmin] || v > max[lmax]) {
+// 	is_in = false;
+//       }
+//     }
+//   }
+
+// };
+
+// // [0,10][23,25][40,100][120,150]
+// //    min   max
+// /*   -inf   inf
+// 	0   150
+//        23    10
+//       120   100
+//        40    25
+//       inf  -inf
+//  */
 
 #endif // __STRUCTURE_HPP

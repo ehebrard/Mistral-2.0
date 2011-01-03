@@ -258,6 +258,7 @@ namespace Mistral {
   class Reversible;
   class Decision;
   class Variable;
+  class VariableImplementation;
   class Solver : public Environment {
 
   public:
@@ -304,6 +305,7 @@ namespace Mistral {
     /// The search part
     /// These are the search variables.
     VarStack < Variable > sequence;
+    //IntStack sequence;
     Vector< Decision > decisions;
 
     /// The delimitation between different levels is kept by this vector of integers
@@ -338,10 +340,14 @@ namespace Mistral {
       }
 
       int* get_next() { 
-	slots.add(new int[1]);
-	return slots.back();
+	int *dom = new int[1];
+	*dom = 3;
+	slots.add(dom);
+	return dom;
       }
     };
+
+    //int *booleans;
     BooleanMemoryManager booleans;
 
     int* getNextBooleanSlot() { return booleans.get_next(); }
@@ -376,6 +382,7 @@ namespace Mistral {
     inline void save(Reversible* object) { saved_objs.add(object); }
     inline void save(Constraint* c) { saved_cons.add(c); }
     void save(Variable x); 
+    void save(VariableImplementation *x, int dtype); 
     //@}
 
     /*!@name Propagation accessors*/

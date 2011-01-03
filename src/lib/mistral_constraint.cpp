@@ -37,7 +37,8 @@ Mistral::Constraint::Constraint(Vector< Variable >& scp) {
   //weight = 1.0;
   //initialise(scp);
   for(unsigned int i=0; i<scp.size; ++i) {
-    scope.add(scp[i].get_var());
+    //scope.add(scp[i].get_var());
+    scope.add(scp[i]);
   }
 }
 
@@ -88,7 +89,7 @@ void Mistral::Constraint::initialise() {
 
   active.initialise(0, scope.size-1, true);
   for(unsigned int i=0; i<scope.size; ++i) 
-    if(scope[i].isGround()) active.erase(i);
+    if(scope[i].is_ground()) active.erase(i);
 
   //scope = _scope;
 }
@@ -256,7 +257,7 @@ bool Mistral::Constraint::findSupport(const int vri, const int vli)
     // find the last var whose domain we have not exhausted
     --i;
     while( i >= 0 ) {
-      if( i == vri || scope[i].isGround() ) {
+      if( i == vri || scope[i].is_ground() ) {
 	--i;
 	continue;
       }
@@ -366,15 +367,15 @@ std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
 Mistral::PropagationOutcome Mistral::PredicateEqual::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if( scope[2].isGround() ) {
+  if( scope[2].is_ground() ) {
     if( (spin + scope[2].get_min()) != 1 ) {
       if( !(scope[0].setDomain(scope[1])) ) wiped = FAILURE(0);
       else if( !(scope[1].setDomain(scope[0])) ) wiped = FAILURE(1);
     } else {
-      if(scope[0].isGround() && !(scope[1].remove(scope[0].get_min())))
+      if(scope[0].is_ground() && !(scope[1].remove(scope[0].get_min())))
 	wiped = FAILURE(1);
       else {
-	if(scope[1].isGround() && !(scope[0].remove(scope[1].get_min())))
+	if(scope[1].is_ground() && !(scope[0].remove(scope[1].get_min())))
 	  wiped = FAILURE(0);
       }
     }
@@ -382,7 +383,7 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate() {
     if( !(scope[0].intersect(scope[1])) ) {
       if(!(scope[2].remove(spin))) wiped = FAILURE(2);	    
     } else { 
-      if( scope[0].isGround() && scope[1].isGround() ) {
+      if( scope[0].is_ground() && scope[1].is_ground() ) {
 	if(!(scope[2].setDomain( spin ))) wiped = FAILURE(2);
       }
     }
@@ -648,7 +649,6 @@ void Mistral::ConstraintAllDiff::initialise() {
     trigger_on(_range_, i);
   set_idempotent(true);
   priority = 0;
-  level = &(scope[0].get_solver()->level);
   init();
 }
 
@@ -661,6 +661,7 @@ void Mistral::ConstraintAllDiff::initialise() {
 void Mistral::ConstraintAllDiff::init() 
 {
   unsigned int i;
+  level = &(scope[0].get_solver()->level);
   lastLevel = -2;
   nb = 0;
 
