@@ -720,12 +720,18 @@ Mistral::Solver::~Solver() {
 
   for(unsigned int i=0; i<variables.size; ++i) {
     int domain_type = variables[i].domain_type;
-    VariableImplementation *var = variables[i].implementation;
-    if     (domain_type ==  BITSET_VAR) delete (Mistral::VariableBitmap  *)var;
-    else if(domain_type ==    LIST_VAR) delete (Mistral::VariableList    *)var;
-    else if(domain_type ==   RANGE_VAR) delete (Mistral::VariableRange   *)var;
-    else if(domain_type == VIRTUAL_VAR) delete (Mistral::VariableVirtual *)var;
-    else if(domain_type !=   CONST_VAR) delete (int*)domain_type;
+//     VariableImplementation *var = variables[i].implementation;
+//     if     (domain_type ==  BITSET_VAR) delete (Mistral::VariableBitmap  *)var;
+//     else if(domain_type ==    LIST_VAR) delete (Mistral::VariableList    *)var;
+//     else if(domain_type ==   RANGE_VAR) delete (Mistral::VariableRange   *)var;
+//     else if(domain_type == VIRTUAL_VAR) delete (Mistral::VariableVirtual *)var;
+//     else if(domain_type !=   CONST_VAR) delete (int*)domain_type;
+    if     (domain_type ==  BITSET_VAR) delete variables[i].bitset_domain;
+    else if(domain_type ==    LIST_VAR) delete variables[i].list_domain;
+    else if(domain_type ==   RANGE_VAR) delete variables[i].range_domain;
+    else if(domain_type == VIRTUAL_VAR) delete variables[i].virtual_domain;
+    else if(domain_type ==  EXPRESSION) delete variables[i].expression;
+    //else if(domain_type !=   CONST_VAR) delete (int*)domain_type;
     delete constraint_graph[i];
   }
 }

@@ -30,6 +30,8 @@
 #include <iomanip>
 #include <stdlib.h> 
 #include <sstream> 
+#include <string.h>
+#include <limits.h>
 
 
 #ifndef __STRUCTURE_HPP
@@ -591,12 +593,12 @@ namespace Mistral {
 
       int *aux_list = list_;
       list_ = new int[new_capacity];
-      std::memcpy(list_, aux_list, capacity*sizeof(int));
+      memcpy(list_, aux_list, capacity*sizeof(int));
       delete [] aux_list;
 
       unsigned int *aux_start = start_;
       start_ = new unsigned int[new_capacity];
-      std::memcpy(start_+(lb-new_lb), aux_start, capacity*sizeof(unsigned int));
+      memcpy(start_+(lb-new_lb), aux_start, capacity*sizeof(unsigned int));
       delete [] aux_start;
 
       index_ = start_ - new_lb;
@@ -1095,12 +1097,12 @@ namespace Mistral {
 	
 	unsigned int *aux_index = index_+offset;
 	index_ = new unsigned int[new_capacity];
-	std::memcpy(index_, aux_index, capacity*sizeof(unsigned int));
+	memcpy(index_, aux_index, capacity*sizeof(unsigned int));
 	delete [] aux_index;
 	
 	VAR_TYPE *aux_list = list_;
 	list_ = new VAR_TYPE[new_capacity];
-	std::memcpy(list_, aux_list, capacity*sizeof(VAR_TYPE));
+	memcpy(list_, aux_list, capacity*sizeof(VAR_TYPE));
 	delete [] aux_list;
 
 	index_ -= new_lb;
@@ -1759,8 +1761,8 @@ namespace Mistral {
 
     Bitset(const int sz, const int* elt) 
     {
-      int lb = INT_MAX;
-      int ub = INT_MIN;
+      int lb =  NOVAL;
+      int ub = -NOVAL;
       for(int i=0; i<sz; ++i) {
 	if(elt[i] > ub) ub = elt[i];
 	if(elt[i] < lb) lb = elt[i];
@@ -1876,7 +1878,7 @@ namespace Mistral {
 	    table = new WORD_TYPE[new_pos_words-new_neg_words];
 	    table -= new_neg_words;
 	    
-	    std::memcpy(table+new_neg_words, aux+neg_words, 
+	    memcpy(table+new_neg_words, aux+neg_words, 
 			(pos_words-neg_words)*sizeof(WORD_TYPE));
 	    
 	    aux += neg_words;
@@ -2486,10 +2488,10 @@ namespace Mistral {
       WORD_TYPE masked_lb = (full << (lb & CACHE));
       WORD_TYPE masked_ub = (full >> (CACHE - (ub & CACHE)));
 
-      if( i == j ) 
+      if( i == j ) {
 	if( table[i] & (masked_lb & masked_ub) ) return true;
 	else return false;
-
+      }
       if( i >= pos_words )
 	i = pos_words-1;
       else if( table[i--] & masked_ub ) return true;
@@ -2617,12 +2619,13 @@ namespace Mistral {
     inline void setMin(const int bound)
     {
       int ith_word=(bound >> EXP);
-      if( ith_word >= neg_words )
+      if( ith_word >= neg_words ) {
 	if( ith_word <  pos_words ) {      
 	  int i=ith_word;
 	  while( i-- > neg_words ) table[i]=0;
 	  table[ith_word] &= (full << (bound & CACHE));
 	} else clear();
+      }
     }
 
     /*!
@@ -2631,12 +2634,13 @@ namespace Mistral {
     inline void setMax(const int bound)
     {
       int ith_word=(bound >> EXP);
-      if( ith_word <  pos_words )
+      if( ith_word <  pos_words ) {
 	if( ith_word >= neg_words ) {
 	  int i=pos_words;
 	  while( --i > ith_word ) table[i]=0;
 	  table[ith_word] &= (full >> (CACHE - (bound & CACHE)));
 	} else clear();
+      }
     }
 
     /*!
@@ -2959,7 +2963,7 @@ namespace Mistral {
 // 	next = new int[new_ub-new_lb+2];
 // 	std::fill(next, next+new_ub-new_lb+2, NOVAL);
 // 	next-=new_lb;
-// 	//std::memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
+// 	//memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
 
 	
 	

@@ -107,148 +107,160 @@ namespace Mistral {
   std::ostream& operator<< (std::ostream& os, const BitsetDomain& x);
   std::ostream& operator<< (std::ostream& os, const BitsetDomain* x);
 
-  //class Variable;
+  class Variable;
+//   class VariableBitmap;
+//   class VariableRange;
+//   class VariableList;
+//   class Expression;
+//   class Variable {
 
-  class Expression;
-  class Variable {
+//   public:
 
-  public:
+//     union {
+//       int domain_type;
+//       int* bool_domain;
+//     };
+//     union {
+//       int constant_value;
+//       VariableImplementation* variable;
+//       VariableBitmap* bitset_domain;
+//       VariableRange* range_domain;
+//       VariableList* list_domain;
+//       Expression* expression;
+//     };
 
-    int domain_type;
-    VariableImplementation *implementation;
+//     Variable();
+//     Variable(const int value);
+//     Variable(VariableImplementation* impl, const int type=DYN_VAR);
+//     Variable(Expression* impl);
+//     Variable(const int lo, const int up, const int type=DYN_VAR);
 
-    Variable();
-    Variable(const int value);
-    Variable(VariableImplementation* impl, const int type=DYN_VAR);
-    Variable(Expression* impl);
-    Variable(const int lo, const int up, const int type=DYN_VAR);
+//     //Variable get_children();
+//     Variable get_var();
 
-    //Variable get_children();
-    Variable get_var();
-
-    Variable operator+(Variable);
-    Variable operator-(Variable);
-//     //Variable operator*(Variable);
-//     //Variable operator/(Variable);
-//     //Variable operator&&(Variable);
-//     //Variable operator||(Variable);
-//     //Variable operator^(Variable);
-//     //Variable operator->(Variable);
-//     Variable operator==(Variable);
-    Variable operator!=(Variable);
-    Variable operator<(Variable);
-    Variable operator<=(Variable);
-    Variable operator>(Variable);
-    Variable operator>=(Variable);
-//     //Variable operator-();
-//     //Variable operator!();
+//     Variable operator+(Variable);
+//     Variable operator-(Variable);
+// //     //Variable operator*(Variable);
+// //     //Variable operator/(Variable);
+// //     //Variable operator&&(Variable);
+// //     //Variable operator||(Variable);
+// //     //Variable operator^(Variable);
+// //     //Variable operator->(Variable);
+// //     Variable operator==(Variable);
+//     Variable operator!=(Variable);
+//     Variable operator<(Variable);
+//     Variable operator<=(Variable);
+//     Variable operator>(Variable);
+//     Variable operator>=(Variable);
+// //     //Variable operator-();
+// //     //Variable operator!();
 
 
-    void initialise(Solver *s, const bool top=true);
-//    void initialise(Solver *s);
+//     void initialise(Solver *s, const bool top=true);
+// //    void initialise(Solver *s);
 
-    Event setValue( const int val );    
-    inline int id() const {return implementation->id;}
-    inline Solver* get_solver() {return implementation->solver;}
+//     Event setValue( const int val );    
+//     inline int id() const {return variable->id;}
+//     inline Solver* get_solver() {return variable->solver;}
 
-    /*!@name Constant Accessors and Iterators*/
-    //@{
-    /// Returns the assigned value if it exists
-    int get_value() const ; 
-    int get_solution_value() const ; 
-    /// Returns the domain 
-    //BitsetDomain get_domain() const ; 
-    std::string get_domain() const ; 
-    /// Returns the domain size
-    unsigned int get_size() const ; 
-    /// Returns the minimum value in the domain
-    int get_min() const ;
-    /// Returns the maximum value in the domain
-    int get_max() const ; 
-    /// Returns the minimum value that could belong to the domain
-    int get_minCapacity() const ;
-    /// Returns 1 + the maximum value that could belong to the domain
-    int get_maxCapacity() const ;
-    /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
-    int get_minPosAbs() const ;
-    /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
-    int get_minNegAbs() const ;
-    /// Return the smallest value currently in the domain that is strictly greater than "v"
-    int next(const int v) const ;
-    /// Return the smallest value currently in the domain that is strictly greater than "v"
-    int prev(const int v) const ;
-    /// Whether or not the Variable is currently an interval
-    bool is_range() const ;
-    /// Whether or not the Variable is bound to a ground value
-    bool is_ground() const ;
-    /// Whether or not the Variable is bound to a given ground value
-    bool equal(const int v) ;
-    /// Whether the value "v" is currently contained in the domain
-    bool contain(const int v) ;
+//     /*!@name Constant Accessors and Iterators*/
+//     //@{
+//     /// Returns the assigned value if it exists
+//     int get_value() const ; 
+//     int get_solution_value() const ; 
+//     /// Returns the domain 
+//     //BitsetDomain get_domain() const ; 
+//     std::string get_domain() const ; 
+//     /// Returns the domain size
+//     unsigned int get_size() const ; 
+//     /// Returns the minimum value in the domain
+//     int get_min() const ;
+//     /// Returns the maximum value in the domain
+//     int get_max() const ; 
+//     /// Returns the minimum value that could belong to the domain
+//     int get_minCapacity() const ;
+//     /// Returns 1 + the maximum value that could belong to the domain
+//     int get_maxCapacity() const ;
+//     /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
+//     int get_minPosAbs() const ;
+//     /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
+//     int get_minNegAbs() const ;
+//     /// Return the smallest value currently in the domain that is strictly greater than "v"
+//     int next(const int v) const ;
+//     /// Return the smallest value currently in the domain that is strictly greater than "v"
+//     int prev(const int v) const ;
+//     /// Whether or not the Variable is currently an interval
+//     bool is_range() const ;
+//     /// Whether or not the Variable is bound to a ground value
+//     bool is_ground() const ;
+//     /// Whether or not the Variable is bound to a given ground value
+//     bool equal(const int v) ;
+//     /// Whether the value "v" is currently contained in the domain
+//     bool contain(const int v) ;
 
-    /// Whether the domain has a nonempty intersection with the interval [l..u]
-    bool intersect(const int lo, const int up) const ;
-    /// Whether the domain is included in the interval [l..u]
-    bool included(const int lo, const int up) const ;
-    /// Whether the domain is included in the interval [l..u]
-    bool includes(const int lo, const int up) const ;
+//     /// Whether the domain has a nonempty intersection with the interval [l..u]
+//     bool intersect(const int lo, const int up) const ;
+//     /// Whether the domain is included in the interval [l..u]
+//     bool included(const int lo, const int up) const ;
+//     /// Whether the domain is included in the interval [l..u]
+//     bool includes(const int lo, const int up) const ;
 
-    /// Whether the domain has a nonempty intersection with the set s 
-    bool intersect(const BitSet& s) const ;
-    /// Whether the domain is included in the set s 
-    bool included(const BitSet& s) const ;
-    /// Whether the domain is included in the set s 
-    bool includes(const BitSet& s) const ;
+//     /// Whether the domain has a nonempty intersection with the set s 
+//     bool intersect(const BitSet& s) const ;
+//     /// Whether the domain is included in the set s 
+//     bool included(const BitSet& s) const ;
+//     /// Whether the domain is included in the set s 
+//     bool includes(const BitSet& s) const ;
 
-    /// Whether the domain has a nonempty intersection with the Variable x
-    bool intersect(const Variable& x) const ;
-    /// Whether the domain is included in the Variable x 
-    bool included(const Variable& x) const ;
-    /// Whether the domain is included in the Variable x 
-    bool includes(const Variable& x) const ;
+//     /// Whether the domain has a nonempty intersection with the Variable x
+//     bool intersect(const Variable& x) const ;
+//     /// Whether the domain is included in the Variable x 
+//     bool included(const Variable& x) const ;
+//     /// Whether the domain is included in the Variable x 
+//     bool includes(const Variable& x) const ;
 
-    /// Intersect its domain with a set s
-    void intersectTo( BitSet& s ) const ;
-    /// Do the union of its domain with a set s
-    void unionTo( BitSet& s ) const ;
-    //@}
+//     /// Intersect its domain with a set s
+//     void intersectTo( BitSet& s ) const ;
+//     /// Do the union of its domain with a set s
+//     void unionTo( BitSet& s ) const ;
+//     //@}
 
-    /*!@name Domain changing methods*/
-    //@{
-    /// Remove value "v"
-    Event remove(const int v) ;
-    /// Remove all values but "v"
-    Event setDomain(const int v) ;
-    /// Remove all values strictly lower than lo
-    Event setMin(const int lo) ;
-    /// Remove all values strictly greater than up
-    Event setMax(const int up) ;
-    /// Remove all values that do not appear in the set "s"
-    Event setDomain(const BitSet& s) ;
-    /// Remove all values that do not appear in the current domain of the Variable "x"
-    Event setDomain(Variable& x) ;
-    /// Remove all values that belong to the set "s"
-    Event removeSet(const BitSet& s) ;
-    /// Remove all values in the interval [l..u]
-    Event removeRange(const int lo, const int up) ;
-    //@}
+//     /*!@name Domain changing methods*/
+//     //@{
+//     /// Remove value "v"
+//     Event remove(const int v) ;
+//     /// Remove all values but "v"
+//     Event setDomain(const int v) ;
+//     /// Remove all values strictly lower than lo
+//     Event setMin(const int lo) ;
+//     /// Remove all values strictly greater than up
+//     Event setMax(const int up) ;
+//     /// Remove all values that do not appear in the set "s"
+//     Event setDomain(const BitSet& s) ;
+//     /// Remove all values that do not appear in the current domain of the Variable "x"
+//     Event setDomain(Variable& x) ;
+//     /// Remove all values that belong to the set "s"
+//     Event removeSet(const BitSet& s) ;
+//     /// Remove all values in the interval [l..u]
+//     Event removeRange(const int lo, const int up) ;
+//     //@}
 
-    /*!@name Backtracking methods*/
-    //@{
-    /// Restore the last solved state
-    Event restore();
-    //@}
+//     /*!@name Backtracking methods*/
+//     //@{
+//     /// Restore the last solved state
+//     Event restore();
+//     //@}
 
-    /*!@name printing methods*/
-    //@{
-    //void full_print() const ;
-    std::ostream& display(std::ostream& os) const ;
-    //void debug_print() const ;
-    //@}
-  };
+//     /*!@name printing methods*/
+//     //@{
+//     //void full_print() const ;
+//     std::ostream& display(std::ostream& os) const ;
+//     //void debug_print() const ;
+//     //@}
+//   };
 
-  std::ostream& operator<< (std::ostream& os, const Variable& x);
-  std::ostream& operator<< (std::ostream& os, const Variable* x);
+//   std::ostream& operator<< (std::ostream& os, const Variable& x);
+//   std::ostream& operator<< (std::ostream& os, const Variable* x);
 
 
   //  std::string toString(const BitsetDomain& x);
@@ -548,38 +560,38 @@ namespace Mistral {
     }
 
 
-    //    Event setDomain(Variable x) ;
-    /// Remove all values that do not appear in the current domain of the Variable "x"
-    inline Event setDomain(Variable x) {
-      if(domain.size == 1) {
-	return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
-      } else {
-	int xsize = x.get_size();
-	if(xsize == 1) {
-	  return setDomain(x.get_value());
-	} else {
-	  int xmin = x.get_min();
-	  int xmax = x.get_max();
-	  if(xsize == (xmax-xmin+1)) {
-	    return(setMin(xmin) | setMax(xmax));
-	  } else if(x.includes(domain.values)) {
-	    return NO_EVENT;
-	  } else if(x.intersect(domain.values)) {
-	    Event intersection = DOMAIN_EVENT;
-	    save();
-	    x.intersectTo(domain.values);
-	    domain.size = domain.values.size();
-	    if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
-	    if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
-	    if(domain.min == domain.max) intersection |= VALUE_EVENT;
+    //   Event setDomain(Variable x) ;
+//     /// Remove all values that do not appear in the current domain of the Variable "x"
+//     inline Event setDomain(Variable x) {
+//       if(domain.size == 1) {
+// 	return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
+//       } else {
+// 	int xsize = x.get_size();
+// 	if(xsize == 1) {
+// 	  return setDomain(x.get_value());
+// 	} else {
+// 	  int xmin = x.get_min();
+// 	  int xmax = x.get_max();
+// 	  if(xsize == (xmax-xmin+1)) {
+// 	    return(setMin(xmin) | setMax(xmax));
+// 	  } else if(x.includes(domain.values)) {
+// 	    return NO_EVENT;
+// 	  } else if(x.intersect(domain.values)) {
+// 	    Event intersection = DOMAIN_EVENT;
+// 	    save();
+// 	    x.intersectTo(domain.values);
+// 	    domain.size = domain.values.size();
+// 	    if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
+// 	    if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
+// 	    if(domain.min == domain.max) intersection |= VALUE_EVENT;
     
-	    solver->trigger_event(id, intersection);
+// 	    solver->trigger_event(id, intersection);
 	    
-	  } else return FAIL_EVENT;
-	}
-      }
-      return NO_EVENT;
-    }
+// 	  } else return FAIL_EVENT;
+// 	}
+//       }
+//       return NO_EVENT;
+//     }
 
     /// Remove all values that belong to the set "s"
     inline Event removeSet(const BitSet& s) {
@@ -642,9 +654,9 @@ namespace Mistral {
     inline void save() {
       if(trail_.back() != solver->level) {
 	//store();
-	Variable self(this, BITSET_VAR);
-	solver->save(self);
-	//solver->save(this, BITSET_VAR);
+	//Variable self(this, BITSET_VAR);
+	//solver->save(self);
+	solver->save(this, BITSET_VAR);
 
 	int i = domain.values.pos_words, j = domain.values.neg_words;
 
@@ -755,7 +767,7 @@ namespace Mistral {
     virtual void initialise(const int lb, const int ub) {
       int nw = (lb >> BitSet::EXP);
       int pw = (ub >> BitSet::EXP);
-      assert((pw-nw) <= NUM_WORDS);
+      //assert((pw-nw) <= NUM_WORDS);
       VariableBitset< WORD_TYPE >::domain.initialise(lb, ub, false);
       VariableBitset< WORD_TYPE >::domain.values.neg_words = nw;
       VariableBitset< WORD_TYPE >::domain.values.pos_words = pw;
@@ -854,12 +866,12 @@ namespace Mistral {
     /// Whether the domain is included in the set s 
     inline bool includes(const BitSet& s) const { return s.included(min, max); }
 
-    /// Whether the domain has a nonempty intersection with the Variable x
-    inline bool intersect(const Variable x) const { return x.intersect(min,max); }
-    /// Whether the domain is included in the Variable x 
-    inline bool included(const Variable x) const { return x.includes(min,max); }
-    /// Whether the domain is included in the Variable x 
-    inline bool includes(const Variable x) const { return x.included(min,max); }
+ //    /// Whether the domain has a nonempty intersection with the Variable x
+//     inline bool intersect(const Variable x) const { return x.intersect(min,max); }
+//     /// Whether the domain is included in the Variable x 
+//     inline bool included(const Variable x) const { return x.includes(min,max); }
+//     /// Whether the domain is included in the Variable x 
+//     inline bool includes(const Variable x) const { return x.included(min,max); }
 
 //     /// Whether the domain has a nonempty intersection with the Variable x
 //     bool intersect(const Variable x) const ;
@@ -977,12 +989,12 @@ namespace Mistral {
     }
 
 
-    //    Event setDomain(Variable x) ;
+    Event setDomain(Variable x) ;
     /// Remove all values that do not appear in the current domain of the Variable "x"
-    inline Event setDomain(Variable x) {
-      //return setDomain(x.next(min-1), x.prev(max+1));
-      return NO_EVENT;
-    }
+//     inline Event setDomain(Variable x) {
+//       //return setDomain(x.next(min-1), x.prev(max+1));
+//       return NO_EVENT;
+//     }
 
     /// Remove all values that belong to the set "s"
     inline Event removeSet(const BitSet& s) {
@@ -1006,9 +1018,9 @@ namespace Mistral {
 
     inline void save() {
       if(trail_.back() != solver->level) {
-	Variable self(this, RANGE_VAR);
-	solver->save(self);
-	//solver->save(this, RANGE_VAR);
+	//Variable self(this, RANGE_VAR);
+	//solver->save(self);
+	solver->save(this, RANGE_VAR);
 	trail_.add(min);
 	trail_.add(max);
 	trail_.add(solver->level);
@@ -1033,6 +1045,161 @@ namespace Mistral {
   class VariableVirtual : public VariableBitmap {};
 
 
+//   class VariableBitmap;
+//   class VariableRange;
+//   class VariableList;
+  class Expression;
+  class Variable {
+
+  public:
+
+    union {
+      int domain_type;
+      int* bool_domain;
+    };
+    union {
+      int constant_value;
+      VariableImplementation* variable;
+      VariableVirtual* virtual_domain;
+      VariableBitmap* bitset_domain;
+      VariableRange* range_domain;
+      VariableList* list_domain;
+      Expression* expression;
+      Constraint* constraint;
+    };
+
+    Variable();
+    Variable(const int value);
+    Variable(VariableImplementation* impl, const int type=DYN_VAR);
+    Variable(Expression* impl);
+    Variable(const int lo, const int up, const int type=DYN_VAR);
+
+    //Variable get_children();
+    Variable get_var();
+
+    Variable operator+(Variable);
+    Variable operator-(Variable);
+//     //Variable operator*(Variable);
+//     //Variable operator/(Variable);
+//     //Variable operator&&(Variable);
+//     //Variable operator||(Variable);
+//     //Variable operator^(Variable);
+//     //Variable operator->(Variable);
+//     Variable operator==(Variable);
+    Variable operator!=(Variable);
+    Variable operator<(Variable);
+    Variable operator<=(Variable);
+    Variable operator>(Variable);
+    Variable operator>=(Variable);
+//     //Variable operator-();
+//     //Variable operator!();
+
+
+    void initialise(Solver *s, const bool top=true);
+//    void initialise(Solver *s);
+
+    Event setValue( const int val );    
+    inline int id() const {return variable->id;}
+    inline Solver* get_solver() {return variable->solver;}
+
+    /*!@name Constant Accessors and Iterators*/
+    //@{
+    /// Returns the assigned value if it exists
+    int get_value() const ; 
+    int get_solution_value() const ; 
+    /// Returns the domain 
+    //BitsetDomain get_domain() const ; 
+    std::string get_domain() const ; 
+    /// Returns the domain size
+    unsigned int get_size() const ; 
+    /// Returns the minimum value in the domain
+    int get_min() const ;
+    /// Returns the maximum value in the domain
+    int get_max() const ; 
+    /// Returns the minimum value that could belong to the domain
+    int get_minCapacity() const ;
+    /// Returns 1 + the maximum value that could belong to the domain
+    int get_maxCapacity() const ;
+    /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
+    int get_minPosAbs() const ;
+    /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
+    int get_minNegAbs() const ;
+    /// Return the smallest value currently in the domain that is strictly greater than "v"
+    int next(const int v) const ;
+    /// Return the smallest value currently in the domain that is strictly greater than "v"
+    int prev(const int v) const ;
+    /// Whether or not the Variable is currently an interval
+    bool is_range() const ;
+    /// Whether or not the Variable is bound to a ground value
+    bool is_ground() const ;
+    /// Whether or not the Variable is bound to a given ground value
+    bool equal(const int v) ;
+    /// Whether the value "v" is currently contained in the domain
+    bool contain(const int v) ;
+
+    /// Whether the domain has a nonempty intersection with the interval [l..u]
+    bool intersect(const int lo, const int up) const ;
+    /// Whether the domain is included in the interval [l..u]
+    bool included(const int lo, const int up) const ;
+    /// Whether the domain is included in the interval [l..u]
+    bool includes(const int lo, const int up) const ;
+
+    /// Whether the domain has a nonempty intersection with the set s 
+    bool intersect(const BitSet& s) const ;
+    /// Whether the domain is included in the set s 
+    bool included(const BitSet& s) const ;
+    /// Whether the domain is included in the set s 
+    bool includes(const BitSet& s) const ;
+
+    /// Whether the domain has a nonempty intersection with the Variable x
+    bool intersect(const Variable& x) const ;
+    /// Whether the domain is included in the Variable x 
+    bool included(const Variable& x) const ;
+    /// Whether the domain is included in the Variable x 
+    bool includes(const Variable& x) const ;
+
+    /// Intersect its domain with a set s
+    void intersectTo( BitSet& s ) const ;
+    /// Do the union of its domain with a set s
+    void unionTo( BitSet& s ) const ;
+    //@}
+
+    /*!@name Domain changing methods*/
+    //@{
+    /// Remove value "v"
+    Event remove(const int v) ;
+    /// Remove all values but "v"
+    Event setDomain(const int v) ;
+    /// Remove all values strictly lower than lo
+    Event setMin(const int lo) ;
+    /// Remove all values strictly greater than up
+    Event setMax(const int up) ;
+    /// Remove all values that do not appear in the set "s"
+    Event setDomain(const BitSet& s) ;
+    /// Remove all values that do not appear in the current domain of the Variable "x"
+    Event setDomain(Variable& x) ;
+    /// Remove all values that belong to the set "s"
+    Event removeSet(const BitSet& s) ;
+    /// Remove all values in the interval [l..u]
+    Event removeRange(const int lo, const int up) ;
+    //@}
+
+    /*!@name Backtracking methods*/
+    //@{
+    /// Restore the last solved state
+    Event restore();
+    //@}
+
+    /*!@name printing methods*/
+    //@{
+    //void full_print() const ;
+    std::ostream& display(std::ostream& os) const ;
+    //void debug_print() const ;
+    //@}
+  };
+
+  std::ostream& operator<< (std::ostream& os, const Variable& x);
+  std::ostream& operator<< (std::ostream& os, const Variable* x);
 
 
 //   class Expression;
@@ -1256,7 +1423,7 @@ namespace Mistral {
     Decision(Constraint *c) {
       _data_ = -1;
       var = Variable();
-      var.implementation = (VariableImplementation*)c;
+      var.constraint = c;
     }
 
     virtual ~Decision() {
