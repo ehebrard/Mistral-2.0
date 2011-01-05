@@ -95,6 +95,9 @@ namespace Mistral {
     // used to post/relax the constraints on the right triggers
     int *trigger;
     int *self;
+
+    /// The constrained variables.
+    Vector<Variable> scope;
     //@}
 
 
@@ -217,324 +220,324 @@ namespace Mistral {
   };
 
 
-  /**********************************************
-   * DynamicConstraint
-   **********************************************/
-  /*! \class DynamicConstraint
-    \brief Representation of DynamicConstraints.
+//   /**********************************************
+//    * DynamicConstraint
+//    **********************************************/
+//   /*! \class DynamicConstraint
+//     \brief Representation of DynamicConstraints.
 
-    The constrained variables are stored in the array _scope[]. 
-    The method propagate() is called during preprocessing.
-    Generic propagate methods, using AC3
-    with residual supports are implemented in
-    the class DynamicConstraint.
-  */
-  class DynamicConstraint : public Constraint {
+//     The constrained variables are stored in the array _scope[]. 
+//     The method propagate() is called during preprocessing.
+//     Generic propagate methods, using AC3
+//     with residual supports are implemented in
+//     the class DynamicConstraint.
+//   */
+//   class DynamicConstraint : public Constraint {
 
-  public:
+//   public:
 
-    /*!@name Parameters*/
-    //@{
-    /// The constrained variables.
-    Vector<Variable> scope;
-    //@}
+//     /*!@name Parameters*/
+//     //@{
+//     /// The constrained variables.
+//     Vector<Variable> scope;
+//     //@}
 
 
-    /*!@name Constructors*/
-    //@{
-    /// The _scope is build by copying an array "scp" containing "l" variables
-    virtual void initialise();
-    //void initialise(Vector< Variable >& scp);
-    DynamicConstraint();
-    DynamicConstraint(Vector< Variable >& scp);
-    virtual ~DynamicConstraint();
+//     /*!@name Constructors*/
+//     //@{
+//     /// The _scope is build by copying an array "scp" containing "l" variables
+//     virtual void initialise();
+//     //void initialise(Vector< Variable >& scp);
+//     DynamicConstraint();
+//     DynamicConstraint(Vector< Variable >& scp);
+//     virtual ~DynamicConstraint();
 
-    /// An idempotent constraint should not be called on events triggered by itself.
-    /// To forbid that, the lists 'events' and 'changes' are merged
-    inline void set_idempotent(const bool idp) {
-      if(idp) {
-	events.size = 0;
-	events.capacity = scope.size;
-	events.list_ = changes.list_;
-	events.index_ = changes.index_;
-	events.start_ = NULL;
-      } else {
-	events.initialise(0, scope.size-1, false);
-      }
-    }
+//     /// An idempotent constraint should not be called on events triggered by itself.
+//     /// To forbid that, the lists 'events' and 'changes' are merged
+//     inline void set_idempotent(const bool idp) {
+//       if(idp) {
+// 	events.size = 0;
+// 	events.capacity = scope.size;
+// 	events.list_ = changes.list_;
+// 	events.index_ = changes.index_;
+// 	events.start_ = NULL;
+//       } else {
+// 	events.initialise(0, scope.size-1, false);
+//       }
+//     }
 
-    // called 
-    inline Constraint* freeze() {
-      changes.size = events.size;
+//     // called 
+//     inline Constraint* freeze() {
+//       changes.size = events.size;
 
-      // before each propagation, the lists events and changes are swapped 
-      if(changes.list_ != events.list_) {
+//       // before each propagation, the lists events and changes are swapped 
+//       if(changes.list_ != events.list_) {
 
-	// make the changes list points to the events list, and clear the other
-	events.size = 0;
+// 	// make the changes list points to the events list, and clear the other
+// 	events.size = 0;
 	
-	int *iaux = events.list_;
-	events.list_ = changes.list_;
-	changes.list_ = iaux;
+// 	int *iaux = events.list_;
+// 	events.list_ = changes.list_;
+// 	changes.list_ = iaux;
 	
-	unsigned int *uaux = events.index_;
-	events.index_ = changes.index_;
-	changes.index_ = uaux;
+// 	unsigned int *uaux = events.index_;
+// 	events.index_ = changes.index_;
+// 	changes.index_ = uaux;
 	
-	return NULL;
-      }
-      return this;
-    }
+// 	return NULL;
+//       }
+//       return this;
+//     }
 
-    inline void defrost() {
+//     inline void defrost() {
 
-      if(active.size == 1) relax();
+//       if(active.size == 1) relax();
 
-      if(changes.list_ == events.list_) 
-	// if idempotent, clear the events list
-	events.size = 0;      
-    }
+//       if(changes.list_ == events.list_) 
+// 	// if idempotent, clear the events list
+// 	events.size = 0;      
+//     }
 
-    inline void trigger_on(const int t, const int x) {
-      trigger[x] = t;
-    }
+//     inline void trigger_on(const int t, const int x) {
+//       trigger[x] = t;
+//     }
 
-    inline Constraint* notify_assignment(const int var, const int level) {
-      Constraint *r = NULL;
-      if(trail_.back() != level) {
-	trail_.add(active.size);
-	trail_.add(level);
-	r = this;
-      }
-      active.erase(var);
-      return r;
-    }
+//     inline Constraint* notify_assignment(const int var, const int level) {
+//       Constraint *r = NULL;
+//       if(trail_.back() != level) {
+// 	trail_.add(active.size);
+// 	trail_.add(level);
+// 	r = this;
+//       }
+//       active.erase(var);
+//       return r;
+//     }
 
-    void post(Solver *s);
-    void relax();
+//     void post(Solver *s);
+//     void relax();
     
-    inline void restore() {
-      trail_.pop();
-      active.size = trail_.pop();
-    }
+//     inline void restore() {
+//       trail_.pop();
+//       active.size = trail_.pop();
+//     }
 
 
-    /*!@name Propagators*/
-    //@{
-    /*!
-     * This methods returns 0 if the constraint is satisfied
-     * by the combination and any positive value otherwise.  
-     */
-    virtual int check(const int*) const = 0;
-    /*!
-     *  This method is called when the domain of at least one   
-     *  variable in _scope has been modified. The list of 
-     *  changed variables is in 'modified', and the type
-     *  of event in 'event_type'.
-     *  Some domains in _scope may be reduced, and NULL is
-     *  returned on success (there is still at least one consistent
-     *  assignment) or a ptr to the wiped-out variable otherwise. 
-     */
-    virtual PropagationOutcome propagate() { return NULL; }
-    /*!
-     *  Check if the cached support is valid.
-     *  Otherwise initialize an iterator on supports
-     */
-    bool firstSupport(const int, const int);
-    /*!
-     *  Find the first valid support. 
-     *  Return true if a support has been found, 
-     *  or false if no such support exists.
-     */
-    bool findSupport(const int, const int);
-    //@}
+//     /*!@name Propagators*/
+//     //@{
+//     /*!
+//      * This methods returns 0 if the constraint is satisfied
+//      * by the combination and any positive value otherwise.  
+//      */
+//     virtual int check(const int*) const = 0;
+//     /*!
+//      *  This method is called when the domain of at least one   
+//      *  variable in _scope has been modified. The list of 
+//      *  changed variables is in 'modified', and the type
+//      *  of event in 'event_type'.
+//      *  Some domains in _scope may be reduced, and NULL is
+//      *  returned on success (there is still at least one consistent
+//      *  assignment) or a ptr to the wiped-out variable otherwise. 
+//      */
+//     virtual PropagationOutcome propagate() { return NULL; }
+//     /*!
+//      *  Check if the cached support is valid.
+//      *  Otherwise initialize an iterator on supports
+//      */
+//     bool firstSupport(const int, const int);
+//     /*!
+//      *  Find the first valid support. 
+//      *  Return true if a support has been found, 
+//      *  or false if no such support exists.
+//      */
+//     bool findSupport(const int, const int);
+//     //@}
 
 
-    /*!@name Miscellanous methods*/
-    //@{
-    /// Print the constraint
-    virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "c"; }
-    //@}
-  };
+//     /*!@name Miscellanous methods*/
+//     //@{
+//     /// Print the constraint
+//     virtual std::ostream& display(std::ostream&) const ;
+//     virtual std::string name() const { return "c"; }
+//     //@}
+//   };
 
 
-  /**********************************************
-   * StaticConstraint
-   **********************************************/
-  /*! \class StaticConstraint
-    \brief Representation of StaticConstraints.
+//   /**********************************************
+//    * StaticConstraint
+//    **********************************************/
+//   /*! \class StaticConstraint
+//     \brief Representation of StaticConstraints.
 
-    The constrained variables are stored in the array _scope[]. 
-    The method propagate() is called during preprocessing.
-    Generic propagate methods, using AC3
-    with residual supports are implemented in
-    the class StaticConstraint.
-  */
-  class StaticConstraint {
+//     The constrained variables are stored in the array _scope[]. 
+//     The method propagate() is called during preprocessing.
+//     Generic propagate methods, using AC3
+//     with residual supports are implemented in
+//     the class StaticConstraint.
+//   */
+//   class StaticConstraint {
 
-  protected:
+//   protected:
 
-    /*!@name Parameters*/
-    //@{
-    /// The trail, used for backtracking
-    Vector< int > trail_;
+//     /*!@name Parameters*/
+//     //@{
+//     /// The trail, used for backtracking
+//     Vector< int > trail_;
 
-    /// 
-    int   *solution;
-    int ***supports;
-    //@}
+//     /// 
+//     int   *solution;
+//     int ***supports;
+//     //@}
     
 
-  public:
+//   public:
 
-    /*!@name Parameters*/
-    //@{
-    // used to post/relax the constraints on the right triggers
-    int *trigger;
-    int *self;
+//     /*!@name Parameters*/
+//     //@{
+//     // used to post/relax the constraints on the right triggers
+//     int *trigger;
+//     int *self;
 
-    ///
-    Solver *solver;
-    /// The constrained variables.
-    Vector<Variable> scope;
-    //Vector<int> trigger;
-
-
-    /// Whether the propagation is delayed
-    int priority;
-    /// An unique id
-    int id;
-
-    /// The indices of unassigned variables
-    IntStack active;
-
-    /// We use two lists so that the active constraint can add events to its own 
-    /// list (events) without changing the one used during propagation (changes)
-    IntStack changes; // this is the list that is accessible from a propagator
-    IntStack events; // this is the list that collects the events
-    /// The type of event for each modified variable
-    Event *event_type;
-    //@}
+//     ///
+//     Solver *solver;
+//     /// The constrained variables.
+//     Vector<Variable> scope;
+//     //Vector<int> trigger;
 
 
-    /*!@name Constructors*/
-    //@{
-    /// The _scope is build by copying an array "scp" containing "l" variables
-    virtual void initialise();
-    //void initialise(Vector< Variable >& scp);
-    StaticConstraint();
-    StaticConstraint(Vector< Variable >& scp);
-    virtual ~StaticConstraint();
+//     /// Whether the propagation is delayed
+//     int priority;
+//     /// An unique id
+//     int id;
 
-    /// An idempotent constraint should not be called on events triggered by itself.
-    /// To forbid that, the lists 'events' and 'changes' are merged
-    inline void set_idempotent(const bool idp) {
-      if(idp) {
-	events.size = 0;
-	events.capacity = scope.size;
-	events.list_ = changes.list_;
-	events.index_ = changes.index_;
-	events.start_ = NULL;
-      } else {
-	events.initialise(0, scope.size-1, false);
-      }
-    }
+//     /// The indices of unassigned variables
+//     IntStack active;
 
-    // called 
-    inline StaticConstraint* freeze() {
-      changes.size = events.size;
+//     /// We use two lists so that the active constraint can add events to its own 
+//     /// list (events) without changing the one used during propagation (changes)
+//     IntStack changes; // this is the list that is accessible from a propagator
+//     IntStack events; // this is the list that collects the events
+//     /// The type of event for each modified variable
+//     Event *event_type;
+//     //@}
 
-      // before each propagation, the lists events and changes are swapped 
-      if(changes.list_ != events.list_) {
 
-	// make the changes list points to the events list, and clear the other
-	events.size = 0;
+//     /*!@name Constructors*/
+//     //@{
+//     /// The _scope is build by copying an array "scp" containing "l" variables
+//     virtual void initialise();
+//     //void initialise(Vector< Variable >& scp);
+//     StaticConstraint();
+//     StaticConstraint(Vector< Variable >& scp);
+//     virtual ~StaticConstraint();
+
+//     /// An idempotent constraint should not be called on events triggered by itself.
+//     /// To forbid that, the lists 'events' and 'changes' are merged
+//     inline void set_idempotent(const bool idp) {
+//       if(idp) {
+// 	events.size = 0;
+// 	events.capacity = scope.size;
+// 	events.list_ = changes.list_;
+// 	events.index_ = changes.index_;
+// 	events.start_ = NULL;
+//       } else {
+// 	events.initialise(0, scope.size-1, false);
+//       }
+//     }
+
+//     // called 
+//     inline StaticConstraint* freeze() {
+//       changes.size = events.size;
+
+//       // before each propagation, the lists events and changes are swapped 
+//       if(changes.list_ != events.list_) {
+
+// 	// make the changes list points to the events list, and clear the other
+// 	events.size = 0;
 	
-	int *iaux = events.list_;
-	events.list_ = changes.list_;
-	changes.list_ = iaux;
+// 	int *iaux = events.list_;
+// 	events.list_ = changes.list_;
+// 	changes.list_ = iaux;
 	
-	unsigned int *uaux = events.index_;
-	events.index_ = changes.index_;
-	changes.index_ = uaux;
+// 	unsigned int *uaux = events.index_;
+// 	events.index_ = changes.index_;
+// 	changes.index_ = uaux;
 	
-	return NULL;
-      }
-      return this;
-    }
+// 	return NULL;
+//       }
+//       return this;
+//     }
 
-    inline void defrost() {
+//     inline void defrost() {
 
-      if(active.size == 1) relax();
+//       if(active.size == 1) relax();
 
-      if(changes.list_ == events.list_) 
-	// if idempotent, clear the events list
-	events.size = 0;      
-    }
+//       if(changes.list_ == events.list_) 
+// 	// if idempotent, clear the events list
+// 	events.size = 0;      
+//     }
 
-    inline void trigger_on(const int t, const int x) {
-      trigger[x] = t;
-    }
+//     inline void trigger_on(const int t, const int x) {
+//       trigger[x] = t;
+//     }
 
-    inline Constraint* notify_assignment(const int var, const int level) {
-      Constraint *r = NULL;
-      if(trail_.back() != level) {
-	trail_.add(active.size);
-	trail_.add(level);
-	r = this;
-      }
-      active.erase(var);
-      return r;
-    }
+//     inline Constraint* notify_assignment(const int var, const int level) {
+//       Constraint *r = NULL;
+//       if(trail_.back() != level) {
+// 	trail_.add(active.size);
+// 	trail_.add(level);
+// 	r = this;
+//       }
+//       active.erase(var);
+//       return r;
+//     }
 
-    void post(Solver *s);
-    void relax();
+//     void post(Solver *s);
+//     void relax();
     
-    inline void restore() {
-      trail_.pop();
-      active.size = trail_.pop();
-    }
+//     inline void restore() {
+//       trail_.pop();
+//       active.size = trail_.pop();
+//     }
 
 
-    /*!@name Propagators*/
-    //@{
-    /*!
-     * This methods returns 0 if the constraint is satisfied
-     * by the combination and any positive value otherwise.  
-     */
-    virtual int check(const int*) const = 0;
-    /*!
-     *  This method is called when the domain of at least one   
-     *  variable in _scope has been modified. The list of 
-     *  changed variables is in 'modified', and the type
-     *  of event in 'event_type'.
-     *  Some domains in _scope may be reduced, and NULL is
-     *  returned on success (there is still at least one consistent
-     *  assignment) or a ptr to the wiped-out variable otherwise. 
-     */
-    virtual PropagationOutcome propagate() { return NULL; }
-    /*!
-     *  Check if the cached support is valid.
-     *  Otherwise initialize an iterator on supports
-     */
-    bool firstSupport(const int, const int);
-    /*!
-     *  Find the first valid support. 
-     *  Return true if a support has been found, 
-     *  or false if no such support exists.
-     */
-    bool findSupport(const int, const int);
-    //@}
+//     /*!@name Propagators*/
+//     //@{
+//     /*!
+//      * This methods returns 0 if the constraint is satisfied
+//      * by the combination and any positive value otherwise.  
+//      */
+//     virtual int check(const int*) const = 0;
+//     /*!
+//      *  This method is called when the domain of at least one   
+//      *  variable in _scope has been modified. The list of 
+//      *  changed variables is in 'modified', and the type
+//      *  of event in 'event_type'.
+//      *  Some domains in _scope may be reduced, and NULL is
+//      *  returned on success (there is still at least one consistent
+//      *  assignment) or a ptr to the wiped-out variable otherwise. 
+//      */
+//     virtual PropagationOutcome propagate() { return NULL; }
+//     /*!
+//      *  Check if the cached support is valid.
+//      *  Otherwise initialize an iterator on supports
+//      */
+//     bool firstSupport(const int, const int);
+//     /*!
+//      *  Find the first valid support. 
+//      *  Return true if a support has been found, 
+//      *  or false if no such support exists.
+//      */
+//     bool findSupport(const int, const int);
+//     //@}
 
 
-    /*!@name Miscellanous methods*/
-    //@{
-    /// Print the constraint
-    virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "c"; }
-    //@}
-  };
+//     /*!@name Miscellanous methods*/
+//     //@{
+//     /// Print the constraint
+//     virtual std::ostream& display(std::ostream&) const ;
+//     virtual std::string name() const { return "c"; }
+//     //@}
+//   };
 
 
   /**********************************************

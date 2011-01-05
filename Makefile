@@ -57,3 +57,8 @@ $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 %: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<	
 	$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
+
+release: 
+	@echo Export Mistral version 2.0.$(DATE)
+	mkdir Mistral-2.0.$(DATE)
+	git archive master --format=tar | tar -x -C ./Mistral-2.0.$(DATE)
