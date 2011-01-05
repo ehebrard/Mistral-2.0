@@ -270,7 +270,6 @@ int main(int argc, char *argv[])
   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
   tests.push_back(new CostasNotEqualAllSolutions(N)); 
-  
   tests.push_back(new RandomCListRandomEraseAndRestore<4>());
   tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
   tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
@@ -279,7 +278,6 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
-
     
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;

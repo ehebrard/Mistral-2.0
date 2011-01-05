@@ -675,12 +675,12 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
 //     for(int i=0; i<booleans.size; ++i) {
 //       booleans->initialise_boolean_domain(boolean_pool.back()+i);
 //     }
-//     for(unsigned int i=0; i<constraints.size; ++i) {
-//       //constraints[i]->initialise_scope();
-//       for(unsigned int j=0; j<constraints[i]->scope.size; ++j) {
-// 	constraints[i]->scope[j] = constraints[i]->scope[j].get_var();
-//       }
-//     }
+  for(unsigned int i=0; i<constraints.size; ++i) {
+    //constraints[i]->initialise_scope();
+    for(unsigned int j=0; j<constraints[i]->scope.size; ++j) {
+      constraints[i]->scope[j] = constraints[i]->scope[j].get_var();
+    }
+  }
     //  }
 
 

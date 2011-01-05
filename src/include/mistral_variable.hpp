@@ -73,7 +73,10 @@ namespace Mistral {
     int get_solution_ub() const ;//{ return solver->last_solution_ub[id] } ; 
 
     //inline void triggerValueEvent() {solver->trigger_event(id, VALUE_EVENT);}
+    void trigger_event(Event evt);
     void trigger_value_event_and_save(Variable *x);
+    void store(VariableImplementation *x, const int type);
+    int get_current_level();
   };
 
 
@@ -451,8 +454,9 @@ namespace Mistral {
 	  domain.min = domain.values.min();
 	}       
       }  
-
-      solver->trigger_event(id, removal);
+      
+      //solver->trigger_event(id, removal);
+      trigger_event(removal);
       return removal; 
     }
 
@@ -479,7 +483,8 @@ namespace Mistral {
 	setdomain |= UB_EVENT;
       }
       
-      solver->trigger_event(id, setdomain);	
+      //solver->trigger_event(id, setdomain);	
+      trigger_event(setdomain);
 
       return setdomain; 
     }
@@ -507,7 +512,8 @@ namespace Mistral {
 	if(domain.size == 1) lower_bound |= VALUE_EVENT;
       }
       
-      solver->trigger_event(id, lower_bound);
+      //solver->trigger_event(id, lower_bound);
+      trigger_event(lower_bound);
       return lower_bound; 
     }
 
@@ -534,7 +540,8 @@ namespace Mistral {
 	if(domain.size == 1) upper_bound |= VALUE_EVENT;
       }
 
-      solver->trigger_event(id, upper_bound);
+      //solver->trigger_event(id, upper_bound);
+      trigger_event(upper_bound);
       return upper_bound; 
     }
 
@@ -555,7 +562,8 @@ namespace Mistral {
       if(!s.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
       if(domain.min == domain.max) intersection |= VALUE_EVENT;
     
-      solver->trigger_event(id, intersection);
+      //solver->trigger_event(id, intersection);
+      trigger_event(intersection);
       return intersection; 
     }
 
@@ -639,8 +647,8 @@ namespace Mistral {
 	domain.size -= (up-lo+1);
       }
 
-      solver->trigger_event(id, DOMAIN_EVENT);
-
+      //solver->trigger_event(id, DOMAIN_EVENT);
+      trigger_event(DOMAIN_EVENT);
       return DOMAIN_EVENT; 
     }
     //@}
@@ -652,13 +660,18 @@ namespace Mistral {
     //@}   
 
     inline void save() {
-      if(trail_.back() != solver->level) {
+      int i, j, lvl = get_current_level();
+      //if(trail_.back() != solver->level) {
+      if(trail_.back() != lvl) {
 	//store();
 	//Variable self(this, BITSET_VAR);
 	//solver->save(self);
-	solver->save(this, BITSET_VAR);
+	//solver->save(this, BITSET_VAR);
+	store(this, BITSET_VAR);
 
-	int i = domain.values.pos_words, j = domain.values.neg_words;
+	//int i = domain.values.pos_words, j = domain.values.neg_words;
+	i = domain.values.pos_words;
+	j = domain.values.neg_words;
 
 	trail_.add(domain.min);
 	trail_.add(domain.max);
@@ -669,18 +682,20 @@ namespace Mistral {
 	    //WORD_TYPE buf = domain.values.table[i];
 	    if(*(delta_[i]) != domain.values.table[i]) {
 	      *(++delta_[i]) = domain.values.table[i];
-	      *(++level_[i]) = solver->level;
+	      *(++level_[i]) = lvl;
 	    }
 	  }
 	
-	trail_.add(solver->level);
+	trail_.add(lvl);
       }
     }
 
     inline Event restore() {
       // backtrack from solver->level to solver->level-1;
       // the domain has changed at solver->level
-      int i = domain.values.pos_words, j = domain.values.neg_words;
+      int i = domain.values.pos_words;
+      int j = domain.values.neg_words;
+      int lvl = get_current_level();
 
       trail_.pop();
       trail_.pop(domain.size);
@@ -690,7 +705,8 @@ namespace Mistral {
       if(delta_) 
 	while( i --> j ) {
 	  domain.values.table[i] = *(delta_[i]);
-	  if(*(level_[i]) == solver->level) {
+	  //if(*(level_[i]) == solver->level) {
+	  if(*(level_[i]) == lvl) {
 	    --level_[i];
 	    --delta_[i];
 	  }
@@ -1045,11 +1061,32 @@ namespace Mistral {
   class VariableVirtual : public VariableBitmap {};
 
 
+  class VariableStruct {
+    union {
+      int domain_type;
+      int* bool_domain;
+    };
+    union {
+      int constant_value;
+      VariableImplementation* variable;
+      VariableVirtual* virtual_domain;
+      VariableBitmap* bitset_domain;
+      VariableRange* range_domain;
+      VariableList* list_domain;
+      //Expression* expression;
+      Constraint* constraint;
+    };
+  };
+
 //   class VariableBitmap;
 //   class VariableRange;
 //   class VariableList;
+
+
   class Expression;
-  class Variable {
+
+
+  class Variable  {
 
   public:
 
@@ -1098,96 +1135,384 @@ namespace Mistral {
     void initialise(Solver *s, const bool top=true);
 //    void initialise(Solver *s);
 
-    Event setValue( const int val );    
+    //Event setValue( const int val );    
+    inline Event setValue( const int val ) {
+      int nstat = (*bool_domain & val);
+      if( !nstat ) return FAIL_EVENT;
+      
+      *bool_domain = nstat;
+      
+      variable->trigger_value_event_and_save(this);
+      return VALUE_EVENT;
+    }
     inline int id() const {return variable->id;}
     inline Solver* get_solver() {return variable->solver;}
 
     /*!@name Constant Accessors and Iterators*/
     //@{
     /// Returns the assigned value if it exists
-    int get_value() const ; 
-    int get_solution_value() const ; 
+    int get_value(const Expression *x) const;
+    inline int get_value() const {
+      if     (domain_type ==  BITSET_VAR) return bitset_domain->get_value();
+      else if(domain_type ==    LIST_VAR) return list_domain->get_value();
+      else if(domain_type ==   RANGE_VAR) return range_domain->get_value();
+      //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_value();
+      else if(domain_type ==   CONST_VAR) return constant_value;
+      //else if(domain_type ==   EXPRESSION) return expression->self.get_value();
+      else if(domain_type ==   EXPRESSION) return get_value(expression);
+      else  return (*bool_domain-1);
+    }
+    inline int get_solution_value() const {
+      return(domain_type == CONST_VAR ? constant_value :
+	     variable->get_solution_value());
+    }
     /// Returns the domain 
     //BitsetDomain get_domain() const ; 
     std::string get_domain() const ; 
     /// Returns the domain size
-    unsigned int get_size() const ; 
+    unsigned int get_size(const Expression *x) const;
+    inline unsigned int get_size() const {
+      if     (domain_type ==  BITSET_VAR) return bitset_domain->get_size();
+      else if(domain_type ==    LIST_VAR) return list_domain->get_size();
+      else if(domain_type ==   RANGE_VAR) return range_domain->get_size();
+      //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_size();
+      else if(domain_type ==   CONST_VAR) return 1;
+      //else if(domain_type ==   EXPRESSION) return expression->self.get_size();
+      else if(domain_type ==   EXPRESSION) return get_size(expression);
+      else  return ((*bool_domain+1)/2);
+    }
     /// Returns the minimum value in the domain
-    int get_min() const ;
+    int get_min(const Expression *x) const;
+    inline int get_min() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_min();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_min();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_min();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.get_min();
+    else if(domain_type ==   EXPRESSION) return get_min(expression);
+    else  return (!(*bool_domain & 1));
+    }
     /// Returns the maximum value in the domain
-    int get_max() const ; 
+    int get_max(const Expression *x) const;
+    inline int get_max() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_max();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_max();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_max();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_max();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.get_max();
+    else if(domain_type ==   EXPRESSION) return get_max(expression);
+    else  return (*bool_domain >> 1);
+    }
     /// Returns the minimum value that could belong to the domain
-    int get_minCapacity() const ;
+    inline int get_minCapacity() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minCapacity();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_minCapacity();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_minCapacity();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minCapacity();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.get_minCapacity();
+    else  return 0;
+    }
     /// Returns 1 + the maximum value that could belong to the domain
-    int get_maxCapacity() const ;
+    inline int get_maxCapacity() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_maxCapacity();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_maxCapacity();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_maxCapacity();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_maxCapacity();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.get_maxCapacity();
+    else  return 1;
+  }
     /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
-    int get_minPosAbs() const ;
+    inline int get_minPosAbs() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minPosAbs();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_minPosAbs();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_minPosAbs();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minPosAbs();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.get_minPosAbs();
+    else  return (!(*bool_domain & 1));
+  }
     /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
-    int get_minNegAbs() const ;
+    inline int get_minNegAbs() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minNegAbs();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_minNegAbs();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_minNegAbs();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minNegAbs();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.get_minNegAbs();
+    else  return (!(*bool_domain & 1));
+  }
     /// Return the smallest value currently in the domain that is strictly greater than "v"
-    int next(const int v) const ;
+    inline int next(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->next(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->next(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->next(v);
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->next(v);
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.next(v);
+    else  return (*bool_domain >> 1);
+  }
     /// Return the smallest value currently in the domain that is strictly greater than "v"
-    int prev(const int v) const ;
+    inline int prev(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->prev(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->prev(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->prev(v);
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->prev(v);
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    //else if(domain_type ==   EXPRESSION) return expression->self.prev(v);
+    else  return (!(*bool_domain & 1));
+  }
     /// Whether or not the Variable is currently an interval
-    bool is_range() const ;
+    //int get_value(const Expression *x) const;
+    inline bool is_range() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->is_range();
+    else if(domain_type ==    LIST_VAR) return list_domain->is_range();
+    else if(domain_type ==   RANGE_VAR) return range_domain->is_range();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->is_range();
+    else if(domain_type ==   CONST_VAR) return true;
+    //else if(domain_type ==   EXPRESSION) return expression->self.is_range();
+    else return true;
+  }
     /// Whether or not the Variable is bound to a ground value
-    bool is_ground() const ;
+    bool is_ground(const Expression *x) const;
+    inline bool is_ground() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->is_ground();
+    else if(domain_type ==    LIST_VAR) return list_domain->is_ground();
+    else if(domain_type ==   RANGE_VAR) return range_domain->is_ground();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->is_ground();
+    else if(domain_type ==   CONST_VAR) return true;
+    //else if(domain_type ==   EXPRESSION) return expression->self.is_ground();
+    else if(domain_type ==   EXPRESSION)  {
+      //std::cout << "here " << expression << std::endl;
+      return is_ground(expression);
+    }
+    else  return (*bool_domain != 3);
+  }
     /// Whether or not the Variable is bound to a given ground value
-    bool equal(const int v) ;
+    //int get_value(const Expression *x) const;
+    inline bool equal(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->equal(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->equal(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->equal(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->equal(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value == v);
+    //else if(domain_type ==   EXPRESSION) return expression->self.equal(v);
+    else  return (*bool_domain-1 == v);
+  }
     /// Whether the value "v" is currently contained in the domain
-    bool contain(const int v) ;
+    //int get_value(const Expression *x) const;
+    inline bool contain(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->contain(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->contain(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->contain(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->contain(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value == v);
+    //else if(domain_type ==   EXPRESSION) return expression->self.contain(v);
+    else  return (!(v >> 1) && (*bool_domain & (v+1)));
+  }
 
     /// Whether the domain has a nonempty intersection with the interval [l..u]
-    bool intersect(const int lo, const int up) const ;
+    inline bool intersect(const int lo, const int up) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->intersect(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->intersect(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->intersect(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(lo, up);
+    else if(domain_type ==   CONST_VAR) return (constant_value >= lo && constant_value <= up);
+    //else if(domain_type ==   EXPRESSION) return expression->self.intersect(lo, up);
+    else  return (((lo<=0) | (2*(up>0))) & *bool_domain);
+  }
     /// Whether the domain is included in the interval [l..u]
-    bool included(const int lo, const int up) const ;
+    inline bool included(const int lo, const int up) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->included(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->included(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->included(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(lo, up);
+    else if(domain_type ==   CONST_VAR) return (constant_value >= lo && constant_value <= up);
+    //else if(domain_type ==   EXPRESSION) return expression->self.included(lo, up);
+    else  {
+      int state = *bool_domain;
+      return ( up >= (state >> 1) && (lo <= !(state & 1)) );
+    }
+  }
     /// Whether the domain is included in the interval [l..u]
-    bool includes(const int lo, const int up) const ;
+    inline bool includes(const int lo, const int up) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->includes(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->includes(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(lo, up);
+    else if(domain_type ==   CONST_VAR) return (constant_value == lo && constant_value == up);
+    //else if(domain_type ==   EXPRESSION) return expression->self.includes(lo, up);
+    else  {
+      int state = *bool_domain;
+      return ( up <= (state >> 1) && (lo >= !(state & 1)) );
+    }
+  }
 
     /// Whether the domain has a nonempty intersection with the set s 
-    bool intersect(const BitSet& s) const ;
+    inline bool intersect(const BitSet& s) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->intersect(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->intersect(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->intersect(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value));
+    //else if(domain_type ==   EXPRESSION) return expression->self.intersect(s);
+    else  return s.intersect(*bool_domain);
+  }
     /// Whether the domain is included in the set s 
-    bool included(const BitSet& s) const ;
+    inline bool included(const BitSet& s) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->included(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->included(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->included(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value));
+    //else if(domain_type ==   EXPRESSION) return expression->self.included(s);
+    else  return s.includes(*bool_domain);
+  }
     /// Whether the domain is included in the set s 
-    bool includes(const BitSet& s) const ;
+    inline bool includes(const BitSet& s) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->includes(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->includes(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(s);
+    else if(domain_type ==   CONST_VAR) return (s.size() == 1 && s.contain(constant_value));
+    //else if(domain_type ==   EXPRESSION) return expression->self.includes(s);
+    else  return s.included(*bool_domain);
+  }
 
     /// Whether the domain has a nonempty intersection with the Variable x
-    bool intersect(const Variable& x) const ;
+    bool intersect(const Variable& x) const { return true; }
     /// Whether the domain is included in the Variable x 
-    bool included(const Variable& x) const ;
+    bool included(const Variable& x) const { return true; }
     /// Whether the domain is included in the Variable x 
-    bool includes(const Variable& x) const ;
+    bool includes(const Variable& x) const { return true; }
 
     /// Intersect its domain with a set s
-    void intersectTo( BitSet& s ) const ;
+    inline void intersectTo( BitSet& s ) const {
+    if     (domain_type ==  BITSET_VAR) bitset_domain->intersectTo(s);
+    else if(domain_type ==    LIST_VAR) list_domain->intersectTo(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->intersectTo(s);
+    else if(domain_type == VIRTUAL_VAR) virtual_domain->intersectTo(s);
+    else if(domain_type ==   CONST_VAR) {
+      if(s.contain(constant_value)) {
+	s.clear();
+	s.add(constant_value);
+      } else s.clear();
+    }
+    //else if(domain_type ==   EXPRESSION) return expression->self.intersectTo(s);
+    else  return s.intersectWith(*bool_domain);
+  }
     /// Do the union of its domain with a set s
-    void unionTo( BitSet& s ) const ;
+    inline void unionTo( BitSet& s ) const {
+    if     (domain_type ==  BITSET_VAR) bitset_domain->unionTo(s);
+    else if(domain_type ==    LIST_VAR) list_domain->unionTo(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->unionTo(s);
+    else if(domain_type == VIRTUAL_VAR) virtual_domain->unionTo(s);
+    else if(domain_type ==   CONST_VAR) s.add(constant_value);
+    //else if(domain_type ==   EXPRESSION) expression->self.unionTo(s);
+    else s.unionWith(*bool_domain);
+  }
     //@}
 
     /*!@name Domain changing methods*/
     //@{
     /// Remove value "v"
-    Event remove(const int v) ;
+    inline Event remove(const int v) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->remove(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->remove(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->remove(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->remove(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value == v ? FAIL_EVENT : NO_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.remove(v);
+    else  return ((v>1 || v<0) ? NO_EVENT : setValue(2-v));
+  }
     /// Remove all values but "v"
-    Event setDomain(const int v) ;
+    inline Event setDomain(const int v) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->setDomain(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value != v ? FAIL_EVENT : NO_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.setDomain(v);
+    else  return ((v>1 || v<0) ? NO_EVENT : setValue(1+v));
+  }
+
+    inline Event setDomain(Variable& x) {
+      return NO_EVENT;
+    }
+
     /// Remove all values strictly lower than lo
-    Event setMin(const int lo) ;
+    inline Event setMin(const int lo) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setMin(lo);
+    else if(domain_type ==    LIST_VAR) return list_domain->setMin(lo);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setMin(lo);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setMin(lo);
+    else if(domain_type ==   CONST_VAR) return (constant_value < lo ? FAIL_EVENT : NO_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.setMin(lo);
+    else  return (lo<1 ? NO_EVENT : (lo>1 ? FAIL_EVENT : setValue(2)));
+  }
     /// Remove all values strictly greater than up
-    Event setMax(const int up) ;
+    inline Event setMax(const int up) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setMax(up);
+    else if(domain_type ==    LIST_VAR) return list_domain->setMax(up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setMax(up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setMax(up);
+    else if(domain_type ==   CONST_VAR) return (constant_value > up ? FAIL_EVENT : NO_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.setMax(up);
+    else  return (up>0 ? NO_EVENT : (up<0 ? FAIL_EVENT : setValue(1)));
+  }
     /// Remove all values that do not appear in the set "s"
-    Event setDomain(const BitSet& s) ;
+    inline Event setDomain(const BitSet& s) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->setDomain(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.setDomain(s);
+    else  return ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
+  }
     /// Remove all values that do not appear in the current domain of the Variable "x"
-    Event setDomain(Variable& x) ;
+    //Event setDomain(Variable& x) ;
     /// Remove all values that belong to the set "s"
-    Event removeSet(const BitSet& s) ;
+    inline Event removeSet(const BitSet& s) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->removeSet(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->removeSet(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->removeSet(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeSet(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.removeSet(s);
+    else  return ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
+  }
+
     /// Remove all values in the interval [l..u]
-    Event removeRange(const int lo, const int up) ;
+    inline Event removeRange(const int lo, const int up) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->removeRange(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->removeRange(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->removeRange(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeRange(lo, up);
+    else if(domain_type ==   CONST_VAR) return ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
+    //else if(domain_type ==   EXPRESSION) return expression->self.removeRange(lo, up);
+    else  return (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
+  }
     //@}
 
     /*!@name Backtracking methods*/
     //@{
     /// Restore the last solved state
-    Event restore();
+    inline Event restore() {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->restore();
+    //else if(domain_type ==    LIST_VAR) return list_domain->restore();
+    else if(domain_type ==   RANGE_VAR) return range_domain->restore();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->restore();
+    else if(domain_type ==   CONST_VAR) return NO_EVENT;
+    //else if(domain_type ==   EXPRESSION) return expression->self.restore();
+    else {
+      *bool_domain = 3;
+      return NO_EVENT;
+    } 
+  }
     //@}
 
     /*!@name printing methods*/
@@ -1505,8 +1830,9 @@ namespace Mistral {
 public :
 
     //int id;
-  Variable self;
-  Vector< Variable > children;
+    Variable self;
+    Vector< Variable > children;
+    
 
     Expression() : VariableImplementation() {}
   Expression(Vector< Variable >& args);
