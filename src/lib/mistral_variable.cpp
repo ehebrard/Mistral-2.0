@@ -26,18 +26,18 @@
 #include <mistral_solver.hpp>
 
 
-void Mistral::VariableImplementation::trigger_event(Event evt) {
-  solver->trigger_event(id, evt);
-}
+// void Mistral::VariableImplementation::trigger_event(Event evt) {
+//   solver->trigger_event(id, evt);
+// }
 
-void Mistral::VariableImplementation::store(VariableImplementation *x, const int type) {
-  //Variable self(x, type);
-  //solver->save(self);
-  solver->save(x, type);
-}
-int Mistral::VariableImplementation::get_current_level() {
-  return solver->level;
-}
+// void Mistral::VariableImplementation::store(VariableImplementation *x, const int type) {
+//   //Variable self(x, type);
+//   //solver->save(self);
+//   solver->save(x, type);
+// }
+// int Mistral::VariableImplementation::get_current_level() {
+//   return solver->level;
+// }
 
 // Mistral::Variable::Variable() {
 //   domain_type = DYN_VAR;
@@ -233,9 +233,9 @@ int Mistral::VariableImplementation::get_current_level() {
 // 	 implementation->get_solution_value());
 // }
 
-int Mistral::Variable::get_value(const Expression *expression) const {
-  return expression->self.get_value();
-}
+// int Mistral::Variable::get_value(const Expression *expression) const {
+//   return expression->self.get_value();
+// }
 //   int Mistral::Variable::get_value() const {
 //     if     (domain_type ==  BITSET_VAR) return ((Mistral::VariableBitmap  *)implementation)->get_value();
 //     else if(domain_type ==    LIST_VAR) return ((Mistral::VariableList    *)implementation)->get_value();
@@ -246,9 +246,9 @@ int Mistral::Variable::get_value(const Expression *expression) const {
 //     else  return (*((int*)domain_type)-1);
 //   }
 
-unsigned int Mistral::Variable::get_size(const Expression *expression) const {
-  return expression->self.get_size();
-}
+// unsigned int Mistral::Variable::get_size(const Expression *expression) const {
+//   return expression->self.get_size();
+// }
 //   unsigned int Mistral::Variable::get_size() const {
 //     if     (domain_type ==  BITSET_VAR) return ((Mistral::VariableBitmap  *)implementation)->get_size();
 //     else if(domain_type ==    LIST_VAR) return ((Mistral::VariableList    *)implementation)->get_size();
@@ -309,9 +309,9 @@ unsigned int Mistral::Variable::get_size(const Expression *expression) const {
 //   return buf.str();
 // }
 
-int Mistral::Variable::get_min(const Expression *x) const {
-  return expression->self.get_min();
-}
+// int Mistral::Variable::get_min(const Expression *x) const {
+//   return expression->self.get_min();
+// }
 //   int Mistral::Variable::get_min() const {
 //     if     (domain_type ==  BITSET_VAR) return ((Mistral::VariableBitmap  *)implementation)->get_min();
 //     else if(domain_type ==    LIST_VAR) return ((Mistral::VariableList    *)implementation)->get_min();
@@ -322,9 +322,9 @@ int Mistral::Variable::get_min(const Expression *x) const {
 //     else  return (!(*((int*)domain_type) & 1));
 //   }
 
-int Mistral::Variable::get_max(const Expression *x) const {
-  return expression->self.get_max();
-}
+// int Mistral::Variable::get_max(const Expression *x) const {
+//   return expression->self.get_max();
+// }
 //   int Mistral::Variable::get_max() const {
 //     if     (domain_type ==  BITSET_VAR) return ((Mistral::VariableBitmap  *)implementation)->get_max();
 //     else if(domain_type ==    LIST_VAR) return ((Mistral::VariableList    *)implementation)->get_max();
@@ -847,70 +847,46 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
 
 
 
-// Mistral::Event Mistral::Variable::setValue( const int val ) 
-//   {
-// //     std::cout << "SET VALUE" << std::endl;
-// //     std::cout << (int*)domain_type << std::endl;
-// //     std::cout << *bool_domain << std::endl;
+Mistral::Event Mistral::Variable::setValue( const int val ) 
+  {
+//     std::cout << "SET VALUE" << std::endl;
+//     std::cout << (int*)domain_type << std::endl;
+//     std::cout << *bool_domain << std::endl;
 
-//     int nstat = (*bool_domain & val);
-//     if( !nstat ) return FAIL_EVENT;
+    int nstat = (*bool_domain & val);
+    if( !nstat ) return FAIL_EVENT;
 
-//     *bool_domain = nstat;
+    *bool_domain = nstat;
 
-//     variable->trigger_value_event_and_save(this);
-//     return VALUE_EVENT;
-//   }
+    variable->trigger_value_event_and_save(this);
+    return VALUE_EVENT;
+  }
 
-// int Mistral::Variable::get_solution_value() const {
-//   return(domain_type == CONST_VAR ? constant_value :
-// 	 variable->get_solution_value());
-// }
+int Mistral::Variable::get_solution_value() const {
+  return(domain_type == CONST_VAR ? constant_value :
+	 variable->get_solution_value());
+}
 
-//   int Mistral::Variable::get_value() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_value();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_value();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_value();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_value();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_value();
-//     else  return (*bool_domain-1);
-//   }
+  int Mistral::Variable::get_value() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_value();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_value();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_value();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_value();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_value();
+    else  return (*bool_domain-1);
+  }
 
- //  unsigned int Mistral::Variable::get_size() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_size();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_size();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_size();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_size();
-//     else if(domain_type ==   CONST_VAR) return 1;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_size();
-//     else  return ((*bool_domain+1)/2);
-//   }
+  unsigned int Mistral::Variable::get_size() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_size();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_size();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_size();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_size();
+    else if(domain_type ==   CONST_VAR) return 1;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_size();
+    else  return ((*bool_domain+1)/2);
+  }
 
-// Mistral::BitsetDomain Mistral::Variable::get_domain() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->domain;
-//     else if(domain_type ==    LIST_VAR) return list_domain->domain;
-//     else if(domain_type ==   RANGE_VAR) {
-
-//       Mistral::VariableRange* r = (Mistral::VariableRange*)implementation;
-//       BitsetDomain d(r->get_min(), r->get_max());
-
-//       std::cout << "HERE " << (r->get_min()) << " " << r->get_max() << std::endl;
-//       std::cout << d << std::endl;
-      
-//       return d;
-//     }
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_domain();
-//     else if(domain_type ==   CONST_VAR)  {
-//       BitsetDomain d(constant_value, constant_value);
-//       return d;
-//     }
-//     else {
-//       int dom = *bool_domain;
-//       BitsetDomain d((!(dom&1)),(dom/2));
-//       return d;
-//     }
-//   }
 
 std::string Mistral::Variable::get_domain() const {
   std::ostringstream buf;
@@ -936,366 +912,366 @@ std::string Mistral::Variable::get_domain() const {
   return buf.str();
 }
 
-//   int Mistral::Variable::get_min() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_min();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_min();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_min();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_min();
-//     else  return (!(*bool_domain & 1));
-//   }
+  int Mistral::Variable::get_min() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_min();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_min();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_min();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_min();
+    else  return (!(*bool_domain & 1));
+  }
 
-//   int Mistral::Variable::get_max() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_max();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_max();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_max();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_max();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_max();
-//     else  return (*bool_domain >> 1);
-//   }
+  int Mistral::Variable::get_max() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_max();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_max();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_max();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_max();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_max();
+    else  return (*bool_domain >> 1);
+  }
 
-//   int Mistral::Variable::get_minCapacity() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minCapacity();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_minCapacity();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_minCapacity();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minCapacity();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_minCapacity();
-//     else  return 0;
-//   }
+  int Mistral::Variable::get_minCapacity() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minCapacity();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_minCapacity();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_minCapacity();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minCapacity();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_minCapacity();
+    else  return 0;
+  }
 
-//   int Mistral::Variable::get_maxCapacity() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_maxCapacity();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_maxCapacity();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_maxCapacity();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_maxCapacity();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_maxCapacity();
-//     else  return 1;
-//   }
+  int Mistral::Variable::get_maxCapacity() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_maxCapacity();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_maxCapacity();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_maxCapacity();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_maxCapacity();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_maxCapacity();
+    else  return 1;
+  }
 
-//   int Mistral::Variable::get_minPosAbs() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minPosAbs();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_minPosAbs();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_minPosAbs();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minPosAbs();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_minPosAbs();
-//     else  return (!(*bool_domain & 1));
-//   }
+  int Mistral::Variable::get_minPosAbs() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minPosAbs();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_minPosAbs();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_minPosAbs();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minPosAbs();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_minPosAbs();
+    else  return (!(*bool_domain & 1));
+  }
 
-//   int Mistral::Variable::get_minNegAbs() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minNegAbs();
-//     else if(domain_type ==    LIST_VAR) return list_domain->get_minNegAbs();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->get_minNegAbs();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minNegAbs();
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.get_minNegAbs();
-//     else  return (!(*bool_domain & 1));
-//   }
+  int Mistral::Variable::get_minNegAbs() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minNegAbs();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_minNegAbs();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_minNegAbs();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minNegAbs();
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.get_minNegAbs();
+    else  return (!(*bool_domain & 1));
+  }
 
-//   int Mistral::Variable::next(const int v) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->next(v);
-//     else if(domain_type ==    LIST_VAR) return list_domain->next(v);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->next(v);
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->next(v);
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.next(v);
-//     else  return (*bool_domain >> 1);
-//   }
+  int Mistral::Variable::next(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->next(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->next(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->next(v);
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->next(v);
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.next(v);
+    else  return (*bool_domain >> 1);
+  }
 
-//   int Mistral::Variable::prev(const int v) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->prev(v);
-//     else if(domain_type ==    LIST_VAR) return list_domain->prev(v);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->prev(v);
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->prev(v);
-//     else if(domain_type ==   CONST_VAR) return constant_value;
-//     else if(domain_type ==   EXPRESSION) return expression->self.prev(v);
-//     else  return (!(*bool_domain & 1));
-//   }
+  int Mistral::Variable::prev(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->prev(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->prev(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->prev(v);
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->prev(v);
+    else if(domain_type ==   CONST_VAR) return constant_value;
+    else if(domain_type ==   EXPRESSION) return expression->self.prev(v);
+    else  return (!(*bool_domain & 1));
+  }
 
-//   bool Mistral::Variable::is_range() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->is_range();
-//     else if(domain_type ==    LIST_VAR) return list_domain->is_range();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->is_range();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->is_range();
-//     else if(domain_type ==   CONST_VAR) return true;
-//     else if(domain_type ==   EXPRESSION) return expression->self.is_range();
-//     else return true;
-//   }
+  bool Mistral::Variable::is_range() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->is_range();
+    else if(domain_type ==    LIST_VAR) return list_domain->is_range();
+    else if(domain_type ==   RANGE_VAR) return range_domain->is_range();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->is_range();
+    else if(domain_type ==   CONST_VAR) return true;
+    else if(domain_type ==   EXPRESSION) return expression->self.is_range();
+    else return true;
+  }
 
-bool Mistral::Variable::is_ground(const Expression *x) const {
-  return x->self.is_ground();
-}
-//   bool Mistral::Variable::is_ground() const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->is_ground();
-//     else if(domain_type ==    LIST_VAR) return list_domain->is_ground();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->is_ground();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->is_ground();
-//     else if(domain_type ==   CONST_VAR) return true;
-//     else if(domain_type ==   EXPRESSION) return expression->self.is_ground();
-//     else  return (*bool_domain != 3);
-//   }
+// bool Mistral::Variable::is_ground(const Expression *x) const {
+//   return x->self.is_ground();
+// }
+  bool Mistral::Variable::is_ground() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->is_ground();
+    else if(domain_type ==    LIST_VAR) return list_domain->is_ground();
+    else if(domain_type ==   RANGE_VAR) return range_domain->is_ground();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->is_ground();
+    else if(domain_type ==   CONST_VAR) return true;
+    else if(domain_type ==   EXPRESSION) return expression->self.is_ground();
+    else  return (*bool_domain != 3);
+  }
 
-//   bool Mistral::Variable::equal(const int v) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->equal(v);
-//     else if(domain_type ==    LIST_VAR) return list_domain->equal(v);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->equal(v);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->equal(v);
-//     else if(domain_type ==   CONST_VAR) return (constant_value == v);
-//     else if(domain_type ==   EXPRESSION) return expression->self.equal(v);
-//     else  return (*bool_domain-1 == v);
-//   }
+  bool Mistral::Variable::equal(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->equal(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->equal(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->equal(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->equal(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value == v);
+    else if(domain_type ==   EXPRESSION) return expression->self.equal(v);
+    else  return (*bool_domain-1 == v);
+  }
 
-//   bool Mistral::Variable::contain(const int v) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->contain(v);
-//     else if(domain_type ==    LIST_VAR) return list_domain->contain(v);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->contain(v);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->contain(v);
-//     else if(domain_type ==   CONST_VAR) return (constant_value == v);
-//     else if(domain_type ==   EXPRESSION) return expression->self.contain(v);
-//     else  return (!(v >> 1) && (*bool_domain & (v+1)));
-//   }
+  bool Mistral::Variable::contain(const int v) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->contain(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->contain(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->contain(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->contain(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value == v);
+    else if(domain_type ==   EXPRESSION) return expression->self.contain(v);
+    else  return (!(v >> 1) && (*bool_domain & (v+1)));
+  }
 
-//   bool Mistral::Variable::intersect(const int lo, const int up) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->intersect(lo, up);
-//     else if(domain_type ==    LIST_VAR) return list_domain->intersect(lo, up);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->intersect(lo, up);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(lo, up);
-//     else if(domain_type ==   CONST_VAR) return (constant_value >= lo && constant_value <= up);
-//     else if(domain_type ==   EXPRESSION) return expression->self.intersect(lo, up);
-//     else  return (((lo<=0) | (2*(up>0))) & *bool_domain);
-//   }
+  bool Mistral::Variable::intersect(const int lo, const int up) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->intersect(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->intersect(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->intersect(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(lo, up);
+    else if(domain_type ==   CONST_VAR) return (constant_value >= lo && constant_value <= up);
+    else if(domain_type ==   EXPRESSION) return expression->self.intersect(lo, up);
+    else  return (((lo<=0) | (2*(up>0))) & *bool_domain);
+  }
 
-//   bool Mistral::Variable::included(const int lo, const int up) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->included(lo, up);
-//     else if(domain_type ==    LIST_VAR) return list_domain->included(lo, up);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->included(lo, up);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(lo, up);
-//     else if(domain_type ==   CONST_VAR) return (constant_value >= lo && constant_value <= up);
-//     else if(domain_type ==   EXPRESSION) return expression->self.included(lo, up);
+  bool Mistral::Variable::included(const int lo, const int up) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->included(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->included(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->included(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(lo, up);
+    else if(domain_type ==   CONST_VAR) return (constant_value >= lo && constant_value <= up);
+    else if(domain_type ==   EXPRESSION) return expression->self.included(lo, up);
+    else  {
+      int state = *bool_domain;
+      return ( up >= (state >> 1) && (lo <= !(state & 1)) );
+    }
+  }
+
+  bool Mistral::Variable::includes(const int lo, const int up) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->includes(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->includes(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(lo, up);
+    else if(domain_type ==   CONST_VAR) return (constant_value == lo && constant_value == up);
+    else if(domain_type ==   EXPRESSION) return expression->self.includes(lo, up);
+    else  {
+      int state = *bool_domain;
+      return ( up <= (state >> 1) && (lo >= !(state & 1)) );
+    }
+  }
+
+  bool Mistral::Variable::intersect(const BitSet& s) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->intersect(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->intersect(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->intersect(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value));
+    else if(domain_type ==   EXPRESSION) return expression->self.intersect(s);
+    else  return s.intersect(*bool_domain);
+  }
+
+  bool Mistral::Variable::included(const BitSet& s) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->included(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->included(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->included(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value));
+    else if(domain_type ==   EXPRESSION) return expression->self.included(s);
+    else  return s.includes(*bool_domain);
+  }
+
+  bool Mistral::Variable::includes(const BitSet& s) const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->includes(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->includes(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(s);
+    else if(domain_type ==   CONST_VAR) return (s.size() == 1 && s.contain(constant_value));
+    else if(domain_type ==   EXPRESSION) return expression->self.includes(s);
+    else  return s.included(*bool_domain);
+  }
+
+  bool Mistral::Variable::intersect(const Mistral::Variable& x) const {
+    //     if     (domain_type ==  BITSET_VAR) return x->intersect(bitset_domain->domain);
+    //     else if(domain_type ==    LIST_VAR) return x->intersect(list_domain->domain); //list_domain->intersect(x);
+    //     else if(domain_type ==   RANGE_VAR) return range_domain->intersect(x);
+    //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(x);
+    //     else if(domain_type ==   CONST_VAR) return x.contain(constant_value);
+    //     else  {
+    //       int state = *bool_domain;
+    //       if(state == 3) return x.intersect(0,1); 
+    //       else if(state == 2) return x.contain(1); 
+    //       else return x.contain(0);
+    //     }
+    return false;
+  }
+
+  bool Mistral::Variable::included(const Mistral::Variable& x) const {
+    //     if     (domain_type ==  BITSET_VAR) return bitset_domain->included(x);
+    //     else if(domain_type ==    LIST_VAR) return list_domain->included(x);
+    //     else if(domain_type ==   RANGE_VAR) return range_domain->included(x);
+    //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(x);
+    //     else if(domain_type ==   CONST_VAR) return x.contain(constant_value);
+    //     else  {
+    //       int state = *bool_domain;
+    //       if(state == 3) return x.includes(0,1); 
+    //       else if(state == 2) return x.contain(1); 
+    //       else return x.contain(0);
+    //     }
+    return false;
+  }
+
+  bool Mistral::Variable::includes(const Mistral::Variable& x) const {
+    //     if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(x);
+    //     else if(domain_type ==    LIST_VAR) return list_domain->includes(x);
+    //     else if(domain_type ==   RANGE_VAR) return range_domain->includes(x);
+    //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(x);
+    //     else if(domain_type ==   CONST_VAR) return (x.size() == 1 && x.contain(constant_value));
+    //     else  {
+    //       int state = *bool_domain;
+    //       if(state == 3) return x.included(0,1); 
+    //       else if(state == 2) return x.equal(1); 
+    //       else return x.equal(0);
+    //     }
+    return false;
+  }
+
+  void Mistral::Variable::intersectTo( BitSet& s ) const {
+    if     (domain_type ==  BITSET_VAR) bitset_domain->intersectTo(s);
+    else if(domain_type ==    LIST_VAR) list_domain->intersectTo(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->intersectTo(s);
+    else if(domain_type == VIRTUAL_VAR) virtual_domain->intersectTo(s);
+    else if(domain_type ==   CONST_VAR) {
+      if(s.contain(constant_value)) {
+	s.clear();
+	s.add(constant_value);
+      } else s.clear();
+    }
+    else if(domain_type ==   EXPRESSION) return expression->self.intersectTo(s);
+    else  return s.intersectWith(*bool_domain);
+  }
+
+  void Mistral::Variable::unionTo( BitSet& s ) const {
+    if     (domain_type ==  BITSET_VAR) bitset_domain->unionTo(s);
+    else if(domain_type ==    LIST_VAR) list_domain->unionTo(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->unionTo(s);
+    else if(domain_type == VIRTUAL_VAR) virtual_domain->unionTo(s);
+    else if(domain_type ==   CONST_VAR) s.add(constant_value);
+    else if(domain_type ==   EXPRESSION) expression->self.unionTo(s);
+    else s.unionWith(*bool_domain);
+  }
+
+  Mistral::Event Mistral::Variable::remove(const int v) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->remove(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->remove(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->remove(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->remove(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value == v ? FAIL_EVENT : NO_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.remove(v);
+    else  return ((v>1 || v<0) ? NO_EVENT : setValue(2-v));
+  }
+
+  Mistral::Event Mistral::Variable::setDomain(const int v) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(v);
+    else if(domain_type ==    LIST_VAR) return list_domain->setDomain(v);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(v);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(v);
+    else if(domain_type ==   CONST_VAR) return (constant_value != v ? FAIL_EVENT : NO_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.setDomain(v);
+    else  return ((v>1 || v<0) ? NO_EVENT : setValue(1+v));
+  }
+
+  Mistral::Event Mistral::Variable::setMin(const int lo) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setMin(lo);
+    else if(domain_type ==    LIST_VAR) return list_domain->setMin(lo);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setMin(lo);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setMin(lo);
+    else if(domain_type ==   CONST_VAR) return (constant_value < lo ? FAIL_EVENT : NO_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.setMin(lo);
+    else  return (lo<1 ? NO_EVENT : (lo>1 ? FAIL_EVENT : setValue(2)));
+  }
+
+  Mistral::Event Mistral::Variable::setMax(const int up) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setMax(up);
+    else if(domain_type ==    LIST_VAR) return list_domain->setMax(up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setMax(up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setMax(up);
+    else if(domain_type ==   CONST_VAR) return (constant_value > up ? FAIL_EVENT : NO_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.setMax(up);
+    else  return (up>0 ? NO_EVENT : (up<0 ? FAIL_EVENT : setValue(1)));
+  }
+
+  Mistral::Event Mistral::Variable::setDomain(const BitSet& s) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->setDomain(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.setDomain(s);
+    else  return ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
+  }
+
+  Mistral::Event Mistral::Variable::setDomain(Mistral::Variable& x) {
+//     if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(x);
+//     else if(domain_type ==    LIST_VAR) return list_domain->setDomain(x);
+//     else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(x);
+//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(x);
+//     else if(domain_type ==   CONST_VAR) return (x.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
+//     else if(domain_type ==   EXPRESSION) return expression->self.setDomain(x);
 //     else  {
-//       int state = *bool_domain;
-//       return ( up >= (state >> 1) && (lo <= !(state & 1)) );
+//       if(!x.contain(0)) {
+// 	if(!x.contain(1)) return FAIL_EVENT;
+// 	else return setValue(2);
+//       } else {
+// 	if(!x.contain(1)) return setValue(1);
+// 	else return NO_EVENT;
+//       }
 //     }
-//   }
+    return NO_EVENT;
+  }
 
-//   bool Mistral::Variable::includes(const int lo, const int up) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(lo, up);
-//     else if(domain_type ==    LIST_VAR) return list_domain->includes(lo, up);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->includes(lo, up);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(lo, up);
-//     else if(domain_type ==   CONST_VAR) return (constant_value == lo && constant_value == up);
-//     else if(domain_type ==   EXPRESSION) return expression->self.includes(lo, up);
-//     else  {
-//       int state = *bool_domain;
-//       return ( up <= (state >> 1) && (lo >= !(state & 1)) );
-//     }
-//   }
+  Mistral::Event Mistral::Variable::removeSet(const BitSet& s) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->removeSet(s);
+    else if(domain_type ==    LIST_VAR) return list_domain->removeSet(s);
+    else if(domain_type ==   RANGE_VAR) return range_domain->removeSet(s);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeSet(s);
+    else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.removeSet(s);
+    else  return ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
+  }
 
-//   bool Mistral::Variable::intersect(const BitSet& s) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->intersect(s);
-//     else if(domain_type ==    LIST_VAR) return list_domain->intersect(s);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->intersect(s);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(s);
-//     else if(domain_type ==   CONST_VAR) return (s.contain(constant_value));
-//     else if(domain_type ==   EXPRESSION) return expression->self.intersect(s);
-//     else  return s.intersect(*bool_domain);
-//   }
+  Mistral::Event Mistral::Variable::removeRange(const int lo, const int up) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->removeRange(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->removeRange(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->removeRange(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeRange(lo, up);
+    else if(domain_type ==   CONST_VAR) return ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
+    else if(domain_type ==   EXPRESSION) return expression->self.removeRange(lo, up);
+    else  return (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
+  }
 
-//   bool Mistral::Variable::included(const BitSet& s) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->included(s);
-//     else if(domain_type ==    LIST_VAR) return list_domain->included(s);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->included(s);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(s);
-//     else if(domain_type ==   CONST_VAR) return (s.contain(constant_value));
-//     else if(domain_type ==   EXPRESSION) return expression->self.included(s);
-//     else  return s.includes(*bool_domain);
-//   }
-
-//   bool Mistral::Variable::includes(const BitSet& s) const {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(s);
-//     else if(domain_type ==    LIST_VAR) return list_domain->includes(s);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->includes(s);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(s);
-//     else if(domain_type ==   CONST_VAR) return (s.size() == 1 && s.contain(constant_value));
-//     else if(domain_type ==   EXPRESSION) return expression->self.includes(s);
-//     else  return s.included(*bool_domain);
-//   }
-
-//   bool Mistral::Variable::intersect(const Mistral::Variable& x) const {
-//     //     if     (domain_type ==  BITSET_VAR) return x->intersect(bitset_domain->domain);
-//     //     else if(domain_type ==    LIST_VAR) return x->intersect(list_domain->domain); //list_domain->intersect(x);
-//     //     else if(domain_type ==   RANGE_VAR) return range_domain->intersect(x);
-//     //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->intersect(x);
-//     //     else if(domain_type ==   CONST_VAR) return x.contain(constant_value);
-//     //     else  {
-//     //       int state = *bool_domain;
-//     //       if(state == 3) return x.intersect(0,1); 
-//     //       else if(state == 2) return x.contain(1); 
-//     //       else return x.contain(0);
-//     //     }
-//     return false;
-//   }
-
-//   bool Mistral::Variable::included(const Mistral::Variable& x) const {
-//     //     if     (domain_type ==  BITSET_VAR) return bitset_domain->included(x);
-//     //     else if(domain_type ==    LIST_VAR) return list_domain->included(x);
-//     //     else if(domain_type ==   RANGE_VAR) return range_domain->included(x);
-//     //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->included(x);
-//     //     else if(domain_type ==   CONST_VAR) return x.contain(constant_value);
-//     //     else  {
-//     //       int state = *bool_domain;
-//     //       if(state == 3) return x.includes(0,1); 
-//     //       else if(state == 2) return x.contain(1); 
-//     //       else return x.contain(0);
-//     //     }
-//     return false;
-//   }
-
-//   bool Mistral::Variable::includes(const Mistral::Variable& x) const {
-//     //     if     (domain_type ==  BITSET_VAR) return bitset_domain->includes(x);
-//     //     else if(domain_type ==    LIST_VAR) return list_domain->includes(x);
-//     //     else if(domain_type ==   RANGE_VAR) return range_domain->includes(x);
-//     //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->includes(x);
-//     //     else if(domain_type ==   CONST_VAR) return (x.size() == 1 && x.contain(constant_value));
-//     //     else  {
-//     //       int state = *bool_domain;
-//     //       if(state == 3) return x.included(0,1); 
-//     //       else if(state == 2) return x.equal(1); 
-//     //       else return x.equal(0);
-//     //     }
-//     return false;
-//   }
-
-//   void Mistral::Variable::intersectTo( BitSet& s ) const {
-//     if     (domain_type ==  BITSET_VAR) bitset_domain->intersectTo(s);
-//     else if(domain_type ==    LIST_VAR) list_domain->intersectTo(s);
-//     else if(domain_type ==   RANGE_VAR) range_domain->intersectTo(s);
-//     else if(domain_type == VIRTUAL_VAR) virtual_domain->intersectTo(s);
-//     else if(domain_type ==   CONST_VAR) {
-//       if(s.contain(constant_value)) {
-// 	s.clear();
-// 	s.add(constant_value);
-//       } else s.clear();
-//     }
-//     else if(domain_type ==   EXPRESSION) return expression->self.intersectTo(s);
-//     else  return s.intersectWith(*bool_domain);
-//   }
-
-//   void Mistral::Variable::unionTo( BitSet& s ) const {
-//     if     (domain_type ==  BITSET_VAR) bitset_domain->unionTo(s);
-//     else if(domain_type ==    LIST_VAR) list_domain->unionTo(s);
-//     else if(domain_type ==   RANGE_VAR) range_domain->unionTo(s);
-//     else if(domain_type == VIRTUAL_VAR) virtual_domain->unionTo(s);
-//     else if(domain_type ==   CONST_VAR) s.add(constant_value);
-//     else if(domain_type ==   EXPRESSION) expression->self.unionTo(s);
-//     else s.unionWith(*bool_domain);
-//   }
-
-//   Mistral::Event Mistral::Variable::remove(const int v) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->remove(v);
-//     else if(domain_type ==    LIST_VAR) return list_domain->remove(v);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->remove(v);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->remove(v);
-//     else if(domain_type ==   CONST_VAR) return (constant_value == v ? FAIL_EVENT : NO_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.remove(v);
-//     else  return ((v>1 || v<0) ? NO_EVENT : setValue(2-v));
-//   }
-
-//   Mistral::Event Mistral::Variable::setDomain(const int v) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(v);
-//     else if(domain_type ==    LIST_VAR) return list_domain->setDomain(v);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(v);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(v);
-//     else if(domain_type ==   CONST_VAR) return (constant_value != v ? FAIL_EVENT : NO_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.setDomain(v);
-//     else  return ((v>1 || v<0) ? NO_EVENT : setValue(1+v));
-//   }
-
-//   Mistral::Event Mistral::Variable::setMin(const int lo) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->setMin(lo);
-//     else if(domain_type ==    LIST_VAR) return list_domain->setMin(lo);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->setMin(lo);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->setMin(lo);
-//     else if(domain_type ==   CONST_VAR) return (constant_value < lo ? FAIL_EVENT : NO_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.setMin(lo);
-//     else  return (lo<1 ? NO_EVENT : (lo>1 ? FAIL_EVENT : setValue(2)));
-//   }
-
-//   Mistral::Event Mistral::Variable::setMax(const int up) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->setMax(up);
-//     else if(domain_type ==    LIST_VAR) return list_domain->setMax(up);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->setMax(up);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->setMax(up);
-//     else if(domain_type ==   CONST_VAR) return (constant_value > up ? FAIL_EVENT : NO_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.setMax(up);
-//     else  return (up>0 ? NO_EVENT : (up<0 ? FAIL_EVENT : setValue(1)));
-//   }
-
-//   Mistral::Event Mistral::Variable::setDomain(const BitSet& s) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(s);
-//     else if(domain_type ==    LIST_VAR) return list_domain->setDomain(s);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(s);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(s);
-//     else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.setDomain(s);
-//     else  return ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
-//   }
-
-//   Mistral::Event Mistral::Variable::setDomain(Mistral::Variable& x) {
-// //     if     (domain_type ==  BITSET_VAR) return bitset_domain->setDomain(x);
-// //     else if(domain_type ==    LIST_VAR) return list_domain->setDomain(x);
-// //     else if(domain_type ==   RANGE_VAR) return range_domain->setDomain(x);
-// //     else if(domain_type == VIRTUAL_VAR) return virtual_domain->setDomain(x);
-// //     else if(domain_type ==   CONST_VAR) return (x.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
-// //     else if(domain_type ==   EXPRESSION) return expression->self.setDomain(x);
-// //     else  {
-// //       if(!x.contain(0)) {
-// // 	if(!x.contain(1)) return FAIL_EVENT;
-// // 	else return setValue(2);
-// //       } else {
-// // 	if(!x.contain(1)) return setValue(1);
-// // 	else return NO_EVENT;
-// //       }
-// //     }
-//     return NO_EVENT;
-//   }
-
-//   Mistral::Event Mistral::Variable::removeSet(const BitSet& s) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->removeSet(s);
-//     else if(domain_type ==    LIST_VAR) return list_domain->removeSet(s);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->removeSet(s);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeSet(s);
-//     else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.removeSet(s);
-//     else  return ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
-//   }
-
-//   Mistral::Event Mistral::Variable::removeRange(const int lo, const int up) {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->removeRange(lo, up);
-//     else if(domain_type ==    LIST_VAR) return list_domain->removeRange(lo, up);
-//     else if(domain_type ==   RANGE_VAR) return range_domain->removeRange(lo, up);
-//     else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeRange(lo, up);
-//     else if(domain_type ==   CONST_VAR) return ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
-//     else if(domain_type ==   EXPRESSION) return expression->self.removeRange(lo, up);
-//     else  return (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
-//   }
-
-//   Mistral::Event Mistral::Variable::restore() {
-//     if     (domain_type ==  BITSET_VAR) return bitset_domain->restore();
-//     //else if(domain_type ==    LIST_VAR) return list_domain->restore();
-//     else if(domain_type ==   RANGE_VAR) return range_domain->restore();
-//     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->restore();
-//     else if(domain_type ==   CONST_VAR) return NO_EVENT;
-//     //else if(domain_type ==   EXPRESSION) return expression->self.restore();
-//     else {
-//       *bool_domain = 3;
-//       return NO_EVENT;
-//     } 
-//   }
+  Mistral::Event Mistral::Variable::restore() {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->restore();
+    //else if(domain_type ==    LIST_VAR) return list_domain->restore();
+    else if(domain_type ==   RANGE_VAR) return range_domain->restore();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->restore();
+    else if(domain_type ==   CONST_VAR) return NO_EVENT;
+    //else if(domain_type ==   EXPRESSION) return expression->self.restore();
+    else {
+      *bool_domain = 3;
+      return NO_EVENT;
+    } 
+  }
 
 
 // bool Mistral::VariableImplementation::is_new(Solver *s) {
