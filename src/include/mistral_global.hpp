@@ -164,15 +164,7 @@ namespace Mistral {
   //std::ostream& operator<< (std::ostream& os, const Goal* x);
 
 
-  template <class WORD_TYPE>
-  void showUint(WORD_TYPE n, std::ostream& os) {
-    WORD_TYPE mask=1;
-    while(mask){
-      if(mask & n) os<<1;
-      else os<<0;
-      mask = mask << 1;
-    }
-  }
+
   template <class WORD_TYPE>
   void printBitset(WORD_TYPE n, const int idx, std::ostream& os) {
 

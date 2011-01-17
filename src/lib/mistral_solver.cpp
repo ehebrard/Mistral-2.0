@@ -41,6 +41,10 @@ static void Mistral_SIGINT_handler(int signum) {
   exit(1);
 }
 
+#ifdef _DEBUG_PROPAG
+std::ostringstream *o_propag = NULL;
+#endif
+
 
 Mistral::SolverParameters::SolverParameters() {}
 Mistral::SolverParameters::~SolverParameters() {}
@@ -341,7 +345,8 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons)//;
   
 
   for(unsigned int i=0; i<cons->scope.size; ++i) {
-    evt = (cons->scope[i].is_ground() ? VALUE_EVENT : RANGE_EVENT);
+    evt = (// cons->scope[i].domain_type != BOOL_VAR &&
+	   cons->scope[i].is_ground() ? VALUE_EVENT : RANGE_EVENT);
     if(EVENT_TYPE(evt) <= cons->trigger[i]) {
       cons->events.add(i);
       cons->event_type[i] = evt;
@@ -364,8 +369,22 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Ev
 {
 
 #ifdef _DEBUG_AC
-  std::cout << "  triggers " << cons << "(" << (cons->id) << ") by " 
-	    << cons->scope[var] << std::endl;
+
+  //#ifndef _DEBUG_PROPAG
+
+  std::cout << "  triggers " << cons << " after a " 
+	    << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
+	    << " event on "
+	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
+	    << std::endl;
+
+// #elseif
+
+//   (*o_propag) << "  triggers " << cons << "(" << (cons->id) << ") by " 
+// 	      << cons->scope[var] << " " ; //std::endl;
+
+// #endif
+
 #endif
 
 
@@ -399,15 +418,39 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Ev
     }
   } 
 
- #ifdef _DEBUG_AC
+#ifdef _DEBUG_QUEUE
+
+  //#ifndef _DEBUG_PROPAG
+
   else
     std::cout << cons << "(" << (cons->id) 
 	      << ") is currently being processed " 
 	      << std::endl;
+  
+// #elseif
+
+//   else
+//     (*o_propag) << cons << "(" << (cons->id) 
+// 		<< ") is currently being processed " 
+// 		<< std::endl;
+  
+// #endif
+      
 #endif
 
- #ifdef _DEBUG_AC
-  std::cout << " => " << cons->events << std::endl;
+
+#ifdef _DEBUG_QUEUE
+
+  //#ifndef _DEBUG_PROPAG
+
+  std::cout << "=> " << cons->events << std::endl;
+
+// #elseif
+    
+//   (*o_propag) << "=> " << cons->events << std::endl;
+
+// #endif
+
 //   else
 //     std::cout << cons << "(" << (cons->id) 
 // 	      << ") is currently being processed " 
@@ -455,6 +498,7 @@ Mistral::Solver::Solver() {
   variables.initialise(0,128);
   constraints.initialise(0,256);
   sequence.initialise(128);
+  initialised_vars = 0;
 
   // trail stuff
   level = -1;
@@ -549,6 +593,11 @@ Mistral::Solver::Solver() {
 //   }
 // }
 
+void Mistral::Solver::add(VarArray& x) {
+  for(unsigned int i=0; i<x.size; ++i)
+    x[i].initialise(this);
+}
+
 void Mistral::Solver::add(Variable x) { 
   //std::cout << x << std::endl;
 
@@ -560,8 +609,12 @@ void Mistral::Solver::add(Variable x) {
 }
 
 int Mistral::Solver::declare(Variable x) {
+  //if(x.domain_type == BOOL_VAR) booleans.add(&x);
+  if(x.domain_type > DYN_VAR) booleans.add(&x);
+
   // add the variables to the set of vars
   variables.add(x);
+
   last_solution_lb.add(-INFTY);
   last_solution_ub.add( INFTY);
   
@@ -663,25 +716,63 @@ Mistral::Outcome Mistral::Solver::get_next_solution()
   return satisfiability;
 }
 
+void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
+  if(size.back() < 1000) {
+    x->bool_domain = slots.back()+size.back();
+    ++size.back();
+  } else {
+    int *nslot = new int[1000];
+    std::fill(nslot, nslot+1000, 3);
+    size.add(0);
+    slots.add(nslot);
+    x->bool_domain = nslot;
+  }
+}
+
+
+// void Mistral::Solver::BooleanMemoryManager::add(Vector< int >& bool_vars) {
+//   int *pool = new int[bool_vars.size];
+//   slots.add(pool);
+//   for(unsigned int i=0; i<bool_vars.size; ++i) {
+//     variables[bool_vars[i]].bool_domain = pool+i;
+//   }
+// }
+
+
 void Mistral::Solver::initialise_search(Vector< Variable >& seq, 
 					BranchingHeuristic *heu, 
 					RestartPolicy *pol) 
 {
-  //  if(!initialised) {
-//     for(int i=0; i<non_convex.size; ++i) {
-//       non_convex->initialise_bitset_domain();
+//   if(!is_initialised()) {
+//     Vector< int > bool_vars;
+//     while(initialised_vars < variables.size) {
+//       if(variables[initialised_vars].domain_type == BOOL_VAR)
+// 	bool_vars.add(initialised_vars);
+//       ++initialised_vars;
 //     }
-//     boolean_pool.add(new int[booleans.size]);
-//     for(int i=0; i<booleans.size; ++i) {
-//       booleans->initialise_boolean_domain(boolean_pool.back()+i);
+//     //booleans.add(bool_vars);
+//     //void Mistral::Solver::BooleanMemoryManager::add(Vector< int >& bool_vars) {
+//     int *pool = new int[bool_vars.size];
+//     std::fill(pool, pool+bool_vars.size, 3);
+//     booleans.slots.add(pool);
+//     for(unsigned int i=0; i<bool_vars.size; ++i) {
+//       variables[bool_vars[i]].bool_domain = pool+i;
 //     }
-  for(unsigned int i=0; i<constraints.size; ++i) {
-    //constraints[i]->initialise_scope();
-    for(unsigned int j=0; j<constraints[i]->scope.size; ++j) {
-      constraints[i]->scope[j] = constraints[i]->scope[j].get_var();
-    }
-  }
-    //  }
+    
+//     //     for(int i=0; i<non_convex.size; ++i) {
+//     //       non_convex->initialise_bitset_domain();
+//     //     }
+//     //     boolean_pool.add(new int[booleans.size]);
+//     //     for(int i=0; i<booleans.size; ++i) {
+//     //       booleans->initialise_boolean_domain(boolean_pool.back()+i);
+//     //     }
+//     for(unsigned int i=0; i<constraints.size; ++i) {
+//       //constraints[i]->initialise_scope();
+//       for(unsigned int j=0; j<constraints[i]->scope.size; ++j) {
+// 	constraints[i]->scope[j] = constraints[i]->scope[j].get_var();
+//       }
+//     }
+//   }
 
 
   if(level < 0) save();
@@ -693,7 +784,7 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
 
   sequence.clear();
   for(unsigned int i=seq.size; i;) {
-    sequence.add(seq[--i]);
+    sequence.add(seq[--i].get_var());
     //sequence.add(seq[--i].id());
   }
 
@@ -749,11 +840,17 @@ void Mistral::Solver::trigger_event(const int var,
 //   std::cout << std::endl;
 
 
- #ifdef _DEBUG_AC
+#ifdef _DEBUG_QUEUE
   std::cout << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
-	    << " event on " << variables[var] << std::endl;
+	    << " event on " << variables[var] 
+	    << " in " << variables[var].get_domain() << std::endl;
   //std::cout << "trigger " << cons << "(" << (cons->id) << ") by a " << (is_value(evt) ? "value" : (is_range(evt) ? "range" : "domain")) << " event on " << cons->scope[var] << std::endl;
+  
+  //display(std::cout);
+  //std::cout << std::endl;
 #endif
+
+
 
 
   Constraint *c;
@@ -850,6 +947,10 @@ void Mistral::Solver::save(VariableImplementation *impl, int dtype) {
   saved_vars.add(x); 
 }
 
+void Mistral::Solver::save(const int idx) { 
+  saved_vars.add(variables[idx]);
+}
+
 void Mistral::Solver::restore() {
   unsigned int previous_level;
 
@@ -896,7 +997,8 @@ void Mistral::Solver::notify_decision() { //Decision d) {
 bool Mistral::Solver::propagate() 
 {
 
-#ifdef _DEBUG_AC
+
+#ifdef _DEBUG_QUEUE
   std::cout << "start propagation loop: " << (statistics.num_filterings) 
 	    << std::endl << active_constraints << std::endl;
 // active_constraints.active << " ";
@@ -918,18 +1020,37 @@ bool Mistral::Solver::propagate()
     culprit = active_constraints.select(constraints);
  
 #ifdef _DEBUG_PROPAG
-    int size_before = 1;
-    std::ostringstream o_propag;
+    int size_before = 0;
+    //std::ostringstream o_propag;
+    delete o_propag;
+    o_propag = new std::ostringstream();
 
-    o_propag << "propagate " << (culprit) << " b/c" ;
+ //    o_propag << std::endl << "Propagation step" << std::endl;
+//     for(unsigned int i=0; i<variables.size; ++i) {
+//       o_propag << variables[i] << " in " << variables[i].get_domain() << ": ";
+//       ConstraintNode nd;
+//       nd = constraint_graph[i]->first(_value_);
+//       o_propag << "[" ;
+//       while( constraint_graph[i]->next(nd) ) {
+// 	for(unsigned int j=0; j<nd.elt.constraint->scope.size; ++j)
+// 	  if(nd.elt.constraint->scope[j].id() == variables[i].id())
+// 	    o_propag << nd.elt.constraint->scope[j].get_domain();
+//       }
+//       o_propag << "]" << std::endl;
+//     }
+//     o_propag << "\n";
+
+    
+
+    (*o_propag) << "propagate " << (culprit) << " b/c" ;
     for(unsigned int i=0; i<culprit->changes.size; ++i) 
-      o_propag << " " << culprit->scope[culprit->changes[i]];
-    o_propag << std::endl;
+      (*o_propag) << " " << culprit->scope[culprit->changes[i]];
+    (*o_propag) << std::endl;
     for(unsigned int i=0; i<culprit->scope.size; ++i) {
       size_before += culprit->scope[i].get_size();
-      o_propag << culprit->scope[i] << ": " << (culprit->scope[i].get_domain()) << " ";
+      (*o_propag) << culprit->scope[i] << ": " << (culprit->scope[i].get_domain()) << " ";
     }
-    //o_propag << std::endl;
+    //(*o_propag) << std::endl;
 #endif
 
     ++statistics.num_propagations;
@@ -953,13 +1074,13 @@ bool Mistral::Solver::propagate()
    
 #ifdef _DEBUG_PROPAG
     if(!IS_OK(wiped_idx)) {
-      std::cout << (o_propag.str()) << std::endl << culprit->scope[wiped_idx] 
+      std::cout << (o_propag->str()) << std::endl << culprit->scope[wiped_idx] 
 		<< " was wiped out" << std::endl;
     } else {
       for(unsigned int i=0; i<culprit->scope.size; ++i)
 	size_before -= culprit->scope[i].get_size();
       if(size_before) {
-	std::cout << (o_propag.str()) << std::endl;
+	std::cout << (o_propag->str()) << std::endl;
 	for(unsigned int i=0; i<culprit->scope.size; ++i)
 	  std::cout << culprit->scope[i] << ": " 
 		    << (culprit->scope[i].get_domain()) << " ";
@@ -972,8 +1093,8 @@ bool Mistral::Solver::propagate()
     }
     if(active_constraints.empty()) 
       std::cout << "Get out of the AC loop because the closure is achieved" << std::endl;
-    else
-      std::cout << active_constraints << std::endl;
+    //else
+    //std::cout << active_constraints << std::endl;
 
 #endif 
 
@@ -1159,7 +1280,7 @@ void Mistral::Solver::branch_left() {
       tmp_sol.add(constraints[i]->scope[j].get_value());
     if(constraints[i]->check(tmp_sol.stack_))
       {
-	//std::cerr << "\nError: solution does not satisfies " << constraints[i] << tmp_sol << " (backtracking)"<< std::endl;
+	std::cerr << "\nError: solution does not satisfies " << constraints[i] << tmp_sol << " (backtracking)"<< std::endl;
 	//exit(0);
 	if( decisions.empty() ) return UNSAT;
 	else if( limits_expired() ) return LIMITOUT;
@@ -1212,12 +1333,18 @@ Mistral::Outcome Mistral::Solver::iterative_dfs()
   int status = UNKNOWN;
   while(status == UNKNOWN) {
     if(propagate()) {
+
+      display(std::cout);
+      //std::cout << std
+
       if( sequence.empty() ) status = satisfied();
       else branch_left();
     } else {
       if( decisions.empty() ) status = UNSAT;
       else if( limits_expired() ) status = LIMITOUT;
       else branch_right();
+
+      display(std::cout);
     }
   }
   return status;

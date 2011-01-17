@@ -217,6 +217,18 @@ public:
   virtual void run();
 };
 
+class BoolPigeons : public UnitTest {
+
+public:
+  
+  int size;
+  
+  BoolPigeons(const int sz);
+  ~BoolPigeons();
+
+  virtual void run();
+};
+
 
 class VarStackDynamicTest : public UnitTest {
 
@@ -242,7 +254,15 @@ public:
 int main(int argc, char *argv[])
 {  
 
+
+
   usrand(12345);
+
+//   showUint((unsigned int)-2, std::cout);
+//   std::cout << std::endl;
+//   showUint(3, std::cout);
+//   std::cout << std::endl;
+//   exit(1);
 
   std::vector<UnitTest*> tests;
 
@@ -264,8 +284,15 @@ int main(int argc, char *argv[])
   //tests.push_back(new ModelTest());
 
   //tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
+  
+  //  tests.push_back(new Pigeons(5)); 
+  //tests.push_back(new BoolPigeons(5));
 
-  tests.push_back(new Pigeons(10));
+  tests.push_back(new ModelTest());
+  
+  /*
+  tests.push_back(new BoolPigeons(10));
+  tests.push_back(new Pigeons(10)); 
   tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
@@ -278,7 +305,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
-    
+  */
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
@@ -357,19 +384,22 @@ void UnitTest::checkDomainIntegrity(Variable X) {
 
   if(xmin != X.get_min()) {
     cout << "lower bound not properly maintained!" << endl
-	 << X << " in " << X.get_domain() << " / " << values << endl;
+	 << X << " in " << X.get_domain() << " / " << values 
+	 << ": " << xmin << " vs " << X.get_min() << endl;
     exit(1);
   }
 
   if(xmax != X.get_max()) {
     cout << "upper bound not properly maintained!" << endl
-	 << X << " in " << X.get_domain() << " / " << values << endl;
+	 << X << " in " << X.get_domain() << " / " << values 
+	 << ": " << xmax << " vs " << X.get_max() << endl;
     exit(1);
   }
 
   if(values.size != X.get_size()) {
     cout << "domain size not properly maintained!" << endl
-	 << X << " in " << X.get_domain() << " / " << values << endl;
+	 << X << " in " << X.get_domain() << " / " << values 
+	 << ": " << values.size << " vs " << X.get_size() << endl;
     exit(1);
   }
 }
@@ -381,6 +411,9 @@ RandomDomainRandomRemove::RandomDomainRandomRemove(const int ql,
 RandomDomainRandomRemove::~RandomDomainRandomRemove() {}
 
 void RandomDomainRandomRemove::run() {
+
+  //Verbosity = EXTREME;
+
   /// create vars with random domains and remove a random set of values.
   Vector<int> values;
   Vector<int> rand_values;
@@ -422,7 +455,14 @@ void RandomDomainRandomRemove::run() {
 	
 	Solver s;
 	Variable X(lb,ub);
-	s.add(X);
+
+	//std::cout << "X.domain_type: " << X.domain_type << " / " << X.variable << std::endl;
+
+	X.add_to(&s);
+	//s.add(X);
+	//X = X.get_var();
+	
+	//std::cout << "X.domain_type: " << X.domain_type << " / " << X.variable << std::endl;
 
 	//s.initialise();
 	
@@ -482,7 +522,7 @@ RandomDomainRandomSetDomainAndRestore::~RandomDomainRandomSetDomainAndRestore() 
 void RandomDomainRandomSetDomainAndRestore::run() {
   int N = (1<<(1<<Quantity));
 
-  if(Verbosity) cout << "Run " << N << " random setDomain checks ";// << endl;
+  if(Verbosity) cout << "Run " << N << " random set_domain checks ";// << endl;
   if(Verbosity>LOW) cout << endl;
 
   for(int i=0; i<N; ++i) {
@@ -506,8 +546,8 @@ void RandomDomainRandomSetDomainAndRestore::run() {
 
 	if(Verbosity > HIGH) cout << "      <- " << lb-k-1 ;
 
-	if(X.setDomain(lb-k-1) != FAIL_EVENT) {
-	  cout << "Error on [setDomain] " << lb-k-1
+	if(X.set_domain(lb-k-1) != FAIL_EVENT) {
+	  cout << "Error on [set_domain] " << lb-k-1
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -527,8 +567,8 @@ void RandomDomainRandomSetDomainAndRestore::run() {
 
 	if(Verbosity > HIGH) cout << "      <- " << lb+k+1 ;
 
-	if(X.setDomain(ub+k+1) != FAIL_EVENT) {
-	  cout << "Error on [setDomain] " << ub+k+1
+	if(X.set_domain(ub+k+1) != FAIL_EVENT) {
+	  cout << "Error on [set_domain] " << ub+k+1
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -548,9 +588,9 @@ void RandomDomainRandomSetDomainAndRestore::run() {
 
 	if(Verbosity > HIGH) cout << "      <- " << lb+k ;
 
-	X.setDomain(lb+k);
+	X.set_domain(lb+k);
 	if(!X.equal(lb+k)) {
-	  cout << "Error on [setDomain] " << lb+k
+	  cout << "Error on [set_domain] " << lb+k
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -583,8 +623,9 @@ RandomDomainRandomSetMinAndRestore::~RandomDomainRandomSetMinAndRestore() {}
 void RandomDomainRandomSetMinAndRestore::run() {
   int N = (1<<(1<<Quantity));
 
+  //Verbosity = EXTREME;
 
-  if(Verbosity) cout << "Run " << N << " random setMin checks " ;// << endl;
+  if(Verbosity) cout << "Run " << N << " random set_min checks " ;// << endl;
   if(Verbosity>LOW) cout << endl;
 
   for(int i=0; i<N; ++i) {
@@ -606,10 +647,10 @@ void RandomDomainRandomSetMinAndRestore::run() {
 
       for(int k=0; k<50; ++k) {
 
-	if(Verbosity > HIGH) cout << "      <- " << lb-k-1 ;
+	if(Verbosity > HIGH) cout << "      >= " << lb-k ;
 
-	if(X.setDomain(lb-k-1) != FAIL_EVENT) {
-	  cout << "Error on [setDomain] " << lb-k-1
+	if(X.set_min(lb-k) != NO_EVENT) {
+	  cout << "Error on [set_min] " << lb-k
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -617,7 +658,7 @@ void RandomDomainRandomSetMinAndRestore::run() {
 	  cout << "Error on [FAIL] " << X << " in " << X.get_domain() 
 	       << " / [" << lb << ".." << ub << "] sz=" << (ub-lb+1) << endl;
 	  exit(1);
-	}   
+	}
 	  
 	if(Verbosity > HIGH) cout << " (" << X << " in " 
 				  << X.get_domain() << ")" << endl;  
@@ -627,10 +668,10 @@ void RandomDomainRandomSetMinAndRestore::run() {
 	
       for(int k=0; k<50; ++k) {
 	  
-	if(Verbosity > HIGH) cout << "      <- " << lb+k+1 ;
+	if(Verbosity > HIGH) cout << "      >= " << ub+k+1 ;
 	  
-	if(X.setDomain(ub+k+1) != FAIL_EVENT) {
-	  cout << "Error on [setDomain] " << ub+k+1
+	if(X.set_min(ub+k+1) != FAIL_EVENT) {
+	  cout << "Error on [set_min] " << ub+k+1
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -648,11 +689,11 @@ void RandomDomainRandomSetMinAndRestore::run() {
 
       for(int k=0; k<dom_size; ++k) {
 
-	if(Verbosity > HIGH) cout << "      <- " << lb+k ;
+	if(Verbosity > HIGH) cout << "      >= " << lb+k+1 ;
 
-	X.setDomain(lb+k);
-	if(!X.equal(lb+k)) {
-	  cout << "Error on [setDomain] " << lb+k
+	X.set_min(lb+k+1);
+	if(X.get_min() < lb+k+1) {
+	  cout << "Error on [set_min] " << lb+k+1
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -684,8 +725,9 @@ RandomDomainRandomSetMaxAndRestore::~RandomDomainRandomSetMaxAndRestore() {}
 void RandomDomainRandomSetMaxAndRestore::run() {
   int N = (1<<(1<<Quantity));
 
+  //Verbosity = EXTREME;
 
-  if(Verbosity) cout << "Run " << N << " random setMax checks " ; // << endl;
+  if(Verbosity) cout << "Run " << N << " random set_max checks " ; // << endl;
   if(Verbosity>LOW) cout << endl;
 
   for(int i=0; i<N; ++i) {
@@ -709,8 +751,8 @@ void RandomDomainRandomSetMaxAndRestore::run() {
 
 	if(Verbosity > HIGH) cout << "      <= " << lb-k-1 ;
 
-	if(X.setMax(lb-k-1) != FAIL_EVENT) {
-	  cout << "Error on [setMax] " << lb-k-1
+	if(X.set_max(lb-k-1) != FAIL_EVENT) {
+	  cout << "Error on [set_max] " << lb-k-1
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -730,8 +772,8 @@ void RandomDomainRandomSetMaxAndRestore::run() {
 
 	if(Verbosity > HIGH) cout << "      <= " << ub+k ;
 
-	if(X.setMax(ub+k) != NO_EVENT) {
-	  cout << "Error on [setMax] " << ub+k
+	if(X.set_max(ub+k) != NO_EVENT) {
+	  cout << "Error on [set_max] " << ub+k
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -751,9 +793,9 @@ void RandomDomainRandomSetMaxAndRestore::run() {
 
 	if(Verbosity > HIGH) cout << "      <= " << lb+k ;
 
-	X.setMax(lb+k);
+	X.set_max(lb+k);
 	if(X.get_max() != lb+k) {
-	  cout << "Error on [setMax] " << lb+k
+	  cout << "Error on [set_max] " << lb+k
 	       << " on " << X << " in " << X.get_domain() << endl;
 	  exit(1);
 	}
@@ -785,7 +827,7 @@ RandomDomainRandomSetDomainBitsetAndRestore::~RandomDomainRandomSetDomainBitsetA
 void RandomDomainRandomSetDomainBitsetAndRestore::run() {
   int N = (1<<(1<<Quantity));
 
-  if(Verbosity) cout << "Run " << N << " random setDomain (bitset) checks " ; // << endl;
+  if(Verbosity) cout << "Run " << N << " random set_domain (bitset) checks " ; // << endl;
   if(Verbosity>LOW) cout << endl;
 
   for(int i=0; i<N; ++i) {
@@ -819,7 +861,7 @@ void RandomDomainRandomSetDomainBitsetAndRestore::run() {
 	  
 	if(Verbosity > MEDIUM) cout << "    Set: " << vals << ": ";
 
-	Event evt = X.setDomain(vals);
+	Event evt = X.set_domain(vals);
 
 	if(Verbosity > MEDIUM) cout << X << " in " << X.get_domain() << endl;
 
@@ -829,7 +871,7 @@ void RandomDomainRandomSetDomainBitsetAndRestore::run() {
 	  do {
 	    z = nxt;
 	    if(!vals.contain(z)) {
-	      cout << "Error on [setDomain] " 
+	      cout << "Error on [set_domain] " 
 		   << " on " << X << " in " << X.get_domain() << endl;
 	      exit(1);
 	    }
@@ -843,7 +885,7 @@ void RandomDomainRandomSetDomainBitsetAndRestore::run() {
 	  do {
 	    z = nxt;
 	    if(X.contain(z)) {
-	      cout << "Error on [setDomain] " 
+	      cout << "Error on [set_domain] " 
 		   << " on " << X << " in " << X.get_domain() << endl;
 	      exit(1);
 	    }
@@ -883,7 +925,7 @@ RandomDomainRandomRemoveRangeAndRestore::
 void RandomDomainRandomRemoveRangeAndRestore::run() {
   int N = (1<<(1<<Quantity));
 
-  if(Verbosity) cout << "Run " << N << " random setDomain + removeRange checks " ;// << endl;
+  if(Verbosity) cout << "Run " << N << " random set_domain + removeRange checks " ;// << endl;
   if(Verbosity>LOW) cout << endl;
 
   for(int i=0; i<N; ++i) {
@@ -915,7 +957,7 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
       if(Verbosity > MEDIUM) cout << "    Set: " << vals << ": " ;
       s.save();
 	
-      Event evt1 = X.setDomain(vals);
+      Event evt1 = X.set_domain(vals);
 
       if(Verbosity > MEDIUM) cout << X << " in " << X.get_domain() << endl;
 
@@ -925,7 +967,7 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 	do {
 	  z = nxt;
 	  if(!vals.contain(z)) {
-	    cout << "Error on [setDomain] " 
+	    cout << "Error on [set_domain] " 
 		 << " on " << X << " in " << X.get_domain() << endl;
 	    exit(1);
 	  }
@@ -939,7 +981,7 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 	do {
 	  z = nxt;
 	  if(X.contain(z)) {
-	    cout << "Error on [setDomain] " 
+	    cout << "Error on [set_domain] " 
 		 << " on " << X << " in " << X.get_domain() << endl;
 	    exit(1);
 	  }
@@ -1055,7 +1097,7 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
     int branch_length = randint(2*i_elts);
       
     BitSet isIn(0, NUM_ELT, BitSet::full);
-    isIn.setMax(i_elts-1);
+    isIn.set_max(i_elts-1);
       
 
     if(Verbosity>LOW) cout << "Do a run on a branch of length " << branch_length << endl;
@@ -1110,7 +1152,7 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
     }
     
     isIn.fill();
-    isIn.setMax(i_elts-1);
+    isIn.set_max(i_elts-1);
 
     for(int i=0; i<branch_length; i++) {
       s.restore();
@@ -1272,16 +1314,17 @@ void CostasAllDiffAllSolutions::run() {
   if(Verbosity) cout << "Run costas array of order 8 (alldiff - "
 		     << (consistency==FORWARD_CHECKING ? "FC" : "BC" )
 		     << "), look for all solutions "; 
-   
+
+  int i, j;
   VarArray X(size, 1, size, domain);
   Solver s;
 
   s.add( AllDiff(X) );
 
   Vector< Variable > scope;
-  for(int i=1; i<size-1; ++i) {
+  for(i=1; i<size-1; ++i) {
     scope.clear();
-    for(int j=0; j<size-i; ++j) {
+    for(j=0; j<size-i; ++j) {
       scope.add(X[j]-X[j+i]);
     }
     s.add( AllDiff(scope, consistency) );
@@ -1296,6 +1339,10 @@ void CostasAllDiffAllSolutions::run() {
   int num_solutions = 0;
   while(s.get_next_solution() == SAT) {
     ++num_solutions;
+//     for(i=0; i<size; ++i) {
+//       cout << " " << setw(2) << X[i].get_solution_value() ;
+//     }
+//     cout << endl;
   }
 
   if(Verbosity) cout << "(" << num_solutions << ") " ;
@@ -1343,7 +1390,13 @@ void CostasNotEqualAllSolutions::run() {
 
   int num_solutions = 0;
   while(s.get_next_solution() == SAT) {
+//     for(i=0; i<size; ++i) {
+//       cout << " " << setw(2) << X[i].get_solution_value() ;
+//     }
+//     cout << endl;
     ++num_solutions;
+
+    //    if(num_solutions == 2) exit(1);
   }
 
   if(Verbosity) cout << "(" << num_solutions << ") " ;
@@ -1442,19 +1495,85 @@ void Pigeons::run() {
 }
 
 
+BoolPigeons::BoolPigeons(const int sz) 
+  : UnitTest(LOW, LOW, LOW) { size=sz; }
+BoolPigeons::~BoolPigeons() {}
+
+void BoolPigeons::run() {
+  if(Verbosity) cout << "Run pigeon-hole (Boolean) of order 10: "; 
+
+  VarArray X(size*(size-1), 0, 1);
+  VarArray domain;
+  Solver s;
+  int i, j, k;
+  for(i=0; i<size; ++i) {
+    domain.clear();
+    for(j=i*(size-1); j<(i+1)*(size-1); ++j)
+      domain.add( X[j] );
+    s.add( BoolSum(domain, size-2) );
+    //s.add( BoolSum(X[i*(size-1), (i+1)*(size-1)], size-2) );
+    for(j=i+1; j<size; ++j)
+      for(k=0; k<size-1; ++k)
+	s.add( X[i*(size-1)+k] || X[j*(size-1)+k] );
+  }
+  //s.initialise();
+
+  //cout << s << endl;
+  
+  //exit(1);
+
+  s.depth_first_search(X, 
+		       new GenericHeuristic< NoOrder, MinValue >(&s), 
+		       new NoRestart);
+  
+  if(s.statistics.num_backtracks != 362879) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+
+}
+
+
 ModelTest::ModelTest() : UnitTest() {}
 ModelTest::~ModelTest() {}
 
 void ModelTest::run() {
 
-  if(Verbosity) cout << "Run pigeon-hole of order 10: "; 
-
-  VarArray X(4,1,3);
+  VarArray X(5,1,7);
   Solver s;
 
-  s.add((X[0]+X[1]) != (X[2]+X[3]));
+  s.add(X);
+  
+  s.add( X[0]<=4 );
+  s.add( X[1]<=4 );
+  s.add( X[2]<=4 );
+  s.add( X[3]<=3 );
+  //s.add( X[4]>=6 );
+  s.add( (X[0]+2)==X[4] || (X[1]+3)==X[4] );
+  s.add( (!(X[0]==4) || !(X[1]==4)) == (X[2] >= X[3]) );
+  s.add( (X[2] + X[3]) <= X[4] );
 
-  cout << s << endl;
+
+  //cout << s << endl;
+
+  s.initialise_search(X, 
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {    
+    ++num_solutions;
+    for(unsigned int i=0; i<5; ++i) {
+      cout << " " // << setw(2) << X[i] << ":"
+	   << X[i].get_solution_value() ;
+    }
+    cout << endl;
+  }
+
+//   s.rewrite();
+
+//   cout << s << endl;
+
 
 }
 

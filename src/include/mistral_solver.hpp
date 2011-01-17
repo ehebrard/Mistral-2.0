@@ -258,6 +258,7 @@ namespace Mistral {
   class Reversible;
   class Decision;
   class Variable;
+  class VarArray;
   class VariableImplementation;
   class Solver : public Environment {
 
@@ -331,37 +332,68 @@ namespace Mistral {
 
     class BooleanMemoryManager {
     public:
+      Vector< unsigned int > size;
       Vector<int*> slots;
 
-      BooleanMemoryManager() {}
+      BooleanMemoryManager() {
+	size.add(0);
+	int *nslot = new int[1000];
+	std::fill(nslot, nslot+1000, 3);
+	slots.add(nslot);
+      }
       virtual ~BooleanMemoryManager() {
 	while(!slots.empty()) 
 	  delete [] slots.pop();
       }
 
-      int* get_next() { 
-	int *dom = new int[1];
-	*dom = 3;
-	slots.add(dom);
-	return dom;
-      }
+      void add(Variable *x);
+//       void add(Variable *x) {
+// 	if(size.back() < 1000) {
+// 	  x.bool_domain = slots.back()+size.back();
+// 	  ++size.back();
+// 	} else {
+// 	  int *nslot = new int[1000];
+// 	  std::fill(nslot, nslot+1000, 3);
+// 	  size.add(0);
+// 	  slots.add(nslot);
+// 	  x.bool_domain = nslot;
+// 	}
+//       }
+
+      void add(Vector< Variable >& bool_vars);
+//       void add(Vector< Variable >& bool_vars) {
+// 	int *pool = new int[bool_vars.size];
+// 	slots.add(pool);
+// 	for(unsigned int i=0; i<bool_vars.size; ++i) {
+// 	  bool_vars[i].bool_domain = pool+i;
+// 	}
+//       }
+//       int* get_next() { 
+// 	int *dom = new int[1];
+// 	*dom = 3;
+// 	slots.add(dom);
+// 	return dom;
+//       }
     };
 
+    unsigned int initialised_vars;
     //int *booleans;
     BooleanMemoryManager booleans;
 
-    int* getNextBooleanSlot() { return booleans.get_next(); }
+    //int* getNextBooleanSlot() { return booleans.get_next(); }
     //@}
 
     /*!@name Destructor*/
     //@{
     virtual ~Solver();
+    bool is_initialised() {return variables.size <= initialised_vars;}
     //@}
   
     /*!@name Declarations*/
     //@{
     /// add a variable (prior to search!!!)
     void add(Variable x);
+    void add(VarArray& x);
     int declare(Variable x);
     /// add a constraint
     void add(Constraint* x); 
@@ -382,6 +414,7 @@ namespace Mistral {
     inline void save(Reversible* object) { saved_objs.add(object); }
     inline void save(Constraint* c) { saved_cons.add(c); }
     void save(Variable x); 
+    void save(const int idx); 
     void save(VariableImplementation *x, int dtype); 
     //@}
 

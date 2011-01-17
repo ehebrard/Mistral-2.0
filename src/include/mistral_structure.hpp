@@ -37,6 +37,15 @@
 #ifndef __STRUCTURE_HPP
 #define __STRUCTURE_HPP
 
+  template <class WORD_TYPE>
+  void showUint(WORD_TYPE n, std::ostream& os) {
+    WORD_TYPE mask=1;
+    while(mask){
+      if(mask & n) os<<1;
+      else os<<0;
+      mask = mask << 1;
+    }
+  }
 
 const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 
@@ -2029,14 +2038,16 @@ namespace Mistral {
     }
 
     inline int prev(const int elt) const {
+
       WORD_TYPE tab;
       int i = ((elt-1) >> EXP);
+      int SHFT = size_word_byte;
 
       if( i >= neg_words ) {
 	int e = ((elt-1) & CACHE), k;
 	int j = 1+(e >> 3);
 
-	if( (tab = ((table[i] & (full >> (CACHE - e))) << ((4-j) << 3))) ) 
+	if( (tab = ((table[i] & (full >> (CACHE - e))) << ((SHFT-j) << 3))) ) 
 	  while( j-- ) {
 	    if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 )
 	      return ( (i<<EXP)+(j<<3)+k );
@@ -2052,6 +2063,7 @@ namespace Mistral {
 	    }
 	  }
       }
+
       return elt;
     }
 
@@ -2352,7 +2364,8 @@ namespace Mistral {
 
     inline unsigned int size( const int i ) const
     {  
-      unsigned int v, c=0;
+      WORD_TYPE v;
+      unsigned int c=0;
       if( (v = table[i]) ) 
 	c = word_size(v);
       return c;  
@@ -2616,7 +2629,7 @@ namespace Mistral {
     /*!
       Erase all elements strictly lower than l [O(N/32)]
     */
-    inline void setMin(const int bound)
+    inline void set_min(const int bound)
     {
       int ith_word=(bound >> EXP);
       if( ith_word >= neg_words ) {
@@ -2631,7 +2644,7 @@ namespace Mistral {
     /*!
       Erase all elements strictly greater than u [O(N/32)]
     */
-    inline void setMax(const int bound)
+    inline void set_max(const int bound)
     {
       int ith_word=(bound >> EXP);
       if( ith_word <  pos_words ) {
