@@ -62,26 +62,57 @@ namespace Mistral {
 #define DYN_VAR     27
 #define EXPRESSION  3
   
+// #define NO_EVENT     0
+// #define DOMAIN_EVENT 1
+// #define UB_EVENT     3
+// #define LB_EVENT     5
+// #define RANGE_EVENT  7
+// #define VALUE_EVENT  15
+// #define FAIL_EVENT   16
+
+// #define DOMAIN_CHANGED(e) ((e&DOMAIN_EVENT) == DOMAIN_EVENT)
+// #define BOUND_CHANGED(e)  ((e&RANGE_EVENT)  == RANGE_EVENT)
+// #define LB_CHANGED(e)     ((e&LB_EVENT)     == LB_EVENT)
+// #define UB_CHANGED(e)     ((e&UB_EVENT)     == UB_EVENT)
+// #define ASSIGNED(e)       ((e&VALUE_EVENT)  == VALUE_EVENT)
+
+// #define IS_FAIL(e)    (e & FAIL_EVENT)
+// #define IS_REMOVAL(e) (e == DOMAIN_EVENT)
+// #define IS_RANGE(e)   (e == RANGE_EVENT)
+// #define IS_LB(e)      (e == LB_EVENT)
+// #define IS_UB(e)      (e == UB_EVENT)
+// #define IS_ASSIGN(e)  (e == VALUE_EVENT)
+
+#define DOMAIN_C     1
+#define RANGE_C      2
+#define UB_C         4
+#define LB_C         8
+#define VALUE_C     16
+
 #define NO_EVENT     0
 #define DOMAIN_EVENT 1
-#define UB_EVENT     3
-#define LB_EVENT     5
-#define RANGE_EVENT  7
-#define VALUE_EVENT  15
-#define FAIL_EVENT   16
+  // DOMAIN_C+RANGE_C
+#define RANGE_EVENT  3
+  // DOMAIN_C+RANGE_C+UB_C
+#define UB_EVENT     7
+  // DOMAIN_C+RANGE_C+LB_C
+#define LB_EVENT     11
+  // DOMAIN_C+RANGE_C+VALUE_C
+#define VALUE_EVENT  19
+#define FAIL_EVENT   32
 
-#define DOMAIN_CHANGED(e) ((e&DOMAIN_EVENT) == DOMAIN_EVENT)
-#define BOUND_CHANGED(e)  ((e&RANGE_EVENT)  == RANGE_EVENT)
-#define LB_CHANGED(e)     ((e&LB_EVENT)     == LB_EVENT)
-#define UB_CHANGED(e)     ((e&UB_EVENT)     == UB_EVENT)
-#define ASSIGNED(e)       ((e&VALUE_EVENT)  == VALUE_EVENT)
+#define DOMAIN_CHANGED(e) (bool)((e)&DOMAIN_C)
+#define RANGE_CHANGED(e)  (bool)((e)&RANGE_C)
+#define LB_CHANGED(e)     (bool)((e)&LB_C)
+#define UB_CHANGED(e)     (bool)((e)&UB_C)
+#define ASSIGNED(e)       (bool)((e)&VALUE_C)
 
-#define IS_FAIL(e)    (e & FAIL_EVENT)
-#define IS_REMOVAL(e) (e == DOMAIN_EVENT)
-#define IS_RANGE(e)   (e == RANGE_EVENT)
-#define IS_LB(e)      (e == LB_EVENT)
-#define IS_UB(e)      (e == UB_EVENT)
-#define IS_ASSIGN(e)  (e == VALUE_EVENT)
+#define IS_FAIL(e) ((e)&FAIL_EVENT)
+// #define IS_REMOVAL(e) (e == DOMAIN_EVENT)
+// #define IS_RANGE(e)   (e == RANGE_EVENT)
+// #define IS_LB(e)      (e == LB_EVENT)
+// #define IS_UB(e)      (e == UB_EVENT)
+// #define IS_ASSIGN(e)  (e & VALUE_EVENT)
 
 #define SAT      1
 #define OPT      3
@@ -97,7 +128,7 @@ namespace Mistral {
 #define _range_ 1
 #define _domain_ 2
 
-#define EVENT_TYPE(e) (2-BOUND_CHANGED(e)-ASSIGNED(e))
+#define EVENT_TYPE(e) (2-(RANGE_CHANGED(e))-(ASSIGNED(e)))
 
 //   inline bool is_domain(Event e) {
 //     return ((e & DOMAIN_EVENT) == DOMAIN_EVENT);

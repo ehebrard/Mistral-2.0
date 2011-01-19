@@ -275,13 +275,14 @@ namespace Mistral {
 
     /// The set of variables, in the initial order, that is as loaded from the model
     Vector< Variable > variables;
+    Vector< int >   domain_types;
 
     /// The set of constraints, with special accessors for triggers
     Vector< Constraint* >         constraints;
     ConstraintQueue        active_constraints;
     
     Vector< ConstraintList* > constraint_graph;
-    Vector< Vector <ConstraintTrigger> > triggers;
+    Vector< Vector < ConstraintTrigger > > triggers;
 
     /// For each level, the list of reversible objects that changed at this level, 
     /// and will need to be restored
@@ -377,6 +378,7 @@ namespace Mistral {
     };
 
     unsigned int initialised_vars;
+    unsigned int initialised_cons;
     //int *booleans;
     BooleanMemoryManager booleans;
 
@@ -397,6 +399,9 @@ namespace Mistral {
     int declare(Variable x);
     /// add a constraint
     void add(Constraint* x); 
+    void mark_non_convex(const int i) { 
+      domain_types[i] &= (~RANGE_VAR); 
+    }
     //@}
 
     /*!@name Trail accessors*/
@@ -458,6 +463,8 @@ namespace Mistral {
 
     /// achieve propagation closure
     bool propagate(); 
+    bool rewrite(); 
+    void consolidate(); 
     //@}
 
     /*!@name Search accesors*/

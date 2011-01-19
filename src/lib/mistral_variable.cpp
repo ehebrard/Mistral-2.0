@@ -47,47 +47,50 @@ Mistral::Variable::Variable(Expression* exp) {
   expression = exp;
 }
 
+int BOOL_DOM = 3;
+
 Mistral::Variable::Variable(Vector< int >& values, const int type) {
 
 }
 
-
-int BOOL_DOM = 3;
-
 Mistral::Variable::Variable(const int lo, const int up, const int type) {
-  if((type & CONST_VAR) && lo == up) {
-    domain_type = CONST_VAR;
-    constant_value = lo;
-  } else if((type & BOOL_VAR) && lo==0 && up==1) {
-    //domain_type = BOOL_VAR;
-    bool_domain = &BOOL_DOM;
-    variable = new VariableImplementation();
-  } else if(type & RANGE_VAR) {
-    domain_type = RANGE_VAR;
-    range_domain = new VariableRange(lo, up);
-  } else {
-    domain_type = BITSET_VAR;
+    if(lo == up) {
+      domain_type = CONST_VAR;
+      constant_value = lo;
+    } else if(type == EXPRESSION) {
+      domain_type = EXPRESSION;
+      expression = new Expression(lo, up);
+    } else if((type & BOOL_VAR) && lo==0 && up==1) {
+      //domain_type = BOOL_VAR;
+      bool_domain = &BOOL_DOM;
+      variable = new VariableImplementation();
+    } else if(type & RANGE_VAR) {
+      domain_type = RANGE_VAR;
+      range_domain = new VariableRange(lo, up);
+    } else {
+      domain_type = BITSET_VAR;
 #ifdef _BIT64
-    int nwords = ((up-lo) / 64);
-    if(nwords < 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
-    else if(nwords < 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
-    else if(nwords < 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
+      int nwords = ((up-lo) / 64);
+      if(nwords < 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
+      else if(nwords < 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
+      else if(nwords < 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
 #else
-    int nwords = ((up-lo) / 32);
-    if(nwords < 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
-    else if(nwords < 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
-    else if(nwords < 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
-    else if(nwords < 4) bitset_domain = new VariableWord<unsigned int, 4>(lo, up);
-    else if(nwords < 5) bitset_domain = new VariableWord<unsigned int, 5>(lo, up);
+      int nwords = ((up-lo) / 32);
+      if(nwords < 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
+      else if(nwords < 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
+      else if(nwords < 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
+      else if(nwords < 4) bitset_domain = new VariableWord<unsigned int, 4>(lo, up);
+      else if(nwords < 5) bitset_domain = new VariableWord<unsigned int, 5>(lo, up);
 #endif
-    else bitset_domain = new VariableBitmap(lo, up);
-  }
+      else bitset_domain = new VariableBitmap(lo, up);
+    }
 }
+
 
 
 Mistral::Variable Mistral::Variable::get_var() {
   if(domain_type == EXPRESSION)
-    return expression->self;
+    return expression->self.get_var();
   else if(domain_type == CONST_VAR)
     return *this;
   return variable->solver->variables[variable->id];
@@ -100,12 +103,18 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
     //Expression *exp = (Expression*)implementation;
     if(expression->is_initialised())
       os << expression->self << ":";
-    os << expression->get_name()
-       << "(" << expression->children[0];
-    for(unsigned int i=1; i<expression->children.size-expression->is_initialised(); ++i) {
-      os << ", " << expression->children[i];
+      //os << expression->self;
+    //else {
+    os << expression->get_name() << "(" ;
+    if(expression->children.empty()) os << expression->self;
+    else {
+      os << expression->children[0];
+      for(unsigned int i=1; i<expression->children.size-expression->is_initialised(); ++i) {
+	os << ", " << expression->children[i];
+      }
     }
     os << ")";
+    //}
   } else if(domain_type == CONST_VAR) {
     os << constant_value;
   } else {
@@ -136,9 +145,9 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
 void Mistral::Variable::initialise(Solver *s, const bool top) {
   if(domain_type == EXPRESSION) {
     
-    std::cout << "Add a new expression: " << this 
-    	      << (top ? " at top-level" : " nested")
-	      << std::endl;
+//     std::cout << "Add a new expression: " << this 
+//     	      << (top ? " at top-level" : " nested")
+// 	      << std::endl;
     
     //Expression *exp = (Expression*)implementation;
     if(!expression->is_initialised()) {
@@ -148,7 +157,7 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
 	expression->children[i].initialise(s, false);
       }
 
-      if(top) {
+      if(top && !expression->children.empty()) {
 	expression->extract_constraint(s);
 	//std::cout << this << " extract constraint: " << s->constraints.back() << std::endl; 
       } else {
@@ -183,8 +192,8 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
 
       s->sequence.declare(*this);
 
-      std::cout << "declare a new variable: " << this 
-  		<< " in " << get_domain() << std::endl;
+//       std::cout << "declare a new variable: " << this 
+//   		<< " in " << get_domain() << std::endl;
     } 
 
     //else std::cout << this << " is known " << std::endl;
@@ -638,8 +647,12 @@ std::string Mistral::Variable::get_domain() const {
 
   Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
     if(x.is_ground()) return set_domain(x.get_min());
-    else if(x.is_range()) return (set_min(x.get_min()) | set_max(x.get_max()));
-    else if(x.domain_type ==  BITSET_VAR) return set_domain(bitset_domain->domain.values);
+    else if(x.is_range()) {
+      std::cout << "\nset " << (*this) << "'s domain to " << x << "'s " << std::endl;
+      Event evt = (set_min(x.get_min()) | set_max(x.get_max()));
+      std::cout << evt << std::endl;
+      return evt;
+    } else if(x.domain_type ==  BITSET_VAR) return set_domain(bitset_domain->domain.values);
     //else {
     std::cout << "TODO!" << std::endl;
     //}
@@ -755,6 +768,24 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitsetDomain
   return x->display(os);
 }
 
+Mistral::Expression::Expression(const int lo, const int up) 
+  : VariableImplementation() {
+  id=-1; 
+  Variable x(lo, up, DYN_VAR);
+  self = x;
+}
+
+Mistral::Expression::Expression(Vector< int >& values) 
+  : VariableImplementation() {
+  id=-1; 
+  Variable x(values, DYN_VAR);
+  self = x;
+}
+
+void Mistral::Expression::extract_variable(Solver *s) {
+  self.initialise(s, false);
+  self = self.get_var();
+}
 
 Mistral::Expression::Expression(Vector< Variable >& args) 
   : VariableImplementation() {
@@ -798,7 +829,7 @@ void Mistral::AddExpression::extract_constraint(Solver *s) {
     int lb = children[0].get_min()+children[1].get_min();
     int ub = children[0].get_max()+children[1].get_max();
 
-    Variable aux(lb, ub// , (RANGE_VAR | BOOL_VAR)
+    Variable aux(lb, ub, DYN_VAR
 		 );
     self = aux;
 
@@ -831,7 +862,7 @@ void Mistral::OffsetExpression::extract_variable(Solver *s) {
   int lb = children[0].get_min()+offset;
   int ub = children[0].get_max()+offset;
 
-  Variable aux(lb, ub);
+  Variable aux(lb, ub, DYN_VAR);
   self = aux;
 
   self.initialise(s, false);
@@ -874,7 +905,7 @@ void Mistral::SubExpression::extract_constraint(Solver *s) {
     
     int lb = children[0].get_min()-children[1].get_max();
     int ub = children[0].get_max()-children[1].get_min();
-    Variable aux(lb, ub// , (RANGE_VAR | BOOL_VAR)
+    Variable aux(lb, ub, DYN_VAR// , (RANGE_VAR | BOOL_VAR)
 		 );
     self = aux;
 
@@ -913,7 +944,7 @@ void Mistral::NotExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::NotExpression::extract_variable(Solver *s) {
-  Variable aux(0, 1);
+  Variable aux(0, 1, BOOL_VAR);
   self = aux;
 
   self.initialise(s, false);
@@ -1053,7 +1084,7 @@ void Mistral::EqualExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::EqualExpression::extract_variable(Solver *s) {
-  Variable aux(0, 1);
+  Variable aux(0, 1, BOOL_VAR);
   self = aux;
   
   self.initialise(s, false);
@@ -1119,7 +1150,7 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::PrecedenceExpression::extract_variable(Solver *s) {
-  Variable aux(0, 1);
+  Variable aux(0, 1, BOOL_VAR);
   self = aux;
   
   self.initialise(s, false);

@@ -944,8 +944,10 @@ namespace Mistral {
     Variable(const int value);
     Variable(VariableImplementation* impl, const int type=DYN_VAR);
     Variable(Expression* impl);
-    Variable(const int lo, const int up, const int type=DYN_VAR);
-    Variable(Vector< int >& values, const int type=DYN_VAR);
+//     Variable(const int lo, const int up, const int type=DYN_VAR);
+//     Variable(Vector< int >& values, const int type=DYN_VAR);
+    Variable(const int lo, const int up, const int type=EXPRESSION);
+    Variable(Vector< int >& values, const int type=EXPRESSION);
 
     //Variable get_children();
     Variable get_var();
@@ -1274,13 +1276,15 @@ namespace Mistral {
     Expression(Variable X);
     Expression(Variable X, Variable Y);
     Expression(Vector< Variable >& args);
+    Expression(const int lo, const int up);
+    Expression(Vector< int >& values);
     ~Expression();
     
     
-    virtual void extract_constraint(Solver*)=0;
-    virtual void extract_predicate(Solver*)=0;
-    virtual void extract_variable(Solver*)=0;
-    virtual const char* get_name()=0;
+    virtual void extract_constraint(Solver*) {}
+    virtual void extract_predicate(Solver*) {}
+    virtual void extract_variable(Solver*);
+    virtual const char* get_name() { return "var"; }
     
 };
 
@@ -1491,11 +1495,12 @@ public:
   public:
     
     VarArray() : Vector< Variable >() {}
-    VarArray(const int n, int lb=NOVAL, int ub=NOVAL, int type=DYN_VAR) : Vector< Variable >() 
+    VarArray(const int n, int lb=NOVAL, int ub=NOVAL, int type=EXPRESSION) 
+      : Vector< Variable >() 
     {
       if(lb==NOVAL) { lb=0; ub=1; }
       else if(ub==NOVAL) { lb=0; ub=lb-1; }
-
+      
       for(int i=0; i<n; ++i) {
 	Variable x(lb, ub, type);
 	add(x);

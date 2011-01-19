@@ -104,7 +104,9 @@ namespace Mistral {
     /*!@name Constructors*/
     //@{
     /// The _scope is build by copying an array "scp" containing "l" variables
+    virtual void mark_domain();
     virtual void initialise();
+    virtual Constraint *clone() = 0;
     Constraint();
     Constraint(Vector< Variable >& scp);
     virtual ~Constraint();
@@ -148,7 +150,10 @@ namespace Mistral {
 
     inline void defrost() {
 
-      if(active.size == 1) relax();
+      if(active.size == 1) {
+	relax();
+	active.clear();
+      }
 
       if(changes.list_ == events.list_) 
 	// if idempotent, clear the events list
@@ -208,6 +213,8 @@ namespace Mistral {
      *  assignment) or a ptr to the wiped-out variable otherwise. 
      */
     virtual PropagationOutcome propagate() { return NULL; }
+    virtual PropagationOutcome rewrite();
+    virtual void consolidate();
     /*!
      *  Check if the cached support is valid.
      *  Otherwise initialize an iterator on supports
@@ -246,12 +253,14 @@ namespace Mistral {
     ConstraintEqual() : Constraint() {}
     ConstraintEqual(Vector< Variable >& scp) 
       : Constraint(scp) {}
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_domain_, 0);
-      trigger_on(_domain_, 1);
-      set_idempotent(true);
-    }
+    virtual Constraint *clone() { return new ConstraintEqual(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_domain_, 0);
+//       trigger_on(_domain_, 1);
+//       set_idempotent(true);
+//     }
     virtual ~ConstraintEqual() {}
     //@}
 
@@ -259,6 +268,7 @@ namespace Mistral {
     //@{
     virtual int check(const int* sol) const { return (sol[0] != sol[1]); }
     virtual PropagationOutcome propagate();
+    virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -283,12 +293,17 @@ namespace Mistral {
     ConstraintNotEqual() : Constraint() {}
     ConstraintNotEqual(Vector< Variable >& scp) 
       : Constraint(scp) {}
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_value_, 0);
-      trigger_on(_value_, 1);
-      set_idempotent(true);
-    }
+    virtual Constraint *clone() { return new ConstraintNotEqual(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_value_, 0);
+//       trigger_on(_value_, 1);
+//       set_idempotent(true);
+//       solver->mark_non_convex(scope[0].id());
+//       solver->mark_non_convex(scope[1].id());
+//     }
+    virtual void mark_domain();
     virtual ~ConstraintNotEqual() {}
     //@}
 
@@ -296,6 +311,7 @@ namespace Mistral {
     //@{
     virtual int check(const int* sol) const { return (sol[0] == sol[1]); }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -325,13 +341,14 @@ namespace Mistral {
     ConstraintLess() : Constraint() {}
     ConstraintLess(Vector< Variable >& scp, const int ofs=0) 
       : Constraint(scp) { offset = ofs; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_range_, 0);
-      trigger_on(_range_, 1);
-      set_idempotent(true);
-    }
+    virtual Constraint *clone() { return new ConstraintLess(scope, offset); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_range_, 0);
+//       trigger_on(_range_, 1);
+//       set_idempotent(true);
+//     }
     virtual ~ConstraintLess() {}
     //@}
 
@@ -339,6 +356,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const { return (sol[0]+offset > sol[1]); }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -365,14 +383,15 @@ namespace Mistral {
     PredicateLess() : ConstraintLess() {}
     PredicateLess(Vector< Variable >& scp, const int ofs=0) 
       : ConstraintLess(scp) { offset = ofs; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_range_, 0);
-      trigger_on(_range_, 1);
-      trigger_on(_value_, 2);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateLess(scope, offset); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_range_, 0);
+//       trigger_on(_range_, 1);
+//       trigger_on(_value_, 2);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateLess() {}
     //@}
 
@@ -382,6 +401,7 @@ namespace Mistral {
       return ((sol[0]+offset <= sol[1]) != sol[2]); 
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -410,13 +430,14 @@ namespace Mistral {
     PredicateUpperBound() : Constraint() {}
     PredicateUpperBound(Vector< Variable >& scp, const int b=0) 
       : Constraint(scp) { bound = b; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_range_, 0);
-      trigger_on(_value_, 1);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateUpperBound(scope, bound); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_range_, 0);
+//       trigger_on(_value_, 1);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateUpperBound() {}
     //@}
 
@@ -426,6 +447,7 @@ namespace Mistral {
       return ((sol[0] <= bound) != sol[1]); 
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -454,13 +476,14 @@ namespace Mistral {
     PredicateLowerBound() : Constraint() {}
     PredicateLowerBound(Vector< Variable >& scp, const int b=0) 
       : Constraint(scp) { bound = b; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_range_, 0);
-      trigger_on(_value_, 1);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateLowerBound(scope, bound); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_range_, 0);
+//       trigger_on(_value_, 1);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateLowerBound() {}
     //@}
 
@@ -470,6 +493,7 @@ namespace Mistral {
       return ((sol[0] <= bound) != sol[1]); 
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -500,14 +524,20 @@ namespace Mistral {
     PredicateEqual() : Constraint() {}
     PredicateEqual(Vector< Variable >& scp, const int sp=1) 
       : Constraint(scp) { spin = sp; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_domain_, 0);
-      trigger_on(_domain_, 1);
-      trigger_on(_value_, 2);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateEqual(scope, spin); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_domain_, 0);
+//       trigger_on(_domain_, 1);
+//       trigger_on(_value_, 2);
+//       set_idempotent(false);
+//       if(!spin) {
+// 	solver->mark_non_convex(scope[0].id());
+// 	solver->mark_non_convex(scope[1].id());
+//       }
+//     }
+    virtual void mark_domain();
     virtual ~PredicateEqual() {}
     //@}
 
@@ -515,6 +545,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const { return((sol[0] == sol[1]) == (sol[2] ^ spin)); }
     virtual PropagationOutcome propagate();
+    virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -546,13 +577,20 @@ namespace Mistral {
     PredicateConstantEqual() : Constraint() {}
     PredicateConstantEqual(Vector< Variable >& scp, const int val, const int sp=1) 
       : Constraint(scp) { value = val; spin = sp; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_domain_, 0);
-      trigger_on(_value_, 1);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateConstantEqual(scope, value, spin); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_domain_, 0);
+//       trigger_on(_value_, 1);
+//       set_idempotent(false);
+//       if(!spin && 
+// 	 value > scope[0].get_min() && 
+// 	 value < scope[0].get_max()) {
+// 	solver->mark_non_convex(scope[0].id());
+//       }
+//     }
+    virtual void mark_domain();
     virtual ~PredicateConstantEqual() {}
     //@}
 
@@ -560,6 +598,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const { return((sol[0] == value) == (sol[1] ^ spin)); }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -591,13 +630,14 @@ namespace Mistral {
     PredicateOffset() : Constraint() {}
     PredicateOffset(Vector< Variable >& scp, const int ofs) 
       : Constraint(scp) { offset=ofs; }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      for(int i=0; i<2; ++i)
-	trigger_on(_range_, i);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateOffset(scope, offset); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       for(int i=0; i<2; ++i)
+// 	trigger_on(_range_, i);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateOffset() {}
     //@}
 
@@ -607,6 +647,7 @@ namespace Mistral {
       return((sol[0]+offset) != sol[1]);
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -632,13 +673,14 @@ namespace Mistral {
     PredicateNot() : Constraint() {}
     PredicateNot(Vector< Variable >& scp) 
       : Constraint(scp) {}
-
-    virtual void initialise() {
-      Constraint::initialise();
-      for(int i=0; i<2; ++i)
-	trigger_on(_value_, i);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateNot(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       for(int i=0; i<2; ++i)
+// 	trigger_on(_value_, i);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateNot() {}
     //@}
 
@@ -648,6 +690,7 @@ namespace Mistral {
       return((sol[0]>0) == sol[1]);
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -673,13 +716,14 @@ namespace Mistral {
     PredicateAnd() : Constraint() {}
     PredicateAnd(Vector< Variable >& scp) 
       : Constraint(scp) {}
-
-    virtual void initialise() {
-      Constraint::initialise();
-      for(int i=0; i<3; ++i)
-	trigger_on(_value_, i);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateAnd(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       for(int i=0; i<3; ++i)
+// 	trigger_on(_value_, i);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateAnd() {}
     //@}
 
@@ -689,6 +733,7 @@ namespace Mistral {
       return((sol[0] && sol[1]) != (sol[2])); 
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -713,13 +758,14 @@ namespace Mistral {
     ConstraintAnd() : Constraint() {}
     ConstraintAnd(Vector< Variable >& scp) 
       : Constraint(scp) {}
-
-    virtual void initialise() {
-      Constraint::initialise();
-      for(int i=0; i<2; ++i)
-	trigger_on(_range_, i);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new ConstraintAnd(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       for(int i=0; i<2; ++i)
+// 	trigger_on(_range_, i);
+//       set_idempotent(false);
+//     }
     virtual ~ConstraintAnd() {}
     //@}
 
@@ -729,6 +775,7 @@ namespace Mistral {
       return(!(sol[0] && sol[1])); 
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -754,13 +801,14 @@ namespace Mistral {
     PredicateOr() : Constraint() {}
     PredicateOr(Vector< Variable >& scp) 
       : Constraint(scp) {}
-
-    virtual void initialise() {
-      Constraint::initialise();
-      for(int i=0; i<3; ++i)
-	trigger_on(_value_, i);
-      set_idempotent(false);
-    }
+    virtual Constraint *clone() { return new PredicateOr(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       for(int i=0; i<3; ++i)
+// 	trigger_on(_value_, i);
+//       set_idempotent(false);
+//     }
     virtual ~PredicateOr() {}
     //@}
 
@@ -770,6 +818,7 @@ namespace Mistral {
       return((sol[0] || sol[1]) != (sol[2])); 
     }
     virtual PropagationOutcome propagate();
+    virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -796,13 +845,14 @@ namespace Mistral {
     //@{
     ConstraintOr(Vector< Variable >& scp) 
       : Constraint(scp) { }
-
-    virtual void initialise() {
-      Constraint::initialise();
-      for(int i=0; i<2; ++i)
-	trigger_on(_range_, i);
-      set_idempotent(true);
-    }
+    virtual Constraint *clone() { return new ConstraintOr(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       for(int i=0; i<2; ++i)
+// 	trigger_on(_range_, i);
+//       set_idempotent(true);
+//     }
 
  //    static ConstraintOr* ConstraintOr_new(Vector< Variable >& X);
 //     //ConstraintOr() : InlineConstraint() {}
@@ -823,6 +873,7 @@ namespace Mistral {
       return(!(sol[0] || sol[1])); 
     }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -848,14 +899,15 @@ namespace Mistral {
     PredicateAdd() : Constraint() {}
     PredicateAdd(Vector< Variable >& scp) 
       : Constraint(scp) {}
-
-    virtual void initialise() {
-      Constraint::initialise();
-      trigger_on(_range_, 0);
-      trigger_on(_range_, 1);
-      trigger_on(_range_, 2);
-      set_idempotent(true);
-    }
+    virtual Constraint *clone() { return new PredicateAdd(scope); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_range_, 0);
+//       trigger_on(_range_, 1);
+//       trigger_on(_range_, 2);
+//       set_idempotent(true);
+//     }
     virtual ~PredicateAdd() {}
     //@}
     
@@ -863,6 +915,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const { return (sol[2] != (sol[0]+sol[1])); }
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
     
     /**@name Miscellaneous*/
@@ -888,6 +941,8 @@ namespace Mistral {
     //@{
     ConstraintCliqueNotEqual() : Constraint() {}
     ConstraintCliqueNotEqual(Vector< Variable >& scp);
+    virtual void mark_domain();
+    virtual Constraint *clone() { return new ConstraintCliqueNotEqual(scope); }
     virtual void initialise();
     virtual ~ConstraintCliqueNotEqual();
     //@}
@@ -896,6 +951,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -926,6 +982,7 @@ namespace Mistral {
     //@{
     ConstraintBoolSumEqual() : Constraint() {}
     ConstraintBoolSumEqual(Vector< Variable >& scp, const int t);
+    virtual Constraint *clone() { return new ConstraintBoolSumEqual(scope, total); }
     virtual void initialise();
     virtual ~ConstraintBoolSumEqual();
     //@}
@@ -934,6 +991,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
   
     /**@name Miscellaneous*/
@@ -987,6 +1045,8 @@ namespace Mistral {
     //@{
     ConstraintAllDiff() : Constraint() {}
     ConstraintAllDiff(Vector< Variable >& scp);
+    virtual void mark_domain();
+    virtual Constraint *clone() { return new ConstraintAllDiff(scope); }
     virtual void initialise();
     virtual ~ConstraintAllDiff();
     void init();
@@ -996,6 +1056,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/

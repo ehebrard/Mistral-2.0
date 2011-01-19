@@ -250,11 +250,19 @@ public:
   virtual void run();
 };
 
+class RewriteTest : public UnitTest {
+
+public:
+  
+  RewriteTest();
+  ~RewriteTest();
+
+  virtual void run();
+};
+
 
 int main(int argc, char *argv[])
 {  
-
-
 
   usrand(12345);
 
@@ -281,16 +289,16 @@ int main(int argc, char *argv[])
   //tests.push_back(new VarStackDynamicTest());
 
   int N = 8; //atoi(argv[1]);
-  //tests.push_back(new ModelTest());
+  //
 
   //tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
   
   //  tests.push_back(new Pigeons(5)); 
   //tests.push_back(new BoolPigeons(5));
 
-  tests.push_back(new ModelTest());
-  
-  /*
+  //tests.push_back(new RewriteTest());
+  //tests.push_back(new ModelTest());
+
   tests.push_back(new BoolPigeons(10));
   tests.push_back(new Pigeons(10)); 
   tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
@@ -305,7 +313,8 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
-  */
+
+
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
@@ -928,6 +937,9 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
   if(Verbosity) cout << "Run " << N << " random set_domain + removeRange checks " ;// << endl;
   if(Verbosity>LOW) cout << endl;
 
+  //Verbosity = EXTREME;
+
+
   for(int i=0; i<N; ++i) {
     int dom_size = randint(1<<(1<<Quality))+1;
 
@@ -941,7 +953,8 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 
       Solver s;
       Variable X(lb,ub);
-      s.add(X);
+      //s.add(X);
+      X.add_to(&s);
       //s.initialise();
 
       if(Verbosity > MEDIUM) cout << "    " << X << " in " << X.get_domain() << endl;
@@ -1535,6 +1548,24 @@ void BoolPigeons::run() {
 }
 
 
+// VariableTest::VariableTest() : UnitTest() {}
+// VariableTest::~VariableTest() {}
+
+// void VariableTest::run() {
+
+//   Variable X(0,10);
+//   Variable Y(-5,5);
+
+//   Solver s;
+
+//   s.add(X);
+//   s.add(Y);
+
+//   cout << s << endl;
+
+// }
+
+
 ModelTest::ModelTest() : UnitTest() {}
 ModelTest::~ModelTest() {}
 
@@ -1544,18 +1575,48 @@ void ModelTest::run() {
   Solver s;
 
   s.add(X);
+
+  cout << s << endl;
   
-  s.add( X[0]<=4 );
+  s.add( X[0]<=5 );
   s.add( X[1]<=4 );
   s.add( X[2]<=4 );
   s.add( X[3]<=3 );
-  //s.add( X[4]>=6 );
+  s.add( X[4]>=6 );
+  s.add( X[0]!=4 );
+
+
+  cout << s << endl;
+
   s.add( (X[0]+2)==X[4] || (X[1]+3)==X[4] );
+
+  s.propagate();
+  cout << s << endl;
+
   s.add( (!(X[0]==4) || !(X[1]==4)) == (X[2] >= X[3]) );
+
+  s.propagate();
+  cout << s << endl;
+
   s.add( (X[2] + X[3]) <= X[4] );
 
+//   s.propagate();
+//   cout << s << endl;
 
-  //cout << s << endl;
+//   s.add( (X[2] + X[3]) >= X[4] );
+
+  s.propagate();
+  cout << s << endl;
+
+  s.save();
+  s.rewrite();
+  
+  cout << s << endl;
+
+  s.restore();
+
+  cout << s << endl;
+
 
   s.initialise_search(X, 
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -1570,12 +1631,89 @@ void ModelTest::run() {
     cout << endl;
   }
 
-//   s.rewrite();
+// 
 
 //   cout << s << endl;
 
 
 }
+
+
+
+RewriteTest::RewriteTest() : UnitTest() {}
+RewriteTest::~RewriteTest() {}
+
+void RewriteTest::run() {
+
+  VarArray X(4,1,3);
+  Solver s;
+
+  s.add(X);
+
+  Variable Y(1,2);
+
+  s.add(Y);
+
+
+  cout << "Init\n" << s << endl;
+
+  s.add( (Y==1) <= (X[0]==X[2] || X[1]==X[3]) );
+  s.add( (Y==1) <= (X[0]!=X[2] || X[1]!=X[3]) );
+  s.add( Y!=2 );
+
+  //s.propagate();
+
+  cout << "Add constraints\n" << s << endl;
+
+  s.consolidate();
+
+  cout << "Consolidate\n" << s << endl;  
+
+  s.save();
+  s.rewrite();
+  
+  cout << "Rewrite\n" << s << endl;
+
+  s.save();
+  s.add( X[0]+1 < X[1] );
+
+  cout << "Add a new constraint\n" << s << endl;
+
+  s.consolidate();
+  s.rewrite();
+
+  cout << "Rewrite\n" << s << endl;
+
+  s.restore();
+
+  cout << "Restore\n" << s << endl;
+
+  s.restore();
+
+  cout << "Restore\n" << s << endl;
+
+
+
+//   s.initialise_search(X, 
+// 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+// 		      new NoRestart());
+//   int num_solutions = 0;
+//   while(s.get_next_solution() == SAT) {    
+//     ++num_solutions;
+//     for(unsigned int i=0; i<5; ++i) {
+//       cout << " " // << setw(2) << X[i] << ":"
+// 	   << X[i].get_solution_value() ;
+//     }
+//     cout << endl;
+//   }
+
+// 
+
+//   cout << s << endl;
+
+
+}
+
 
 VarStackDynamicTest::VarStackDynamicTest() : UnitTest() {}
 
