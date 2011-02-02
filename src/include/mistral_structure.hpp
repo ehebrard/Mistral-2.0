@@ -717,6 +717,9 @@ namespace Mistral {
 
     inline void add(const int elt)
     {
+//       std::cout << elt << ", " << size << " <= " << capacity << std::endl; 
+//       std::cout << index_[elt] << " <= " << capacity << std::endl; 
+
       index_[list_[size]] = index_[elt];
       list_[index_[elt]] = list_[size];
       list_[size] = elt;
@@ -1329,6 +1332,306 @@ namespace Mistral {
   };
 
 
+
+  /**********************************************
+   * ConStack
+   **********************************************/
+  /// Sparse set representation
+
+  template< class CON_TYPE >
+  class ConStack 
+  {
+  public:
+
+    /*!@name Parameters*/
+    //@{
+    /// list of values
+    CON_TYPE *list_;
+    /// current max capacity
+    unsigned int capacity;
+    /// current size
+    unsigned int size;
+    /// values' indices
+    unsigned int *index_;
+    int offset;
+    //unsigned int *start_;
+    //@}
+
+    /*!@name Constructors*/
+    //@{
+    ConStack()
+    {
+      size = 0;
+      capacity = 0;
+      list_ = NULL;
+      offset = 0;
+      index_ = NULL;
+    }
+
+    ConStack(Vector< CON_TYPE >& obj, bool full=true)
+    {
+      initialise(obj, full);
+    }
+
+    virtual ~ConStack()
+    {
+      delete [] list_;
+      index_  += offset;
+      delete [] index_;
+    }
+
+    void initialise(const int n)
+    {
+      capacity = n;
+      list_ = new CON_TYPE[capacity];
+      offset = 0;
+      index_ = new unsigned int[capacity];
+      for(unsigned int i=0; i<capacity; ++i) 
+	{
+	  index_[i] = i;
+	}
+      index_ -= offset;
+      size = 0;
+    }
+
+    void extend(const int idx) {
+      //int idx = elt.id();
+      int new_lb = offset;
+      int new_ub = capacity-offset-1;
+      
+      if(idx < new_lb || idx > new_ub) {
+
+	if(idx < new_lb) new_lb = idx;
+	else if(idx > new_ub) new_ub = idx;
+	
+	unsigned int new_capacity = new_ub=new_lb+1;
+	if(new_capacity < 2*capacity) new_capacity = capacity;
+	
+	unsigned int *aux_index = index_+offset;
+	index_ = new unsigned int[new_capacity];
+	memcpy(index_, aux_index, capacity*sizeof(unsigned int));
+	delete [] aux_index;
+	
+	CON_TYPE *aux_list = list_;
+	list_ = new CON_TYPE[new_capacity];
+	memcpy(list_, aux_list, capacity*sizeof(CON_TYPE));
+	delete [] aux_list;
+
+	index_ -= new_lb;
+	capacity = new_capacity;
+      }
+    }
+
+    void declare(CON_TYPE elt) {
+      int idx = elt->id;
+      extend(idx);
+      
+      if(idx < offset || idx >= offset+(int)size) {
+	list_[index_[idx+offset]] = list_[size];
+	list_[size] = elt;
+	index_[idx+offset] = size;
+	++size;
+      } else {
+	add(elt);
+      }
+    }
+
+    void initialise(Vector< CON_TYPE >& obj, const bool full=true)
+    {
+      assert((obj.size == 0) || ((unsigned int)(obj.back()->id - obj[0]->id + 1) == obj.size));
+
+      capacity = (obj.size ? obj.size : obj.capacity);
+      list_ = new CON_TYPE[capacity];
+      offset = (obj.size ? obj[0]->id : 0);
+      index_ = new unsigned int[capacity];
+      index_ -= offset;
+      for(unsigned int i=0; i<capacity; ++i) 
+	{
+	  index_[i+offset] = i;
+	  list_[i] = obj[i];
+	}
+      
+      size = (full ? capacity : 0);
+    }
+    //@}    
+
+    /*!@name Accessors*/
+    //@{  
+    inline bool contain(const CON_TYPE elt) const 
+    {
+      return index_[elt->id]<size;
+    } 
+    inline bool contain(const int elt) const 
+    {
+      return index_[elt]<size;
+    } 
+  
+    inline bool empty()const 
+    {
+      return !size;
+    } 
+
+    inline CON_TYPE next(const CON_TYPE elt) const
+    {
+      unsigned int idx = index_[elt->id]+1;
+      return (idx < size ? list_[idx] : elt);
+    }
+    inline CON_TYPE next(const int elt) const
+    {
+      unsigned int idx = index_[elt]+1;
+      return (idx < size ? list_[idx] : elt);
+    }
+    
+    inline CON_TYPE operator[](const unsigned int idx) const
+    {
+      return list_[idx];
+    }
+
+    inline CON_TYPE& operator[](const unsigned int idx)
+    {
+      return list_[idx];
+    }
+    //@}
+
+    /*!@name List Manipulation*/
+    //@{
+    inline void fill()
+    {
+      size = capacity;
+    }
+
+    inline void clear()
+    {
+      size = 0;
+    }
+  
+    inline void setTo(const CON_TYPE elt)
+    {
+      int idx = elt->id;
+      size=1;
+      index_[(*list_)->id] = index_[idx];
+      list_[index_[idx]] = *list_;
+      *list_ = elt;
+      index_[idx] = 0;
+    }
+
+    inline void remove(const CON_TYPE elt)
+    {
+      int idx = elt->id;
+      --size;
+      index_[list_[size]->id] = index_[idx];
+      list_[index_[idx]] = list_[size];
+      list_[size] = elt;
+      index_[idx] = size;
+    }
+
+    inline void remove(const int idx)
+    {
+      CON_TYPE elt = list_[index_[idx]];
+      --size;
+      index_[list_[size]->id] = index_[idx];
+      list_[index_[idx]] = list_[size];
+      list_[size] = elt;
+      index_[idx] = size;
+    }
+
+    inline CON_TYPE next()
+    {
+      return list_[size];
+    }
+
+    inline CON_TYPE pop()
+    {
+      return list_[--size];
+    }
+
+    inline CON_TYPE popHead()
+    {
+      --size;
+      index_[list_[size]->id] = 0;
+      const CON_TYPE elt = *list_;
+      *list_ = list_[size];
+      list_[size] = elt;
+      index_[elt->id] = size;
+      return elt;
+    }
+
+    inline CON_TYPE head()
+    {
+      return *list_;
+    }
+    
+    inline CON_TYPE back()
+    {
+      return list_[size-1];
+    }
+
+    inline void add(const CON_TYPE elt)
+    {
+      int idx = elt->id;
+      index_[list_[size]->id] = index_[idx];
+      list_[index_[idx]] = list_[size];
+      list_[size] = elt;
+      index_[idx] = size;
+      ++size;
+    }
+
+    inline void ordered_add(const CON_TYPE elt)
+    {
+      int idx = elt->id;
+
+      // the first non-element goes where elt was
+      index_[list_[size]->id] = index_[idx];
+      list_[index_[idx]] = list_[size];
+
+      int rank = size;
+      while(idx && list_[rank-1]->id > elt->id) { // push every values greater than elt above elt
+	list_[rank] = list_[rank-1];
+	index_[list_[rank-1]->id] = rank;
+	--rank;
+      }
+
+      list_[rank] = elt;
+      index_[idx] = rank;
+      ++size;
+    }
+
+    inline void revertTo(const int level)
+    {
+      size = level;
+    }
+
+    inline void index()
+    {
+      for(unsigned int i=0; i<capacity; ++i)
+	index_[list_[i]->id] = list_[i]->id;
+    }
+    //@}
+
+    /*!@name Miscellaneous*/
+    //@{
+//     std::string getString() const {
+//       std::string return_str = "(";
+//       if(size) return_str += toString(list_[0]);
+//       for(unsigned int i=1; i<size; ++i)
+// 	return_str += (" "+toString(list_[i]));
+//       return_str += ")";
+      
+//       return return_str;
+//     }
+
+    std::ostream& display(std::ostream& os) const {
+      os << "(";
+      if(size) os << list_[0];
+      for(unsigned int i=1; i<size; ++i)
+	os << " " << list_[i];
+      os << ")";
+      return os;
+    }
+    //@}
+  };
+
+
   /**********************************************
    * IdStack
    **********************************************/
@@ -1587,13 +1890,54 @@ namespace Mistral {
     }
 
     inline void erase(const int idx, const int k=0) {
+
+//       std::cout << (int*)this << std::endl;
+
       int succ = data.stack_[idx].next;
       int prec = data.stack_[idx].prev;   
    
+//       std::cout << "ERASE " << idx << " " << prec << " " << succ << std::endl;
+//       std::cout << "ERASE " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl;
+
+
       data.stack_[succ].prev = prec;
       data.stack_[prec].next = succ;
+
+//       std::cout << "ERASE " << idx << " " << prec << " " << succ << std::endl;
+//       std::cout << "ERASE " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl << std::endl;
       --degree;
+
+      //      std::cout << contain(idx) << std::endl;
     }
+
+//     inline bool contain(const int idx) {
+
+//  //      // std::cout << (int*)this << std::endl;
+
+
+// //       int succ = data.stack_[idx].next;
+// //       int prec = data.stack_[idx].prev;   
+   
+// //       std::cout << "CONTAIN " << idx << " " << prec << " " << succ << std::endl;
+// //       std::cout << "CONTAIN " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl;
+
+// // //       int succ = data.stack_[idx].next;
+// // //       int prec = data.stack_[idx].prev;   
+
+// // //       std::cout << "CONTAIN " << idx << "? " << prec << "->" 
+// // // 		<< data.stack_[prec].next
+// // // 		<< " " << succ << "<-" 
+// // // 		<< data.stack_[succ].prev << std::endl;
+
+   
+// //       return(  data.stack_[succ].prev == idx
+// // 	       && 
+// // 	       data.stack_[prec].next == idx
+// // 	       );
+
+//       return ( data.stack_[idx].prev != idx );
+     
+//     }
 
     inline Node<DATA_TYPE>& first(const int h) {
       //int idx = ;
@@ -3151,6 +3495,110 @@ namespace Mistral {
 
 
 
+  template <class T>
+  class BinaryMinHeap {
+
+  private:
+    
+    inline void sift_up(unsigned int index, const T x) {
+      ++num_operations;
+      
+      unsigned int ascendant = (index-1)/2;    
+      while(index && x < data[ascendant]) {
+	++num_operations;
+	
+	data[index] = data[ascendant];
+	data[ascendant] = x;
+	index = ascendant;
+	ascendant /= 2;
+      }
+    }
+    
+    inline void sift_down(unsigned int index, const T x) {
+      unsigned int descendant = index*2+1;
+      unsigned int smallest = index;
+      ++num_operations;
+      
+      while(descendant < data.size) {
+	++num_operations;
+	
+	if(data[descendant] < data[smallest]) {
+	  smallest = descendant;
+	}
+	++descendant;
+	if(descendant < data.size && data[descendant] < data[smallest]) {
+	  smallest = descendant;
+	}
+	if(smallest == index) break;
+	
+	data[index] = data[smallest];
+	data[smallest] = x;
+	
+	index = smallest;
+	descendant = smallest*2+1;
+      }
+    }
+    
+  public: 
+    
+    int num_operations;
+    Vector< T > data;
+    
+    BinaryMinHeap() { num_operations=0; }
+    virtual ~BinaryMinHeap() { }
+    
+    void add(const T x) {
+      data.add(x);
+      sift_up(data.size-1, x);
+    }
+    
+    T pop_min() {
+      T the_min = data[0];
+      data[0] = data[--data.size];
+      data[data.size] = the_min;
+      sift_down(0, data[0]);
+      return the_min;
+    }
+    
+    /*!@name Printing*/
+    //@{
+    std::ostream& display(std::ostream& os) const {
+      
+
+      unsigned int n_level = 0;
+      while((unsigned int)(1<<n_level)<=data.size) ++n_level;
+      
+      unsigned int offset = 0;
+      unsigned int step = 1;
+
+      unsigned int i, j, l, first, last;
+
+      for(i=0; i<30; ++i) {
+	os << " " << data[i];
+      }
+      os << std::endl;
+	
+      for(l=0; l<n_level; ++l) {
+	first = (1<<(n_level-l-1))-1;
+	last = (1<<(n_level-l))-1;
+	if(last>data.size) last = data.size;
+	for(j=0; j<offset; ++j) os << "   ";
+	for(i=first; i<last; ++i) {
+	  os << std::setw(3) << data[i];
+	  if(i<last-1) for(j=0; j<step; ++j) os << "   ";
+	}
+	os << std::endl;
+	offset = offset+(1+step)/2;
+	step = 2*step+1;
+      }
+      return os;
+    }
+    //@}
+    
+  };
+
+
+
 //   template < class DATA_TYPE > 
 //   std::string toString(const Vector< DATA_TYPE >& x) {
 //     std::ostringstream os;
@@ -3185,11 +3633,18 @@ namespace Mistral {
 //     return x.getString();
 //   }
 
+
+
   std::ostream& operator<< (std::ostream& os, const MultiSet& x);
 
   std::ostream& operator<< (std::ostream& os, const IntStack& x);
 
   std::ostream& operator<< (std::ostream& os, const Queue& x);
+
+  template < class DATA_TYPE > 
+  std::ostream& operator<< (std::ostream& os, const BinaryMinHeap< DATA_TYPE >& x) {
+    return x.display(os);
+  }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >& x) {
@@ -3203,6 +3658,11 @@ namespace Mistral {
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const VarStack< DATA_TYPE >& x) {
+    return x.display(os);
+  }
+
+  template < class DATA_TYPE > 
+  std::ostream& operator<< (std::ostream& os, const ConStack< DATA_TYPE >& x) {
     return x.display(os);
   }
 
@@ -3232,12 +3692,16 @@ namespace Mistral {
   }
 
 
-
   std::ostream& operator<< (std::ostream& os, const IntStack* x);
 
   std::ostream& operator<< (std::ostream& os, const Queue* x);
 
   std::ostream& operator<< (std::ostream& os, const MultiSet* x);
+
+  template < class DATA_TYPE > 
+  std::ostream& operator<< (std::ostream& os, const BinaryMinHeap< DATA_TYPE >* x) {
+    return x->display(os);
+  }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >* x) {

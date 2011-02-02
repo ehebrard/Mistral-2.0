@@ -57,7 +57,8 @@ namespace Mistral {
   */
   class Constraint {
 
-  protected:
+    //protected:
+  public:
 
     /*!@name Parameters*/
     //@{
@@ -81,6 +82,11 @@ namespace Mistral {
     int priority;
     /// An unique id
     int id;
+
+    /// stress >= active.size means that the constraint is entailed
+    /// stress <  active.size means that the constraint is active
+    /// If the propagator enforces at least FC then stress should be >= 1
+    unsigned int stress;
 
     /// The indices of unassigned variables
     IntStack active;
@@ -110,6 +116,8 @@ namespace Mistral {
     Constraint();
     Constraint(Vector< Variable >& scp);
     virtual ~Constraint();
+    
+    void add(Variable X);
 
     /// An idempotent constraint should not be called on events triggered by itself.
     /// To forbid that, the lists 'events' and 'changes' are merged
@@ -149,10 +157,11 @@ namespace Mistral {
     }
 
     inline void defrost() {
-
-      if(active.size == 1) {
+      
+      //if(stress )
+      if(active.size <= stress) {
 	relax();
-	active.clear();
+	//active.clear();
       }
 
       if(changes.list_ == events.list_) 
@@ -164,28 +173,16 @@ namespace Mistral {
       trigger[x] = t;
     }
 
-    Constraint* notify_assignment(const int var, const int level);
-//     inline Constraint* notify_assignment(const int var, const int level) {
-
-//       //display(std::cout);
-//       //std::cout << std::endl;
-//       std::cout << "remove " << scope[var] << " from " ;
-//       display(std::cout);
-//       std::cout << active << " => " ;
-		
-
-//       Constraint *r = NULL;
-//       if(trail_.back() != level) {
-// 	trail_.add(active.size);
-// 	trail_.add(level);
-// 	r = this;
-//       }
-//       active.erase(var);
-
-//       std::cout << active << std""endl;
-
-//       return r;
-//     }
+    inline Constraint* notify_assignment(const int var, const int level) {
+      Constraint *r = NULL;
+      if(trail_.back() != level) {
+	trail_.add(active.size);
+	trail_.add(level);
+	r = this;
+      }
+      active.erase(var);
+      return r;
+    }
 
     void post(Solver *s);
     void relax();
@@ -339,6 +336,8 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     ConstraintLess() : Constraint() {}
+    ConstraintLess(const int ofs=0) 
+      : Constraint() { offset = ofs; }
     ConstraintLess(Vector< Variable >& scp, const int ofs=0) 
       : Constraint(scp) { offset = ofs; }
     virtual Constraint *clone() { return new ConstraintLess(scope, offset); }
@@ -368,6 +367,66 @@ namespace Mistral {
 
 
   /**********************************************
+   * Disjunctive Constraint (implemented with two precedence constraints)
+   **********************************************/ 
+  /*! \class ConstraintDisjunctive
+    \brief  Binary Disjunctive Constraint (x0 + p0 <= x1 || x1 + p1 <= x0).
+  */
+  class ConstraintDisjunctive : public Constraint {
+
+  public: 
+    /**@name Parameters*/
+    //@{
+    int processing_time[2];
+    Constraint *precedence[2];
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintDisjunctive() : Constraint() {}
+    ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1) 
+      : Constraint(scp) { 
+      processing_time[0] = p0; 
+      processing_time[1] = p1;
+
+      precedence[0] = new ConstraintLess(scope, processing_time[0]);
+      precedence[1] = new ConstraintLess(processing_time[1]);
+      precedence[1]->add(scope[1]);
+      precedence[1]->add(scope[0]);
+    }
+    virtual Constraint *clone() { return new ConstraintDisjunctive(scope, processing_time[0], processing_time[1]); }
+    virtual void initialise();
+//     virtual void initialise() {
+//       Constraint::initialise();
+//       trigger_on(_range_, 0);
+//       trigger_on(_range_, 1);
+//       set_idempotent(true);
+//     }
+    virtual ~ConstraintDisjunctive() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    void decide(const int choice);
+    virtual int check( const int* sol ) const { 
+      return ((sol[0]+processing_time[0] > sol[1])
+	      &&
+	      (sol[1]+processing_time[1] > sol[0])); 
+    }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    virtual void consolidate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "disjunctive"; }
+    //@}
+  };
+
+
+  /**********************************************
    * <= Predicate
    **********************************************/ 
   /*! \class PredicateLess
@@ -380,9 +439,9 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    PredicateLess() : ConstraintLess() {}
+    PredicateLess() : ConstraintLess(0) {}
     PredicateLess(Vector< Variable >& scp, const int ofs=0) 
-      : ConstraintLess(scp) { offset = ofs; }
+      : ConstraintLess(scp, ofs) {}
     virtual Constraint *clone() { return new PredicateLess(scope, offset); }
     virtual void initialise();
 //     virtual void initialise() {

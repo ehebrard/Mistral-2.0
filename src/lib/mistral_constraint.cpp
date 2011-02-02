@@ -24,20 +24,22 @@
 
 
 Mistral::Constraint::Constraint() {
+  stress = 1;
   priority = 2;
   id = -1;
-  //weight = 1.0;
 }
 
 Mistral::Constraint::Constraint(Vector< Variable >& scp) {
+  stress = 1;
   priority = 2;
   id = -1;
-  //weight = 1.0;
-  //initialise(scp);
   for(unsigned int i=0; i<scp.size; ++i) {
-    //scope.add(scp[i].get_var());
     scope.add(scp[i]);
   }
+}
+
+void Mistral::Constraint::add(Variable X) {
+  scope.add(X);
 }
 
 Mistral::Constraint::~Constraint() {
@@ -48,37 +50,16 @@ Mistral::Constraint::~Constraint() {
   delete [] self;
   delete [] trigger;
   delete [] event_type;
-  //delete [] _scope;
-  //scope = NULL;
-  
 }
 
-// void Mistral::Constraint::initialise(Vector< Variable >& scp) {
-//   for(unsigned int i=0; i<scp.size; ++i) {
-//     scope.add(scp[i]);
-//     //trigger.add(_domain_);
-//   }
-//   initialise();
-// }
-
-// void Mistral::Constraint::init_self() {
-//   self = new int[scope.size];
-//   std::fill(self, self+scope.size, -1);
-// }
 
 void Mistral::Constraint::mark_domain() {
 }
 
 void Mistral::Constraint::initialise() {
-  //arity = scp.size;
-  //weight = w;
-
-  //std::cout << "Initialise " << this << std::endl;
-
   trail_.initialise(0,2*scope.size);
   trail_.add(-1);
 
-  //_scope = new IntVar[scope.size];
   event_type = new Event[scope.size];
   self = new int[scope.size];
   trigger = new int[scope.size];
@@ -86,8 +67,6 @@ void Mistral::Constraint::initialise() {
   changes.initialise(0, scope.size-1, false);
   supports = NULL;
 
-
-  //std::memcpy(_scope, scp.stack_, scope.size*sizeof(IntVar));
   std::fill(event_type, event_type+scope.size, NO_EVENT);
   std::fill(self, self+scope.size, -1);
   std::fill(trigger, trigger+scope.size, _domain_);
@@ -97,8 +76,6 @@ void Mistral::Constraint::initialise() {
   for(unsigned int i=0; i<scope.size; ++i) 
     if(scope[i].domain_type != BOOL_VAR && scope[i].is_ground()) 
       active.erase(i);
-
-  //scope = _scope;
 }
 
 Mistral::PropagationOutcome Mistral::Constraint::rewrite() {
@@ -106,9 +83,17 @@ Mistral::PropagationOutcome Mistral::Constraint::rewrite() {
 }
 
 void Mistral::Constraint::consolidate() {
+
+//   std::cout << "consolidate " ;
+//   display(std::cout);
+//   std::cout << std::endl;
+
   for(unsigned int i=0; i<scope.size; ++i) {
     scope[i] = scope[i].get_var();
   }
+
+  //display(std::cout);
+  //std::cout << " consolidated" << std::endl;
 }
 
 
@@ -129,151 +114,123 @@ void Mistral::Constraint::post(Solver *s) {
     }
   }
   mark_domain();
+
+//   if(scope[0].id() == 5 || scope[1].id() == 5) {
+//     std::cout << "X5CLIST AFTER POST ";
+//     solver->print_clist(5);
+//     std::cout << "C" << id << "ALIST AFTER POST "
+// 	      << active << " " << trail_ << std::endl;
+//   }
 }
 
 void Mistral::Constraint::relax() {
-  unsigned int i, j;
-  int k;
-
-
-  //std::cout << solver << std::endl;
-
+  if(!active.empty()) {
+    unsigned int i, j;
+    int k;
+    
 #ifdef _DEBUG_AC
-  std::cout << "relax " << this << " from ";
+    for(i=0; i<scope.size; ++i) {
+      std::cout << " " << scope[i] << " in " << scope[i].get_domain();
+    }
+    std::cout << std::endl << "relax " << this << " from";
+#endif
+      
+    for(i=0; i<active.size; ++i) {
+      j = active[i];
+      k = scope[j].id();
+      
+#ifdef _DEBUG_AC
+      std::cout << " " << scope[j] << "'s c-list ("; 
+      
+      bool is_in = false;
+      ConstraintNode nd;
+      nd = solver->constraint_graph[k]->first(_value_);
+      while( !is_in && solver->constraint_graph[k]->next(nd) ) {
+	std::cout << " " << nd.elt.constraint;
+	is_in = (nd.elt.constraint->id == id);
+      }
+      
+      if(!is_in) {
+	std::cout << ") WAS NOT IN!" << std::endl;
+	exit(1);
+      }
 #endif
 
-
-  for(i=0; i<active.size; ++i) {
-    j = active[i];
-    k = scope[j].id();
-
-#ifdef _DEBUG_AC
-    std::cout << scope[j] << "'s c-list ("; 
-    //<< solver->constraint_graph[i] << " " ;
-
-    bool is_in = false;
-    ConstraintNode nd;
-    nd = solver->constraint_graph[k]->first(_value_);
-    while( !is_in && solver->constraint_graph[k]->next(nd) ) {
-      std::cout << " " << nd.elt.constraint;
-      is_in = (nd.elt.constraint->id == id);
+      //std::cout << "INDEX " << k << " " << j << std::endl;
+      //std::cout << "ERASE FROM " << scope[j] << std::endl;
+      solver->constraint_graph[k]->reversible_erase(self[j], trigger[j]);
+//       std::cout << "TEST" << std::endl;
+//       if(solver->constraint_graph[k]->contain(self[j])) {
+// 	exit(1);
+//       }
     }
     
-    if(!is_in) {
-      std::cout << ") WAS NOT IN!" << std::endl;
-      exit(1);
-    }
-
+#ifdef _DEBUG_AC
+    std::cout << " )" << std::endl;
 #endif
 
+    if(trail_.back() != solver->level) {
+      solver->saved_cons.add(this);
+      trail_.add(active.size);
+      trail_.add(solver->level);
+    }
+    active.clear();
+  }//  else {
+    
+//     std::cout << "do not relax because there is no active variable" 
+// 	      << std::endl << scope[0] << " in " << scope[0].get_domain()
+// 	      << " " << scope[1] << " in " << scope[1].get_domain() << std::endl;
+//   }
 
-    solver->constraint_graph[k]->reversible_erase(self[j], trigger[j]);
-  }
+//   if(scope[0].id() == 5 || scope[1].id() == 5) {
+//     std::cout << "X5CLIST AFTER RELAX ";
+//     solver->print_clist(5);
+//     std::cout << "C" << id << "ALIST AFTER RELAX "
+// 	      << active << " " << trail_ << std::endl;
+//     //<< solver->constraint_graph[5] << std::endl;
+//   }
 
-  #ifdef _DEBUG_AC
-  std::cout << " )" << std::endl;
-  #endif
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     if(!scope[i].is_ground()) {
+//       int j = scope[i].id();
+//       std::cout << "INDEX " << j << " " << i << std::endl;
+//       if(solver->constraint_graph[j]->contain(self[i])) {
+// 	std::cout << std::endl << this << " (" << self[i] << ") is in " << scope[i] << std::endl;
+// 	std::cout << solver->constraint_graph[j]->data.stack_[self[i]].prev << std::endl;
+// 	std::cout << solver->constraint_graph[j]->data.stack_[self[i]].next << std::endl;
 
-  //  std::cout << solver << std::endl;
-  
+// 	// std::cout << solver->constraint_graph[j]->data.stack_[self[i]].prev.next
+// // 		  << " " << solver->constraint_graph[j]->data.stack_[self[i]].next.prev 
+// //		  << std::endl;
+
+// 	ConstraintNode nd;
+// 	std::cout << std::endl;
+// 	nd = solver->constraint_graph[j]->first(_value_);
+// 	while( solver->constraint_graph[j]->next(nd) ) {
+// 	  std::cout << " " << nd.elt.constraint;
+// 	}
+// 	std::cout << std::endl;
+// 	nd = solver->constraint_graph[j]->first(_value_);
+// 	while( solver->constraint_graph[j]->next(nd) ) {
+// 	  std::cout << " " << nd.prev;
+// 	}
+// 	std::cout << std::endl;
+// 	exit(1);
+//       }
+//     }
+//   }
+
 }
 
-Mistral::Constraint* Mistral::Constraint::notify_assignment(const int var, const int level) {
- //  //display(std::cout);
-//   //std::cout << std::endl;
-//   std::cout << "remove " << scope[var] << " from " ;
-//   display(std::cout);
-//   std::cout << active << " => " ;
-  
-  Constraint *r = NULL;
-  if(trail_.back() != level) {
-	trail_.add(active.size);
-	trail_.add(level);
-	r = this;
-      }
-  active.erase(var);
-  
-  //  std::cout << active << std::endl;
-  
-  return r;
-}
 // Mistral::Constraint* Mistral::Constraint::notify_assignment(const int var, const int level) {
-
-//  //   std::cout << "notify var: rem " << var 
-// //  	    << " from " << active << std::endl;
-
-
-// #ifdef _DEBUG_AC
-//    std::cout << this << " -= " << scope[var] << std::endl;
-// #endif
-//    Constraint *r = NULL;
-
-//   assert(active.contain(var));
-
+//   Constraint *r = NULL;
 //   if(trail_.back() != level) {
 //     trail_.add(active.size);
 //     trail_.add(level);
 //     r = this;
 //   }
 //   active.erase(var);
-
-// #ifdef _DEBUG_AC
-//   std::cout << "number of active variables left: " << active.size << std::endl;
-// #endif
-
-//       // BUGGY: the constraint might be relaxed from the 
-//       //        last variable's list without getting a trigger
-//       //        from it. The 'changes' list might thus not be complete
-//       //        instead we relax it when freezing.
-
-//   //if(active.size == 1) relax();
 //   return r;
-// }
-
-// // void Mistral::Constraint::entail() {
-// // //   unsigned int i, j;
-// // //   for(i=0; i<active.size; ++i) {
-// // //     j = active[i];
-// // //     scope[j]->constraints.reversible_erase(self[j]);
-// // //   }
-// // }
-
-// void Mistral::Constraint::restore() {
-//   trail_.pop();
-//   active.size = trail_.pop();
-// }
-
-// void Mistral::Constraint::trigger_on(const int t, const int x) {
-//   trigger[x] = t;
-// //   //self_list[x] = &(_scope[x]->constraints);
-// //  ConstraintTrigger ct(this, x);
-// //   self[x] = _scope[x]->constraints.create(ct, t);
-// }
-
-//void Mistral::Constraint::post() {
-//   for(int i=0; i<scope.size; ++i)
-//     _scope[i]->constraints.reversible_add(self[i], trigger[i]);
-//}
- 
-//void Mistral::Constraint::relax() {
-//   for(int i=0; i<scope.size; ++i)
-//     _scope[i]->constraints.reversible_erase(self[i], trigger[i]);
-//}
-
-// void Mistral::Constraint::assign(const int var) {
-// //   active.erase(var);
-// //   if(active.size == 1) {
-// //     int i = active.back();
-// //     _scope[i]->constraints.erase(self[i], trigger[i]);
-// //   }
-// }
-
-// void Mistral::Constraint::unassign(const int var) {
-// //   if(active.size == 1) {
-// //     int i = active.back();
-// //     _scope[i]->constraints.add(self[i], trigger[i]);
-// //   } 
-// //   if(!(active.contain(var))) active.add(var);
 // }
 
 bool Mistral::Constraint::firstSupport(const int vri, const int vli) 
@@ -335,23 +292,6 @@ bool Mistral::Constraint::findSupport(const int vri, const int vli)
   return found;
 }
 
-
-// bool Mistral::Constraint::propagate()
-// {
-//   int i, consistent=1, evt = ( Constraint::RANGETRIGGER );
-//   //int i, consistent=1, evt = ( Constraint::VALUETRIGGER );
-//   for( i=0; consistent && i<scope.size; ++i )
-//     consistent = propagate( i, evt );
-//   return consistent;
-// } 
-
-// std::string Mistral::Constraint::getString() const {
-//   std::string return_str = name()+"("+(scope[0]->getString());
-//   for(int i=1; i<scope.size; ++i)
-//     return_str += (", "+(scope[1]->getString()));
-//   return return_str+")";
-// }
-
 std::ostream& Mistral::Constraint::display(std::ostream& os) const {
   os << name() << "(" << scope[0];
   for(unsigned int i=1; i<scope.size; ++i)
@@ -359,87 +299,6 @@ std::ostream& Mistral::Constraint::display(std::ostream& os) const {
   os << ")";
   return os;
 }
-
-// void Mistral::ConstraintNotEqual::post() {
-//   for(unsigned int i=0; i<scope.size; ++i)
-//     trigger_on(_value_, i);
-// }
-
-// Mistral::InlineConstraint* Mistral::InlineConstraint::Constraint_new(Vector< Variable >& X)
-// {
-//   void* mem = malloc(sizeof(Constraint) + 
-// 		     sizeof(Variable)*X.size // + 
-// // 		     sizeof(int)*5*(X.size)
-// 		     );
-//   return new (mem) InlineConstraint(X); 
-// }
-
-
-
-// void Mistral::InlineConstraint::initialise() {
-
-//   Constraint::initialise();
-
-// //   trail_.initialise(0,2*scope.size);
-// //   trail_.add(-1);
-
-// //   //_scope = new IntVar[scope.size];
-// //   solution = new int[scope.size];
-// //   self = new int[scope.size];
-// //   trigger = new int[scope.size];
-// //   //self = &data[scope.size*(sizeof(Variable)/sizeof(int))+scope.size];
-// //   //trigger = &data[scope.size*(sizeof(Variable)/sizeof(int))+2*scope.size];
-  
-// //   event_type = &data[scope.size*(sizeof(Variable)/sizeof(int))];
-// //   changes.list_ = &data[scope.size*(sizeof(Variable)/sizeof(int))+scope.size];
-// //   changes.index_ = &((unsigned int *)data)[scope.size*(sizeof(Variable)/sizeof(int))+2*scope.size];
-// //   changes.start_ = changes.index_;
-// //   changes.size = 0;
-// //   changes.capacity = scope.size;
-
-// //   active.list_ = &data[scope.size*(sizeof(Variable)/sizeof(int))+3*scope.size];
-// //   active.index_ = &((unsigned int *)data)[scope.size*(sizeof(Variable)/sizeof(int))+4*scope.size];
-// //   active.start_ = active.index_;
-// //   active.size = 0;
-// //   active.capacity = scope.size;
-
-// //   //std::memcpy(_scope, scp.stack_, scope.size*sizeof(IntVar));
-// //   std::fill(event_type, event_type+scope.size, NO_EVENT);
-// //   std::fill(self, self+scope.size, -1);
-// //   std::fill(trigger, trigger+scope.size, _domain_);
-// //   std::fill(solution, solution+scope.size, 0);
-
-// //   for(unsigned int i=0; i<scope.size; ++i) {
-// //     active.index_[i] = i;
-// //     active.list_[i] = i;
-// //     changes.index_[i] = i;
-// //     changes.list_[i] = i;
-// //   }
-
-// //   for(unsigned int i=0; i<scope.size; ++i) {
-// //     //active.index_[i] = i;
-// //     if(scope[i].is_ground()) active.erase(i);
-// //   }
-// }
-// Mistral::InlineConstraint::InlineConstraint(Vector< Variable >& scp) 
-//   : Constraint() {
-
-//   scope.stack_ = &((Variable*)data)[0];
-//   //scope.size = scp.size;
-//   scope.size = 0;
-//   scope.capacity = scp.size;
-//   //memcpy(scope.stack_, scp.stack_, sizeof(Variable));
-//   for(unsigned int i=0; i<scp.size; ++i) {
-//     scope.add(scp[i]);
-//   }
-// }
-// Mistral::InlineConstraint::~InlineConstraint() {
-// //   event_type = NULL;
-// //   changes.list_ = NULL;
-// //   active.list_ = NULL;
-// //   changes.start_ = NULL;
-// //   active.start_ = NULL;
-// }
 
 void Mistral::ConstraintNotEqual::initialise() {
   Constraint::initialise();
@@ -453,7 +312,6 @@ void Mistral::ConstraintNotEqual::mark_domain() {
   solver->mark_non_convex(scope[1].id());
 }
 
-
 Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
   int var = 1-changes[0];
   if(active.size)
@@ -462,15 +320,10 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
     return(scope[0].get_min() == scope[1].get_min() ? FAILURE(var) : CONSISTENT);
 }
 
-// std::string Mistral::ConstraintNotEqual::getString() const {
-//   return (toString(scope[0])+" =/= "+toString(scope[1]));
-// }
-
 std::ostream& Mistral::ConstraintNotEqual::display(std::ostream& os) const {
   os << scope[0] << " =/= " << scope[1];
   return os;
 }
-
 
 void Mistral::ConstraintEqual::initialise() {
   Constraint::initialise();
@@ -482,54 +335,34 @@ void Mistral::ConstraintEqual::initialise() {
 Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
   Mistral::PropagationOutcome wiped = propagate();
 
- //  if( active.size == 2 ) {
-//     relax();
-
-//     Variable X(scope[0].get_min(), scope[0].get_max());
-//     X.add_to(solver);
-
-//     ConstraintNode nd;
-//     int k;
-//     Constraint *new_cons;
-//     for(unsigned int i=0; i<2; ++i) {
-//       k = scope[i].id();
-//       nd = solver->constraint_graph[k]->first(_value_);
-//       while( solver->constraint_graph[k]->next(nd) ) {	
-// 	nd.elt.constraint->relax();
-// 	new_cons = nd.elt.constraint->clone();
-// 	new_cons->scope[nd.elt.index] = X;
-// 	solver->add(new_cons);
-//       }
-//     }
-//   }
-
   if( active.size == 2 ) {
-    
-    std::cout << "replace " << scope[0] << " by " << scope[1] << std::endl;
-
-
-    if( scope[0].domain_type == EXPRESSION ) {
-      // x[0] is an expression, we replace x[0].exp->var with x[1]
+    if( scope[0].is_expression() && scope[1].is_expression() ) {
       relax();
 
-      // transfer all constraits from x[0] to x[1]
-      int k = scope[0].id();
-      //solver->variables[k] = scope[1].get_var();
+      int k[2], j;
+
+      k[0] = scope[0].id();
+      k[1] = scope[1].id();
+
+      j = solver->constraint_graph[k[0]]->degree > 
+	solver->constraint_graph[k[1]]->degree;
+      // j is 1 iff degree(x0) > degree(x1), 
+      // in that case we want to transfer x1's constraints on x0.
+      // x[j] <- x[1-j]
       
       ConstraintNode nd;
-      nd = solver->constraint_graph[k]->first(_value_);
-      while( solver->constraint_graph[k]->next(nd) ) {	
+      nd = solver->constraint_graph[k[j]]->first(_value_);
+      while( solver->constraint_graph[k[j]]->next(nd) ) {	
 	nd.elt.constraint->relax();
-	nd.elt.constraint->scope[nd.elt.index] = scope[1];
+	nd.elt.constraint->scope[nd.elt.index] = scope[1-j];
 	solver->add(nd.elt.constraint);
       }
       
-      scope[0].expression->self = scope[1];
-      scope[0].expression->id = scope[1].id();
+      //and now scope[j] points to scope[1-j]
+      scope[j].expression->self = scope[1-j];
+      scope[j].expression->id = scope[1-j].id();
     }
   }
-
-  std::cout << (*solver) << std::endl;
 
   return wiped;
 }
@@ -540,44 +373,16 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::propagate() {
   unsigned int i;
   int var;
 
-//   std::cout << "propagate " << (this) << " b/c" ;
-//   for(i=0; i<this->changes.size; ++i) 
-//     std::cout << " " << this->scope[this->changes[i]];
-//   std::cout << std::endl;
-//   for(i=0; i<this->scope.size; ++i) {
-//     std::cout << this->scope[i] << ": " << (this->scope[i].get_domain()) << " ";
-//   }
-//   std::cout << std::endl;
-  
-
   PropagationOutcome wiped = CONSISTENT;
   if(active.size) {
     for(i=0; IS_OK(wiped) && i<changes.size; ++i) {
-
       var = changes[i];
-
-      //std::cout << scope[var] << " has changed" <<std::endl;
-
       if(scope[1-var].set_domain(scope[var]) == FAIL_EVENT)
 	wiped = FAILURE(1-var);
     }
   } else if(scope[0].get_min() != scope[1].get_min()) {
-
-    //std::cout << "all ground" <<std::endl;
-
     wiped = FAILURE(0);
   }
-
-
-//   if(IS_OK(wiped)) {
-//     for(unsigned int i=0; i<this->scope.size; ++i) {
-//       std::cout << this->scope[i] << ": " << (this->scope[i].get_domain()) << " ";
-//     }
-//   } else {
-//     std::cout << "inconsistent!!" << std::endl;
-//   }  
-//   std::cout << std::endl;
-
 
   return wiped;
 }
@@ -699,10 +504,6 @@ std::ostream& Mistral::PredicateLess::display(std::ostream& os) const {
   os << scope[1] << ")";
   return os;
 }
-// void Mistral::ConstraintLess::post() {
-//   for(unsigned int i=0; i<scope.size; ++i)
-//     trigger_on(_range_, i);
-// }
 
 void Mistral::ConstraintLess::initialise() {
   Constraint::initialise();
@@ -712,6 +513,17 @@ void Mistral::ConstraintLess::initialise() {
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintLess::propagate() {
+
+//   std::cout << "changes: " << changes << std::endl;
+//   std::cout << "events[0]: " << events[0] << " events[0]: " << events[1] << std::endl;
+
+  if(scope[0].id() == 6 && scope[1].id() == 9) {
+  std::cout << "propagate " << this << std::endl;
+  for(unsigned int i=0; i<scope.size; ++i)
+    std::cout << " " << scope[i].get_domain();
+  std::cout << std::endl;
+  }
+
   if(changes.contain(0) && LB_CHANGED(event_type[0])) {
     if(scope[1].set_min(scope[0].get_min() + offset) == FAIL_EVENT) 
       return FAILURE(1);
@@ -720,18 +532,15 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate() {
     if(scope[0].set_max(scope[1].get_max() - offset) == FAIL_EVENT) 
       return FAILURE(0);
   }
+
+  if(scope[0].id() == 6 && scope[1].id() == 9) {
+    for(unsigned int i=0; i<scope.size; ++i)
+      std::cout << " " << scope[i].get_domain();
+    std::cout << std::endl;
+  }
+
   return CONSISTENT;
 }
-
-// std::string Mistral::ConstraintLess::getString() const {
-//   std::string return_str = toString(scope[0]);
-//   if(offset < 0) return_str += (" - "+toString(-offset+1)+" < ");
-//   else if(offset > 1) return_str += (" + "+toString(offset-1)+" < ");
-//   else if(offset > 0) return_str += (" < ");
-//   else return_str += (" <= ");
-//   return_str += toString(scope[1]);
-//   return return_str;
-// }
 
 std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
   os << scope[0];
@@ -743,11 +552,95 @@ std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
   return os;
 }
 
-// Mistral::PredicateEqual::post() {
-//   for(unsigned int i=0; i<scope.size; ++i)
-//     trigger_on(_domain_, i);
-// }
+void Mistral::ConstraintDisjunctive::initialise() {
+  Constraint::initialise();
+  trigger_on(_range_, 0);
+  trigger_on(_range_, 1);
+  set_idempotent(true);
+  stress = 0;
+}
 
+void Mistral::ConstraintDisjunctive::decide(const int choice) {
+
+  //std::cout << "decide " << this << " => " ;
+
+
+  relax();
+  
+
+  if(choice==1) {
+    solver->add(precedence[1]);
+    //std::cout << precedence[1] ;
+  } else {
+    solver->add(precedence[0]);
+    //std::cout << precedence[0] ;
+  }
+
+  //std::cout << std::endl;
+
+//   std::cout << solver->active_constraints << std::endl;
+
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintDisjunctive::propagate() {
+  //(x0 + p0 <= x1 || x1 + p1 <= x0).
+  int hold = 3;
+
+  if(scope[0].id() == 6 && scope[1].id() == 9) {
+    std::cout << "DISJUNCTIVE " << this << std::endl;
+    
+ for(unsigned int i=0; i<scope.size; ++i)
+   std::cout << " " << scope[i] << " in " << scope[i].get_domain();
+  std::cout << std::endl;
+
+    std::cout << scope[1].get_min() << " + " << processing_time[1] 
+	      << " ?> " << scope[0].get_max() ;
+  }
+
+  // check is prec[1] is violated (x1 + p1 > x0).
+  if(scope[1].get_min()+processing_time[1] > scope[0].get_max()) {
+    hold &= 2;
+
+    if(scope[0].id() == 6 && scope[1].id() == 9) {
+      std::cout << " YES" << std::endl;
+    }
+  } else   if(scope[0].id() == 6 && scope[1].id() == 9) {    std::cout << " NO" << std::endl;
+  }
+
+  if(scope[0].id() == 6 && scope[1].id() == 9) {
+    std::cout << scope[0].get_min() << " + " << processing_time[0] 
+	      << " ?> " << scope[1].get_max() ;
+  }
+
+  // check is prec[1] is violated (x0 + p0 > x1).
+  if(scope[0].get_min()+processing_time[0] > scope[1].get_max()) {
+    hold &= 1;
+    if(scope[0].id() == 6 && scope[1].id() == 9) {
+      std::cout << " YES" << std::endl;
+    }
+  }  else  if(scope[0].id() == 6 && scope[1].id() == 9) {     std::cout << " NO" << std::endl;
+  }
+
+  if(!hold) return FAILURE(0);
+  if(hold<3) {
+    decide(hold);
+  }
+  return CONSISTENT;
+}
+
+void Mistral::ConstraintDisjunctive::consolidate() {
+  for(unsigned int i=0; i<scope.size; ++i) {
+    scope[i] = scope[i].get_var();
+    precedence[0]->scope[i] = scope[i];
+    precedence[1]->scope[1-i] = scope[i];
+  }
+}
+
+std::ostream& Mistral::ConstraintDisjunctive::display(std::ostream& os) const {
+  os << precedence[0] << " or " 
+     << precedence[1] ;
+  return os;
+}
 
 void Mistral::PredicateEqual::initialise() {
   Constraint::initialise();
@@ -766,11 +659,6 @@ void Mistral::PredicateEqual::mark_domain() {
 
 Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
   Mistral::PropagationOutcome wiped = propagate();
-
-//   std::cout << "rewrite predicate equal" << std::endl;
-
-//   std::cout << (active.size) << std::endl;
-
   if( active.size == 2 ) {
     relax();
 
@@ -781,9 +669,6 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
 	solver->add(new ConstraintNotEqual(scope));
       }
     } else {
-
-      //std::cout << "add predicate constant equal" << std::endl;
-
       Vector< Variable > new_scope;
 
       int val = NOVAL, ground_idx = scope[1].is_ground();
@@ -902,7 +787,6 @@ std::ostream& Mistral::PredicateOffset::display(std::ostream& os) const {
   return os;
 }
 
-
 void Mistral::PredicateNot::initialise() {
   Constraint::initialise();
   for(int i=0; i<2; ++i)
@@ -988,9 +872,6 @@ Mistral::PropagationOutcome Mistral::PredicateOr::rewrite() {
   if( scope[2].is_ground() && active.size == 2 ) {
     relax();
     if( scope[2].get_min() ) {
-
-      //std::cout << "add OR CONSTRAINT" << std::endl;
-
       solver->add(new ConstraintOr(scope));
     }
   }
@@ -1054,28 +935,6 @@ std::ostream& Mistral::ConstraintAnd::display(std::ostream& os) const {
   return os;
 }
 
-
-// Mistral::ConstraintOr* Mistral::ConstraintOr::ConstraintOr_new(Vector< Variable >& X)
-// {
- 
-//   void* mem = malloc(sizeof(Constraint) + 
-// 		     sizeof(Variable)*X.size//  + 
-// // 		     sizeof(int)*5*(X.size)
-// 		     );
-//   return new (mem) ConstraintOr(X); 
-// }
-
-// Mistral::ConstraintOr::ConstraintOr(Vector< Variable >& scp) 
-//   : Constraint() {
-
-//   scope.stack_ = &((Variable*)data)[0];
-//   scope.size = 0;
-//   scope.capacity = scp.size;
-//   for(unsigned int i=0; i<scp.size; ++i) {
-//     scope.add(scp[i]);
-//   }
-// }
-
 void Mistral::ConstraintOr::initialise() {
   Constraint::initialise();
   for(int i=0; i<2; ++i)
@@ -1099,11 +958,6 @@ std::ostream& Mistral::ConstraintOr::display(std::ostream& os) const {
   os << "(" << scope[0] << " or " << scope[1] << ")";
   return os;
 }
-
-// void Mistral::PredicateAdd::post() {
-//   for(unsigned int i=0; i<scope.size; ++i)
-//     trigger_on(_range_, i);
-// }
 
 void Mistral::PredicateAdd::initialise() {
   Constraint::initialise();
@@ -1155,7 +1009,6 @@ void Mistral::ConstraintBoolSumEqual::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i)
     trigger_on(_value_, i);
-  //set_idempotent(false);
   set_idempotent(true);
 }
 
@@ -1208,9 +1061,7 @@ void Mistral::ConstraintCliqueNotEqual::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i) {
     trigger_on(_value_, i);
-    //solver->mark_non_convex(scope[i].id());
   }
-  //set_idempotent(false);
   set_idempotent(true);
 }
 
@@ -1226,29 +1077,10 @@ Mistral::ConstraintCliqueNotEqual::~ConstraintCliqueNotEqual()
 
 Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate() 
 {
-  
-// //
-// //    
-
-//   if(scope[0].id() == 0) {
-//     std::cout << std::endl;
-//     std::cout << "propagate " << this << std::endl;
-//     std::cout << scope[0] << " " << scope[0].get_domain() ;
-//     for(int x=0; x<scope.size; ++x) {
-//       std::cout << ", " << scope[x] << " " << scope[x].get_domain() ;
-//     }
-//     std::cout << std::endl;
-//     std::cout << "changes: " << changes << std::endl;
-//     std::cout << "active: " << active << std::endl;
-//   }
-
   unsigned int i, j, n=active.size, m;
   int active_var, value;
-  //Event evt;
   for(i=0; i<changes.size; ++i) {
-    //ground_var = changes[i];
     value = scope[changes[i]].get_min();
-    
     for(j=i+1; j<changes.size; ++j) {
       if(scope[changes[j]].get_min() == value) {
 	return FAILURE(changes[j]);
@@ -1258,20 +1090,14 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
     // since the set of active variables my change while
     // processing this loop, we do it backward
     for(j=n; j; --j) {
-    //for(j=0; j<active.size; ++j) {
       active_var = active[j-1];
-      //evt = scope[active_var].remove(value);
       if(scope[active_var].remove(value) == FAIL_EVENT) 
 	return FAILURE(active_var);
     }
   }
 
-
   /// The following is to ensure idempotency
   m = active.size;
-//   if(scope[0].id() == 0) {
-//   std::cout << m << " . " << n << std::endl; 
-//   }
   while(m < n) {
     for(i=m; i<n; ++i) {
       value = scope[active[i]].get_min();
@@ -1288,14 +1114,6 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
     m = active.size;
   }
 
-//   if(scope[0].id() == 0) {
-//   std::cout << scope[0] << " " << scope[0].get_domain() ;
-//   for(int x=1; x<scope.size; ++x) {
-//     std::cout << ", " << scope[x] << " " << scope[x].get_domain() ;
-//   }
-//   std::cout << std::endl;
-//   }
-
   return CONSISTENT;
 }
 
@@ -1309,15 +1127,6 @@ int Mistral::ConstraintCliqueNotEqual::check( const int* s ) const
   }
   return 0; 
 }
-
-// std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const {
-//   os << "cliqueNE(" << scope[0] ;
-//   for(unsigned int i=1; i<scope.size; ++i) 
-//     os << " ," << scope[i];
-//   os << ")" ;
-//   return os;
-// }
-
 
 
 /**********************************************
@@ -1336,10 +1145,8 @@ void Mistral::ConstraintAllDiff::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i) {
     trigger_on(_range_, i);
-    //solver->mark_non_convex(scope[i].id());
   }
   set_idempotent(true);
-  //priority = 0;
   init();
 }
 
@@ -1349,11 +1156,6 @@ void Mistral::ConstraintAllDiff::mark_domain() {
   }
 }
 
-
-// void Mistral::ConstraintAllDiff::post() {
-//   for(unsigned int i=0; i<scope.size; ++i)
-//     trigger_on(_range_, i);
-// }
 
 void Mistral::ConstraintAllDiff::init() 
 {
@@ -1665,14 +1467,6 @@ int Mistral::ConstraintAllDiff::check( const int* s ) const
   }
   return 0; 
 }
-
-// std::string Mistral::ConstraintAllDiff::getString() const 
-// {    
-//   std::string return_str = ("alldiff("+toString(scope[0]));
-//   for(int i=1; i<scope.size; ++i) 
-//     return_str += (" ,"+toString(scope[i]));
-//   return (return_str+")");
-// }
 
 std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
   os << "alldiff(" << scope[0] ;

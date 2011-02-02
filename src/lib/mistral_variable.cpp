@@ -89,10 +89,17 @@ Mistral::Variable::Variable(const int lo, const int up, const int type) {
 
 
 Mistral::Variable Mistral::Variable::get_var() {
-  if(domain_type == EXPRESSION)
+ //  display(std::cout);
+//   std::cout << ".get_var()" << std::endl;
+
+  if(domain_type == EXPRESSION) {
+    //   std::cout << "expression" << std::endl;
     return expression->self.get_var();
-  else if(domain_type == CONST_VAR)
+  } else if(domain_type == CONST_VAR || !variable->solver) {
+    //    std::cout << "self" << std::endl;
     return *this;
+  }
+  //  std::cout << "solver's" << std::endl;
   return variable->solver->variables[variable->id];
     //*this;
 }
@@ -145,7 +152,7 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
 void Mistral::Variable::initialise(Solver *s, const bool top) {
   if(domain_type == EXPRESSION) {
     
-//     std::cout << "Add a new expression: " << this 
+//     std::cout << std::endl << "Add a new expression: " << this 
 //     	      << (top ? " at top-level" : " nested")
 // 	      << std::endl;
     
@@ -174,13 +181,17 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
     //else std::cout << this << " is known " << std::endl;
     
   } else {
+
+//      std::cout << std::endl << "declare a new variable: " << this 
+//    		<< " in " << get_domain() << std::endl;
+     
+
     if(domain_type != CONST_VAR && variable->solver != s) {
 
-//       std::cout << "declare a new variable: " << this 
-//   		<< " in " << get_domain() << std::endl;
-
-      variable->solver = s;
-      variable->id = s->declare(*this);
+ 
+      //variable->id = 
+      s->declare(this->get_var());
+      //variable->solver = s;
 //       if(domain_type == BOOL_VAR) {
 // 	s->booleans.add(this);
 //       }
@@ -192,14 +203,14 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
 
       s->sequence.declare(*this);
 
-//       std::cout << "declare a new variable: " << this 
-//   		<< " in " << get_domain() << std::endl;
+//       std::cout << "declared a new variable: " << this 
+//    		<< " in " << get_domain() << std::endl;
     } 
 
     //else std::cout << this << " is known " << std::endl;
   }
 
-  //std::cout << "end initialise (" << id() << ")" << std::endl;
+  //  std::cout << "end initialise (" << id() << ")" << std::endl << std::endl ;
 }
 
 
@@ -647,15 +658,9 @@ std::string Mistral::Variable::get_domain() const {
 
   Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
     if(x.is_ground()) return set_domain(x.get_min());
-    else if(x.is_range()) {
-      std::cout << "\nset " << (*this) << "'s domain to " << x << "'s " << std::endl;
-      Event evt = (set_min(x.get_min()) | set_max(x.get_max()));
-      std::cout << evt << std::endl;
-      return evt;
-    } else if(x.domain_type ==  BITSET_VAR) return set_domain(bitset_domain->domain.values);
-    //else {
+    else if(x.is_range()) return (set_min(x.get_min()) | set_max(x.get_max()));
+    else if(x.domain_type ==  BITSET_VAR) return set_domain(bitset_domain->domain.values);
     std::cout << "TODO!" << std::endl;
-    //}
     return NO_EVENT;
   }
 
@@ -1212,6 +1217,36 @@ Mistral::Variable Mistral::Variable::operator>=(const int k) {
 }
 
 
+Mistral::DisjunctiveExpression::DisjunctiveExpression(Variable X, Variable Y, 
+						      const int px, const int py) 
+  : Expression(X,Y) { processing_time[0] = px; processing_time[1] = py; }
+Mistral::DisjunctiveExpression::~DisjunctiveExpression() {}
+  
+void Mistral::DisjunctiveExpression::extract_constraint(Solver *s) {
+  s->add(new ConstraintDisjunctive(children, processing_time[0], processing_time[1]));
+}
+
+void Mistral::DisjunctiveExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: Disjunctive constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+void Mistral::DisjunctiveExpression::extract_predicate(Solver *s) {
+  std::cerr << "Error: Disjunctive constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::DisjunctiveExpression::get_name() {
+  return "dsijunct";
+}
+
+Mistral::Variable Mistral::Disjunctive(Variable X, Variable Y, 
+				       const int px, const int py) 
+{
+  Variable exp(new DisjunctiveExpression(X,Y,px,py));
+  return exp;
+}
+
 
 Mistral::AllDiffExpression::AllDiffExpression(Vector< Variable >& args, const int ct) 
   : Expression(args) { consistency_level = ct; }
@@ -1236,12 +1271,12 @@ void Mistral::AllDiffExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::AllDiffExpression::extract_variable(Solver *s) {
-      std::cerr << "Error: Precedence constraint can't yet be used as a predicate" << std::endl;
+      std::cerr << "Error: AllDiff constraint can't yet be used as a predicate" << std::endl;
   exit(0);
 }
 
 void Mistral::AllDiffExpression::extract_predicate(Solver *s) { 
-      std::cerr << "Error: Precedence constraint can't yet be used as a predicate" << std::endl;
+      std::cerr << "Error: AllDiff constraint can't yet be used as a predicate" << std::endl;
   exit(0);
 }
 

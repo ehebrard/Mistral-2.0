@@ -951,6 +951,7 @@ namespace Mistral {
 
     //Variable get_children();
     Variable get_var();
+    bool is_expression() { return domain_type == EXPRESSION; }
 
     Variable operator+(Variable);
     Variable operator+(const int);
@@ -1451,6 +1452,29 @@ public:
 
 };
 
+
+class DisjunctiveExpression : public Expression {
+
+public:
+
+  int processing_time[2];
+
+  DisjunctiveExpression(Variable X, 
+			Variable Y,
+			const int p0=1, 
+			const int p1=1);
+
+  ~DisjunctiveExpression();
+
+  virtual void extract_constraint(Solver*);
+  virtual void extract_variable(Solver*);
+  virtual void extract_predicate(Solver*);
+  virtual const char* get_name();
+
+};
+
+  Variable Disjunctive(Variable X, Variable Y, const int px, const int py);
+  
 
 class AllDiffExpression : public Expression {
 

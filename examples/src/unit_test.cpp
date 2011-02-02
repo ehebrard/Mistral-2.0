@@ -299,20 +299,20 @@ int main(int argc, char *argv[])
   //tests.push_back(new RewriteTest());
   //tests.push_back(new ModelTest());
 
-  tests.push_back(new BoolPigeons(10));
-  tests.push_back(new Pigeons(10)); 
-  tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
-  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
-  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
-  tests.push_back(new CostasNotEqualAllSolutions(N)); 
-  tests.push_back(new RandomCListRandomEraseAndRestore<4>());
-  tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
-  tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
-  tests.push_back(new RandomDomainRandomSetDomainAndRestore());
-  tests.push_back(new RandomDomainRandomSetMaxAndRestore());
-  tests.push_back(new RandomDomainRandomSetMinAndRestore());
-  tests.push_back(new RandomDomainRandomRemove());
-  tests.push_back(new RandomRevNumAffectations<int>());
+  //tests.push_back(new BoolPigeons(10));
+  tests.push_back(new Pigeons(11)); 
+//   tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
+//   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
+//   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
+//   tests.push_back(new CostasNotEqualAllSolutions(N)); 
+//   tests.push_back(new RandomCListRandomEraseAndRestore<4>());
+//   tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
+//   tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
+//   tests.push_back(new RandomDomainRandomSetDomainAndRestore());
+//   tests.push_back(new RandomDomainRandomSetMaxAndRestore());
+//   tests.push_back(new RandomDomainRandomSetMinAndRestore());
+//   tests.push_back(new RandomDomainRandomRemove());
+//   tests.push_back(new RandomRevNumAffectations<int>());
 
 
   //tests[0]->Verbosity = HIGH;

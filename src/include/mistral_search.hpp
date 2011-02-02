@@ -209,6 +209,22 @@ namespace Mistral {
 
   };
 
+
+  class HalfSplit {
+
+  public: 
+    
+    HalfSplit() {}
+    HalfSplit(Solver *s) {}
+    virtual ~HalfSplit() {};
+    
+    inline Decision make(Variable x) {
+      Decision d(x, Decision::UPPERBOUND, (x.get_min()+x.get_max())/2);
+      return d;
+    }
+
+  };
+
   /**********************************************
    * Generic heuristic
    **********************************************/
@@ -335,6 +351,45 @@ namespace Mistral {
     }
 
   };
+
+
+//   class PCP : public BranchingHeuristic {
+
+//   public:
+    
+//     Solver *solver;
+
+//     int nJobs;
+//     int nMachines;
+    
+//     Vector< Variable > *conflict;
+
+//     Constraint ***precedences;
+
+
+//     BranchingHeuristic(Solver *s, VarArray& tasks, int nj, int nm) {
+//       solver = s;
+//       nJobs = nj;
+//       nMachines = nm;
+
+//       conflict = new Vector< Variable >[nJobs*nMachines];
+//       for(int i=0; i<nJobs; ++i) {
+// 	for(int j=0; j<nMachines; ++j) {
+// 	  // record all variables that may be in conflict with 
+// 	}
+//       }
+
+//       precedences = new Constraint**[nJobs];
+//       for(int i=0; i<nJobs; ++i)
+// 	precedences[i] = new Constraint*[nMachines];
+
+
+//     }
+//     virtual ~BranchingHeuristic() {}
+    
+//     virtual Decision branch() = 0;
+
+//   };
   
 //   class Search {
 

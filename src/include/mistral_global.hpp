@@ -98,7 +98,7 @@ namespace Mistral {
   // DOMAIN_C+RANGE_C+LB_C
 #define LB_EVENT     11
   // DOMAIN_C+RANGE_C+VALUE_C
-#define VALUE_EVENT  19
+#define VALUE_EVENT  31
 #define FAIL_EVENT   32
 
 #define DOMAIN_CHANGED(e) (bool)((e)&DOMAIN_C)

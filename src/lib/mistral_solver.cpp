@@ -45,6 +45,43 @@ static void Mistral_SIGINT_handler(int signum) {
 std::ostringstream *o_propag = NULL;
 #endif
 
+Mistral::Solution::Solution( Vector< Variable >& vars ) {
+  min_id = INFTY;
+  max_id = -INFTY;
+  int aux;
+  for(unsigned int i=0; i<vars.size; ++i) {
+    variables.add(vars[i].get_var());
+    aux = variables[i].id();
+    if(aux<min_id) min_id = aux;
+    if(aux>max_id) max_id = aux;
+  }
+
+  values = new int[max_id-min_id+1];
+  values -= min_id;
+
+  for(unsigned int i=0; i<variables.size; ++i) {
+    values[variables[i].id()] = variables[i].get_solution_value();
+  }
+}
+Mistral::Solution::~Solution() {
+  values += min_id;
+  delete [] values;
+}
+
+std::ostream& Mistral::Solution::display(std::ostream& os) const {
+  if(!variables.empty()) {
+    os << variables[0] << ":" << values[variables[0].id()];
+    for(unsigned int i=1; i<variables.size; ++i) {
+      os << " " << variables[i] << ":" << values[variables[i].id()];
+    }
+  }
+  return os;
+}
+   
+int& Mistral::Solution::operator[](Variable x) {
+  return values[x.id()];
+}
+
 
 Mistral::SolverParameters::SolverParameters() {}
 Mistral::SolverParameters::~SolverParameters() {}
@@ -296,7 +333,7 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
 
 //   std::cout << _set_ << std::endl;
 
-  trigger(c);
+  // trigger(c);
 
 
   //std::cout << this  << std::endl;
@@ -343,10 +380,10 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons)//;
   int priority = cons->priority, cons_id = cons->id, triggered=false;
   Event evt;
   
-
+  cons->events.clear();
   for(unsigned int i=0; i<cons->scope.size; ++i) {
     evt = (// cons->scope[i].domain_type != BOOL_VAR &&
-	   cons->scope[i].is_ground() ? VALUE_EVENT : RANGE_EVENT);
+	   cons->scope[i].is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
     if(EVENT_TYPE(evt) <= cons->trigger[i]) {
       cons->events.add(i);
       cons->event_type[i] = evt;
@@ -373,7 +410,7 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Ev
   //#ifndef _DEBUG_PROPAG
 
   std::cout << "  triggers " << cons << " after a " 
-	    << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
+	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
 	    << " event on "
 	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
 	    << std::endl;
@@ -479,8 +516,8 @@ std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
 	 << solver->constraints[elt];
       while(triggers[i+min_priority].next[elt] != end) {
 	elt = triggers[i+min_priority].next[elt];
-	os << " " << elt ;
-	os.flush();
+	//os << " " << elt ;
+	//os.flush();
 	os << ", " << solver->constraints[elt];
       }
       os << std::endl;
@@ -498,6 +535,8 @@ Mistral::Solver::Solver() {
   domain_types.initialise(0,128);
   variables.initialise(0,128);
   constraints.initialise(0,256);
+  //constraints.initialise(256);
+  posted_constraints.initialise(0,256,false);
   sequence.initialise(128);
   initialised_vars = 0;
   initialised_cons = 0;
@@ -509,6 +548,9 @@ Mistral::Solver::Solver() {
   saved_cons.initialise(0,4096); 
   trail_.initialise    (0,4096);
   decisions.initialise (0,4096);
+  con_trail_.initialise(0,512);
+  con_trail_.add(0);
+  con_trail_.add(-1);
 
   // params
   parameters.initialise();
@@ -615,6 +657,8 @@ int Mistral::Solver::declare(Variable x) {
   if(x.domain_type > DYN_VAR) booleans.add(&x);
 
   // add the variables to the set of vars
+  x.variable->id = variables.size;
+  x.variable->solver = this;
   variables.add(x);
   domain_types.add(DYN_VAR);
 
@@ -640,6 +684,7 @@ void Mistral::Solver::add(Constraint* c) {
 
     // get a name for the constraint and add it to the list
     c->id = constraints.size; 
+    //constraints.declare(c);
     constraints.add(c); 
 
     //
@@ -649,6 +694,17 @@ void Mistral::Solver::add(Constraint* c) {
 
   // then post it on the constraint graph
   c->post(this);
+  active_constraints.trigger(c);
+
+  if(con_trail_.back() != level) {
+    con_trail_.add(posted_constraints.size);
+    con_trail_.add(level);
+  }
+
+  //std::cout << "ADD " << c->id << " to " << posted_constraints << std::endl;
+
+  posted_constraints.extend(c->id);
+  posted_constraints.add(c->id);
   
 }
 //   //active_constraints.trigger(c);
@@ -743,6 +799,9 @@ void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
 //   }
 // }
 
+// Solution* Mistral::Solver::get_solution(Vector< Variable >& seq) {
+//   return new Solution(seq);
+// }
 
 void Mistral::Solver::initialise_search(Vector< Variable >& seq, 
 					BranchingHeuristic *heu, 
@@ -839,53 +898,24 @@ Mistral::Solver::~Solver() {
 void Mistral::Solver::trigger_event(const int var, 
 				    const Mistral::Event evt) {
 
-//   std::cout << "event on "<< variables_2[var] << ": ";
-//   if((evt & VALUE_EVENT) == VALUE_EVENT) std::cout << " it was assigned a value ";
-//   if((evt & LB_EVENT) == LB_EVENT) std::cout << " its lower bound was increased ";
-//   if((evt & UB_EVENT) == UB_EVENT) std::cout << " its upper bound was decreased ";
-//   if((evt & DOMAIN_EVENT) == DOMAIN_EVENT) std::cout << " its domain lost at least one value ";
-//   if(evt == NO_EVENT) std::cout << " (no change)";
-//   std::cout << std::endl;
-
 
 #ifdef _DEBUG_QUEUE
   std::cout << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
 	    << " event on " << variables[var] 
 	    << " in " << variables[var].get_domain() << std::endl;
-  //std::cout << "trigger " << cons << "(" << (cons->id) << ") by a " << (is_value(evt) ? "value" : (is_range(evt) ? "range" : "domain")) << " event on " << cons->scope[var] << std::endl;
-  
-  //display(std::cout);
-  //std::cout << std::endl;
 #endif
-
-
-
 
   Constraint *c;
   ConstraintNode nd;
 
-//   if(ASSIGNED(evt))
-//     nd = constraint_graph[var].first(_value_);
-//   else if(BOUND_CHANGED(evt))
-//     nd = constraint_graph[var].first(_range_);
-//   else 
-//     nd = constraint_graph[var].first(_domain_);
   nd = constraint_graph[var]->first(EVENT_TYPE(evt));
-
   if(ASSIGNED(evt)) {
     while(constraint_graph[var]->next(nd)) {
       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
       c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
       if(c) saved_cons.add(c);
     }
-
-    //std::cout << "ASSIGN EVENT ON " << variables[var] << std::endl;
-
     if(sequence.contain(variables[var])) sequence.remove(variables[var]);
-    //if(sequence.contain(var)) sequence.remove(var);
-
-    //std::cout << sequence << std::endl;
-
   } else while(constraint_graph[var]->next(nd)) {
       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
     }
@@ -962,6 +992,8 @@ void Mistral::Solver::save(const int idx) {
 void Mistral::Solver::restore() {
   unsigned int previous_level;
 
+  //decisions.pop(); 
+
   previous_level = trail_.pop();
   while( saved_vars.size > previous_level ) 
     saved_vars.pop().restore();
@@ -974,10 +1006,23 @@ void Mistral::Solver::restore() {
   while( saved_objs.size > previous_level )
     saved_objs.pop()->restore();
 
+  if(con_trail_.back() == level) {
+    con_trail_.pop();
+    posted_constraints.size = con_trail_.pop();
+  }
+
   sequence.size = trail_.pop();
 
   ++statistics.num_backtracks;
   --level;
+
+//   std::cout << "X5CLIST AFTER RESTORE ";
+//     //<< constraint_graph[5] << std::endl;
+//   print_clist(5);
+//   std::cout << "C10ALIST AFTER RESTORE "
+// 	    << constraints[10]->active << " " << constraints[10]->trail_ << std::endl;
+  
+
 }
 
 void Mistral::Solver::restore(const int lvl) {
@@ -1074,7 +1119,7 @@ bool Mistral::Solver::rewrite()
     
     transformed = NULL;
 
-    std::cout << "rewrite " << culprit << std::endl;
+    //std::cout << "rewrite " << culprit << std::endl;
     wiped_idx = culprit->rewrite();
 //     if(IS_OK(wiped_idx) && transformed) 
 //       discarded_constraints.add(culprit);
@@ -1366,6 +1411,16 @@ void Mistral::Solver::debug_print() {
 //   return return_str;
 // }
 
+ void Mistral::Solver::print_clist(int k) {
+   ConstraintNode nd = constraint_graph[k]->first(_value_);
+   if(constraint_graph[k]->next(nd)) {
+     std::cout << " [ " << nd.elt.constraint->id;
+     while( constraint_graph[k]->next(nd) ) 
+       std::cout << " ][ " << nd.elt.constraint->id;
+     std::cout << " ] \n";
+   }
+ }
+
 std::ostream& Mistral::Solver::display(std::ostream& os) {
   os << "Variables:\n";
   ConstraintNode nd;
@@ -1373,16 +1428,28 @@ std::ostream& Mistral::Solver::display(std::ostream& os) {
     os << "\t" << variables[i] << " in " << variables[i].get_domain() ; //<< "\n";
 
     if(domain_types[i] & RANGE_VAR)
-      os << "(r)";
+      os << "(r/" << constraint_graph[i]->degree << ")";
     else
-      os << "(d)";
+      os << "(d/" << constraint_graph[i]->degree << ")";
 
     if(!variables[i].is_ground()) {
       nd = constraint_graph[i]->first(_value_);
       if(constraint_graph[i]->next(nd)) {
 	os << ": [ " << nd.elt.constraint;
-	while( constraint_graph[i]->next(nd) ) 
+
+// 	if(!constraint_graph[i]->contain(nd.elt.constraint->self[nd.elt.index])) {
+// 	  std::cout << std::endl << " is not in " << std::endl;
+// 	  exit(1);
+// 	}
+	
+	while( constraint_graph[i]->next(nd) ) {
 	  os << " ][ " << nd.elt.constraint;
+
+// 	  if(!constraint_graph[i]->contain(nd.elt.constraint->self[nd.elt.index])) {
+// 	    std::cout << std::endl << " is not in " << std::endl;
+// 	    exit(1);
+// 	  }
+	}
 	os << " ]";
       }
     }
@@ -1401,6 +1468,7 @@ void Mistral::Solver::branch_right() {
   restore();  
   Mistral::Decision decision = decisions.pop(); //search.backtrack();
   decision.invert();
+  //decisions.back(-1).invert();
 
 #ifdef _DEBUG_SEARCH
   std::cout << "c";
@@ -1408,6 +1476,7 @@ void Mistral::Solver::branch_right() {
   std::cout << decision << std::endl;
 #endif
 
+  //decisions.back(-1).make();
   decision.make();
 }
 
@@ -1435,14 +1504,27 @@ void Mistral::Solver::branch_left() {
 
   Vector< int > tmp_sol;
   unsigned int i, j, k;
-  for(i=0; i<constraints.size; ++i) {
-    k=constraints[i]->scope.size;
+  Constraint *C;
+  //for(i=0; i<constraints.size; ++i) {
+  for(i=0; i<posted_constraints.size; ++i) {
+    C = constraints[posted_constraints[i]];
+    //std::cout << "check " << C ; //<< std::endl;
+    
+
+    k=C->scope.size;
     for(j=0; j<k; ++j) 
-      tmp_sol.add(constraints[i]->scope[j].get_value());
-    if(constraints[i]->check(tmp_sol.stack_))
+      tmp_sol.add(C->scope[j].get_value());
+
+
+//     std::cout << " (" << tmp_sol[0] ; 
+//     for(j=1; j<k; ++j) 
+//       std::cout << " " << tmp_sol[j] ;
+//     std::cout << ")" << std::endl;
+
+    if(C->check(tmp_sol.stack_))
       {
-	std::cerr << "\nError: solution does not satisfies " << constraints[i] << tmp_sol << " (backtracking)"<< std::endl;
-	//exit(0);
+	std::cerr << "\nError: solution does not satisfies " << C << tmp_sol << " (backtracking)"<< std::endl;
+	exit(0);
 	if( decisions.empty() ) return UNSAT;
 	else if( limits_expired() ) return LIMITOUT;
 	else {
@@ -1495,8 +1577,8 @@ Mistral::Outcome Mistral::Solver::iterative_dfs()
   while(status == UNKNOWN) {
     if(propagate()) {
 
-      //display(std::cout);
-      //std::cout << std
+//        std::cout << "new node:\n";
+//        display(std::cout);
 
       if( sequence.empty() ) status = satisfied();
       else branch_left();
@@ -1505,12 +1587,20 @@ Mistral::Outcome Mistral::Solver::iterative_dfs()
       else if( limits_expired() ) status = LIMITOUT;
       else branch_right();
 
-      //display(std::cout);
+//        std::cout << "restore:\n";
+//        display(std::cout);
+
     }
   }
   return status;
 }
 
+std::ostream& Mistral::operator<< (std::ostream& os, Mistral::Solution& x) {
+  return x.display(os);
+}
+std::ostream& Mistral::operator<< (std::ostream& os, Mistral::Solution* x) {
+  return x->display(os);
+}
 
 std::ostream& Mistral::operator<< (std::ostream& os, Mistral::Solver& x) {
   return x.display(os);

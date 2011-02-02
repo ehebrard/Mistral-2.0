@@ -39,6 +39,24 @@
 
 namespace Mistral {
 
+  class Solution {
+    
+  public: 
+    
+    Vector< Variable > variables;
+    int min_id;
+    int max_id;
+    int *values;
+
+    Solution( Vector< Variable >& vars );
+    virtual ~Solution();
+
+    virtual std::ostream& display(std::ostream&) const ;
+    int& operator[](Variable x) ;
+
+  };
+
+
   class SolverParameters {
 
   public:
@@ -236,6 +254,20 @@ namespace Mistral {
     virtual std::ostream& display(std::ostream&) ;
   };
 
+  class ConstraintPointer {
+
+  public:
+   
+    Constraint *constraint;
+
+    ConstraintPointer(Constraint *c) {
+      constraint = c;
+    }
+    
+    virtual ~ConstraintPointer() {}
+
+    int id() {return constraint->id;}
+  };
 
 
   /**********************************************
@@ -252,6 +284,7 @@ namespace Mistral {
     - the bracktracking structures
     - the search stack
   */
+  //typedef Varstack< ConstraintElement > ConstraintStack;
 
   class BranchingHeuristic;
   class RestartPolicy;
@@ -279,6 +312,8 @@ namespace Mistral {
 
     /// The set of constraints, with special accessors for triggers
     Vector< Constraint* >         constraints;
+    IntStack               posted_constraints;
+    //ConStack< Constraint* >       constraints;
     ConstraintQueue        active_constraints;
     
     Vector< ConstraintList* > constraint_graph;
@@ -312,6 +347,7 @@ namespace Mistral {
 
     /// The delimitation between different levels is kept by this vector of integers
     Vector< int > trail_;
+    Vector< int > con_trail_;
 
     BranchingHeuristic *heuristic;
     RestartPolicy *policy; 
@@ -480,7 +516,7 @@ namespace Mistral {
     /// backtrack to a given level
     void restore(const int);
 
-
+    //Solution *get_solution(Vector< Variable >& seq);
     void initialise_search(Vector< Variable >& seq, 
 			   BranchingHeuristic *heu=NULL, 
 			   RestartPolicy *pol=NULL);
@@ -528,10 +564,13 @@ namespace Mistral {
     //@{
     void debug_print();
     void full_print();
+    void print_clist(int k) ;
     virtual std::ostream& display(std::ostream&) ;
     //@}
   };
 
+  std::ostream& operator<< (std::ostream& os, Solution& x);
+  std::ostream& operator<< (std::ostream& os, Solution* x);
 
   std::ostream& operator<< (std::ostream& os, Solver& x);
   std::ostream& operator<< (std::ostream& os, Solver* x);
