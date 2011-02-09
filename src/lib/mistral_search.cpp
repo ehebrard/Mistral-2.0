@@ -71,40 +71,45 @@ Mistral::Variable Mistral::NoOrder::select() {
 Mistral::Lexicographic::Lexicographic(Solver *s) 
   : VarOrdering(s) {
   last.initialise(0,s);
+  for(unsigned int i=0; i<solver->sequence.size; ++i)
+    order.add(solver->sequence[i]);
+//   int i=solver->sequence.size;
+//   while( i-- ) {
+//     order.add(solver->sequence[i]);
+//   }
 }
 
 void Mistral::Lexicographic::initialise(Solver *s) {
   VarOrdering::initialise(s);
   last.initialise(0,s);
+  for(unsigned int i=0; i<solver->sequence.size; ++i)
+    order.add(solver->sequence[i]);
+//   int i=solver->sequence.size;
+//   while( i-- ) {
+//     order.add(solver->sequence[i]);
+//   }
 }
 
 Mistral::Lexicographic::~Lexicographic() {}
 
 Mistral::Variable Mistral::Lexicographic::select() {
-
-  //std::cout << "pick from " << solver->variables << endl;
-  //std::cout << "start at var " << (int)last << " out of " << (solver->variables.size) << std::endl;
-  
-  
-//   for(int i=0; i<solver->variables.size; ++i) {
-//     std::cout << i << ": " << solver->variables[i]
-// 	      << " in " << solver->variables[i].get_domain()
-// 	      << std::endl;
+//   while(last<solver->variables.size && solver->variables[last].is_ground()) { 
+//     ++last;
 //   }
-//   std::cout << solver->sequence << std::endl;
+
+//   return solver->variables[last];
+
+//   std::cout << solver->variables << std::endl;
+//   std::cout << order << std::endl;
+
+//   std::cout << std::endl;
 
 
-  while(last<solver->variables.size && solver->variables[last].is_ground()) { 
-    //std::cout << solver->variables[last] << "?" << std::endl;
+  while(last<order.size && order[last].is_ground()) { 
     ++last;
   }
 
-//   if((int)last >= solver->variables.size) {
-//     std::cout << "BUG!" << std::endl;
-//   }
-
-
-  return solver->variables[last];
+  return order[last];
 }
 
 // Mistral::IntVar Mistral::Search::backtrack() {

@@ -151,6 +151,7 @@ namespace Mistral {
 
   public: 
     
+    Vector< Variable >           order;
     ReversibleNum< unsigned int > last;
 
     Lexicographic() {}

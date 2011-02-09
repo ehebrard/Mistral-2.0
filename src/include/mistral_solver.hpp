@@ -30,7 +30,6 @@
 #define __SOLVER_HPP
 
 
-//#include <mistral_search.hpp>
 #include <mistral_global.hpp>
 #include <mistral_backtrack.hpp>
 #include <mistral_structure.hpp>
@@ -130,6 +129,7 @@ namespace Mistral {
     //virtual std::string getString() const;
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::ostream& print_full(std::ostream&) const ;
+    virtual std::ostream& print_short(std::ostream&) const ;
   };
   
 
@@ -150,9 +150,6 @@ namespace Mistral {
     int min_priority;
     /// The constraint being processed
     Constraint *taboo_constraint;
-    //Constraint **stack_;
-    //int *min_index;
-    //int *max_index;
 
   public:
 
@@ -170,62 +167,6 @@ namespace Mistral {
     inline bool empty() { return higher_priority<min_priority; }
     void trigger(Constraint* cons);
     void trigger(Constraint* cons, const int var, const Event evt);
-//     inline void trigger(Constraint* cons, const int var, const Event evt)
-//     //void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Event evt)//;
-// {
-
-// #ifdef _DEBUG_AC
-//   std::cout << "  triggers " << cons << "(" << (cons->id) << ") by " 
-// 	    << cons->scope[var] << std::endl;
-// #endif
-
-
-//   if(cons != taboo_constraint) {
-//     int priority = cons->priority, cons_id = cons->id;
-//     if(_set_.fastContain(cons_id)) {
-
-// // #ifdef _DEBUG_AC
-// //       std::cout << "update " << std::endl;
-// // #endif
-
-//       if(cons->events.contain(var)) {
-// 	cons->event_type[var] |= evt;
-//       } else {
-// 	cons->events.add(var);
-// 	cons->event_type[var] = evt;
-//       }
-//     } else {
-
-// // #ifdef _DEBUG_AC
-// //       std::cout << "add " << std::endl;
-// // #endif
-
-//       _set_.fastAdd(cons_id);
-//       if(priority > higher_priority) higher_priority = priority;
-//       triggers[priority].add(cons_id);
-//       cons->events.setTo(var);
-//       //cons->events.clear();
-//       //cons->events.add(var);
-//       cons->event_type[var] = evt;
-//     }
-//   } 
-
-//  #ifdef _DEBUG_AC
-//   else
-//     std::cout << cons << "(" << (cons->id) 
-// 	      << ") is currently being processed " 
-// 	      << std::endl;
-// #endif
-
-//  #ifdef _DEBUG_AC
-//   std::cout << " => " << cons->events << std::endl;
-// //   else
-// //     std::cout << cons << "(" << (cons->id) 
-// // 	      << ") is currently being processed " 
-// // 	      << std::endl;
-// #endif
-
-// }
 
     inline void reset_higher_priority() {
       while(--higher_priority>=min_priority && triggers[higher_priority].empty());
@@ -235,14 +176,6 @@ namespace Mistral {
       Constraint *cons = constraints[cons_id];
       _set_.fastErase(cons_id);
       if(triggers[higher_priority].empty()) reset_higher_priority();
-
-
-//     std::cout << "events of " << cons << " before freeze: " 
-// 	      << cons->events << std::endl;
-//     std::cout << "changes of " << cons << " before freeze: " 
-// 	      << cons->changes << std::endl;
-
-
       taboo_constraint = cons->freeze();
       return cons;
     }
@@ -313,15 +246,11 @@ namespace Mistral {
     /// The set of constraints, with special accessors for triggers
     Vector< Constraint* >         constraints;
     IntStack               posted_constraints;
-    //ConStack< Constraint* >       constraints;
     ConstraintQueue        active_constraints;
     
     Vector< ConstraintList* > constraint_graph;
     Vector< Vector < ConstraintTrigger > > triggers;
 
-    /// For each level, the list of reversible objects that changed at this level, 
-    /// and will need to be restored
-    //Vector< Reversible* > saved_objs;
     /// For each level, the list of reversible objects that changed at this level, 
     /// and will need to be restored
     Vector< Variable > saved_vars;
@@ -342,7 +271,6 @@ namespace Mistral {
     /// The search part
     /// These are the search variables.
     VarStack < Variable > sequence;
-    //IntStack sequence;
     Vector< Decision > decisions;
 
     /// The delimitation between different levels is kept by this vector of integers
@@ -364,8 +292,6 @@ namespace Mistral {
     /*!@name Constructor*/
     //@{
     Solver();
-    //void initialise();
-
 
     class BooleanMemoryManager {
     public:
@@ -384,41 +310,12 @@ namespace Mistral {
       }
 
       void add(Variable *x);
-//       void add(Variable *x) {
-// 	if(size.back() < 1000) {
-// 	  x.bool_domain = slots.back()+size.back();
-// 	  ++size.back();
-// 	} else {
-// 	  int *nslot = new int[1000];
-// 	  std::fill(nslot, nslot+1000, 3);
-// 	  size.add(0);
-// 	  slots.add(nslot);
-// 	  x.bool_domain = nslot;
-// 	}
-//       }
-
       void add(Vector< Variable >& bool_vars);
-//       void add(Vector< Variable >& bool_vars) {
-// 	int *pool = new int[bool_vars.size];
-// 	slots.add(pool);
-// 	for(unsigned int i=0; i<bool_vars.size; ++i) {
-// 	  bool_vars[i].bool_domain = pool+i;
-// 	}
-//       }
-//       int* get_next() { 
-// 	int *dom = new int[1];
-// 	*dom = 3;
-// 	slots.add(dom);
-// 	return dom;
-//       }
     };
 
     unsigned int initialised_vars;
     unsigned int initialised_cons;
-    //int *booleans;
     BooleanMemoryManager booleans;
-
-    //int* getNextBooleanSlot() { return booleans.get_next(); }
     //@}
 
     /*!@name Destructor*/
@@ -465,42 +362,13 @@ namespace Mistral {
     void notify_success();
     void notify_decision();
     /// called when the var'th variable of constraint cons changes (with event type evt)
-    //void trigger(Constraint* cons, const int var, const Event evt);
-    //void activate_constraint(Constraint* cons, const int var, const Event evt);
-    
-
     void trigger_event(const int var, const Event evt);
-//     inline void trigger_event(const int var, const Event evt) 
-// {
-//  #ifdef _DEBUG_AC
-//   std::cout << (ASSIGNED(evt) ? "value" : (BOUND_CHANGED(evt) ? "range" : "domain"))
-// 	    << " event on " << variables[var] << std::endl;
-// #endif
-
-//   Constraint *c;
-//   ConstraintNode nd;
-
-//   nd = constraint_graph[var]->first(EVENT_TYPE(evt));
-
-//   if(ASSIGNED(evt)) {
-//     while(constraint_graph[var]->next(nd)) {
-//       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-//       c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
-//       if(c) saved_cons.add(c);
-//     }
-//     if(sequence.contain(variables[var])) sequence.remove(variables[var]);
-//   } else while(constraint_graph[var]->next(nd)) {
-//       active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-//     }
-
-//   wiper_idx = var;
-  
-// }
 
     /// achieve propagation closure
     bool propagate(); 
     bool rewrite(); 
     void consolidate(); 
+    void specialise(); 
     //@}
 
     /*!@name Search accesors*/
@@ -509,7 +377,6 @@ namespace Mistral {
     void branch_left();
     /// undo the previous branching decision and enforce the complementary constraint
     void branch_right();
-
 
     /// backtrack one level
     void restore();
@@ -542,21 +409,6 @@ namespace Mistral {
 
     /// depth first search algorithm
     Outcome iterative_dfs();
-//     //Mistral::Outcome Mistral::Solver::iterative_dfs() 
-// {
-//   int status = UNKNOWN;
-//   while(status == UNKNOWN) {
-//     if(propagate()) {
-//       if( sequence.empty() ) status = satisfied();
-//       else branch_left();
-//     } else {
-//       if( decisions.empty() ) status = UNSAT;
-//       else if( limits_expired() ) status = LIMITOUT;
-//       else branch_right();
-//     }
-//   }
-//   return status;
-// }
     //@}
 
 

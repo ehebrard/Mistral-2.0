@@ -1,6 +1,7 @@
 
 #include <vector>
 #include <iomanip>
+#include <fstream>
 
 #include <mistral_search.hpp>
 #include <mistral_variable.hpp>
@@ -221,9 +222,10 @@ class BoolPigeons : public UnitTest {
 
 public:
   
+  int var_type;
   int size;
   
-  BoolPigeons(const int sz);
+  BoolPigeons(const int sz, const int vt);
   ~BoolPigeons();
 
   virtual void run();
@@ -260,6 +262,15 @@ public:
   virtual void run();
 };
 
+class OpshopTest : public UnitTest {
+
+public:
+  
+  OpshopTest();
+  ~OpshopTest();
+
+  virtual void run();
+};
 
 int main(int argc, char *argv[])
 {  
@@ -299,20 +310,22 @@ int main(int argc, char *argv[])
   //tests.push_back(new RewriteTest());
   //tests.push_back(new ModelTest());
 
-  //tests.push_back(new BoolPigeons(10));
-  tests.push_back(new Pigeons(11)); 
-//   tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
-//   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
-//   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
-//   tests.push_back(new CostasNotEqualAllSolutions(N)); 
-//   tests.push_back(new RandomCListRandomEraseAndRestore<4>());
-//   tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
-//   tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
-//   tests.push_back(new RandomDomainRandomSetDomainAndRestore());
-//   tests.push_back(new RandomDomainRandomSetMaxAndRestore());
-//   tests.push_back(new RandomDomainRandomSetMinAndRestore());
-//   tests.push_back(new RandomDomainRandomRemove());
-//   tests.push_back(new RandomRevNumAffectations<int>());
+  tests.push_back(new OpshopTest());
+  tests.push_back(new BoolPigeons(10, EXPRESSION));
+  tests.push_back(new BoolPigeons(10, BITSET_VAR));
+  tests.push_back(new Pigeons(10)); 
+  tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
+  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
+  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
+  tests.push_back(new CostasNotEqualAllSolutions(N)); 
+  tests.push_back(new RandomCListRandomEraseAndRestore<4>());
+  tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
+  tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
+  tests.push_back(new RandomDomainRandomSetDomainAndRestore());
+  tests.push_back(new RandomDomainRandomSetMaxAndRestore());
+  tests.push_back(new RandomDomainRandomSetMinAndRestore());
+  tests.push_back(new RandomDomainRandomRemove());
+  tests.push_back(new RandomRevNumAffectations<int>());
 
 
   //tests[0]->Verbosity = HIGH;
@@ -1343,6 +1356,9 @@ void CostasAllDiffAllSolutions::run() {
     s.add( AllDiff(scope, consistency) );
   }
 
+
+  s.consolidate();
+  //std::cout << s << std::endl;
   //cout << s << endl;
 
   //s.initialise();
@@ -1396,6 +1412,8 @@ void CostasNotEqualAllSolutions::run() {
   //cout << s << endl;
 
   //s.initialise();
+  s.consolidate();
+  //std::cout << s << std::endl;
 
   s.initialise_search(X, 
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -1493,6 +1511,8 @@ void Pigeons::run() {
     for(j=i+1; j<size; ++j)
       s.add( X[i] != X[j] );
 
+  s.consolidate();
+  //std::cout << s << std::endl;
   //s.initialise();
 
   s.depth_first_search(X, 
@@ -1508,14 +1528,16 @@ void Pigeons::run() {
 }
 
 
-BoolPigeons::BoolPigeons(const int sz) 
-  : UnitTest(LOW, LOW, LOW) { size=sz; }
+BoolPigeons::BoolPigeons(const int sz, const int vt) 
+  : UnitTest(LOW, LOW, LOW) { size=sz; var_type=vt; }
 BoolPigeons::~BoolPigeons() {}
 
 void BoolPigeons::run() {
-  if(Verbosity) cout << "Run pigeon-hole (Boolean) of order 10: "; 
+  if(Verbosity) cout << "Run pigeon-hole (" 
+		     << (var_type == BITSET_VAR ? "bitset" : "boolean")
+		     << ") of order 10: "; 
 
-  VarArray X(size*(size-1), 0, 1);
+  VarArray X(size*(size-1), 0, 1, var_type);
   VarArray domain;
   Solver s;
   int i, j, k;
@@ -1534,6 +1556,9 @@ void BoolPigeons::run() {
   //cout << s << endl;
   
   //exit(1);
+
+  s.consolidate();
+  //std::cout << s << std::endl;
 
   s.depth_first_search(X, 
 		       new GenericHeuristic< NoOrder, MinValue >(&s), 
@@ -1810,4 +1835,136 @@ void VarStackDynamicTest::run() {
 //     cout << witness << endl;
 //   }
   
+}
+
+
+OpshopTest::OpshopTest() : UnitTest() {}
+OpshopTest::~OpshopTest() {}
+
+
+void OpshopTest::run() {
+
+  if(Verbosity) cout << "Run open-shop (GP03-01): "; 
+
+  // read file
+  int nJobs, nMachines;
+  int i=0, j, k, dur=0, lb, opt, bufsize=1000;
+  char buf[bufsize];
+  std::ifstream infile( "./examples/data/GP03-01.txt", std::ios_base::in );
+	
+  do {
+    infile.getline( buf, bufsize, '\n' );
+  } while( buf[0] == '#' );
+	
+  while( buf[i] != ' ' ) ++i;
+  buf[i] = '\0';
+  lb = atoi( buf );
+	
+  while( buf[i] == '\0' || buf[i] == ' ' || buf[i] == '*' ) ++i;
+  j = i;
+  while( buf[i] != ' ' && buf[i] != '\n' && buf[i] != '\0' ) ++i;
+  buf[i] = '\0';
+  opt = atoi( &(buf[j]) );
+	
+  do {
+    infile.get( buf[0] );
+    if( buf[0] != '#' ) break;
+    infile.getline( buf, bufsize, '\n' );
+  } while( true );
+  infile.unget();
+	
+  infile >> nJobs;
+  infile >> nMachines;
+
+  int *jobs[nJobs];
+  for(i=0; i<nMachines; ++i)
+    jobs[i] = new int[nMachines];
+
+  infile.getline( buf, bufsize, '\n' );
+	
+  do {
+    infile.get( buf[0] );
+    if( buf[0] != '#' ) break;
+    infile.getline( buf, bufsize, '\n' );
+  } while( true );
+  infile.unget();
+	
+  k = 0;
+  for(i=0; i<nJobs; ++i) {
+    for(j=0; j<nMachines; ++j) {
+      infile >> jobs[i][j];
+      dur += jobs[i][j];
+    }
+  }
+
+  VarArray task;
+
+  int makespan = (int)((double)opt*1.2);
+
+  for(i=0; i<nJobs; ++i) {
+    for(j=0; j<nMachines; ++j) {
+      Variable t(0, makespan-jobs[i][j]);
+      task.add(t);
+    }
+  }
+
+  Solver s;
+
+  s.add(task);
+  
+  for(int i=0; i<nJobs; ++i) 
+    {
+      for(int j=0; j<nMachines-1; ++j)
+	for(int k=j+1; k<nMachines; ++k) {
+	  s.add(Disjunctive(task[i*nMachines+j], 
+			    task[i*nMachines+k], 
+			    jobs[i][j],
+			    jobs[i][k]
+			    ));
+	}
+    }
+
+  for(int j=0; j<nMachines; ++j)
+    for(int i=0; i<nJobs-1; ++i) 
+      {
+	for(int k=i+1; k<nJobs; ++k) {
+	  s.add(Disjunctive(task[i*nMachines+j], 
+			    task[k*nMachines+j], 
+			    jobs[i][j],
+			    jobs[k][j]
+			    ));
+	}
+    }
+
+  s.consolidate();
+  makespan = (int)((double)opt*1.0001);
+  for(int i=0; i<nJobs; ++i)
+    for(int j=0; j<nMachines; ++j) 
+      s.add( task[i*nMachines+j] <= makespan-jobs[i][j] );
+
+  //std::cout << s << std::endl;
+  s.specialise();
+  //std::cout << s << std::endl;
+
+  s.initialise_search(task, 
+		      new GenericHeuristic< GenericDVO < MinDomain >, HalfSplit >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+  }
+
+
+  if(s.statistics.num_backtracks != 774581) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 771316) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+
 }

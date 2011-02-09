@@ -73,9 +73,11 @@ void Mistral::Constraint::initialise() {
   std::fill(solution, solution+scope.size, 0);
 
   active.initialise(0, scope.size-1, true);
-  for(unsigned int i=0; i<scope.size; ++i) 
-    if(scope[i].domain_type != BOOL_VAR && scope[i].is_ground()) 
-      active.erase(i);
+
+  
+//   for(unsigned int i=0; i<scope.size; ++i) 
+//     if(scope[i].domain_type != BOOL_VAR && scope[i].is_ground()) 
+//       active.erase(i);
 }
 
 Mistral::PropagationOutcome Mistral::Constraint::rewrite() {
@@ -100,6 +102,9 @@ void Mistral::Constraint::consolidate() {
 
 void Mistral::Constraint::post(Solver *s) {
   solver = s;
+
+  active.fill();
+
   unsigned int i, j;
   // for each of its variables
   for(i=0; i<scope.size; ++i) {
@@ -111,9 +116,29 @@ void Mistral::Constraint::post(Solver *s) {
       ConstraintList *lst = solver->constraint_graph[j];
       unsigned int elt = lst->reversible_add(ct, trg);
       self[i] = elt;
+    } else {
+      active.erase(i);
     }
+//   for(unsigned int i=0; i<scope.size; ++i) 
+//     if(scope[i].domain_type != BOOL_VAR && scope[i].is_ground()) 
+//       active.erase(i);
   }
+
+
+//   std::cout << "MARK DOMAIN " ;
+//   display(std::cout);
+//   std::cout << std::endl;
+//   for(i=0; i<scope.size; ++i) {
+//     std::cout << solver->domain_types[scope[i].id()] << " ";
+//   }
+//   std::cout << std::endl;
+
   mark_domain();
+
+//   for(i=0; i<scope.size; ++i) {
+//     std::cout << solver->domain_types[scope[i].id()] << " ";
+//   }
+//   std::cout << std::endl;
 
 //   if(scope[0].id() == 5 || scope[1].id() == 5) {
 //     std::cout << "X5CLIST AFTER POST ";
@@ -517,12 +542,12 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate() {
 //   std::cout << "changes: " << changes << std::endl;
 //   std::cout << "events[0]: " << events[0] << " events[0]: " << events[1] << std::endl;
 
-  if(scope[0].id() == 6 && scope[1].id() == 9) {
-  std::cout << "propagate " << this << std::endl;
-  for(unsigned int i=0; i<scope.size; ++i)
-    std::cout << " " << scope[i].get_domain();
-  std::cout << std::endl;
-  }
+//   if(scope[0].id() == 6 && scope[1].id() == 9) {
+//   std::cout << "propagate " << this << std::endl;
+//   for(unsigned int i=0; i<scope.size; ++i)
+//     std::cout << " " << scope[i].get_domain();
+//   std::cout << std::endl;
+//   }
 
   if(changes.contain(0) && LB_CHANGED(event_type[0])) {
     if(scope[1].set_min(scope[0].get_min() + offset) == FAIL_EVENT) 
@@ -533,11 +558,11 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate() {
       return FAILURE(0);
   }
 
-  if(scope[0].id() == 6 && scope[1].id() == 9) {
-    for(unsigned int i=0; i<scope.size; ++i)
-      std::cout << " " << scope[i].get_domain();
-    std::cout << std::endl;
-  }
+//   if(scope[0].id() == 6 && scope[1].id() == 9) {
+//     for(unsigned int i=0; i<scope.size; ++i)
+//       std::cout << " " << scope[i].get_domain();
+//     std::cout << std::endl;
+//   }
 
   return CONSISTENT;
 }
@@ -586,40 +611,40 @@ Mistral::PropagationOutcome Mistral::ConstraintDisjunctive::propagate() {
   //(x0 + p0 <= x1 || x1 + p1 <= x0).
   int hold = 3;
 
-  if(scope[0].id() == 6 && scope[1].id() == 9) {
-    std::cout << "DISJUNCTIVE " << this << std::endl;
+ //  if(scope[0].id() == 6 && scope[1].id() == 9) {
+//     std::cout << "DISJUNCTIVE " << this << std::endl;
     
- for(unsigned int i=0; i<scope.size; ++i)
-   std::cout << " " << scope[i] << " in " << scope[i].get_domain();
-  std::cout << std::endl;
+//  for(unsigned int i=0; i<scope.size; ++i)
+//    std::cout << " " << scope[i] << " in " << scope[i].get_domain();
+//   std::cout << std::endl;
 
-    std::cout << scope[1].get_min() << " + " << processing_time[1] 
-	      << " ?> " << scope[0].get_max() ;
-  }
+//     std::cout << scope[1].get_min() << " + " << processing_time[1] 
+// 	      << " ?> " << scope[0].get_max() ;
+//   }
 
   // check is prec[1] is violated (x1 + p1 > x0).
   if(scope[1].get_min()+processing_time[1] > scope[0].get_max()) {
     hold &= 2;
 
-    if(scope[0].id() == 6 && scope[1].id() == 9) {
-      std::cout << " YES" << std::endl;
-    }
-  } else   if(scope[0].id() == 6 && scope[1].id() == 9) {    std::cout << " NO" << std::endl;
-  }
+//     if(scope[0].id() == 6 && scope[1].id() == 9) {
+//       std::cout << " YES" << std::endl;
+//     }
+  } // else   if(scope[0].id() == 6 && scope[1].id() == 9) {    std::cout << " NO" << std::endl;
+//   }
 
-  if(scope[0].id() == 6 && scope[1].id() == 9) {
-    std::cout << scope[0].get_min() << " + " << processing_time[0] 
-	      << " ?> " << scope[1].get_max() ;
-  }
+//   if(scope[0].id() == 6 && scope[1].id() == 9) {
+//     std::cout << scope[0].get_min() << " + " << processing_time[0] 
+// 	      << " ?> " << scope[1].get_max() ;
+//   }
 
   // check is prec[1] is violated (x0 + p0 > x1).
   if(scope[0].get_min()+processing_time[0] > scope[1].get_max()) {
     hold &= 1;
-    if(scope[0].id() == 6 && scope[1].id() == 9) {
-      std::cout << " YES" << std::endl;
-    }
-  }  else  if(scope[0].id() == 6 && scope[1].id() == 9) {     std::cout << " NO" << std::endl;
-  }
+//     if(scope[0].id() == 6 && scope[1].id() == 9) {
+//       std::cout << " YES" << std::endl;
+//     }
+  } //  else  if(scope[0].id() == 6 && scope[1].id() == 9) {     std::cout << " NO" << std::endl;
+//   }
 
   if(!hold) return FAILURE(0);
   if(hold<3) {

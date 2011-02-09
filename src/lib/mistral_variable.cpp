@@ -61,7 +61,6 @@ Mistral::Variable::Variable(const int lo, const int up, const int type) {
       domain_type = EXPRESSION;
       expression = new Expression(lo, up);
     } else if((type & BOOL_VAR) && lo==0 && up==1) {
-      //domain_type = BOOL_VAR;
       bool_domain = &BOOL_DOM;
       variable = new VariableImplementation();
     } else if(type & RANGE_VAR) {
