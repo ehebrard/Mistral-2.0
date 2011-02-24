@@ -45,6 +45,9 @@ namespace Mistral {
   typedef int PropagationOutcome;
   
   
+#define GEOMETRIC 0
+#define LUBY 1
+
 #define INFTY  NOVAL
 #define MAXINT NOVAL
 #define MININT -NOVAL

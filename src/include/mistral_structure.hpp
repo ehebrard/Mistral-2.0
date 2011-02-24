@@ -175,7 +175,7 @@ namespace Mistral {
       stack_[size++] = x;
     }
 
-    inline DATA_TYPE popUntil(const unsigned int level)
+    inline DATA_TYPE pop_until(const unsigned int level)
     {
       size = level;
       return stack_[size];
@@ -199,6 +199,13 @@ namespace Mistral {
     inline void remove(const unsigned int i)
     {  
       stack_[i] = stack_[--size];
+    }
+
+    inline void remove_elt(DATA_TYPE& elt)
+    {
+      unsigned int j=size;
+      while(j && stack_[--j] != elt);
+      stack_[j] = stack_[--size];
     }
 
     inline void setBack(const DATA_TYPE& x, const int k=1)
@@ -264,14 +271,14 @@ namespace Mistral {
 
     /*!@name Parameters*/
     //@{
-    int size;
+    unsigned int size;
     DATA_TYPE data[0];
     //@}
 
     Array(const Vector<DATA_TYPE>& ps) 
     {
       size = ps.size;
-      for (int i=0; i<ps.size; ++i) 
+      for (unsigned int i=0; i<ps.size; ++i) 
 	data[i] = ps[i];
     }
 

@@ -252,12 +252,12 @@ public:
   virtual void run();
 };
 
-class RewriteTest : public UnitTest {
+class RewriteTest1 : public UnitTest {
 
 public:
   
-  RewriteTest();
-  ~RewriteTest();
+  RewriteTest1();
+  ~RewriteTest1();
 
   virtual void run();
 };
@@ -268,6 +268,16 @@ public:
   
   OpshopTest();
   ~OpshopTest();
+
+  virtual void run();
+};
+
+class RewriteTest : public UnitTest {
+
+public:
+  
+  RewriteTest();
+  ~RewriteTest();
 
   virtual void run();
 };
@@ -307,13 +317,14 @@ int main(int argc, char *argv[])
   //  tests.push_back(new Pigeons(5)); 
   //tests.push_back(new BoolPigeons(5));
 
-  //tests.push_back(new RewriteTest());
+  
   //tests.push_back(new ModelTest());
 
+  tests.push_back(new RewriteTest1());
   tests.push_back(new OpshopTest());
-  tests.push_back(new BoolPigeons(10, EXPRESSION));
-  tests.push_back(new BoolPigeons(10, BITSET_VAR));
-  tests.push_back(new Pigeons(10)); 
+  tests.push_back(new BoolPigeons(N+1, EXPRESSION));
+  tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
+  tests.push_back(new Pigeons(N+2)); 
   tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
   tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
@@ -1535,7 +1546,7 @@ BoolPigeons::~BoolPigeons() {}
 void BoolPigeons::run() {
   if(Verbosity) cout << "Run pigeon-hole (" 
 		     << (var_type == BITSET_VAR ? "bitset" : "boolean")
-		     << ") of order 10: "; 
+		     << ") of order " << size << ": "; 
 
   VarArray X(size*(size-1), 0, 1, var_type);
   VarArray domain;
@@ -1558,13 +1569,13 @@ void BoolPigeons::run() {
   //exit(1);
 
   s.consolidate();
-  //std::cout << s << std::endl;
+  //  std::cout << s << std::endl;
 
   s.depth_first_search(X, 
-		       new GenericHeuristic< NoOrder, MinValue >(&s), 
+		       new GenericHeuristic< Lexicographic, MinValue >(&s), 
 		       new NoRestart);
   
-  if(s.statistics.num_backtracks != 362879) {
+  if(s.statistics.num_backtracks != 40319 /*362879*/) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
     //exit(1);
@@ -1966,5 +1977,80 @@ void OpshopTest::run() {
 	 << (s.statistics.num_backtracks) << ")" << endl;
     //exit(1);
   }
+
+}
+
+
+
+RewriteTest1::RewriteTest1() : UnitTest() {}
+RewriteTest1::~RewriteTest1() {}
+
+void RewriteTest1::run() {
+
+  if(Verbosity) cout << "Run rewritting test ";
+
+  Variable X(0,10);
+  Variable Y(-5,5);
+  Variable Z(-100,10);
+
+  int N=10;
+  VarArray E(N, -50, 50);
+
+  Vector< Variable > all_vars;
+  for(int i=0; i<N; ++i)
+    all_vars.add(E[i]);
+  all_vars.add(X);
+  all_vars.add(Y);
+  all_vars.add(Z);
+
+  Solver s;
+  s.add(X);
+  s.add(Y);
+  s.add(Z);
+
+  s.add(X != Z);
+  s.add(Y <= Z);
+
+  s.add(X == Y);
+  for(int i=0; i<N; ++i) s.add(X == E[i]);
+
+  s.rewrite();
+
+  int sum_degree = X.get_degree() + Y.get_degree() + Z.get_degree();
+  for(int i=0; i<N; ++i)
+    sum_degree += E[i].get_degree();
+
+  if(sum_degree != 26) {
+    cout << "Error while rewritting (wrong number of constraints)!" << endl
+	 << "degree(X) = " << X.get_degree() << endl
+	 << "degree(Y) = " << Y.get_degree() << endl
+	 << "degree(Z) = " << Z.get_degree() << endl
+	 << "degree(E[5]) = " << E[5].get_degree() << endl;
+    
+    exit(1);
+  }
+  
+ s.consolidate();
+ s.add(E[4] > 1);
+ s.propagate();
+ s.consolidate();
+
+ s.initialise_search(all_vars, 
+		     new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		     new NoRestart());
+ 
+ int num_solutions = 0;
+ while(s.get_next_solution() == SAT) {
+   Solution sol(all_vars);
+   ++num_solutions;
+   if(num_solutions > 50) break;
+ }
+ 
+ cout << "(" << num_solutions << ") " ;
+
+ if(num_solutions != 26) {
+   cout << "Error wrong number of solution!" << endl;
+   exit(1);
+ }
 
 }

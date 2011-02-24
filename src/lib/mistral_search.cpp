@@ -71,23 +71,36 @@ Mistral::Variable Mistral::NoOrder::select() {
 Mistral::Lexicographic::Lexicographic(Solver *s) 
   : VarOrdering(s) {
   last.initialise(0,s);
-  for(unsigned int i=0; i<solver->sequence.size; ++i)
-    order.add(solver->sequence[i]);
-//   int i=solver->sequence.size;
-//   while( i-- ) {
+//   for(unsigned int i=0; i<solver->sequence.size; ++i)
 //     order.add(solver->sequence[i]);
-//   }
+// //   int i=solver->sequence.size;
+// //   while( i-- ) {
+// //     order.add(solver->sequence[i]);
+// //   }
+
+//   std::cout << "order1: " << order << std::endl;
+}
+
+void Mistral::Lexicographic::initialise(VarStack< Variable >& seq) {
+  for(unsigned int i=0; i<seq.size; ++i) {
+    order.add(seq[i]);
+  }
 }
 
 void Mistral::Lexicographic::initialise(Solver *s) {
   VarOrdering::initialise(s);
   last.initialise(0,s);
-  for(unsigned int i=0; i<solver->sequence.size; ++i)
-    order.add(solver->sequence[i]);
-//   int i=solver->sequence.size;
-//   while( i-- ) {
-//     order.add(solver->sequence[i]);
-//   }
+// //   for(unsigned int i=0; i<solver->sequence.size; ++i)
+// //     order.add(solver->sequence[i]);
+// // //   int i=solver->sequence.size;
+// // //   while( i-- ) {
+// // //     order.add(solver->sequence[i]);
+// // //   }
+//   for(unsigned int i=0; i<seq.size; ++i) {
+    
+//     order.add(seq[i]);
+
+//   std::cout << "order2: " << order << std::endl;
 }
 
 Mistral::Lexicographic::~Lexicographic() {}
@@ -105,9 +118,12 @@ Mistral::Variable Mistral::Lexicographic::select() {
 //   std::cout << std::endl;
 
 
+
   while(last<order.size && order[last].is_ground()) { 
     ++last;
   }
+
+  //std::cout << "order[ " << last << "]: " << order << std::endl;
 
   return order[last];
 }

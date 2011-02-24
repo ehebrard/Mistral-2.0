@@ -117,6 +117,8 @@ namespace Mistral {
 
     BranchingHeuristic(Solver *s) {solver = s;}
     virtual ~BranchingHeuristic() {}
+
+    virtual void initialise(VarStack< Variable >& seq) {}
     
     virtual Decision branch() = 0;
 
@@ -142,6 +144,8 @@ namespace Mistral {
     NoOrder() {}
     NoOrder(Solver *s);
     virtual ~NoOrder();
+    void initialise(Solver *s) { solver = s; }
+    void initialise(VarStack< Variable >& seq) {}
     
     Variable select();
 
@@ -156,7 +160,9 @@ namespace Mistral {
 
     Lexicographic() {}
     Lexicographic(Solver *s);
+    //Lexicographic(Vector< Variable >& seq);
     void initialise(Solver *s);
+    void initialise(VarStack< Variable >& seq);
     virtual ~Lexicographic();
     
     Variable select();
@@ -247,6 +253,8 @@ namespace Mistral {
     //@{
     GenericDVO() : VarOrdering() {}
     GenericDVO(Solver* s) : VarOrdering(s) {}
+    void initialise(Solver *s) { solver = s; }
+    void initialise(VarStack< Variable >& seq) {}
     //@}
     
     /**@name Utils*/
@@ -298,6 +306,8 @@ namespace Mistral {
       bests = new VarSelector[RAND+1];
       bestvars = new Variable[RAND+1];
     }
+    void initialise(Solver *s) { solver = s; }
+    void initialise(VarStack< Variable >& seq) {}
 
     virtual ~GenericRandomDVO() 
     {
@@ -341,17 +351,41 @@ namespace Mistral {
     VarSelector var;
     ValSelector choice;
 
-    GenericHeuristic(Solver *s) : BranchingHeuristic(s) 
+    GenericHeuristic(Solver *s) 
+      : BranchingHeuristic(s) 
     {
       var.initialise(s);
       choice = ValSelector(s);
     }
+
+    virtual void initialise(VarStack< Variable >& seq) {var.initialise(seq);}
 
     virtual Decision branch() {
       return choice.make(var.select());
     }
 
   };
+
+
+//   template < class VarSelector, class ValSelector >
+//   class GenericPtrHeuristic : public BranchingHeuristic {
+//   public:
+
+//     VarSelector *var;
+//     ValSelector choice;
+
+//     GenericPtrHeuristic(Solver *s, VarSelector *var_ord) 
+//       : BranchingHeuristic(s) 
+//     {
+//       var = var_ord; 
+//       choice = ValSelector(s);
+//     }
+
+//     virtual Decision branch() {
+//       return choice.make(var->select());
+//     }
+
+//   };
 
 
 //   class PCP : public BranchingHeuristic {

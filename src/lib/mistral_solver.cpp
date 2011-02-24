@@ -213,6 +213,11 @@ Mistral::ConstraintQueue::ConstraintQueue()
 }
 
 void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
+
+//   std::cout << "declare " << c << " to the constraint queue" << std::endl;
+//   std::cout << "was: [" << min_priority << ","
+// 	    << min_priority+cardinality-1 << "]" << std::endl;
+
   int cons_idx = c->id;
   int cons_priority = c->priority;
 
@@ -228,11 +233,16 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
       new_min_p = cons_priority;
       new_max_p = cons_priority;
     }
+
+//     std::cout << "now: [" << new_min_p << ","
+// 	    << new_max_p << "]" << std::endl;
+
+
     int new_cardinality = (new_max_p-new_min_p+1);
     Queue *aux_triggers = triggers;
     triggers = new Queue[new_cardinality];
     triggers -= new_min_p;
-    for(int i=min_priority; i<cardinality; ++i) {
+    for(int i=min_priority; i<min_priority+cardinality; ++i) {
       triggers[i] = aux_triggers[i];
       aux_triggers[i].cancel();
     }
@@ -244,7 +254,15 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
 
     min_priority = new_min_p;
     cardinality = new_cardinality;
+
+
+//     std::cout << "==> " << triggers[cons_priority] << std::endl;
+
+
   } else {
+    
+//     std::cout << "no need to create a new trigger list" << std::endl;
+//     std::cout << "extend " << triggers[cons_priority] << " with " << cons_idx << std::endl;
 
     triggers[cons_priority].extend(cons_idx);
   }
@@ -385,6 +403,8 @@ std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
 }
 
 Mistral::Solver::Solver() { 
+  search_started = false;
+
   // search stuf
   heuristic = NULL;
   policy = NULL;
@@ -474,8 +494,14 @@ void Mistral::Solver::add(Constraint* c) {
     con_trail_.add(level);
   }
 
-  posted_constraints.extend(c->id);
-  posted_constraints.add(c->id);
+
+  //std::cout << "add " << (c->id) << std::endl;
+
+  if(!posted_constraints.contain(c->id)) {
+    posted_constraints.extend(c->id);
+    posted_constraints.add(c->id);
+  }
+  //std::cout << posted_constraints << std::endl;
 
 }
 
@@ -527,20 +553,29 @@ Mistral::Outcome Mistral::Solver::get_next_solution()
 {
   Outcome satisfiability = UNSAT;
 
-  if(decisions.size) branch_right();
+//   std::cout << "get next solution " << (decisions.size) << " "
+// 	    << search_started << std::endl;
 
-  //if(sequence.size) {
+
+  if(search_started) {
+    if(decisions.size) 
+      branch_right();
+    else return satisfiability;
+  }
+   
+  search_started = true;
+  
   statistics.num_variables = sequence.size;
   statistics.num_values = 0;
   for(unsigned int i=0; i<sequence.size; ++i)
     statistics.num_values += sequence[i].get_size();
   
+  //display(std::cout);
   satisfiability = iterative_dfs();
   
   if(parameters.verbosity) {
     statistics.print_short(std::cout);
   }
-  // }
 
   return satisfiability;
 }
@@ -563,7 +598,6 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
 					BranchingHeuristic *heu, 
 					RestartPolicy *pol) 
 {
-
   consolidate();
 
   if(level < 0) save();
@@ -576,13 +610,18 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   sequence.clear();
   decisions.clear();
   for(unsigned int i=seq.size; i;) {
-    sequence.add(seq[--i].get_var());
+    Variable x = seq[--i].get_var();
+    if(!sequence.contain(x)) sequence.add(x);
   }
+
+  //std::cout <<  sequence << std::endl;
 
   if(heu) { delete heuristic; heuristic = heu; }
   else if(!heuristic) heuristic = new GenericHeuristic< NoOrder, MinValue >(this);
   if(pol) { delete policy;    policy    = pol; }
   else if(!policy) policy = new NoRestart();
+
+  heuristic->initialise(sequence);
 
   parameters.fail_limit = policy->base;
   parameters.limit = (policy->base > 0);
@@ -766,6 +805,10 @@ void Mistral::Solver::notify_decision() { //Decision d) {
 
 void Mistral::Solver::consolidate() 
 {
+
+  for(unsigned int i=0; i<variables.size; ++i)
+    variables[i] = variables[i].get_var();
+
 //   if(!is_initialised()) {
 //     Vector< int > bool_vars;
 //     while(initialised_vars < variables.size) {
@@ -1255,7 +1298,6 @@ void Mistral::Solver::branch_left() {
   std::cout << " SAT!" << std::endl; 
 #endif
 
-  //std::cout << "level: " << level << std::endl;
 
   Vector< int > tmp_sol;
   unsigned int i, j, k;
@@ -1263,18 +1305,11 @@ void Mistral::Solver::branch_left() {
   //for(i=0; i<constraints.size; ++i) {
   for(i=0; i<posted_constraints.size; ++i) {
     C = constraints[posted_constraints[i]];
-    //    std::cout << "check " << C ; //<< std::endl;
     
-
     k=C->scope.size;
     for(j=0; j<k; ++j) 
       tmp_sol.add(C->scope[j].get_value());
 
-
-//     std::cout << " (" << tmp_sol[0] ; 
-//     for(j=1; j<k; ++j) 
-//       std::cout << " " << tmp_sol[j] ;
-//     std::cout << ")" << std::endl;
 
     if(C->check(tmp_sol.stack_))
       {
@@ -1296,8 +1331,6 @@ void Mistral::Solver::branch_left() {
   }
   ++statistics.num_solutions;
   
-  //  std::cout << "level: " << level << std::endl;
-
   return SAT;
 }
 

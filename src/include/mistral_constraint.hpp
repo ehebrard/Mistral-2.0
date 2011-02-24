@@ -859,6 +859,76 @@ namespace Mistral {
   };
 
 
+  class Literal {
+
+  public:
+    
+    unsigned int _data_;
+    
+    inline unsigned int get_type() {
+      // 0 -> equality
+      // 1 -> inequality
+      // 2 -> upper bound
+      // 3 -> lower bound
+      return (_data_&3);
+    }
+
+    inline unsigned int get_atom() {
+      return _data_/4;
+    }
+
+    inline void invert() {
+      _data_^=1;
+    }
+    
+  };
+
+
+  /***********************************************
+   * AllDifferent Constraint (forward checking).
+   ***********************************************/
+  /*! \class ConstraintNogoodBase
+    \brief  Clique of NotEqual Constraint.
+  */
+  class ConstraintNogoodBase : public Constraint {
+
+  public:
+
+    /**@name Parameters*/
+    //@{ 
+    // minimum values, used as an offset when accessing the base
+    int *minimums;
+    // list of nogoods
+    Vector< Array < Literal >* > nogood;
+    // the watched literals data structure
+    Vector< Array < Literal >* > **watched_values;
+    //@}
+    
+    /**@name Constructors*/
+    //@{
+    ConstraintNogoodBase() : Constraint() {}
+    ConstraintNogoodBase(Vector< Variable >& scp);
+    virtual void mark_domain();
+    virtual Constraint *clone() { return new ConstraintNogoodBase(scope); }
+    virtual void initialise();
+    virtual ~ConstraintNogoodBase();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    //virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "nogood_base"; }
+    //@}
+    
+  };
+
 
   /***********************************************
    * AllDifferent Constraint (forward checking).

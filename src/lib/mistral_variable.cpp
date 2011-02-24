@@ -294,15 +294,22 @@ int Mistral::Variable::get_solution_value() const {
     else  return (*bool_domain-1);
   }
 
-  unsigned int Mistral::Variable::get_size() const {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_size();
-    else if(domain_type ==    LIST_VAR) return list_domain->get_size();
-    else if(domain_type ==   RANGE_VAR) return range_domain->get_size();
-    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_size();
-    else if(domain_type ==   CONST_VAR) return 1;
-    else if(domain_type ==   EXPRESSION) return expression->self.get_size();
-    else  return ((*bool_domain+1)/2);
-  }
+unsigned int Mistral::Variable::get_size() const {
+  if     (domain_type ==  BITSET_VAR) return bitset_domain->get_size();
+  else if(domain_type ==    LIST_VAR) return list_domain->get_size();
+  else if(domain_type ==   RANGE_VAR) return range_domain->get_size();
+  //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_size();
+  else if(domain_type ==   CONST_VAR) return 1;
+  else if(domain_type ==   EXPRESSION) return expression->self.get_size();
+  else  return ((*bool_domain+1)/2);
+}
+
+/// Returns the degree (number of constraints)
+unsigned int Mistral::Variable::get_degree() const {
+  if(domain_type ==   CONST_VAR) return 0;
+  else if(domain_type ==   EXPRESSION) return expression->self.get_degree();
+  else return variable->solver->constraint_graph[variable->id]->degree;
+}
 
 
 std::string Mistral::Variable::get_domain() const {

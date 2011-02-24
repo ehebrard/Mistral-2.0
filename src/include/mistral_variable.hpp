@@ -1014,6 +1014,8 @@ namespace Mistral {
     std::string get_domain() const ; 
     /// Returns the domain size
     unsigned int get_size() const ; 
+    /// Returns the degree (number of constraints)
+    unsigned int get_degree() const ; 
     /// Returns the minimum value in the domain
     int get_min() const ;
     /// Returns the maximum value in the domain
@@ -1137,26 +1139,6 @@ namespace Mistral {
 
     inline int type() const {return _data_&3; }
     inline int value() const {return _data_>>2; }
-
-    //     inline bool satisfied() {
-    //       switch(type()) {
-    //       case REMOVAL: return !var.contain(value());
-    //       case ASSIGNMENT: return var.equal(value());
-    //       case LOWERBOUND: return var.get_min() >  value(); // > v
-    //       case UPPERBOUND: return var.get_max() <= value();   // <= v
-    //       }
-    //       return true;
-    //     }
-
-    //     inline bool violated() {
-    //       switch(type()) {
-    //       case REMOVAL: return var.equal(value());
-    //       case ASSIGNMENT: return !var.contain(value());
-    //       case LOWERBOUND: return var.get_max() <= value(); // > v
-    //       case UPPERBOUND: return var.get_min() >  value();   // <= v
-    //       }
-    //       return true;
-    //     }
     
     Decision(Variable x, const int t, const int v) {
       init_data(t,v);
@@ -1186,10 +1168,6 @@ namespace Mistral {
       case ASSIGNMENT: return !IS_FAIL(var.set_domain(value()));
       case LOWERBOUND: return !IS_FAIL(var.set_min(value()+1));
       case UPPERBOUND: return !IS_FAIL(var.set_max(value()));
-	//       case REMOVAL: return (var.remove(value()) == FAIL_EVENT ? var : ok);
-	//       case ASSIGNMENT: return (var.set_domain(value()) == FAIL_EVENT ? var : ok);
-	//       case LOWERBOUND: return (var.set_min(value()+1) == FAIL_EVENT ? var : ok); // > v
-	//       case UPPERBOUND: return (var.set_max(value()) == FAIL_EVENT ? var : ok);   // <= v
       }
       return true;
     }
@@ -1207,8 +1185,6 @@ namespace Mistral {
       os << value();
       return os;
     }
-
-
 
   };
 

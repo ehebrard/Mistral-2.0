@@ -238,6 +238,7 @@ namespace Mistral {
       level k: after k decisions
     */
     //int level;
+    bool search_started;
 
     /// The set of variables, in the initial order, that is as loaded from the model
     Vector< Variable > variables;

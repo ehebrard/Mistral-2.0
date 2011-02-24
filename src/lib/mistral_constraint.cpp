@@ -360,8 +360,19 @@ void Mistral::ConstraintEqual::initialise() {
 Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
   Mistral::PropagationOutcome wiped = propagate();
 
+
+ 
+
   if( active.size == 2 ) {
     if( scope[0].is_expression() && scope[1].is_expression() ) {
+
+
+//  std::cout << "REWRITE EQUALITY " ;
+//   display(std::cout);
+//   std::cout << std::endl;
+//       std::cout << solver->variables << std::endl;
+
+
       relax();
 
       int k[2], j;
@@ -386,6 +397,12 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
       //and now scope[j] points to scope[1-j]
       scope[j].expression->self = scope[1-j];
       scope[j].expression->id = scope[1-j].id();
+
+//       std::cout << solver->variables << std::endl;
+//       std::cout << "EQUALITY REWRITEN " ;
+//       display(std::cout);
+//       std::cout << std::endl;
+
     }
   }
 
@@ -1026,7 +1043,7 @@ std::ostream& Mistral::PredicateAdd::display(std::ostream& os) const {
 
 Mistral::ConstraintBoolSumEqual::ConstraintBoolSumEqual(Vector< Variable >& scp, const int t)
   : Constraint(scp) { 
-  priority = 2;
+  priority = 1;
   total = t; 
 }
 
