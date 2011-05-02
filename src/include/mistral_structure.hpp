@@ -105,7 +105,6 @@ namespace Mistral {
     virtual ~Vector()
     {
       free( stack_ );
-      //delete [] stack_;
     }
     //@}
 
@@ -116,20 +115,32 @@ namespace Mistral {
       size = s;
       capacity = c;
       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+
+      DATA_TYPE x;
+      std::fill(stack_, stack_+capacity, x);
     }
 
-    void extendStack()
-    {
-      capacity = ((capacity+1) << 1);
-      DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
-      stack_ = new_stack;
-    }
+//     void extendStack()
+//     {
+//       unsigned int new_capacity = ((capacity+1) << 1);
+//       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, new_capacity*sizeof(DATA_TYPE));
+//       stack_ = new_stack;
 
-    void extendStack( const unsigned int l )
+//       DATA_TYPE x;
+//       std::fill(stack_+capacity, stack_+new_capacity, x);
+      
+//       capacity = new_capacity;
+//     }
+
+    void extendStack( const unsigned int l=0 )
     {
-      capacity += l;
+      unsigned int increment = (l ? l : (capacity+1) << 1);
+      capacity += increment;
       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
       stack_ = new_stack;
+
+      DATA_TYPE x;
+      std::fill(stack_+capacity-increment, stack_+capacity, x);
     }
 
     void resize( const unsigned int l )
@@ -170,7 +181,7 @@ namespace Mistral {
 
     inline void push_back(DATA_TYPE x)
     {
-      if( capacity == size )
+      if( capacity == size ) 
 	extendStack();
       stack_[size++] = x;
     }
@@ -1091,6 +1102,9 @@ namespace Mistral {
     {
       capacity = n;
       list_ = new VAR_TYPE[capacity];
+      VAR_TYPE x;
+      std::fill(list_, list_+capacity, x);
+      
       offset = 0;
       index_ = new unsigned int[capacity];
       for(unsigned int i=0; i<capacity; ++i) 
@@ -1111,26 +1125,35 @@ namespace Mistral {
 	if(idx < new_lb) new_lb = idx;
 	else if(idx > new_ub) new_ub = idx;
 	
-	unsigned int new_capacity = new_ub=new_lb+1;
-	if(new_capacity < 2*capacity) new_capacity = capacity;
+	unsigned int new_capacity = new_ub-new_lb+1;
+	if(new_capacity < 2*capacity) new_capacity = 2*capacity;
 	
 	unsigned int *aux_index = index_+offset;
 	index_ = new unsigned int[new_capacity];
 	memcpy(index_, aux_index, capacity*sizeof(unsigned int));
+	for(unsigned int i=capacity; i<new_capacity; ++i) 
+	  {
+	    index_[i] = i;
+	  }
 	delete [] aux_index;
 	
 	VAR_TYPE *aux_list = list_;
 	list_ = new VAR_TYPE[new_capacity];
 	memcpy(list_, aux_list, capacity*sizeof(VAR_TYPE));
-	delete [] aux_list;
 
+	VAR_TYPE x;
+	std::fill(list_+capacity, list_+new_capacity, x);
+
+	delete [] aux_list;
+	
 	index_ -= new_lb;
 	capacity = new_capacity;
+	offset = new_lb;
       }
     }
 
     void declare(VAR_TYPE elt) {
-     int idx = elt.id();
+      int idx = elt.id();
       extend(idx);
       
       if(idx < offset || idx >= offset+(int)size) {
@@ -2734,12 +2757,12 @@ namespace Mistral {
 	       (table[i] & ((WORD_TYPE)1 << (elt & CACHE))) );
     }
 
-    inline  bool fastContain(const int elt)const 
+    inline  bool fast_contain(const int elt)const 
     {
       return ( (table[(elt >> EXP)] & ((WORD_TYPE)1 << (elt & CACHE))) );
     }
 
-    inline  bool wordContain(const int elt)const 
+    inline  bool word_contain(const int elt)const 
     {
       return ( (table[neg_words] & ((WORD_TYPE)1 << (elt & CACHE))) );
     }
@@ -3071,7 +3094,7 @@ namespace Mistral {
 
     inline bool operator[](const int i)
     {
-      return fastContain(i);
+      return fast_contain(i);
     }
 
 //     std::string getString() const {  
@@ -3642,6 +3665,7 @@ namespace Mistral {
 
 
 
+
   std::ostream& operator<< (std::ostream& os, const MultiSet& x);
 
   std::ostream& operator<< (std::ostream& os, const IntStack& x);
@@ -3730,48 +3754,48 @@ namespace Mistral {
     return x->display(os);
   }
 
-  template < class DATA_TYPE, int NUM_HEAD > 
-  std::ostream& operator<< (std::ostream& os, const MultiList< DATA_TYPE, NUM_HEAD >* x) {
-    return x->display(os);
-  }
+//   template < class DATA_TYPE, int NUM_HEAD > 
+//   std::ostream& operator<< (std::ostream& os, const MultiList< DATA_TYPE, NUM_HEAD >* x) {
+//     return x->display(os);
+//   }
 
   template< class WORD_TYPE, class FLOAT_TYPE >
   std::ostream& operator<< (std::ostream& os, const Bitset< WORD_TYPE, FLOAT_TYPE >* x) {
     return x->display(os);
   }
 
-  template < class DATA_TYPE, int NUM_HEAD >
-  std::ostream& MultiList< DATA_TYPE, NUM_HEAD >::display(std::ostream& os) const {
-    //for(unsigned int i=0; i<data.size; ++i)
-    //os << data[i];
+//   template < class DATA_TYPE, int NUM_HEAD >
+//   std::ostream& MultiList< DATA_TYPE, NUM_HEAD >::display(std::ostream& os) const {
+//     //for(unsigned int i=0; i<data.size; ++i)
+//     //os << data[i];
     
-    for(int k=0; k<NUM_HEAD; ++k) {
+//     for(int k=0; k<NUM_HEAD; ++k) {
       
-      int min_elt =  NOVAL;
-      int max_elt = -NOVAL;
+//       int min_elt =  NOVAL;
+//       int max_elt = -NOVAL;
       
-      Node< DATA_TYPE > nd = data.stack_[head[k]];
-      while(next(nd)) {
-	if(min_elt > (int)nd) min_elt = (int)nd;
-	if(max_elt < (int)nd) max_elt = (int)nd;
-      }
+//       Node< DATA_TYPE > nd = data.stack_[head[k]];
+//       while(next(nd)) {
+// 	if(min_elt > (int)nd) min_elt = (int)nd;
+// 	if(max_elt < (int)nd) max_elt = (int)nd;
+//       }
       
-      if(min_elt == NOVAL) {
-	min_elt = 0;
-	max_elt = 1;
-      }
+//       if(min_elt == NOVAL) {
+// 	min_elt = 0;
+// 	max_elt = 1;
+//       }
       
-      BitSet tmp(min_elt, max_elt, BitSet::empt);
+//       BitSet tmp(min_elt, max_elt, BitSet::empt);
       
-      nd = data.stack_[head[k]];
-      while(next(nd)) {
-	tmp.add((int)nd);
-      }
+//       nd = data.stack_[head[k]];
+//       while(next(nd)) {
+// 	tmp.add((int)nd);
+//       }
       
-      os << tmp;
-    }
-    return os;
-  }
+//       os << tmp;
+//     }
+//     return os;
+//   }
 
 }
 

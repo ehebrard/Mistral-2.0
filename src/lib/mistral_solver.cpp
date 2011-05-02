@@ -21,7 +21,9 @@
 */
 
 #include <sstream>
+#include <fstream>
 #include <signal.h>
+#include <assert.h>
 
 #include <mistral_search.hpp>
 #include <mistral_solver.hpp>
@@ -82,17 +84,33 @@ int& Mistral::Solution::operator[](Variable x) {
 }
 
 
-Mistral::SolverParameters::SolverParameters() {}
+Mistral::SolverParameters::SolverParameters() {initialise();}
 Mistral::SolverParameters::~SolverParameters() {}
 void Mistral::SolverParameters::initialise() {
-  verbosity = 0;
   find_all = 0;
   node_limit = 0;
   backtrack_limit = 0;
   fail_limit = 0;
   restart_limit = 0;
   limit = 0;
-  time_limit = 0.0;
+
+  verbosity = 0;
+  time_limit = -1;
+  seed = 11041979;
+  restart_policy = GEOMETRIC;
+  restart_base = 200;
+  restart_limit = 200;
+  restart_factor = 1.05;
+  activity_increment = 1e-2;
+  normalize_activity = 0;
+  init_activity = 1;
+  forgetfulness = .75;
+  randomization = 2;
+  shuffle = true;
+  activity_decay = 0.96;
+  checked = true;
+  value_selection = 6;
+  dynamic_value = 1;
 }
 Mistral::SolverParameters::SolverParameters(const SolverParameters& sp) {
   copy(sp);
@@ -108,7 +126,7 @@ void Mistral::SolverParameters::copy(const SolverParameters& sp) {
   time_limit = sp.time_limit;
 }
 
-Mistral::SolverStatistics::SolverStatistics() {}
+Mistral::SolverStatistics::SolverStatistics() { initialise(); }
 Mistral::SolverStatistics::~SolverStatistics() {}
 void Mistral::SolverStatistics::initialise() {
   num_nodes = -1; 
@@ -120,6 +138,12 @@ void Mistral::SolverStatistics::initialise() {
   num_filterings = 0;
   start_time = 0.0;
   end_time = -1.0;
+
+  base_avg_size = 0;
+  learnt_avg_size = 0;
+  literals = 0;
+  small = 0;
+
 }
 std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
   os << " c +=============================================================================+" << std::endl
@@ -346,7 +370,7 @@ void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Ev
 
   if(cons != taboo_constraint) {
     int priority = cons->priority, cons_id = cons->id;
-    if(_set_.fastContain(cons_id)) {
+    if(_set_.fast_contain(cons_id)) {
       if(cons->events.contain(var)) {
 	cons->event_type[var] |= evt;
       } else {
@@ -442,6 +466,70 @@ Mistral::Solver::Solver() {
   save();
 }
 
+void Mistral::Solver::parse_dimacs(const char* filename) {
+  unsigned int LARGENUMBER = 131072;
+  std::ifstream infile( filename );
+  char c=' ';
+  std::string word;
+  int N, M, l=0;
+  //Literal lit;
+  Vector< Literal > new_clause;
+
+  // skip comments
+  infile >> c;
+  while( c != 'p' ) {
+    infile.ignore( LARGENUMBER, '\n' );
+    infile >> c;
+  }
+
+  infile >> word;
+  assert( word == "cnf" );
+  
+  // get number of atoms and clauses
+  infile >> N;
+  infile >> M;
+
+  for(int i=0; i<N; ++i) {
+    Variable x(0,1);
+    add(x);
+  }
+
+  new_clause.initialise(0,N);
+  ConstraintNogoodBase *base = new ConstraintNogoodBase(variables);
+  add(base);
+
+  for(int i=0; i<M; ++i)
+    {
+      new_clause.clear();
+      do {
+	infile >> l;
+	if(l!=0) {
+	  Literal lit((l<0 ? -l : l)-1, 1, (l>0));
+	  new_clause.push_back(lit);
+
+	  //if(params.init_activity == 1)
+	  //activity[lit] += params.activity_increment;
+	}
+      } while(l && infile.good());
+      base->add( new_clause );
+
+      //std::cout << new_clause << std::endl;
+      
+      //if(params.checked) add_original_clause( new_clause );
+    }
+
+  //init_watchers();
+
+//   if(params.normalize_activity != 0)
+//     normalize_activity(params.normalize_activity);
+
+//  std::cout << base << std::endl;
+}
+
+void Mistral::Solver::set_parameters(SolverParameters& p) {
+  parameters = p;
+}
+
 void Mistral::Solver::add(VarArray& x) {
   for(unsigned int i=0; i<x.size; ++i)
     x[i].initialise(this);
@@ -473,6 +561,10 @@ int Mistral::Solver::declare(Variable x) {
 
 void Mistral::Solver::add(Constraint* c) { 
   if(c->id < 0) {
+    if(parameters.verbosity>0) {
+      std::cout << "c add a constraint: " << c << std::endl; 
+    }
+
     c->initialise();
 
     // get a name for the constraint and add it to the list
@@ -494,17 +586,17 @@ void Mistral::Solver::add(Constraint* c) {
     con_trail_.add(level);
   }
 
-
-  //std::cout << "add " << (c->id) << std::endl;
-
   if(!posted_constraints.contain(c->id)) {
     posted_constraints.extend(c->id);
     posted_constraints.add(c->id);
   }
-  //std::cout << posted_constraints << std::endl;
-
 }
 
+Mistral::Outcome Mistral::Solver::solve() {
+  BranchingHeuristic *heu = NULL; 
+  RestartPolicy *pol = NULL;
+  return depth_first_search(variables, heu, pol);
+}
 
 Mistral::Outcome Mistral::Solver::depth_first_search(BranchingHeuristic *heu, 
 						     RestartPolicy *pol) {
@@ -523,14 +615,12 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
     statistics.num_variables = sequence.size;
     statistics.num_values = 0;
     for(unsigned int i=0; i<sequence.size; ++i)
-      //statistics.num_values += variables[sequence[i]].get_size();
       statistics.num_values += sequence[i].get_size();
 
     if(parameters.verbosity) {
       statistics.print_short(std::cout);
       std::cout << std::endl;
     }
-    //std::cout << statistics << std::endl;
 
     ++statistics.num_restarts;
     satisfiability = iterative_dfs();
@@ -785,22 +875,46 @@ void Mistral::Solver::restore(const int lvl) {
   while(lvl < level) restore();
 }
 
+void Mistral::Solver::add(Mistral::RestartListener* l) {
+  l->rid = restart_triggers.size;
+  restart_triggers.add(l);
+}
+void Mistral::Solver::add(Mistral::DecisionListener* l) {
+  l->did = decision_triggers.size;
+  decision_triggers.add(l);
+}
+void Mistral::Solver::add(Mistral::SuccessListener* l) {
+  l->sid = success_triggers.size;
+  success_triggers.add(l);
+}
+void Mistral::Solver::add(Mistral::FailureListener* l) {
+  l->fid = failure_triggers.size;
+  failure_triggers.add(l);
+}
+
+
 void Mistral::Solver::notify_failure() { //Constraint *con, const int idx) {
-//   for(unsigned int i=0; i<failure_listeners.size; ++i) {
-//     failure_listener[i]->notify_failure(con, idx);
-//   }
+  for(unsigned int i=0; i<failure_triggers.size; ++i) {
+    failure_triggers[i]->notify_failure();
+  }
 } 
 
 void Mistral::Solver::notify_success() { //Variable* changes, const int n) {
-//   for(unsigned int i=0; i<success_listeners.size; ++i) {
-//     success_listener[i]->notify_success(con, idx);
-//   }
+  for(unsigned int i=0; i<success_triggers.size; ++i) {
+    success_triggers[i]->notify_success();
+  }
 } 
 
 void Mistral::Solver::notify_decision() { //Decision d) {
-//   for(unsigned int i=0; i<decision_listeners.size; ++i) {
-//     decision_listener[i]->notify_decision(con, idx);
-//   }
+  for(unsigned int i=0; i<decision_triggers.size; ++i) {
+    decision_triggers[i]->notify_decision();
+  }
+} 
+
+void Mistral::Solver::notify_restart() { 
+  for(unsigned int i=0; i<restart_triggers.size; ++i) {
+    restart_triggers[i]->notify_restart();
+  }
 } 
 
 void Mistral::Solver::consolidate() 
@@ -860,7 +974,7 @@ void Mistral::Solver::specialise()
 
       //std::cout << variables[i] << std::endl;
 
-      nd = constraint_graph[i]->first(_value_);
+      nd = constraint_graph[i]->first(_VALUE_);
       while(constraint_graph[i]->next(nd)) {
 	
 	nd.elt.constraint->consolidate();
@@ -1021,7 +1135,7 @@ bool Mistral::Solver::propagate()
 //     for(unsigned int i=0; i<variables.size; ++i) {
 //       o_propag << variables[i] << " in " << variables[i].get_domain() << ": ";
 //       ConstraintNode nd;
-//       nd = constraint_graph[i]->first(_value_);
+//       nd = constraint_graph[i]->first(_VALUE_);
 //       o_propag << "[" ;
 //       while( constraint_graph[i]->next(nd) ) {
 // 	for(unsigned int j=0; j<nd.elt.constraint->scope.size; ++j)
@@ -1207,7 +1321,7 @@ void Mistral::Solver::debug_print() {
 // }
 
  void Mistral::Solver::print_clist(int k) {
-   ConstraintNode nd = constraint_graph[k]->first(_value_);
+   ConstraintNode nd = constraint_graph[k]->first(_VALUE_);
    if(constraint_graph[k]->next(nd)) {
      std::cout << " [ " << nd.elt.constraint->id;
      while( constraint_graph[k]->next(nd) ) 
@@ -1229,7 +1343,7 @@ std::ostream& Mistral::Solver::display(std::ostream& os) {
       os << "(d/" << constraint_graph[i]->degree << ")";
 
     if(!variables[i].is_ground()) {
-      nd = constraint_graph[i]->first(_value_);
+      nd = constraint_graph[i]->first(_VALUE_);
       if(constraint_graph[i]->next(nd)) {
 	os << ": [ " << nd.elt.constraint;
 

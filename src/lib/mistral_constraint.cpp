@@ -23,6 +23,80 @@
 #include <mistral_constraint.hpp>
 
 
+// bool Mistral::Literal::check(Variable x) {
+//   unsigned int mtype = _data_&2;
+//   if(mtype == 0)
+//     return ((_data_&1) ^ (x->)
+// }
+
+bool Mistral::Literal::apply(Variable x) const {
+  unsigned int dat = __data__&3;
+  //std::cout << dat << " " << __value__ << std::endl;
+  if(dat == 1) {
+    return x.set_domain(__value__);
+  } else if(dat == 0) {
+    return x.remove(__value__);
+  } else if(dat == 3) {
+    return x.set_max(__value__);
+  } else {
+    return x.set_min(__value__);
+  }
+}
+
+bool Mistral::Literal::check(const int x) const {
+  unsigned int mtype = __data__&2;
+  if(mtype == 0)
+    // __data__&1 == 1 -> equality
+    return ((__data__&1) == (x==__value__));
+  else
+    // __data__&1 == 1 -> upper bound
+    return ((__data__&1) == (x<=__value__));
+}
+
+bool Mistral::Literal::is_true(Variable x) const {
+  unsigned int mtype = __data__&2;
+  if(mtype == 0)
+    // __data__&1 == 1 -> equality
+    return ((__data__&1) == (x.equal(__value__)));
+  else
+    // __data__&1 == 1 -> upper bound
+    return ((__data__&1) == (x.get_max()<=__value__));
+}
+
+bool Mistral::Literal::is_false(Variable x) const {
+  unsigned int mtype = __data__&2;
+  if(mtype == 0)
+    // __data__&1 == 1 -> equality
+    return ((__data__&1) != (x.contain(__value__)));
+  else
+    // __data__&1 == 1 -> upper bound
+    return ((__data__&1) != (x.get_min()>__value__));
+}
+
+std::ostream& Mistral::Literal::display(std::ostream& os) const {
+  unsigned int dat = __data__&3;
+  if(dat == 0) {
+    if(__value__==0) 
+      os << "x" << get_atom() ;
+    else if(__value__==1)
+      os << "~x" << get_atom() ;
+    else
+      os << "x" << get_atom() << "!=" << __value__;
+  } else if(dat == 1) {
+      if(__value__==0) 
+      os << "~x" << get_atom() ;
+    else if(__value__==1)
+      os << "x" << get_atom() ;
+    else
+      os << "x" << get_atom() << "=" << __value__;
+  } else if(dat == 2) {
+    os << "x" << get_atom() << "<" << __value__+1;
+  } else {
+    os << "x" << get_atom() << ">" << __value__;
+  }
+  return os;
+}
+
 Mistral::Constraint::Constraint() {
   stress = 1;
   priority = 2;
@@ -69,7 +143,7 @@ void Mistral::Constraint::initialise() {
 
   std::fill(event_type, event_type+scope.size, NO_EVENT);
   std::fill(self, self+scope.size, -1);
-  std::fill(trigger, trigger+scope.size, _domain_);
+  std::fill(trigger, trigger+scope.size, _DOMAIN_);
   std::fill(solution, solution+scope.size, 0);
 
   active.initialise(0, scope.size-1, true);
@@ -169,7 +243,7 @@ void Mistral::Constraint::relax() {
       
       bool is_in = false;
       ConstraintNode nd;
-      nd = solver->constraint_graph[k]->first(_value_);
+      nd = solver->constraint_graph[k]->first(_VALUE_);
       while( !is_in && solver->constraint_graph[k]->next(nd) ) {
 	std::cout << " " << nd.elt.constraint;
 	is_in = (nd.elt.constraint->id == id);
@@ -230,12 +304,12 @@ void Mistral::Constraint::relax() {
 
 // 	ConstraintNode nd;
 // 	std::cout << std::endl;
-// 	nd = solver->constraint_graph[j]->first(_value_);
+// 	nd = solver->constraint_graph[j]->first(_VALUE_);
 // 	while( solver->constraint_graph[j]->next(nd) ) {
 // 	  std::cout << " " << nd.elt.constraint;
 // 	}
 // 	std::cout << std::endl;
-// 	nd = solver->constraint_graph[j]->first(_value_);
+// 	nd = solver->constraint_graph[j]->first(_VALUE_);
 // 	while( solver->constraint_graph[j]->next(nd) ) {
 // 	  std::cout << " " << nd.prev;
 // 	}
@@ -320,15 +394,15 @@ bool Mistral::Constraint::findSupport(const int vri, const int vli)
 std::ostream& Mistral::Constraint::display(std::ostream& os) const {
   os << name() << "(" << scope[0];
   for(unsigned int i=1; i<scope.size; ++i)
-    os << ", " << scope[1];
+    os << ", " << scope[i];
   os << ")";
   return os;
 }
 
 void Mistral::ConstraintNotEqual::initialise() {
   Constraint::initialise();
-  trigger_on(_value_, 0);
-  trigger_on(_value_, 1);
+  trigger_on(_VALUE_, 0);
+  trigger_on(_VALUE_, 1);
   set_idempotent(true);
 }
 
@@ -352,8 +426,8 @@ std::ostream& Mistral::ConstraintNotEqual::display(std::ostream& os) const {
 
 void Mistral::ConstraintEqual::initialise() {
   Constraint::initialise();
-  trigger_on(_domain_, 0);
-  trigger_on(_domain_, 1);
+  trigger_on(_DOMAIN_, 0);
+  trigger_on(_DOMAIN_, 1);
   set_idempotent(true);
 }
 
@@ -387,7 +461,7 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
       // x[j] <- x[1-j]
       
       ConstraintNode nd;
-      nd = solver->constraint_graph[k[j]]->first(_value_);
+      nd = solver->constraint_graph[k[j]]->first(_VALUE_);
       while( solver->constraint_graph[k[j]]->next(nd) ) {	
 	nd.elt.constraint->relax();
 	nd.elt.constraint->scope[nd.elt.index] = scope[1-j];
@@ -437,8 +511,8 @@ std::ostream& Mistral::ConstraintEqual::display(std::ostream& os) const {
 
 void Mistral::PredicateUpperBound::initialise() {
   Constraint::initialise();
-  trigger_on(_range_, 0);
-  trigger_on(_value_, 1);
+  trigger_on(_RANGE_, 0);
+  trigger_on(_VALUE_, 1);
   set_idempotent(false);
 }
 
@@ -472,8 +546,8 @@ std::ostream& Mistral::PredicateUpperBound::display(std::ostream& os) const {
 
 void Mistral::PredicateLowerBound::initialise() {
   Constraint::initialise();
-  trigger_on(_range_, 0);
-  trigger_on(_value_, 1);
+  trigger_on(_RANGE_, 0);
+  trigger_on(_VALUE_, 1);
   set_idempotent(false);
 }
 
@@ -506,9 +580,9 @@ std::ostream& Mistral::PredicateLowerBound::display(std::ostream& os) const {
 
 void Mistral::PredicateLess::initialise() {
   Constraint::initialise();
-  trigger_on(_range_, 0);
-  trigger_on(_range_, 1);
-  trigger_on(_value_, 2);
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
+  trigger_on(_VALUE_, 2);
   set_idempotent(false);
 }
 
@@ -549,8 +623,8 @@ std::ostream& Mistral::PredicateLess::display(std::ostream& os) const {
 
 void Mistral::ConstraintLess::initialise() {
   Constraint::initialise();
-  trigger_on(_range_, 0);
-  trigger_on(_range_, 1);
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
   set_idempotent(true);
 }
 
@@ -594,10 +668,20 @@ std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
   return os;
 }
 
+Mistral::ConstraintDisjunctive::ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
+  processing_time[0] = p0; 
+  processing_time[1] = p1;
+  
+  precedence[0] = new ConstraintLess(scope, processing_time[0]);
+  precedence[1] = new ConstraintLess(processing_time[1]);
+  precedence[1]->add(scope[1]);
+  precedence[1]->add(scope[0]);
+}
+
 void Mistral::ConstraintDisjunctive::initialise() {
   Constraint::initialise();
-  trigger_on(_range_, 0);
-  trigger_on(_range_, 1);
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
   set_idempotent(true);
   stress = 0;
 }
@@ -686,9 +770,9 @@ std::ostream& Mistral::ConstraintDisjunctive::display(std::ostream& os) const {
 
 void Mistral::PredicateEqual::initialise() {
   Constraint::initialise();
-  trigger_on(_domain_, 0);
-  trigger_on(_domain_, 1);
-  trigger_on(_value_, 2);
+  trigger_on(_DOMAIN_, 0);
+  trigger_on(_DOMAIN_, 1);
+  trigger_on(_VALUE_, 2);
   set_idempotent(false);
 }
 
@@ -764,8 +848,8 @@ std::ostream& Mistral::PredicateEqual::display(std::ostream& os) const {
 
 void Mistral::PredicateConstantEqual::initialise() {
   Constraint::initialise();
-  trigger_on(_domain_, 0);
-  trigger_on(_value_, 1);
+  trigger_on(_DOMAIN_, 0);
+  trigger_on(_VALUE_, 1);
   set_idempotent(false);
 }
 
@@ -809,7 +893,7 @@ std::ostream& Mistral::PredicateConstantEqual::display(std::ostream& os) const {
 void Mistral::PredicateOffset::initialise() {
   Constraint::initialise();
   for(int i=0; i<2; ++i)
-    trigger_on(_range_, i);
+    trigger_on(_RANGE_, i);
   set_idempotent(false);
 }
 
@@ -832,7 +916,7 @@ std::ostream& Mistral::PredicateOffset::display(std::ostream& os) const {
 void Mistral::PredicateNot::initialise() {
   Constraint::initialise();
   for(int i=0; i<2; ++i)
-    trigger_on(_value_, i);
+    trigger_on(_VALUE_, i);
   set_idempotent(false);
 }
 
@@ -865,7 +949,7 @@ std::ostream& Mistral::PredicateNot::display(std::ostream& os) const {
 void Mistral::PredicateAnd::initialise() {
   Constraint::initialise();
   for(int i=0; i<3; ++i)
-    trigger_on(_value_, i);
+    trigger_on(_VALUE_, i);
   set_idempotent(false);
 }
 
@@ -905,7 +989,7 @@ std::ostream& Mistral::PredicateAnd::display(std::ostream& os) const {
 void Mistral::PredicateOr::initialise() {
   Constraint::initialise();
   for(int i=0; i<3; ++i)
-    trigger_on(_value_, i);
+    trigger_on(_VALUE_, i);
   set_idempotent(false);
 }
 
@@ -957,7 +1041,7 @@ std::ostream& Mistral::PredicateOr::display(std::ostream& os) const {
 void Mistral::ConstraintAnd::initialise() {
   Constraint::initialise();
   for(int i=0; i<2; ++i)
-    trigger_on(_range_, i);
+    trigger_on(_RANGE_, i);
   set_idempotent(false);
 }
 
@@ -980,7 +1064,7 @@ std::ostream& Mistral::ConstraintAnd::display(std::ostream& os) const {
 void Mistral::ConstraintOr::initialise() {
   Constraint::initialise();
   for(int i=0; i<2; ++i)
-    trigger_on(_range_, i);
+    trigger_on(_RANGE_, i);
   set_idempotent(true);
 }
 
@@ -1003,9 +1087,9 @@ std::ostream& Mistral::ConstraintOr::display(std::ostream& os) const {
 
 void Mistral::PredicateAdd::initialise() {
   Constraint::initialise();
-  trigger_on(_range_, 0);
-  trigger_on(_range_, 1);
-  trigger_on(_range_, 2);
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
+  trigger_on(_RANGE_, 2);
   set_idempotent(true);
 }
 
@@ -1050,7 +1134,7 @@ Mistral::ConstraintBoolSumEqual::ConstraintBoolSumEqual(Vector< Variable >& scp,
 void Mistral::ConstraintBoolSumEqual::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i)
-    trigger_on(_value_, i);
+    trigger_on(_VALUE_, i);
   set_idempotent(true);
 }
 
@@ -1102,7 +1186,7 @@ Mistral::ConstraintCliqueNotEqual::ConstraintCliqueNotEqual(Vector< Variable >& 
 void Mistral::ConstraintCliqueNotEqual::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_value_, i);
+    trigger_on(_VALUE_, i);
   }
   set_idempotent(true);
 }
@@ -1186,7 +1270,7 @@ Mistral::ConstraintAllDiff::ConstraintAllDiff(Vector< Variable >& scp)
 void Mistral::ConstraintAllDiff::initialise() {
   Constraint::initialise();
   for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_range_, i);
+    trigger_on(_RANGE_, i);
   }
   set_idempotent(true);
   init();
@@ -1518,10 +1602,428 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
   return os;
 }
 
+
+// Mistral::ConstraintNogoodBase::ConstraintNogoodBase(Vector< Variable >& scp) 
+//   : Constraint(scp) { }
+
+// void Mistral::ConstraintNogoodBase::mark_domain() {
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     solver->mark_non_convex(scope[i].id());
+//   }
+// }
+
+// void Mistral::ConstraintNogoodBase::initialise() {
+//   Constraint::initialise();
+//   //int min_idx = INFTY;
+//   //int max_idx = -INFTY;
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     //if(scope[i].get_id() > max_idx) max_idx = scope[i].get_id();
+//     //if(scope[i].get_id() < min_idx) min_idx = scope[i].get_id();
+//     trigger_on(_VALUE_, i);
+//   }
+//   set_idempotent(true);
+
+//   //if(// min_idx < 
+//   //max_idx) {
+//   watch_structure.initialise(0,scope.size);
+//     //}
+
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     //add(scope[i]);
+//     watch_structure[i] = new Vector< Array< Literal >* > [scope[i].get_size()];
+//     watch_structure[i]-=scope[i].get_min();
+//   }
+// }
+
+// Mistral::ConstraintNogoodBase::~ConstraintNogoodBase() {
+// }
+
+// void Mistral::ConstraintNogoodBase::add(Variable x) {
+//   unsigned int idx = x.id();
+//   if(idx >= scope.size) {
+//     while(scope.capacity <= idx)
+//       scope.extendStack();
+//     scope[idx] = x;
+//     while(watch_structure.capacity <= idx)
+//       watch_structure.extendStack();
+//   }
+// }
+
+// void Mistral::ConstraintNogoodBase::add( Vector < Literal >& clause ) {
+//  if(clause.size > 1) {
+//    Array<Literal> *cl = Array<Literal>::Array_new(clause);
+//    nogood.add( cl );
+//    // std::cout << clause[0].get_atom() << " " << (1-clause[0].get_value()) << std::endl;
+//    // std::cout << watch_structure[clause[0].get_atom()][1-clause[0].get_value()] << std::endl;
+
+//    watch_structure[clause[0].get_atom()][1-clause[0].get_value()].add(cl);
+//    watch_structure[clause[1].get_atom()][1-clause[1].get_value()].add(cl);
+//  } else {
+//    clause[0].apply(scope[clause[0].get_atom()]);
+//  }
+// }
+
+// int Mistral::ConstraintNogoodBase::check( const int* sol ) const {
+//   unsigned int i, j;
+//   bool satisfied=true;
+
+//   for(i=0; i<nogood.size; ++i) {
+//     satisfied = true;
+//     Array < Literal >& clause = *(nogood[i]);
+//     for(j=0; satisfied && j<clause.size; ++j) {
+//       satisfied = clause[j].check(sol[j]);
+//     }
+//   }
+  
+//   return !satisfied;
+// }
+
+// Mistral::PropagationOutcome Mistral::ConstraintNogoodBase::propagate() {
+//   Array< Literal > *conflict=NULL;
+
+//   int x, v, cw;
+//   Literal p;
+//   //unsigned int i;
+//   while( !changes.empty() ) {
+//     std::cout << changes << std::endl;
+//     //std::cout << scope << std::endl;
+//     x = changes.pop();
+//     //std::cout << scope[x] << " in " << scope[x].get_domain() << std::endl;
+//     v = scope[x].get_min();
+//     std::cout << x << "=" << v << ": " << watch_structure[x][v] << std::endl;
+
+//     p = Literal(x,EQ,v);
+
+
+//     cw = watch_structure[x][v].size;
+//     while(cw-- && !conflict) {
+//       conflict = update_watcher(cw, x, v);
+//     }
+//   }
+
+//   return CONSISTENT;
+// }
+
+
+// inline Array< Literal >* SatSolver::update_watcher(const int cw, const int x, const int v)
+// {
+//   Array< Literal > *cl = watch_structure[x][v][cw];
+//   Array< Literal >& clause = *cl;
+
+
+//   unsigned int j;
+//   Lit q, r;
+//   Atom v, w;
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//   std::cout << " ";
+//   print_clause( std::cout, watch_structure[p][cw] );
+//   std::cout << std::endl;
+// #endif
+
+//   //ensure that p is the second watched lit
+//   if( clause[1] != p ) {
+//     q = clause[1];
+//     clause[0] = q;
+//     clause[1] = p;
+//   } else q = clause[0];
+//   v=state[UNSIGNED(q)];
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//    std::cout << " second watched: ";
+//    printLiteral(std::cout, q);
+//    std::cout << std::endl;
+
+//    if( LEVEL(v) < assumptions.size && SIGN(v) == SIGN(q) ) {
+//      for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//      std::cout << " satisfied by second watched" << std::endl;
+//    }
+// #endif
+
+//   //check if the other watched lit is assigned
+//   if( LEVEL(v) >= assumptions.size || SIGN(v) != SIGN(q) ) {
+//     for(j=2; j<clause.size; ++j) {
+//       // for each literal q of the clause,
+//       r = clause[j];
+//       w = state[UNSIGNED(r)];
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//        std::cout << "\tcheck another lit: ";
+//        printLiteral(std::cout, r);
+//        std::cout << std::endl;
+// #endif
+
+//       if( LEVEL(w) >= assumptions.size ) { // this literal is not set
+// 	// then it is a good candidate to replace p
+// 	clause[1] = r;
+// 	clause[j] = p;
+// 	watch_structure[p].remove(cw);
+// 	watch_structure[r].add(cl);
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	std::cout << " new watched" << std::endl;
+// #endif
+
+// 	break;	
+//       }
+//       // if it is set true, then the clause is satisfied
+//       else if( SIGN(w) == SIGN(r) ) {
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	std::cout << " satisfied" << std::endl;
+// #endif
+
+// 	break;
+//       }
+//     }
+      
+//     if( j == clause.size ) // no replacement could be found
+//       { 
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	std::cout << " no more watched" << std::endl;
+// #endif
+
+// 	if( LEVEL(v) >= assumptions.size ) {
+// 	  // the last literal (other watched lit) is not set yet, we set it
+// 	  add_lit(q);
+// 	  reason[UNSIGNED(q)] = cl;
+
+// 	  //#ifdef _DEBUGNOGOOD
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	  std::cout //<< "unit prune disjunct b" << y 
+// 	    << " because ";
+// 	  print_clause( std::cout, cl );
+// 	  std::cout << std::endl;
+// #endif
+
+// 	  //	  std::cout << " prop " << q << std::endl;
+	  
+// 	} else 
+// 	  // it is set to false already, we fail
+// 	  if( // polarity[y] == -q
+// 	     SIGN(v) != SIGN(q)
+// 	      ) {
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	    std::cout << " fail" << std::endl;
+// #endif
+
+// 	    return cl;
+// 	  }
+//       }
+//   }
+
+//   return NULL;
+// }
+
+
+
+
+// std::ostream& Mistral::ConstraintNogoodBase::display(std::ostream& os) const {
+//   os << " (";
+//   if(nogood.size>0) {
+//     os << nogood[0];
+//     for(unsigned int i=1; i<nogood.size; ++i)
+//       os << " " << nogood[i]  ;
+//   }
+//   os << ")";
+//   return os;
+// }
+
+
+
+Mistral::ConstraintClauseBase::ConstraintClauseBase(Vector< Variable >& scp) 
+  : Constraint(scp) { }
+
+void Mistral::ConstraintClauseBase::mark_domain() {
+  for(unsigned int i=0; i<scope.size; ++i) {
+    solver->mark_non_convex(scope[i].id());
+  }
+}
+
+void Mistral::ConstraintClauseBase::initialise() {
+  Constraint::initialise();
+  for(unsigned int i=0; i<scope.size; ++i) {
+    trigger_on(_VALUE_, i);
+  }
+  set_idempotent(true);
+
+  is_watched_by.initialise(0,2*scope.size);
+
+
+  // for(unsigned int i=0; i<scope.size; ++i) {
+  //   is_watched_by[i] = new Vector< Clause* >;
+  //   is_watched_by[i]-=scope[i].get_min();
+  // }
+}
+
+Mistral::ConstraintClauseBase::~ConstraintClauseBase() {
+}
+
+void Mistral::ConstraintClauseBase::add(Variable x) {
+  unsigned int idx = x.id();
+  if(idx == scope.size) {
+    scope.add(x);
+    while(is_watched_by.capacity <= 2*idx)
+      is_watched_by.extendStack();
+  } else if(idx > scope.size) {
+    while(scope.capacity <= idx)
+      scope.extendStack();
+    scope[idx] = x;
+    while(is_watched_by.capacity <= idx)
+      is_watched_by.extendStack();
+  }
+}
+
+void Mistral::ConstraintClauseBase::add( Vector < Literal >& clause ) {
+ if(clause.size > 1) {
+   Clause *cl = Clause::Array_new(clause);
+   clause.add( cl );
+   is_watched_by[clause[0]].add(cl);
+   is_watched_by[clause[1]].add(cl);
+ } else {
+   scope[UNSIGNED(clause[0])].set_domain(SIGN(clause[0]));
+ }
+}
+
+int Mistral::ConstraintClauseBase::check( const int* sol ) const {
+  unsigned int i, j;
+  bool satisfied=true;
+
+  for(i=0; i<clause.size; ++i) {
+    satisfied = true;
+    Clause& clause = *(clause[i]);
+    for(j=0; satisfied && j<clause.size; ++j) {
+      satisfied = //clause[j].check(sol[j]);
+	(sol[j] == SIGN(clause[j]));
+    }
+  }
+  
+  return !satisfied;
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
+  Clause *conflict=NULL;
+
+
+  int x, v, cw;
+  Lit p;
+  //unsigned int i;
+  while( !changes.empty() ) {
+    std::cout << changes << std::endl;
+    //std::cout << scope << std::endl;
+    x = changes.pop();
+    //std::cout << scope[x] << " in " << scope[x].get_domain() << std::endl;
+    v = scope[x].get_min();
+    std::cout << x << "=" << v << ": " << is_watched_by[x][v] << std::endl;
+
+    p = 2*x+v;
+
+    cw = is_watched_by[p].size;
+    while(cw-- && !conflict) {
+      conflict = update_watcher(cw, p);
+    }
+  }
+
+  return CONSISTENT;
+}
+
+
+inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
+{
+  Clause *cl = is_watched_by[p][cw];
+  Clause& clause = *cl;
+
+  unsigned int j;
+  Lit q, r;
+  //Atom v, w;
+  Variable v, w;
+
+  //ensure that p is the second watched lit
+  if( clause[1] != p ) {
+    q = clause[1];
+    clause[0] = q;
+    clause[1] = p;
+  } else q = clause[0];
+  v=scope[UNSIGNED(q)].;
+
+
+  //check if the other watched lit is assigned
+  //if( LEVEL(v) >= assumptions.size || SIGN(v) != SIGN(q) ) {
+  if( !v.is_ground() || v.get_min() != SIGN(q) ) {
+    for(j=2; j<clause.size; ++j) {
+      // for each literal q of the clause,
+      r = clause[j];
+      w = scope[UNSIGNED(r)];
+
+      if( !w.is_ground() ) { // this literal is not set
+	// then it is a good candidate to replace p
+	clause[1] = r;
+	clause[j] = p;
+	is_watched_by[p].remove(cw);
+	is_watched_by[r].add(cl);
+
+	break;	
+      }
+      // if it is set true, then the clause is satisfied
+      else if( w.get_min() == SIGN(r) ) {
+	break;
+      }
+    }
+      
+    if( j == clause.size ) // no replacement could be found
+      { 
+	if( !v,is_ground() ) {
+	  // the last literal (other watched lit) is not set yet, we set it
+	  add_lit(q);
+	  //reason[UNSIGNED(q)] = cl;
+	} else 
+	  // it is set to false already, we fail
+	  if( v.get_min() != SIGN(q) ) {
+	    return cl;
+	  }
+      }
+  }
+
+  return NULL;
+}
+
+
+
+
+std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
+  os << " (";
+  if(clauses.size>0) {
+    os << clauses[0];
+    for(unsigned int i=1; i<clauses.size; ++i)
+      os << " " << clauses[i]  ;
+  }
+  os << ")";
+  return os;
+}
+
+
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint* x) {
+  return x->display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Literal& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Literal* x) {
   return x->display(os);
 }

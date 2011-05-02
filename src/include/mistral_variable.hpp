@@ -197,14 +197,14 @@ namespace Mistral {
     inline int get_minPosAbs() const {
       if( domain.max < 0 ) return NOVAL;
       if( domain.min > 0 ) return domain.min;
-      if( domain.values.fastContain(0) ) return 0;
+      if( domain.values.fast_contain(0) ) return 0;
       return domain.values.next( 0 );
     }
     /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
     inline int get_minNegAbs() const  {
       if( domain.min > 0 ) return NOVAL;
       if( domain.max < 0 ) return domain.max;
-      if( domain.values.fastContain(0) ) return 0;
+      if( domain.values.fast_contain(0) ) return 0;
       return domain.values.prev( 0 );
     } 
     /// Return the smallest value currently in the domain that is strictly greater than "v"
@@ -220,7 +220,7 @@ namespace Mistral {
     /// Whether or not the Variable is bound to a given ground value
     inline bool equal(const int v) const { return (domain.min == v && domain.max == v); }
     /// Whether the value "v" is currently contained in the domain
-    inline bool contain(const int v) const { return (domain.min <= v && domain.max >= v && domain.values.fastContain(v)); }
+    inline bool contain(const int v) const { return (domain.min <= v && domain.max >= v && domain.values.fast_contain(v)); }
 
     /// Whether the domain has a nonempty intersection with the interval [l..u]
     inline bool intersect(const int lo, const int up) const { return (domain.min <= up && domain.max >= lo); }
@@ -1000,7 +1000,7 @@ namespace Mistral {
 //    void initialise(Solver *s);
 
     Event setValue( const int val );    
-    Event setDomain( const int vals );    
+    Event setState( const int vals );    
     inline int id() const {return variable->id;}
     inline Solver* get_solver() {return variable->solver;}
 
@@ -1140,6 +1140,10 @@ namespace Mistral {
     inline int type() const {return _data_&3; }
     inline int value() const {return _data_>>2; }
     
+    Decision() {
+      init_data(ASSIGNMENT,NOVAL);
+    }
+
     Decision(Variable x, const int t, const int v) {
       init_data(t,v);
       var = x;

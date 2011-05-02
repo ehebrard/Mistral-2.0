@@ -257,7 +257,7 @@ Mistral::Event Mistral::Variable::setValue( const int val )
 }
 
 
-Mistral::Event Mistral::Variable::setDomain( const int vals ) 
+Mistral::Event Mistral::Variable::setState( const int vals ) 
 {
   // vals should be 1, 2 or 3
 
@@ -658,7 +658,7 @@ std::string Mistral::Variable::get_domain() const {
     else if(domain_type ==   EXPRESSION) return expression->self.set_domain(s);
     else {
       //return ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
-      return ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : setDomain(s.table[0]&*bool_domain));
+      return ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : setState(s.table[0]&*bool_domain));
     }
   }
 

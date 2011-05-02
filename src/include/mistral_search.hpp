@@ -32,8 +32,34 @@
 
 namespace Mistral {
 
-
   class Solver;
+
+  class RestartListener {
+  public:
+    int rid;
+    virtual void notify_restart() = 0;
+  };
+
+  class DecisionListener {
+  public:
+    int did;
+    virtual void notify_decision() = 0;
+  };
+
+  class SuccessListener {
+  public:
+    int sid;
+    virtual void notify_success() = 0;
+  };
+
+  class FailureListener {
+  public:
+    int fid;
+    virtual void notify_failure() = 0;
+  };
+
+
+
   class RestartPolicy {
     
   public:

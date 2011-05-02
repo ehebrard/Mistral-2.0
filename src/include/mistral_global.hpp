@@ -45,8 +45,9 @@ namespace Mistral {
   typedef int PropagationOutcome;
   
   
-#define GEOMETRIC 0
-#define LUBY 1
+#define NORESTART 0
+#define GEOMETRIC 1
+#define LUBY 2
 
 #define INFTY  NOVAL
 #define MAXINT NOVAL
@@ -127,9 +128,9 @@ namespace Mistral {
 #define FAILURE(x) x
 #define CONSISTENT -1
   
-#define _value_ 0
-#define _range_ 1
-#define _domain_ 2
+#define _VALUE_ 0
+#define _RANGE_ 1
+#define _DOMAIN_ 2
 
 #define EVENT_TYPE(e) (2-(RANGE_CHANGED(e))-(ASSIGNED(e)))
 

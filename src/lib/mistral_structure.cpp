@@ -23,13 +23,6 @@
 #include <mistral_structure.hpp>
 
 
-// std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BitSet& s) {
-//   return (os << (std::string)s);
-// }
-
-// std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BinaryMinHeap& x) {
-//   return x.display(os);
-// }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack& x) {
   return x.display(os);
@@ -43,9 +36,6 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet& x)
   return x.display(os);
 }
 
-// std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BinaryMinHeap* x) {
-//   return x->display(os);
-// }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack* x) {
   return x->display(os);

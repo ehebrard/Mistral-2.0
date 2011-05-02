@@ -31,6 +31,7 @@
 #include <mistral_global.hpp>
 #include <mistral_backtrack.hpp>
 #include <mistral_structure.hpp>
+#include <mistral_sat.hpp>
 
 
 #ifndef __CONSTRAINT_HPP
@@ -363,16 +364,16 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     ConstraintDisjunctive() : Constraint() {}
-    ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1) 
-      : Constraint(scp) { 
-      processing_time[0] = p0; 
-      processing_time[1] = p1;
+    ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1); 
+//       : Constraint(scp) { 
+//       processing_time[0] = p0; 
+//       processing_time[1] = p1;
 
-      precedence[0] = new ConstraintLess(scope, processing_time[0]);
-      precedence[1] = new ConstraintLess(processing_time[1]);
-      precedence[1]->add(scope[1]);
-      precedence[1]->add(scope[0]);
-    }
+//       precedence[0] = new ConstraintLess(scope, processing_time[0]);
+//       precedence[1] = new ConstraintLess(processing_time[1]);
+//       precedence[1]->add(scope[1]);
+//       precedence[1]->add(scope[0]);
+//     }
     virtual Constraint *clone() { return new ConstraintDisjunctive(scope, processing_time[0], processing_time[1]); }
     virtual void initialise();
     virtual ~ConstraintDisjunctive() {}
@@ -858,60 +859,143 @@ namespace Mistral {
     //@}
   };
 
+  #define NE 0
+  #define EQ 1
+  #define GT 2
+  #define LE 3
 
   class Literal {
 
   public:
     
-    unsigned int _data_;
-    
-    inline unsigned int get_type() {
-      // 0 -> equality
-      // 1 -> inequality
-      // 2 -> upper bound
-      // 3 -> lower bound
-      return (_data_&3);
+    unsigned int __data__;
+    int __value__;
+
+    Literal() {
+      __data__ = 0;
+      __value__ = 0;
+    }
+    Literal(const int id, const int tp=EQ, const int va=1) {
+      __value__ = va;
+      __data__ = tp + (id*4);
     }
 
-    inline unsigned int get_atom() {
-      return _data_/4;
+    virtual ~Literal() {
+    }
+    
+    inline unsigned int get_type() const {
+      // 0 -> inequality
+      // 1 -> equality
+      // 2 -> lower bound
+      // 3 -> upper bound
+      return (__data__&3);
+    }
+
+    inline unsigned int get_atom() const {
+      return __data__/4;
+    }
+
+    inline int get_value() const {
+      return __value__;
     }
 
     inline void invert() {
-      _data_^=1;
+      __data__^=1;
     }
-    
+
+    bool check(const int x) const;
+
+    bool is_true(Variable x) const;
+
+    bool is_false(Variable x) const;
+
+    bool apply(Variable x) const;
+
+    std::ostream& display(std::ostream&) const ;
+
   };
 
 
+  // /***********************************************
+  //  * NogoodBase Constraint (forward checking).
+  //  ***********************************************/
+  // /*! \class ConstraintNogoodBase
+  //   \brief   Constraint.
+  // */
+  // class ConstraintNogoodBase : public Constraint {
+
+  // public:
+
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   // minimum values, used as an offset when accessing the base
+  //   //Vector< int > minimums;
+  //   int* minimums;
+  //   // list of nogoods
+  //   Vector< Array < Literal >* > nogood;
+  //   // the watched literals data structure
+  //   Vector< Vector< Array < Literal >* >* > watch_structure;
+  //   //@}
+    
+  //   /**@name Constructors*/
+  //   //@{
+  //   ConstraintNogoodBase() : Constraint() {}
+  //   ConstraintNogoodBase(Vector< Variable >& scp);
+  //   virtual void mark_domain();
+  //   virtual Constraint *clone() { return new ConstraintNogoodBase(scope); }
+  //   virtual void initialise();
+  //   virtual ~ConstraintNogoodBase();
+    
+  //   void add( Variable x );
+  //   void add( Vector < Literal >& clause );
+  //   //@}
+
+  //   /**@name Solving*/
+  //   //@{
+  //   virtual int check( const int* sol ) const ;
+  //   virtual PropagationOutcome propagate();
+  //   //virtual PropagationOutcome rewrite();
+  //   //@}
+
+  //   /**@name Miscellaneous*/
+  //   //@{  
+  //   virtual std::ostream& display(std::ostream&) const ;
+  //   virtual std::string name() const { return "nogood_base"; }
+  //   //@}
+    
+  // };
+
+
   /***********************************************
-   * AllDifferent Constraint (forward checking).
+   * NogoodBase Constraint (forward checking).
    ***********************************************/
   /*! \class ConstraintNogoodBase
-    \brief  Clique of NotEqual Constraint.
+    \brief   Constraint.
   */
-  class ConstraintNogoodBase : public Constraint {
+  class ConstraintClauseBase : public Constraint {
 
   public:
 
     /**@name Parameters*/
     //@{ 
-    // minimum values, used as an offset when accessing the base
-    int *minimums;
-    // list of nogoods
-    Vector< Array < Literal >* > nogood;
+    Vector< Clause* > reason;
+    // list of clauses
+    Vector< Clause* > clauses;
     // the watched literals data structure
-    Vector< Array < Literal >* > **watched_values;
+    Vector< Vector< Clause* > > is_watched_by;
     //@}
     
     /**@name Constructors*/
     //@{
-    ConstraintNogoodBase() : Constraint() {}
-    ConstraintNogoodBase(Vector< Variable >& scp);
+    ConstraintClauseBase() : Constraint() {}
+    ConstraintClauseBase(Vector< Variable >& scp);
     virtual void mark_domain();
-    virtual Constraint *clone() { return new ConstraintNogoodBase(scope); }
+    virtual Constraint *clone() { return new ConstraintClauseBase(scope); }
     virtual void initialise();
-    virtual ~ConstraintNogoodBase();
+    virtual ~ConstraintClauseBase();
+    
+    void add( Variable x );
+    void add( Vector < Literal >& clause );
     //@}
 
     /**@name Solving*/
@@ -923,8 +1007,8 @@ namespace Mistral {
 
     /**@name Miscellaneous*/
     //@{  
-    //virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "nogood_base"; }
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "clause_base"; }
     //@}
     
   };
@@ -1210,7 +1294,7 @@ namespace Mistral {
     inline void trigger(Constraint* cons, const int var, const Event evt)//;
     {
       int priority = cons->priority, cons_id = cons->id;
-      if(_set_.fastContain(cons_id)) {
+      if(_set_.fast_contain(cons_id)) {
 	if(cons->events.contain(var)) {
 	  cons->event_type[var] |= evt;
 	} else {
@@ -1250,6 +1334,8 @@ namespace Mistral {
 
   std::ostream& operator<< (std::ostream& os, const Constraint& x);
   std::ostream& operator<< (std::ostream& os, const Constraint* x);
+  std::ostream& operator<< (std::ostream& os, const Literal& x);
+  std::ostream& operator<< (std::ostream& os, const Literal* x);
 
 
 }

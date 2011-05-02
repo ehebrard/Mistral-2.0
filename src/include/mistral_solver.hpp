@@ -66,7 +66,10 @@ namespace Mistral {
     void initialise();
     void copy(const SolverParameters&);
 
-    /// level of verbosity
+    /// random seed
+    int seed;
+
+    /// degree of verbosity
     int verbosity;
     /// Number of solutions to find, if equal to -1, then all solutions are listed
     int find_all;
@@ -84,6 +87,33 @@ namespace Mistral {
 
     /// Limit on cpu time
     double time_limit;  
+
+    /// restart policy settings 
+    int restart_policy;
+    /// restart policy settings (base limit)
+    unsigned int restart_base;
+    /// restart policy settings (geometric increment)
+    double restart_factor;
+
+    /// type of randomization
+    unsigned int randomization;
+    /// variables sequence shuffle between restarts
+    bool shuffle;
+
+    /// whether solutions are checked
+    bool checked;
+
+
+    /////// PARAMETERS FOR SAT SOLVING ///////
+    double            activity_increment;
+    double            normalize_activity;
+    int               init_activity;
+    double            forgetfulness;
+    double            activity_decay;
+
+    int               value_selection;
+    int               dynamic_value;
+
   };
 
   class SolverStatistics {
@@ -125,6 +155,12 @@ namespace Mistral {
     double start_time;
     /// timestamp
     double end_time;
+
+    /////// STATISTICS FOR SAT SOLVING ///////
+    unsigned int      literals;
+    unsigned int      small;
+    double            base_avg_size;
+    double            learnt_avg_size;
 
     //virtual std::string getString() const;
     virtual std::ostream& display(std::ostream&) const ;
@@ -219,6 +255,10 @@ namespace Mistral {
   */
   //typedef Varstack< ConstraintElement > ConstraintStack;
 
+  class RestartListener;
+  class DecisionListener;
+  class SuccessListener;
+  class FailureListener;
   class BranchingHeuristic;
   class RestartPolicy;
   class Reversible;
@@ -281,6 +321,12 @@ namespace Mistral {
     BranchingHeuristic *heuristic;
     RestartPolicy *policy; 
 
+
+    Vector<RestartListener*> restart_triggers;
+    Vector<DecisionListener*> decision_triggers;
+    Vector<SuccessListener*> success_triggers;
+    Vector<FailureListener*> failure_triggers;
+
     /// the constraint responsible for the last fail (NULL otherwise) 
     Constraint *culprit;
     /// the constraint-index of the last wiped_out variable in the culprit constraint (-1 otherwise)
@@ -293,6 +339,9 @@ namespace Mistral {
     /*!@name Constructor*/
     //@{
     Solver();
+
+    void parse_dimacs(const char* filename);
+    void set_parameters(SolverParameters& p);
 
     class BooleanMemoryManager {
     public:
@@ -327,15 +376,19 @@ namespace Mistral {
   
     /*!@name Declarations*/
     //@{
+    int declare(Variable x);
     /// add a variable (prior to search!!!)
     void add(Variable x);
     void add(VarArray& x);
-    int declare(Variable x);
-    /// add a constraint
     void add(Constraint* x); 
+    void add(RestartListener* l);
+    void add(DecisionListener* l);
+    void add(SuccessListener* l);
+    void add(FailureListener* l);
     void mark_non_convex(const int i) { 
       domain_types[i] &= (~RANGE_VAR); 
     }
+    //void add(Vector<Literal>& clause);
     //@}
 
     /*!@name Trail accessors*/
@@ -362,6 +415,7 @@ namespace Mistral {
     void notify_failure();
     void notify_success();
     void notify_decision();
+    void notify_restart();
     /// called when the var'th variable of constraint cons changes (with event type evt)
     void trigger_event(const int var, const Event evt);
 
@@ -405,12 +459,20 @@ namespace Mistral {
     */
     Outcome depth_first_search(BranchingHeuristic *heu=NULL, 
 			       RestartPolicy *pol=NULL);
+
+    /*!
+      Black box search.
+    */
+    Outcome solve();
+
     ///
     bool limits_expired();
 
     /// depth first search algorithm
     Outcome iterative_dfs();
     //@}
+
+
 
 
     /*!@name Search accesors*/
