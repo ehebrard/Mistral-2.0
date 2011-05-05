@@ -1157,7 +1157,7 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
 	    for(int l=0; l<s.level; ++l) cout << " ";
 	    cout << s.level << " remove " << (elts[idx2[j]]) << endl;
 	    for(int l=0; l<s.level; ++l) cout << " ";
-	    cout << alist << endl;
+	    //alistcout << alist << endl;
 	  }
 
 	  isIn.erase(j);
@@ -1177,7 +1177,7 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
 	  cout << s.level << " add " << (elts[idx2[n_elts]]) << " to " 
 	       << wl[n_elts] << "th list" << endl;
 	  for(int l=0; l<s.level; ++l) cout << " ";
-	  cout << alist << endl;
+	  //cout << alist << endl;
 	}
 
 	isIn.add(n_elts);
@@ -1201,7 +1201,7 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
 	for(int l=0; l<s.level; ++l) cout << " ";
 	cout << s.level << " restore" << endl;
 	for(int l=0; l<s.level; ++l) cout << " ";
-	cout << alist << endl;      
+	//cout << alist << endl;      
       }
       
       checkEquality(alist, blist);

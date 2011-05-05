@@ -25,7 +25,7 @@
 #include <signal.h>
 #include <assert.h>
 
-#include <mistral_search.hpp>
+#include <mistral_sat.hpp>
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
@@ -472,8 +472,8 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
   char c=' ';
   std::string word;
   int N, M, l=0;
-  //Literal lit;
-  Vector< Literal > new_clause;
+  Lit lit;
+  Vector< Lit > new_clause;
 
   // skip comments
   infile >> c;
@@ -495,7 +495,7 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
   }
 
   new_clause.initialise(0,N);
-  ConstraintNogoodBase *base = new ConstraintNogoodBase(variables);
+  ConstraintClauseBase *base = new ConstraintClauseBase(variables);
   add(base);
 
   for(int i=0; i<M; ++i)
@@ -504,9 +504,9 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
       do {
 	infile >> l;
 	if(l!=0) {
-	  Literal lit((l<0 ? -l : l)-1, 1, (l>0));
-	  new_clause.push_back(lit);
-
+	  if(l>0) lit = (l-1)*2+1;
+	  else lit = (l+1)*-2;
+	  new_clause.add(lit);
 	  //if(params.init_activity == 1)
 	  //activity[lit] += params.activity_increment;
 	}
@@ -517,13 +517,13 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
       
       //if(params.checked) add_original_clause( new_clause );
     }
-
+  
   //init_watchers();
-
-//   if(params.normalize_activity != 0)
-//     normalize_activity(params.normalize_activity);
-
-//  std::cout << base << std::endl;
+  
+  //   if(params.normalize_activity != 0)
+  //     normalize_activity(params.normalize_activity);
+  
+  //  std::cout << base << std::endl;
 }
 
 void Mistral::Solver::set_parameters(SolverParameters& p) {
@@ -701,10 +701,10 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   decisions.clear();
   for(unsigned int i=seq.size; i;) {
     Variable x = seq[--i].get_var();
-    if(!sequence.contain(x)) sequence.add(x);
+    if(!x.is_ground() && !sequence.contain(x)) sequence.add(x);
   }
 
-  //std::cout <<  sequence << std::endl;
+  std::cout <<  sequence << std::endl;
 
   if(heu) { delete heuristic; heuristic = heu; }
   else if(!heuristic) heuristic = new GenericHeuristic< NoOrder, MinValue >(this);
@@ -1400,6 +1400,8 @@ void Mistral::Solver::branch_left() {
   for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
   std::cout << decision << std::endl;
 #endif
+
+  if(decision.var.is_ground()) exit(1);
   
   decision.make();
 }

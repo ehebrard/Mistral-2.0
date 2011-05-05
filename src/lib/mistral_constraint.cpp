@@ -1841,175 +1841,176 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
 
 
 
-Mistral::ConstraintClauseBase::ConstraintClauseBase(Vector< Variable >& scp) 
-  : Constraint(scp) { }
+// Mistral::ConstraintClauseBase::ConstraintClauseBase(Vector< Variable >& scp) 
+//   : Constraint(scp) { }
 
-void Mistral::ConstraintClauseBase::mark_domain() {
-  for(unsigned int i=0; i<scope.size; ++i) {
-    solver->mark_non_convex(scope[i].id());
-  }
-}
+// void Mistral::ConstraintClauseBase::mark_domain() {
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     solver->mark_non_convex(scope[i].id());
+//   }
+// }
 
-void Mistral::ConstraintClauseBase::initialise() {
-  Constraint::initialise();
-  for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_VALUE_, i);
-  }
-  set_idempotent(true);
+// void Mistral::ConstraintClauseBase::initialise() {
+//   Constraint::initialise();
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     trigger_on(_VALUE_, i);
+//   }
+//   set_idempotent(true);
 
-  is_watched_by.initialise(0,2*scope.size);
+//   is_watched_by.initialise(0,2*scope.size);
 
 
-  // for(unsigned int i=0; i<scope.size; ++i) {
-  //   is_watched_by[i] = new Vector< Clause* >;
-  //   is_watched_by[i]-=scope[i].get_min();
-  // }
-}
+//   // for(unsigned int i=0; i<scope.size; ++i) {
+//   //   is_watched_by[i] = new Vector< Clause* >;
+//   //   is_watched_by[i]-=scope[i].get_min();
+//   // }
+// }
 
-Mistral::ConstraintClauseBase::~ConstraintClauseBase() {
-}
+// Mistral::ConstraintClauseBase::~ConstraintClauseBase() {
+// }
 
-void Mistral::ConstraintClauseBase::add(Variable x) {
-  unsigned int idx = x.id();
-  if(idx == scope.size) {
-    scope.add(x);
-    while(is_watched_by.capacity <= 2*idx)
-      is_watched_by.extendStack();
-  } else if(idx > scope.size) {
-    while(scope.capacity <= idx)
-      scope.extendStack();
-    scope[idx] = x;
-    while(is_watched_by.capacity <= idx)
-      is_watched_by.extendStack();
-  }
-}
+// void Mistral::ConstraintClauseBase::add(Variable x) {
+//   unsigned int idx = x.id();
+//   if(idx == scope.size) {
+//     scope.add(x);
+//     while(is_watched_by.capacity <= 2*idx)
+//       is_watched_by.extendStack();
+//   } else if(idx > scope.size) {
+//     while(scope.capacity <= idx)
+//       scope.extendStack();
+//     scope[idx] = x;
+//     while(is_watched_by.capacity <= idx)
+//       is_watched_by.extendStack();
+//   }
+// }
 
-void Mistral::ConstraintClauseBase::add( Vector < Literal >& clause ) {
- if(clause.size > 1) {
-   Clause *cl = Clause::Array_new(clause);
-   clause.add( cl );
-   is_watched_by[clause[0]].add(cl);
-   is_watched_by[clause[1]].add(cl);
- } else {
-   scope[UNSIGNED(clause[0])].set_domain(SIGN(clause[0]));
- }
-}
+// void Mistral::ConstraintClauseBase::add( Vector < Literal >& clause ) {
+//  if(clause.size > 1) {
+//    Clause *cl = Clause::Array_new(clause);
+//    clause.add( cl );
+//    is_watched_by[clause[0]].add(cl);
+//    is_watched_by[clause[1]].add(cl);
+//  } else {
+//    scope[UNSIGNED(clause[0])].set_domain(SIGN(clause[0]));
+//  }
+// }
 
-int Mistral::ConstraintClauseBase::check( const int* sol ) const {
-  unsigned int i, j;
-  bool satisfied=true;
+// int Mistral::ConstraintClauseBase::check( const int* sol ) const {
+//   unsigned int i, j;
+//   bool satisfied=true;
 
-  for(i=0; i<clause.size; ++i) {
-    satisfied = true;
-    Clause& clause = *(clause[i]);
-    for(j=0; satisfied && j<clause.size; ++j) {
-      satisfied = //clause[j].check(sol[j]);
-	(sol[j] == SIGN(clause[j]));
-    }
-  }
+//   for(i=0; i<clause.size; ++i) {
+//     satisfied = true;
+//     Clause& clause = *(clause[i]);
+//     for(j=0; satisfied && j<clause.size; ++j) {
+//       satisfied = //clause[j].check(sol[j]);
+// 	(sol[j] == SIGN(clause[j]));
+//     }
+//   }
   
-  return !satisfied;
-}
+//   return !satisfied;
+// }
 
-Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
-  Clause *conflict=NULL;
-
-
-  int x, v, cw;
-  Lit p;
-  //unsigned int i;
-  while( !changes.empty() ) {
-    std::cout << changes << std::endl;
-    //std::cout << scope << std::endl;
-    x = changes.pop();
-    //std::cout << scope[x] << " in " << scope[x].get_domain() << std::endl;
-    v = scope[x].get_min();
-    std::cout << x << "=" << v << ": " << is_watched_by[x][v] << std::endl;
-
-    p = 2*x+v;
-
-    cw = is_watched_by[p].size;
-    while(cw-- && !conflict) {
-      conflict = update_watcher(cw, p);
-    }
-  }
-
-  return CONSISTENT;
-}
+// Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
+//   Clause *conflict=NULL;
 
 
-inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
-{
-  Clause *cl = is_watched_by[p][cw];
-  Clause& clause = *cl;
+//   int x, v, cw;
+//   Lit p;
+//   //unsigned int i;
+//   while( !changes.empty() ) {
+//     std::cout << changes << std::endl;
+//     //std::cout << scope << std::endl;
+//     x = changes.pop();
+//     //std::cout << scope[x] << " in " << scope[x].get_domain() << std::endl;
+//     v = scope[x].get_min();
+//     std::cout << x << "=" << v << ": " << is_watched_by[x][v] << std::endl;
 
-  unsigned int j;
-  Lit q, r;
-  //Atom v, w;
-  Variable v, w;
+//     p = 2*x+v;
 
-  //ensure that p is the second watched lit
-  if( clause[1] != p ) {
-    q = clause[1];
-    clause[0] = q;
-    clause[1] = p;
-  } else q = clause[0];
-  v=scope[UNSIGNED(q)].;
+//     cw = is_watched_by[p].size;
+//     while(cw-- && !conflict) {
+//       conflict = update_watcher(cw, p);
+//     }
+//   }
+
+//   return CONSISTENT;
+// }
 
 
-  //check if the other watched lit is assigned
-  //if( LEVEL(v) >= assumptions.size || SIGN(v) != SIGN(q) ) {
-  if( !v.is_ground() || v.get_min() != SIGN(q) ) {
-    for(j=2; j<clause.size; ++j) {
-      // for each literal q of the clause,
-      r = clause[j];
-      w = scope[UNSIGNED(r)];
+// inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
+// {
+//   Clause *cl = is_watched_by[p][cw];
+//   Clause& clause = *cl;
 
-      if( !w.is_ground() ) { // this literal is not set
-	// then it is a good candidate to replace p
-	clause[1] = r;
-	clause[j] = p;
-	is_watched_by[p].remove(cw);
-	is_watched_by[r].add(cl);
+//   unsigned int j;
+//   Lit q, r;
+//   //Atom v, w;
+//   Variable v, w;
 
-	break;	
-      }
-      // if it is set true, then the clause is satisfied
-      else if( w.get_min() == SIGN(r) ) {
-	break;
-      }
-    }
+//   //ensure that p is the second watched lit
+//   if( clause[1] != p ) {
+//     q = clause[1];
+//     clause[0] = q;
+//     clause[1] = p;
+//   } else q = clause[0];
+//   v=scope[UNSIGNED(q)].;
+
+
+//   //check if the other watched lit is assigned
+//   //if( LEVEL(v) >= assumptions.size || SIGN(v) != SIGN(q) ) {
+//   if( !v.is_ground() || v.get_min() != SIGN(q) ) {
+//     for(j=2; j<clause.size; ++j) {
+//       // for each literal q of the clause,
+//       r = clause[j];
+//       w = scope[UNSIGNED(r)];
+
+//       if( !w.is_ground() ) { // this literal is not set
+// 	// then it is a good candidate to replace p
+// 	clause[1] = r;
+// 	clause[j] = p;
+// 	is_watched_by[p].remove(cw);
+// 	is_watched_by[r].add(cl);
+
+// 	break;	
+//       }
+//       // if it is set true, then the clause is satisfied
+//       else if( w.get_min() == SIGN(r) ) {
+// 	break;
+//       }
+//     }
       
-    if( j == clause.size ) // no replacement could be found
-      { 
-	if( !v,is_ground() ) {
-	  // the last literal (other watched lit) is not set yet, we set it
-	  add_lit(q);
-	  //reason[UNSIGNED(q)] = cl;
-	} else 
-	  // it is set to false already, we fail
-	  if( v.get_min() != SIGN(q) ) {
-	    return cl;
-	  }
-      }
-  }
+//     if( j == clause.size ) // no replacement could be found
+//       { 
+// 	if( !v,is_ground() ) {
+// 	  // the last literal (other watched lit) is not set yet, we set it
+// 	  add_lit(q);
+// 	  //reason[UNSIGNED(q)] = cl;
+// 	} else 
+// 	  // it is set to false already, we fail
+// 	  if( v.get_min() != SIGN(q) ) {
+// 	    return cl;
+// 	  }
+//       }
+//   }
 
-  return NULL;
-}
-
-
+//   return NULL;
+// }
 
 
-std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
-  os << " (";
-  if(clauses.size>0) {
-    os << clauses[0];
-    for(unsigned int i=1; i<clauses.size; ++i)
-      os << " " << clauses[i]  ;
-  }
-  os << ")";
-  return os;
-}
+
+
+// std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
+//   os << " (";
+//   if(clauses.size>0) {
+//     os << clauses[0];
+//     for(unsigned int i=1; i<clauses.size; ++i)
+//       os << " " << clauses[i]  ;
+//   }
+//   os << ")";
+//   return os;
+// }
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {

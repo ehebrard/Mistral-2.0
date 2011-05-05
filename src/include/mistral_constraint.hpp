@@ -31,7 +31,7 @@
 #include <mistral_global.hpp>
 #include <mistral_backtrack.hpp>
 #include <mistral_structure.hpp>
-#include <mistral_sat.hpp>
+//#include <mistral_sat.hpp>
 
 
 #ifndef __CONSTRAINT_HPP
@@ -965,53 +965,6 @@ namespace Mistral {
     
   // };
 
-
-  /***********************************************
-   * NogoodBase Constraint (forward checking).
-   ***********************************************/
-  /*! \class ConstraintNogoodBase
-    \brief   Constraint.
-  */
-  class ConstraintClauseBase : public Constraint {
-
-  public:
-
-    /**@name Parameters*/
-    //@{ 
-    Vector< Clause* > reason;
-    // list of clauses
-    Vector< Clause* > clauses;
-    // the watched literals data structure
-    Vector< Vector< Clause* > > is_watched_by;
-    //@}
-    
-    /**@name Constructors*/
-    //@{
-    ConstraintClauseBase() : Constraint() {}
-    ConstraintClauseBase(Vector< Variable >& scp);
-    virtual void mark_domain();
-    virtual Constraint *clone() { return new ConstraintClauseBase(scope); }
-    virtual void initialise();
-    virtual ~ConstraintClauseBase();
-    
-    void add( Variable x );
-    void add( Vector < Literal >& clause );
-    //@}
-
-    /**@name Solving*/
-    //@{
-    virtual int check( const int* sol ) const ;
-    virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
-    //@}
-
-    /**@name Miscellaneous*/
-    //@{  
-    virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "clause_base"; }
-    //@}
-    
-  };
 
 
   /***********************************************

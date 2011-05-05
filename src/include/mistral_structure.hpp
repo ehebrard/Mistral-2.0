@@ -116,7 +116,7 @@ namespace Mistral {
       capacity = c;
       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
 
-      DATA_TYPE x;
+      DATA_TYPE x(0);
       std::fill(stack_, stack_+capacity, x);
     }
 
@@ -139,7 +139,7 @@ namespace Mistral {
       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
       stack_ = new_stack;
 
-      DATA_TYPE x;
+      DATA_TYPE x(0);
       std::fill(stack_+capacity-increment, stack_+capacity, x);
     }
 
