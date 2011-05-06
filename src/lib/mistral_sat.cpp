@@ -509,19 +509,21 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 
 #define _DEBUG_WATCH true
 
-inline Clause* ConstraintClauseBase::update_watcher(const int cw, const Lit p)
+inline Clause* ConstraintClauseBase::update_watcher(const int cw, 
+						    const Lit p,
+						    PropagationOutcome& po)
 {
   Clause *cl = is_watched_by[p][cw];
   Clause& clause = *cl;
   unsigned int j;
 
 
-  BitSet e(0, scope.size, BitSet::empt);
-  for(j=0; j<clause.size; ++j) 
-    {
-      e.add(UNSIGNED(clause[j]));
-    }
-  std::cout << e << std::endl;
+  // BitSet e(0, scope.size, BitSet::empt);
+  // for(j=0; j<clause.size; ++j) 
+  //   {
+  //     e.add(UNSIGNED(clause[j]));
+  //   }
+  // std::cout << e << std::endl;
 
 
   Lit q, r;
@@ -611,6 +613,7 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw, const Lit p)
 #ifdef _DEBUG_WATCH
 	    std::cout << "    -> fail!" << std::endl;
 #endif
+	    po = FAILURE(UNSIGNED(q));
 
 	    return cl;
 	  }
