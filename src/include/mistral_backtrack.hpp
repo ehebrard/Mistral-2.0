@@ -215,17 +215,22 @@ namespace Mistral {
 
     /*!@name Constructors*/
     //@{ 
-    ReversibleIntStack(const int lb, const int ub, bool full=true)
+    ReversibleIntStack() : Reversible(), IntStack() {}
+    ReversibleIntStack(const int lb, const int ub, bool full, Environment *s)
+      : Reversible()
     {
-      initialise(lb, ub, full);
+      initialise(lb, ub, full, s);
     }
 
     virtual ~ReversibleIntStack()
     {
     }
 
-    virtual void initialise(const int lb, const int ub, const bool full=true)
+    virtual void initialise(const int lb, const int ub, 
+			    const bool full, Environment *s
+			    )
     {
+      Reversible::initialise(s);
       IntStack::initialise(lb, ub, full);
       trail_.initialise(0, 2*(ub-lb+1));
       trail_.add(-1);
@@ -234,7 +239,7 @@ namespace Mistral {
 
     /*!@name Backtrack method*/
     //@{    
-    virtual void restore() { size = trail_.pop(); } 
+    virtual void restore() { trail_.pop(); size = trail_.pop(); } 
     inline void save() { 
       if(trail_.back() != env->level) {
 	trail_.add(size);
@@ -252,10 +257,10 @@ namespace Mistral {
       add(elt);
     }
 
-    // ...or erase, but not both!!
-    inline void reversible_erase(const int elt) {
+    // ...or remove, but not both!!
+    inline void reversible_remove(const int elt) {
       save();
-      erase(elt);
+      remove(elt);
     }
 
     inline int reversible_pop()
@@ -301,9 +306,9 @@ namespace Mistral {
 
     /*!@name List Manipulation*/
     //@{
-    inline void reversible_erase(const int idx, const int k=0) {
+    inline void reversible_remove(const int idx, const int k=0) {
       _notify_();
-      MultiList< DATA_TYPE, NUM_HEAD >::erase(idx, k);      
+      MultiList< DATA_TYPE, NUM_HEAD >::remove(idx, k);      
       _save_(idx, k);
     }
     inline int reversible_add(DATA_TYPE elt, const int k=0) {
@@ -351,7 +356,7 @@ namespace Mistral {
       trail_.pop(idx_end);
       while(idx_start > idx_end) {
 	k = --MultiList< DATA_TYPE, NUM_HEAD >::data.size;
-	MultiList< DATA_TYPE, NUM_HEAD >::erase(k);
+	MultiList< DATA_TYPE, NUM_HEAD >::remove(k);
 	++MultiList< DATA_TYPE, NUM_HEAD >::degree;
 	--idx_start;
       }

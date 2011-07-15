@@ -27,6 +27,7 @@
 
 
 #include <string>
+#include <vector>
 
 #include <mistral_global.hpp>
 #include <mistral_backtrack.hpp>
@@ -44,6 +45,7 @@ namespace Mistral {
   //class ConstraintList;
   class Solver;
   class Variable;
+  class Decision;
   /**********************************************
    * Constraint
    **********************************************/
@@ -89,6 +91,9 @@ namespace Mistral {
     /// If the propagator enforces at least FC then stress should be >= 1
     unsigned int stress;
 
+    /// whether the constraint is posted/relaxed
+    bool is_posted;
+
     /// The indices of unassigned variables
     IntStack active;
 
@@ -116,6 +121,7 @@ namespace Mistral {
     virtual Constraint *clone() = 0;
     Constraint();
     Constraint(Vector< Variable >& scp);
+    Constraint(std::vector< Variable >& scp);
     virtual ~Constraint();
     
     void add(Variable X);
@@ -162,7 +168,7 @@ namespace Mistral {
     }
 
     inline void defrost() {
-      if(active.size <= stress) {
+      if(is_posted && active.size <= stress) {
 	relax();
       }
       if(changes.list_ == events.list_) 
@@ -174,25 +180,42 @@ namespace Mistral {
       trigger[x] = t;
     }
 
+
+    //Constraint* notify_assignment(const int var, const int level) ;
     inline Constraint* notify_assignment(const int var, const int level) {
+
+      //   std::cout << "remove " << scope[var] << " from " ;
+      //   //<< this //<< std::endl;
+      //   display(std::cout);
+      //   std::cout << " " << active << " -> "; 
+      
       Constraint *r = NULL;
       if(trail_.back() != level) {
-	trail_.add(active.size);
-	trail_.add(level);
-	r = this;
+     	trail_.add(active.size);
+     	trail_.add(level);
+     	r = this;
       }
-
-      active.erase(var);
+      
+      active.remove(var);
+      
+      //   std::cout << active << std::endl;
+      
       return r;
     }
 
     void post(Solver *s);
     void relax();
     
-    inline void restore() {
-      trail_.pop();
-      active.size = trail_.pop();
-    }
+    //inline
+    void restore();//  {
+
+    //   if(active.size <= stress) {
+    // 	solver->notify_post(this);
+    //   }
+
+    //   trail_.pop();
+    //   active.size = trail_.pop();
+    // }
 
 
     /*!@name Propagators*/
@@ -211,20 +234,28 @@ namespace Mistral {
      *  returned on success (there is still at least one consistent
      *  assignment) or a ptr to the wiped-out variable otherwise. 
      */
-    virtual PropagationOutcome propagate() { return NULL; }
+    PropagationOutcome checker_propagate() { // std::cout << "checker propagate\n";
+      return Constraint::propagate(); 
+    }
+    PropagationOutcome bound_propagate();
+    virtual PropagationOutcome propagate(); // { return NULL; }
     virtual PropagationOutcome rewrite();
     virtual void consolidate();
+
+    virtual int get_backtrack_level();// {return solver->level-1;}
+    virtual Decision get_decision();// { return solver->decisions.back(0); }
     /*!
      *  Check if the cached support is valid.
      *  Otherwise initialize an iterator on supports
      */
-    bool firstSupport(const int, const int);
+    bool first_support(const int, const int);
     /*!
      *  Find the first valid support. 
      *  Return true if a support has been found, 
      *  or false if no such support exists.
      */
-    bool findSupport(const int, const int);
+    bool find_support(const int, const int);
+    bool find_bound_support(const int, const int);
     //@}
 
 
@@ -251,6 +282,8 @@ namespace Mistral {
     //@{
     ConstraintEqual() : Constraint() {}
     ConstraintEqual(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    ConstraintEqual(std::vector< Variable >& scp) 
       : Constraint(scp) {}
     virtual Constraint *clone() { return new ConstraintEqual(scope); }
     virtual void initialise();
@@ -284,6 +317,8 @@ namespace Mistral {
     //@{
     ConstraintNotEqual() : Constraint() {}
     ConstraintNotEqual(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    ConstraintNotEqual(std::vector< Variable >& scp) 
       : Constraint(scp) {}
     virtual Constraint *clone() { return new ConstraintNotEqual(scope); }
     virtual void initialise();
@@ -326,6 +361,8 @@ namespace Mistral {
       : Constraint() { offset = ofs; }
     ConstraintLess(Vector< Variable >& scp, const int ofs=0) 
       : Constraint(scp) { offset = ofs; }
+    ConstraintLess(std::vector< Variable >& scp, const int ofs=0) 
+      : Constraint(scp) { offset = ofs; }
     virtual Constraint *clone() { return new ConstraintLess(scope, offset); }
     virtual void initialise();
     virtual ~ConstraintLess() {}
@@ -365,6 +402,7 @@ namespace Mistral {
     //@{
     ConstraintDisjunctive() : Constraint() {}
     ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1); 
+    ConstraintDisjunctive(std::vector< Variable >& scp, const int p0, const int p1); 
 //       : Constraint(scp) { 
 //       processing_time[0] = p0; 
 //       processing_time[1] = p1;
@@ -416,6 +454,8 @@ namespace Mistral {
     PredicateLess() : ConstraintLess(0) {}
     PredicateLess(Vector< Variable >& scp, const int ofs=0) 
       : ConstraintLess(scp, ofs) {}
+    PredicateLess(std::vector< Variable >& scp, const int ofs=0) 
+      : ConstraintLess(scp, ofs) {}
     virtual Constraint *clone() { return new PredicateLess(scope, offset); }
     virtual void initialise();
     virtual ~PredicateLess() {}
@@ -455,6 +495,8 @@ namespace Mistral {
     //@{
     PredicateUpperBound() : Constraint() {}
     PredicateUpperBound(Vector< Variable >& scp, const int b=0) 
+      : Constraint(scp) { bound = b; }
+    PredicateUpperBound(std::vector< Variable >& scp, const int b=0) 
       : Constraint(scp) { bound = b; }
     virtual Constraint *clone() { return new PredicateUpperBound(scope, bound); }
     virtual void initialise();
@@ -496,6 +538,8 @@ namespace Mistral {
     PredicateLowerBound() : Constraint() {}
     PredicateLowerBound(Vector< Variable >& scp, const int b=0) 
       : Constraint(scp) { bound = b; }
+    PredicateLowerBound(std::vector< Variable >& scp, const int b=0) 
+      : Constraint(scp) { bound = b; }
     virtual Constraint *clone() { return new PredicateLowerBound(scope, bound); }
     virtual void initialise();
     virtual ~PredicateLowerBound() {}
@@ -504,7 +548,7 @@ namespace Mistral {
     /**@name Solving*/
     //@{
     virtual int check( const int* sol ) const { 
-      return ((sol[0] <= bound) != sol[1]); 
+      return ((sol[0] >= bound) != sol[1]); 
     }
     virtual PropagationOutcome propagate();
     //virtual PropagationOutcome rewrite();
@@ -537,6 +581,8 @@ namespace Mistral {
     //@{
     PredicateEqual() : Constraint() {}
     PredicateEqual(Vector< Variable >& scp, const int sp=1) 
+      : Constraint(scp) { spin = sp; }
+    PredicateEqual(std::vector< Variable >& scp, const int sp=1) 
       : Constraint(scp) { spin = sp; }
     virtual Constraint *clone() { return new PredicateEqual(scope, spin); }
     virtual void initialise();
@@ -578,7 +624,9 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     PredicateConstantEqual() : Constraint() {}
-    PredicateConstantEqual(Vector< Variable >& scp, const int val, const int sp=1) 
+    PredicateConstantEqual(Vector< Variable >& scp, const int val=0, const int sp=1) 
+      : Constraint(scp) { value = val; spin = sp; }
+    PredicateConstantEqual(std::vector< Variable >& scp, const int val=0, const int sp=1) 
       : Constraint(scp) { value = val; spin = sp; }
     virtual Constraint *clone() { return new PredicateConstantEqual(scope, value, spin); }
     virtual void initialise();
@@ -622,6 +670,8 @@ namespace Mistral {
     PredicateOffset() : Constraint() {}
     PredicateOffset(Vector< Variable >& scp, const int ofs) 
       : Constraint(scp) { offset=ofs; }
+    PredicateOffset(std::vector< Variable >& scp, const int ofs) 
+      : Constraint(scp) { offset=ofs; }
     virtual Constraint *clone() { return new PredicateOffset(scope, offset); }
     virtual void initialise();
     virtual ~PredicateOffset() {}
@@ -645,6 +695,51 @@ namespace Mistral {
 
 
   /**********************************************
+   * Factor Predicate
+   **********************************************/
+  /*! \class PredicateFactor
+    \brief  Truth value of a conjunction (!x0 <-> y)
+  */
+  class PredicateFactor : public Constraint
+  {
+
+  public:
+
+    /**@name Parameters*/
+    //@{  
+    int factor;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateFactor() : Constraint() {}
+    PredicateFactor(Vector< Variable >& scp, const int fct) 
+      : Constraint(scp) { factor=fct; }
+    PredicateFactor(std::vector< Variable >& scp, const int fct) 
+      : Constraint(scp) { factor=fct; }
+    virtual Constraint *clone() { return new PredicateFactor(scope, factor); }
+    virtual void initialise();
+    virtual ~PredicateFactor() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return((sol[0]*factor) != sol[1]);
+    }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "factor"; }
+    //@}
+  };
+
+
+  /**********************************************
    * Not Predicate
    **********************************************/
   /*! \class PredicateNot
@@ -658,6 +753,8 @@ namespace Mistral {
     //@{
     PredicateNot() : Constraint() {}
     PredicateNot(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    PredicateNot(std::vector< Variable >& scp) 
       : Constraint(scp) {}
     virtual Constraint *clone() { return new PredicateNot(scope); }
     virtual void initialise();
@@ -696,6 +793,8 @@ namespace Mistral {
     PredicateAnd() : Constraint() {}
     PredicateAnd(Vector< Variable >& scp) 
       : Constraint(scp) {}
+    PredicateAnd(std::vector< Variable >& scp) 
+      : Constraint(scp) {}
     virtual Constraint *clone() { return new PredicateAnd(scope); }
     virtual void initialise();
     virtual ~PredicateAnd() {}
@@ -731,6 +830,8 @@ namespace Mistral {
     //@{
     ConstraintAnd() : Constraint() {}
     ConstraintAnd(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    ConstraintAnd(std::vector< Variable >& scp) 
       : Constraint(scp) {}
     virtual Constraint *clone() { return new ConstraintAnd(scope); }
     virtual void initialise();
@@ -769,6 +870,8 @@ namespace Mistral {
     PredicateOr() : Constraint() {}
     PredicateOr(Vector< Variable >& scp) 
       : Constraint(scp) {}
+    PredicateOr(std::vector< Variable >& scp) 
+      : Constraint(scp) {}
     virtual Constraint *clone() { return new PredicateOr(scope); }
     virtual void initialise();
     virtual ~PredicateOr() {}
@@ -803,6 +906,8 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     ConstraintOr(Vector< Variable >& scp) 
+      : Constraint(scp) { }
+    ConstraintOr(std::vector< Variable >& scp) 
       : Constraint(scp) { }
     virtual Constraint *clone() { return new ConstraintOr(scope); }
     virtual void initialise();
@@ -840,6 +945,8 @@ namespace Mistral {
     PredicateAdd() : Constraint() {}
     PredicateAdd(Vector< Variable >& scp) 
       : Constraint(scp) {}
+    PredicateAdd(std::vector< Variable >& scp) 
+      : Constraint(scp) {}
     virtual Constraint *clone() { return new PredicateAdd(scope); }
     virtual void initialise();
     virtual ~PredicateAdd() {}
@@ -849,7 +956,97 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const { return (sol[2] != (sol[0]+sol[1])); }
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    virtual PropagationOutcome rewrite();
+    //@}
+    
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "plus"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Multiplication Predicate
+   **********************************************/
+  /*! \class PredicateMul
+    \brief  Binary mulition predicate (x0 + x1 = y)
+  */
+  class PredicateMul : public Constraint
+  {
+    
+  public:
+
+    // class SplitDomain {
+    // private:
+    //   int min_neg; // minimum negative value, if there are none, then this is the minimum value
+    //   int max_neg; // maximum negative value, if there are none, then this is the maximum value
+    //   int min_pos; // minimum positive value, if there are none, then this is the minimum value
+    //   int max_pos; // maximum positive value, if there are none, then this is the maximum value
+    //   int polarity; // 1->can be =0 // 2->can be >0 // 4->can be <0
+
+    // public:
+    //   inline bool con_be_zero() { return polarity&1; }
+    //   inline bool con_be_positive() { return polarity&2; }
+    //   inline bool con_be_negative() { return polarity&4; }
+      
+    //   // set the bounds to
+    //   inline bool set_pos_bounds(const int l, const int u) {
+    // 	bool change = false;
+    // 	if(l>u) {
+    // 	  change = (max_pos)
+    // 	}
+
+    // 	  return false
+    //   }
+
+    // };
+
+
+
+    int 
+    min_pos[3],
+      max_pos[3],
+      min_neg[3],
+      max_neg[3],
+      zero[3];
+
+    /**@name Constructors*/
+    //@{
+    PredicateMul() : Constraint() {}
+    PredicateMul(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    PredicateMul(std::vector< Variable >& scp) 
+      : Constraint(scp) {}
+    virtual Constraint *clone() { return new PredicateMul(scope); }
+    virtual void initialise();
+    virtual ~PredicateMul() {}
+    //@}
+    
+    /**@name Solving*/
+    //@{
+    PropagationOutcome pruneZeros(const int changedIdx);
+    PropagationOutcome pruneUnary(const int last); 
+    PropagationOutcome pruneBinary(const int otherIdx, const int reviseIdx, const int v);
+    PropagationOutcome pruneTernary(const int reviseIdx);
+
+    void compute_division(Variable X, Variable Y, int& lb, int& ub);
+    void compute_multiplication(Variable X, Variable Y, int& lb, int& ub);
+    void refine_bounds(const int evt_idx);
+
+    PropagationOutcome revise_division(const int X, const int Y, const int Z);
+    PropagationOutcome revise_multiplication(const int X, const int Y, const int Z);
+    PropagationOutcome prune(const int lb_neg, 
+			     const int ub_neg, 
+			     const int lb_pos, 
+			     const int ub_pos,
+			     const bool pzero,
+			     const int Z);
+
+    virtual int check( const int* sol ) const { return (sol[2] != (sol[0]*sol[1])); }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome rewrite();
     //@}
     
     /**@name Miscellaneous*/
@@ -981,6 +1178,7 @@ namespace Mistral {
     //@{
     ConstraintCliqueNotEqual() : Constraint() {}
     ConstraintCliqueNotEqual(Vector< Variable >& scp);
+    ConstraintCliqueNotEqual(std::vector< Variable >& scp);
     virtual void mark_domain();
     virtual Constraint *clone() { return new ConstraintCliqueNotEqual(scope); }
     virtual void initialise();
@@ -1022,6 +1220,7 @@ namespace Mistral {
     //@{
     ConstraintBoolSumEqual() : Constraint() {}
     ConstraintBoolSumEqual(Vector< Variable >& scp, const int t);
+    ConstraintBoolSumEqual(std::vector< Variable >& scp, const int t);
     virtual Constraint *clone() { return new ConstraintBoolSumEqual(scope, total); }
     virtual void initialise();
     virtual ~ConstraintBoolSumEqual();
@@ -1040,6 +1239,198 @@ namespace Mistral {
     virtual std::string name() const { return "bool_sum"; }
     //@}
   };
+
+
+  /**********************************************
+   * BoolSum Interval Constraint
+   **********************************************/
+  //  lb <= x1 + ... + xn <= ub
+  /// Constraint on the value of the sum of a set of variables.
+  class ConstraintBoolSumInterval : public Constraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    int lb;
+    int ub;
+    ReversibleNum<int> min_;
+    ReversibleNum<int> max_;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintBoolSumInterval() : Constraint() {}
+    ConstraintBoolSumInterval(Vector< Variable >& scp, const int l, const int u);
+    ConstraintBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
+    virtual Constraint *clone() { return new ConstraintBoolSumInterval(scope, lb, ub); }
+    virtual void initialise();
+    virtual ~ConstraintBoolSumInterval();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bool_sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * BoolSum  Predicate
+   **********************************************/
+  //  x1 + ... + xn-1 = xn
+  /// predicate on the value of the sum of a set of variables.
+  class PredicateBoolSum : public Constraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    int lb;
+    int ub;
+    ReversibleNum<int> min_;
+    ReversibleNum<int> max_;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateBoolSum() : Constraint() {}
+    PredicateBoolSum(Vector< Variable >& scp);
+    PredicateBoolSum(std::vector< Variable >& scp);
+    PredicateBoolSum(Vector< Variable >& scp, Variable tot);
+    PredicateBoolSum(std::vector< Variable >& scp, Variable tot);
+    virtual Constraint *clone() { return new PredicateBoolSum(scope); }
+    virtual void initialise();
+    virtual ~PredicateBoolSum();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bool_sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Element Predicate
+   **********************************************/
+  /*! \class PredicateElement
+    \brief  
+  */
+  class PredicateElement : public Constraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    BitSet aux_dom;
+    int offset;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateElement(Vector< Variable >& scp, const int o=0);
+    PredicateElement(std::vector< Variable >& scp, const int o=0);
+    virtual ~PredicateElement();
+    virtual Constraint *clone() { return new PredicateElement(scope, offset); }
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * WeightedSum Constraint
+   **********************************************/
+  /*! \class ConstraintWeightedSum
+    \brief  Constraint on a sum of variables (a1 * x1 + ... + an * xn = total)
+  */
+  class PredicateWeightedSum : public Constraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    // Lower bound of the linear experssion
+    int lower_bound;
+
+    // Upper bound of the linear experssion
+    int upper_bound;
+
+    Vector< int > weight;
+    // from index 0 to wpos (not included), the coefficients are all 1s
+    int wpos;
+    // from index wpos to wneg (not included), the coefficients are all >0
+    int wneg;
+    // from index wneg to size (not included), the coefficients are all <0
+
+    // utils for the propagation
+    int *lo_bound;
+    int *up_bound;
+    int *span;
+    ReversibleNum<int> parity;
+    ReversibleIntStack unknown_parity;
+    
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateWeightedSum(Vector< Variable >& scp,
+			 const int L=0, const int U=0);
+    PredicateWeightedSum(Vector< Variable >& scp,
+			 Vector< int >& coefs,
+			 const int L=0, const int U=0);
+    PredicateWeightedSum(std::vector< Variable >& scp,
+			 std::vector< int >& coefs,
+			 const int L=0, const int U=0);
+    // PredicateWeightedSum(Vector< Variable >& scp,
+    // 			 Vector< int >& coefs,
+    // 			 Variable tot);
+    // PredicateWeightedSum(std::vector< Variable >& scp,
+    // 			 std::vector< int >& coefs,
+    // 			 Variable tot);
+    virtual ~PredicateWeightedSum();
+    virtual Constraint *clone() { return new PredicateWeightedSum(scope, weight); }
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "sum"; }
+    //@}
+  };
+
+
 
 
   /***********************************************
@@ -1085,6 +1476,7 @@ namespace Mistral {
     //@{
     ConstraintAllDiff() : Constraint() {}
     ConstraintAllDiff(Vector< Variable >& scp);
+    ConstraintAllDiff(std::vector< Variable >& scp);
     virtual void mark_domain();
     virtual Constraint *clone() { return new ConstraintAllDiff(scope); }
     virtual void initialise();
@@ -1255,7 +1647,7 @@ namespace Mistral {
 	  cons->event_type[var] = evt;
 	}
       } else {
-	_set_.fastAdd(cons_id);
+	_set_.fast_add(cons_id);
 	triggers[priority].add(cons_id);
 	++num_actives;
 	cons->events.clear();
@@ -1269,7 +1661,7 @@ namespace Mistral {
       int priority = NUM_PRIORITY;
       while(--priority) if(!triggers[priority].empty()) break;
       int cons = triggers[priority].pop();
-      _set_.fastErase(cons);
+      _set_.fast_remove(cons);
       --num_actives;
       return cons;
     }

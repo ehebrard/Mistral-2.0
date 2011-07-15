@@ -43,13 +43,21 @@ namespace Mistral {
   typedef int Event;
   typedef int Outcome;
   typedef int PropagationOutcome;
+
+
+  typedef unsigned int Lit;
+  typedef unsigned int Atom;
+  typedef unsigned int Value;
+
+  typedef Array<Lit> Clause;
   
   
 #define NORESTART 0
 #define GEOMETRIC 1
 #define LUBY 2
 
-#define INFTY  NOVAL
+#define LARGE_VALUE NOVAL/16384
+#define INFTY  NOVAL/2
 #define MAXINT NOVAL
 #define MININT -NOVAL
 #define MIN_CAPACITY 16
@@ -63,30 +71,10 @@ namespace Mistral {
 #define BITSET_VAR  8
 #define LIST_VAR    16
 #define VIRTUAL_VAR 0
-#define DYN_VAR     27
+  //#define DYN_VAR     27
+#define DYN_VAR     31
 #define EXPRESSION  3
   
-// #define NO_EVENT     0
-// #define DOMAIN_EVENT 1
-// #define UB_EVENT     3
-// #define LB_EVENT     5
-// #define RANGE_EVENT  7
-// #define VALUE_EVENT  15
-// #define FAIL_EVENT   16
-
-// #define DOMAIN_CHANGED(e) ((e&DOMAIN_EVENT) == DOMAIN_EVENT)
-// #define BOUND_CHANGED(e)  ((e&RANGE_EVENT)  == RANGE_EVENT)
-// #define LB_CHANGED(e)     ((e&LB_EVENT)     == LB_EVENT)
-// #define UB_CHANGED(e)     ((e&UB_EVENT)     == UB_EVENT)
-// #define ASSIGNED(e)       ((e&VALUE_EVENT)  == VALUE_EVENT)
-
-// #define IS_FAIL(e)    (e & FAIL_EVENT)
-// #define IS_REMOVAL(e) (e == DOMAIN_EVENT)
-// #define IS_RANGE(e)   (e == RANGE_EVENT)
-// #define IS_LB(e)      (e == LB_EVENT)
-// #define IS_UB(e)      (e == UB_EVENT)
-// #define IS_ASSIGN(e)  (e == VALUE_EVENT)
-
 #define DOMAIN_C     1
 #define RANGE_C      2
 #define UB_C         4
@@ -112,11 +100,6 @@ namespace Mistral {
 #define ASSIGNED(e)       (bool)((e)&VALUE_C)
 
 #define IS_FAIL(e) ((e)&FAIL_EVENT)
-// #define IS_REMOVAL(e) (e == DOMAIN_EVENT)
-// #define IS_RANGE(e)   (e == RANGE_EVENT)
-// #define IS_LB(e)      (e == LB_EVENT)
-// #define IS_UB(e)      (e == UB_EVENT)
-// #define IS_ASSIGN(e)  (e & VALUE_EVENT)
 
 #define SAT      1
 #define OPT      3
@@ -134,27 +117,6 @@ namespace Mistral {
 
 #define EVENT_TYPE(e) (2-(RANGE_CHANGED(e))-(ASSIGNED(e)))
 
-//   inline bool is_domain(Event e) {
-//     return ((e & DOMAIN_EVENT) == DOMAIN_EVENT);
-//   }
-
-//   inline bool is_range(Event e) {
-//     return ((e & RANGE_EVENT) == RANGE_EVENT);
-//   }
-
-//   inline bool is_upper_bound(Event e) {
-//     return ((e & UB_EVENT) == UB_EVENT);
-//   }
-
-//   inline bool is_lower_bound(Event e) {
-//     return ((e & LB_EVENT) == LB_EVENT);
-//   }
-
-//   inline bool is_value(Event e) {
-//     return ((e & VALUE_EVENT) == VALUE_EVENT);
-//   }
-
-
 
   /**********************************************
    * Timing Memory and Command line utilities 
@@ -164,49 +126,8 @@ namespace Mistral {
   unsigned long int getMemory();
   void getCommandLine(const char**,int*,int,const char**,const char**,int,char**,int);
 
-
-  //   std::string toString(const int x);
-
-
-  //   std::string toString(const IntStack& x);
-
-
-  //   std::string toString(const Queue& x);
-
-
-  //   std::string toString(const MultiSet& x);
-
-
-  //   std::string toString(const ConstraintTrigger& x);
-
-
-  //   std::string toString(const Constraint* x);
-
-
-  //   std::string toString(const SolverStatistics& x);
-
-  // //   class VariableInt;
-  // //   std::string toString(const VariableInt* x);
-
-  //   //class Goal;
-  //   //std::string toString(const Goal* x);
-
-
-
-
-  //std::ostream& operator<< (std::ostream& os, const VariableInt* x);
-
-  //std::ostream& operator<< (std::ostream& os, const Goal* x);
-
-
-
   template <class WORD_TYPE>
   void printBitset(WORD_TYPE n, const int idx, std::ostream& os) {
-
-    //     os << std::endl;
-    //     showUint(n, os);
-    //     os << std::endl;
-
     int offset = 8*sizeof(WORD_TYPE)*idx;
     WORD_TYPE mask=1;
     int last, cur, serie=0, k=0;
@@ -248,12 +169,25 @@ namespace Mistral {
    * Knuth's Random number generator (code from sp-1.4)
    **********************************************/
 
-  void usrand (unsigned seed);
-  unsigned urand0 (void);
-  unsigned urand (void);
-  int randint(int upto);
-  double randreal();
+  // class Random {
 
+  // public:
+  //   unsigned int mistral_rand_x[56];
+  //   unsigned int mistral_rand_y[256];
+  //   unsigned int mistral_rand_z;
+
+  //   int mistral_rand_j;
+  //   int mistral_rand_k;
+
+  //   Random(unsigned int seed=12345) { usrand(seed); }
+  //   virtual ~Random() {}
+
+    void usrand (unsigned seed);
+    unsigned urand0 (void);
+    unsigned urand (void);
+    int randint(int upto);
+    double randreal();
+  //  };
 
   /// Other utils:
 

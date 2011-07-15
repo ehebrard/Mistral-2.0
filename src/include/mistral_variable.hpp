@@ -62,13 +62,13 @@ namespace Mistral {
     VariableImplementation() {solver=NULL; id=-1;}
     virtual ~VariableImplementation() {}
 
-    bool is_initialised() { 
+    bool is_initialised() const { 
       return id>-1;
     }
 
-    int get_solution_value() const ;//{ return solver->last_solution_lb[id] } ; 
-    int get_solution_lb() const ;//{ return solver->last_solution_lb[id] } ; 
-    int get_solution_ub() const ;//{ return solver->last_solution_ub[id] } ; 
+    virtual int get_solution_value() const ;//{ return solver->last_solution_lb[id] } ; 
+    virtual int get_solution_min() const ;//{ return solver->last_solution_lb[id] } ; 
+    virtual int get_solution_max() const ;//{ return solver->last_solution_ub[id] } ; 
 
     //void trigger_value_event_and_save(Variable *x);
     void trigger_value_event_and_save();
@@ -81,7 +81,10 @@ namespace Mistral {
   
     BitsetDomain() {min = NOVAL; max = NOVAL; size = 0;}
     BitsetDomain(const int lb, const int ub);
+    BitsetDomain(Vector< int >& vals);
+    virtual ~BitsetDomain() {}
     void initialise(const int lb, const int ub, const bool vals=true);
+    void initialise(Vector< int >& vals);
   
     int min;
     int max;
@@ -95,7 +98,7 @@ namespace Mistral {
       if(min == max-1) {
 	os << "{" << min << "," << max << "}";
       } else if(values.table) {
-	os << values;
+	os << values ;//<< " [" << min << ".." << max << "] (" << size << ")";
       } else {
 	os << "[" << min << ".." << max << "]";
       }
@@ -130,6 +133,11 @@ namespace Mistral {
 
     /*!@name Constructors*/
     //@{
+    VariableBitset() {
+      id = -1;
+      solver = NULL;
+    };
+
     VariableBitset(const int lb, const int ub) {
       id = -1;
       solver = NULL;
@@ -138,17 +146,39 @@ namespace Mistral {
 
     virtual void initialise(const int lb, const int ub) {
  
+      //std::cout << "init superclass " << lb << " " << ub << std::endl;
+
       domain.initialise(lb, ub);
-      trail_.initialise(0,8);
-      trail_.add(domain.min);
-      trail_.add(domain.max);
-      trail_.add(domain.size);
-      trail_.add(-1);
+      // trail_.initialise(0,8);
+      // trail_.add(domain.min);
+      // trail_.add(domain.max);
+      // trail_.add(domain.size);
+      // trail_.add(-1);
+      initialise_trail();
+    }
+
+    VariableBitset(Vector< int >& values) {
+      id = -1;
+      solver = NULL;
+      initialise(values);
+    };
+
+    virtual void initialise(Vector< int >& values) {
+      domain.initialise(values);
       initialise_trail();
     }
 
     void initialise_trail() {
       int i, k;
+
+      //std::cout << "build " << domain.values.neg_words << " <? " << domain.values.pos_words << std::endl;
+
+      trail_.initialise(0,8);
+      trail_.add(domain.min);
+      trail_.add(domain.max);
+      trail_.add(domain.size);
+      trail_.add(-1);
+
       delta_abs = new WORD_TYPE*[domain.values.pos_words-domain.values.neg_words];
       delta_abs -= domain.values.neg_words;
       delta_ = new WORD_TYPE*[domain.values.pos_words-domain.values.neg_words];
@@ -169,6 +199,10 @@ namespace Mistral {
     }
 
     virtual ~VariableBitset() {
+
+      //std::cout << VariableImplementation::id << " delete superclass" << std::endl;
+      //std::cout << "delete " << domain.values.neg_words << " <? " << domain.values.pos_words << std::endl;
+
       for(int i=domain.values.neg_words; i<domain.values.pos_words; ++i) {
 	delete [] delta_abs[i];
 	delete [] level_abs[i];
@@ -177,6 +211,86 @@ namespace Mistral {
       level_abs += domain.values.neg_words;
       delta_ += domain.values.neg_words;
       level_ += domain.values.neg_words;
+
+      delete [] delta_abs;
+      delta_abs = NULL;
+      delete [] level_abs;
+      level_abs = NULL;
+      delete [] delta_;
+      delta_ = NULL;
+      delete [] level_;
+      level_ = NULL;
+
+      //std::cout << "delete " << domain.values.table << std::endl;
+
+      if(domain.values.table) {
+	domain.values.table += domain.values.neg_words;
+	delete [] domain.values.table;
+	domain.values.table = NULL;
+      } //else {
+      domain.values.neg_words = 0;
+      //}
+    }
+
+    // // set the history of X to match self
+    // void set_history(Variable X) {
+    //   for(unsigned int i = 4; i<trail_.size; i+=4) {
+    // 	X.set_bound_history(trail_[i], trail_[i+1], trail_[i+3]);
+    // 	if((trail_[i+1] - trail_[i] + 1) > trail_[i+2]) {
+    // 	  std::cout << "c Warning cannot take into account the history" << std::endl;
+    // 	}
+    //   }
+    // }
+
+    void set_bound_history(const int lb, const int ub, const int level) {
+
+      
+
+      // first find out which words have changed
+      int prev_lb = domain.min; //trail_.back(-4);
+      int prev_ub = domain.max; //trail_.back(-3);
+      int i, j;
+      WORD_TYPE w;
+
+      //std::cout << std::endl << "[" << prev_lb << ".." << prev_ub << "] set bound history [" << lb << ".." << ub << "] at level " << level << std::endl;
+
+
+      if(prev_lb > lb) {
+	i = (lb >> BitSet::EXP);
+	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
+	w = (BitSet::full << (lb & BitSet::CACHE));
+	domain.values.table[i] = w;
+	*(++delta_[i]) = w;
+	*(++level_[i]) = level;
+	while( i --> j ) {
+	  *(++delta_[i]) = BitSet::empt;
+	  domain.values.table[i] = BitSet::empt;
+	  *(++level_[i]) = level;
+	}
+      }
+
+      if(prev_ub < ub) {
+	i = (ub >> BitSet::EXP);
+	j = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
+	w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+	domain.values.table[i] = w;
+	*(++delta_[i]) = w;
+	*(++level_[i]) = level;
+	while( j --> i ) {
+	  *(++delta_[j]) = BitSet::empt;
+	  domain.values.table[j] = BitSet::empt;
+	  *(++level_[j]) = level;
+	}
+      }
+
+      domain.min = lb;
+      domain.max = ub;
+      // domain.size = ub-lb+1;
+
+      trail_.add(lb);
+      trail_.add(ub);
+      trail_.add(ub-lb+1);
+      trail_.add(level);
     }
 
     /*!@name Static Accessors and Iterators*/
@@ -190,22 +304,22 @@ namespace Mistral {
     /// Returns the maximum value in the domain
     inline int get_max() const { return domain.max; }
     /// Returns the minimum value that could belong to the domain
-    inline int get_minCapacity() const { return trail_[0]; }
+    inline int get_initial_min() const { return trail_[0]; }
     /// Returns 1 + the maximum value that could belong to the domain
-    inline int get_maxCapacity() const { return trail_[1]; }
-    /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
-    inline int get_minPosAbs() const {
-      if( domain.max < 0 ) return NOVAL;
+    inline int get_initial_max() const { return trail_[1]; }
+    /// Returns the minimum value in [1..infty] \\inter domain, min if there are none
+    inline int get_min_pos() const {
       if( domain.min > 0 ) return domain.min;
-      if( domain.values.fast_contain(0) ) return 0;
-      return domain.values.next( 0 );
+      if( domain.max < 1 ) return domain.min;
+      if( domain.values.fast_contain(1) ) return 1;
+      return domain.values.next( 1 );
     }
-    /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
-    inline int get_minNegAbs() const  {
-      if( domain.min > 0 ) return NOVAL;
+    /// Returns the maximum value in [-infty..-1] \\inter domain, max if there are none
+    inline int get_max_neg() const  {
       if( domain.max < 0 ) return domain.max;
-      if( domain.values.fast_contain(0) ) return 0;
-      return domain.values.prev( 0 );
+      if( domain.min > -1 ) return domain.max;
+      if( domain.values.fast_contain(-1) ) return -1;
+      return domain.values.prev( -1 );
     } 
     /// Return the smallest value currently in the domain that is strictly greater than "v"
     inline int next(const int v) const { return (((domain.size != domain.max - domain.min + 1)) ? domain.values.next(v) : (v < domain.max ? v+1 : v)); }
@@ -243,17 +357,17 @@ namespace Mistral {
     /// Whether the domain is included in the Variable x 
     inline bool includes(const VariableBitset* x) const { return x->included(domain.values); }
 
-//     /// Whether the domain has a nonempty intersection with the Variable x
-//     bool intersect(Variable x) const ;
-//     /// Whether the domain is included in the Variable x 
-//     bool included(Variable x) const ;
-//     /// Whether the domain is included in the Variable x 
-//     bool includes(Variable x) const ;
+    //     /// Whether the domain has a nonempty intersection with the Variable x
+    //     bool intersect(Variable x) const ;
+    //     /// Whether the domain is included in the Variable x 
+    //     bool included(Variable x) const ;
+    //     /// Whether the domain is included in the Variable x 
+    //     bool includes(Variable x) const ;
 
     /// Intersect its domain with a set s
-    inline void intersectTo( BitSet& s ) const { s.intersectWith(domain.values); }
+    inline void intersect_to( BitSet& s ) const { s.intersect_with(domain.values); }
     /// Do the union of its domain with a set s
-    inline void unionTo( BitSet& s ) const { s.unionWith(domain.values); }
+    inline void union_to( BitSet& s ) const { s.union_with(domain.values); }
     //@}
 
     /*!@name Domain handling methods*/
@@ -272,7 +386,7 @@ namespace Mistral {
 
       // then change the static domain
       if(--domain.size == 1) removal = VALUE_EVENT; 
-      domain.values.fastErase(v);
+      domain.values.fast_remove(v);
 	
       if(removal == VALUE_EVENT)
 	if(domain.min == v) domain.min = domain.max;
@@ -296,6 +410,10 @@ namespace Mistral {
     inline Event set_domain(const int v) {
       Event setdomain = VALUE_EVENT;
 
+      // this->display(std::cout);
+      // std::cout << " <- " << v << " (was: " << domain << " " << domain.values << ") " 
+      //  		<< contain(v) << "/" << domain.size << std::endl;
+
       // first check if we can abort early
       if(!contain(v)) return FAIL_EVENT;
       else if(domain.size == 1) return NO_EVENT;
@@ -303,8 +421,11 @@ namespace Mistral {
       setdomain = VALUE_EVENT;
       save();
 
+
+      // std::cout << domain.values.table << std::endl;
+
       if(domain.values.table) 
-	domain.values.setTo(v);
+	domain.values.set_to(v);
       domain.size = 1;
       if(domain.min != v) {
 	domain.min = v;
@@ -386,9 +507,9 @@ namespace Mistral {
       if( domain.values.included(s) ) return NO_EVENT;
 
       save();
-	  
+
       // then change the static domain
-      domain.values.intersectWith(s);
+      domain.values.intersect_with(s);
       domain.size = domain.values.size();
       if(!s.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
       if(!s.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
@@ -401,37 +522,37 @@ namespace Mistral {
 
 
     //   Event set_domain(Variable x) ;
-//     /// Remove all values that do not appear in the current domain of the Variable "x"
-//     inline Event set_domain(Variable x) {
-//       if(domain.size == 1) {
-// 	return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
-//       } else {
-// 	int xsize = x.get_size();
-// 	if(xsize == 1) {
-// 	  return set_domain(x.get_value());
-// 	} else {
-// 	  int xmin = x.get_min();
-// 	  int xmax = x.get_max();
-// 	  if(xsize == (xmax-xmin+1)) {
-// 	    return(set_min(xmin) | set_max(xmax));
-// 	  } else if(x.includes(domain.values)) {
-// 	    return NO_EVENT;
-// 	  } else if(x.intersect(domain.values)) {
-// 	    Event intersection = DOMAIN_EVENT;
-// 	    save();
-// 	    x.intersectTo(domain.values);
-// 	    domain.size = domain.values.size();
-// 	    if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
-// 	    if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
-// 	    if(domain.min == domain.max) intersection |= VALUE_EVENT;
+    //     /// Remove all values that do not appear in the current domain of the Variable "x"
+    //     inline Event set_domain(Variable x) {
+    //       if(domain.size == 1) {
+    // 	return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
+    //       } else {
+    // 	int xsize = x.get_size();
+    // 	if(xsize == 1) {
+    // 	  return set_domain(x.get_value());
+    // 	} else {
+    // 	  int xmin = x.get_min();
+    // 	  int xmax = x.get_max();
+    // 	  if(xsize == (xmax-xmin+1)) {
+    // 	    return(set_min(xmin) | set_max(xmax));
+    // 	  } else if(x.includes(domain.values)) {
+    // 	    return NO_EVENT;
+    // 	  } else if(x.intersect(domain.values)) {
+    // 	    Event intersection = DOMAIN_EVENT;
+    // 	    save();
+    // 	    x.intersect_to(domain.values);
+    // 	    domain.size = domain.values.size();
+    // 	    if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
+    // 	    if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
+    // 	    if(domain.min == domain.max) intersection |= VALUE_EVENT;
     
-// 	    solver->trigger_event(id, intersection);
+    // 	    solver->trigger_event(id, intersection);
 	    
-// 	  } else return FAIL_EVENT;
-// 	}
-//       }
-//       return NO_EVENT;
-//     }
+    // 	  } else return FAIL_EVENT;
+    // 	}
+    //       }
+    //       return NO_EVENT;
+    //     }
 
     /// Remove all values that belong to the set "s"
     inline Event removeSet(const BitSet& s) {
@@ -447,7 +568,7 @@ namespace Mistral {
 	  
       // 	  // then change the static domain
       // 	  setdifference = DOMAIN_EVENT;
-      // 	  domain.values.setminusWith(s);
+      // 	  domain.values.setminus_with(s);
       // 	  domain.size = domain.values.size();
       // 	  if(s.contain(domain.min)) { setdifference |= LB_EVENT; domain.min = domain.values.next(domain.min); }
       // 	  if(s.contain(domain.max)) { setdifference |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
@@ -463,17 +584,29 @@ namespace Mistral {
     }
 
     /// Remove all values in the interval [l..u]
-    inline Event removeRange(const int lo, const int up) {
-      if(lo <= domain.min) return set_min(up+1);
-      if(up >= domain.max) return set_max(lo-1);
+    inline Event remove_interval(const int lo, const int up) {
+
+      //std::cout << "REMOVE [" << lo << ".." << up << "] from " << domain << std::endl;
+
+      if(lo <= domain.min) {
+	//std::cout << "EQUIVALENT TO >= " << (up+1) << std::endl;
+	return set_min(up+1);
+      }
+      if(up >= domain.max) {
+	//std::cout << "EQUIVALENT TO <= " << (lo-1) << std::endl;
+	return set_max(lo-1);
+      }
       if(domain.size != domain.max-domain.min+1) {
-	if(!domain.values.intersect(lo, up)) return NO_EVENT;
+	if(!domain.values.intersect(lo, up)) {
+	  //std::cout << "NO INTERSECTION -> NO EVENT" << std::endl;
+	  return NO_EVENT;
+	}
 	save();
-	domain.values.removeInterval(lo, up);
+	domain.values.remove_interval(lo, up);
 	domain.size = domain.values.size();
       } else {
 	save();
-	domain.values.removeInterval(lo, up);
+	domain.values.remove_interval(lo, up);
 	domain.size -= (up-lo+1);
       }
 
@@ -491,6 +624,12 @@ namespace Mistral {
 
     inline void save() {
 
+      // std::cout << "SAVE " << this << " at level " << solver->level << std::endl
+      //  		<< trail_  ;
+      // // for(int i=domain.values.pos_words; i-->domain.values.neg_words;)
+      // // 	std::cout << " " << delta_[i]-delta_abs[i] ;
+      // std::cout << std::endl;
+
       int i, j;//, lvl = get_current_level();
       if(trail_.back() != solver->level) {
 
@@ -498,7 +637,8 @@ namespace Mistral {
 	//store();
 	//Variable self(this, BITSET_VAR);
 	//solver->save(self);
-	solver->save(this, BITSET_VAR);
+	//solver->save(this, BITSET_VAR);
+	solver->save(id);
 	//store(this, BITSET_VAR);
 
 	//int i = domain.values.pos_words, j = domain.values.neg_words;
@@ -520,6 +660,12 @@ namespace Mistral {
 	
 	trail_.add(solver->level);
       }
+
+
+    // std::cout << "===> " << this << std::endl
+    //    		<< trail_  ;
+    //   std::cout << std::endl;
+      
     }
 
     inline Event restore() {
@@ -557,7 +703,7 @@ namespace Mistral {
     virtual void debug_print() const
     {
 
-    //       //Variable self((VariableImplementation*)this, BITSET_VAR);
+      //       //Variable self((VariableImplementation*)this, BITSET_VAR);
 
       std::cout << "x" << id << " in " 
 		<< domain << " "
@@ -613,22 +759,89 @@ namespace Mistral {
     /*!@name Constructors*/
     //@{
     VariableWord(const int lb, const int ub) 
-      : VariableBitset< WORD_TYPE >(lb, ub) {}
+    //: VariableBitset< WORD_TYPE >(lb, ub) 
+    {
+      //VariableBitset< WORD_TYPE >::id = -1;
+      //VariableBitset< WORD_TYPE >::solver = NULL;
+      initialise(lb, ub);
+    }
 
     virtual void initialise(const int lb, const int ub) {
+
+
+
       int nw = (lb >> BitSet::EXP);
-      int pw = (ub >> BitSet::EXP);
+      int pw = (ub >> BitSet::EXP)+1;
+
+
+      // std::cout << " initialise " << lb << " " << ub 
+      // 		<< " -> " << nw << " " << pw 
+      // 		<< std::endl;
+
       //assert((pw-nw) <= NUM_WORDS);
       VariableBitset< WORD_TYPE >::domain.initialise(lb, ub, false);
       VariableBitset< WORD_TYPE >::domain.values.neg_words = nw;
       VariableBitset< WORD_TYPE >::domain.values.pos_words = pw;
       VariableBitset< WORD_TYPE >::domain.values.table = ((&(word[0]))-nw);
+
+      std::fill(VariableBitset< WORD_TYPE >::domain.values.table+nw, 
+		VariableBitset< WORD_TYPE >::domain.values.table+pw,
+		0);
+
+      VariableBitset< WORD_TYPE >::domain.values.add_interval(lb,ub);
       VariableBitset< WORD_TYPE >::initialise_trail();
+      
+      //  this->VariableBitset< WORD_TYPE >::display(std::cout);
+      //  std::cout  << " in " << VariableBitset< WORD_TYPE >::domain << std::endl;
+      // std::cout  << " in " << VariableBitset< WORD_TYPE >::domain.values << std::endl;
+      //  std::cout  << " in " << VariableBitset< WORD_TYPE >::domain.values.table[0] << std::endl;
+    }
+
+
+    VariableWord(Vector< int >& values) 
+    {
+      initialise(values);
+    }
+
+    virtual void initialise(Vector< int >& values) {
+
+      int nw = (values.front() >> BitSet::EXP);
+      int pw = (values.back() >> BitSet::EXP)+1;
+
+
+      // std::cout << " initialise " << lb << " " << ub 
+      // 		<< " -> " << nw << " " << pw 
+      // 		<< std::endl;
+
+      //assert((pw-nw) <= NUM_WORDS);
+      VariableBitset< WORD_TYPE >::domain.initialise(values.front(), values.back(), false);
+      VariableBitset< WORD_TYPE >::domain.values.neg_words = nw;
+      VariableBitset< WORD_TYPE >::domain.values.pos_words = pw;
+      VariableBitset< WORD_TYPE >::domain.values.table = ((&(word[0]))-nw);
+
+      std::fill(VariableBitset< WORD_TYPE >::domain.values.table+nw, 
+		VariableBitset< WORD_TYPE >::domain.values.table+pw,
+		0);
+
+      //VariableBitset< WORD_TYPE >::domain.values.add_interval(lb,ub);
+
+      for(unsigned int i=0; i<values.size; ++i) 
+	VariableBitset< WORD_TYPE >::domain.values.add(values[i]);
+
+      VariableBitset< WORD_TYPE >::initialise_trail();
+      
+      //  this->VariableBitset< WORD_TYPE >::display(std::cout);
+      //  std::cout  << " in " << VariableBitset< WORD_TYPE >::domain << std::endl;
+      // std::cout  << " in " << VariableBitset< WORD_TYPE >::domain.values << std::endl;
+      //  std::cout  << " in " << VariableBitset< WORD_TYPE >::domain.values.table[0] << std::endl;
     }
 
     virtual ~VariableWord() {
+
+      //std::cout << VariableBitset< WORD_TYPE >::id << " delete subclass" << std::endl;
+      
       VariableBitset< WORD_TYPE >::domain.values.table = NULL;
-      VariableBitset< WORD_TYPE >::domain.values.neg_words = 0;
+      //VariableBitset< WORD_TYPE >::domain.values.neg_words = 0;
     }
 
   };
@@ -662,6 +875,33 @@ namespace Mistral {
     virtual ~VariableRange() {
     }
 
+
+    // set the history of X to match self
+    void set_history(VariableBitmap *X) {
+      //std::cout << "HISTORY: " << trail_ << std::endl;
+
+      for(unsigned int i = 3; i<trail_.size; i+=3) {
+	//if(trail_[i] != trail_[i-3] || trail_[i+1] != trail_[i-2])
+	X->set_bound_history(trail_[i], trail_[i+1], trail_[i+2]);
+      }
+      X->domain.values.set_min(min);
+      X->domain.values.set_max(max);
+      X->domain.min = min;
+      X->domain.max = max;
+      X->domain.size = (max-min+1);
+    }
+
+    // void set_bound_history(const int lb, const int ub, const int level) {
+    //   // first find out which words have changed
+    //   min = lb;
+    //   max = ub;
+      
+    //   trail_.add(lb);
+    //   trail_.add(ub);
+    //   trail_.add(level);
+    // }
+
+
     /*!@name Static Accessors and Iterators*/
     //@{
     /// Returns the assigned value if it exists
@@ -673,20 +913,20 @@ namespace Mistral {
     /// Returns the maximum value in the domain
     inline int get_max() const { return max; }
     /// Returns the minimum value that could belong to the domain
-    inline int get_minCapacity() const { return trail_[0]; }
+    inline int get_initial_min() const { return trail_[0]; }
     /// Returns 1 + the maximum value that could belong to the domain
-    inline int get_maxCapacity() const { return trail_[1]; }
-    /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
-    inline int get_minPosAbs() const {
-      if( max < 0 ) return NOVAL;
+    inline int get_initial_max() const { return trail_[1]; }
+    /// Returns the minimum value in [1..infty] \\inter domain, min if there are none
+    inline int get_min_pos() const {
       if( min > 0 ) return min;
-      return 0;
+      if( max < 1 ) return min;
+      return 1;
     }
-    /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
-    inline int get_minNegAbs() const  {
-      if( min > 0 ) return NOVAL;
+    /// Returns the maximum value in [-infty..-1] \\inter domain, max if there are none
+    inline int get_max_neg() const  {
       if( max < 0 ) return max;
-      return 0;
+      if( min > -1 ) return max;
+      return -1;
     } 
     /// Return the smallest value currently in the domain that is strictly greater than "v"
     inline int next(const int v) const { return (v < max ? (v>=min ? v+1 : min) : v); }
@@ -711,30 +951,32 @@ namespace Mistral {
     inline bool includes(const int lo, const int up) const { return (min <= lo && max >= up); }
 
     /// Whether the domain has a nonempty intersection with the set s 
-    inline bool intersect(const BitSet& s) const { return (min <= s.max() && max >= s.min()); }
+    //inline bool intersect(const BitSet& s) const { return (min <= s.max() && max >= s.min()); }
+    inline bool intersect(const BitSet& s) const { return s.intersect(min, max); }
     /// Whether the domain is included in the set s 
     inline bool included(const BitSet& s) const { return s.includes(min, max); }
     /// Whether the domain is included in the set s 
     inline bool includes(const BitSet& s) const { return s.included(min, max); }
 
- //    /// Whether the domain has a nonempty intersection with the Variable x
-//     inline bool intersect(const Variable x) const { return x.intersect(min,max); }
-//     /// Whether the domain is included in the Variable x 
-//     inline bool included(const Variable x) const { return x.includes(min,max); }
-//     /// Whether the domain is included in the Variable x 
-//     inline bool includes(const Variable x) const { return x.included(min,max); }
+    //    /// Whether the domain has a nonempty intersection with the Variable x
+    //     inline bool intersect(const Variable x) const { return x.intersect(min,max); }
+    //     /// Whether the domain is included in the Variable x 
+    //     inline bool included(const Variable x) const { return x.includes(min,max); }
+    //     /// Whether the domain is included in the Variable x 
+    //     inline bool includes(const Variable x) const { return x.included(min,max); }
 
-//     /// Whether the domain has a nonempty intersection with the Variable x
-//     bool intersect(const Variable x) const ;
-//     /// Whether the domain is included in the Variable x 
-//     bool included(const Variable x) const ;
-//     /// Whether the domain is included in the Variable x 
-//     bool includes(const Variable x) const ;
+    //     /// Whether the domain has a nonempty intersection with the Variable x
+    //     bool intersect(const Variable x) const ;
+    //     /// Whether the domain is included in the Variable x 
+    //     bool included(const Variable x) const ;
+    //     /// Whether the domain is included in the Variable x 
+    //     bool includes(const Variable x) const ;
 
     /// Intersect its domain with a set s
-    inline void intersectTo( BitSet& s ) const { s.set_min(min); s.set_max(max); }
+    inline void intersect_to( BitSet& s ) const { s.set_min(min); s.set_max(max); }
     /// Do the union of its domain with a set s
-    inline void unionTo( BitSet& s ) const { // s.fill(min,max);
+    inline void union_to( BitSet& s ) const { // s.fill(min,max);
+      s.fill(min,max);
     }
     //@}
 
@@ -743,33 +985,37 @@ namespace Mistral {
     
 
 
-    inline Event remove(const int v) {
-      Event removal = DOMAIN_EVENT;
+    inline Event remove(const int v);//  {
+    //   Event removal = DOMAIN_EVENT;
 
-      // first check if we can abort early
-      if(min!=v && max!=v) return NO_EVENT;
-      if(min==max) return FAIL_EVENT;
+    //   // first check if we can abort early
+    //   if(min!=v && max!=v) {
+    // 	solver->make_non_convex(id);
+    // 	return solver->variables[id].remove(v);
+    // 	//return NO_EVENT;
+    //   }
+    //   if(min==max) return FAIL_EVENT;
 
-      save();
+    //   save();
 
-      if(min==v) {
-	++min;
-	removal |= LB_EVENT;
-      } else {
-	--max;
-	removal |= UB_EVENT;
-      }
+    //   if(min==v) {
+    // 	++min;
+    // 	removal |= LB_EVENT;
+    //   } else {
+    // 	--max;
+    // 	removal |= UB_EVENT;
+    //   }
 
-      if(min == max) removal |= VALUE_EVENT; 
+    //   if(min == max) removal |= VALUE_EVENT; 
 
-//       display(std::cout);
-//       std::cout << " in [" << min << ".." << max << "]: ";
-//       std::cout << "TRIGGER " << removal << std::endl;
-//       std::cout << (ASSIGNED(removal)) << std::endl;
+    //   //       display(std::cout);
+    //   //       std::cout << " in [" << min << ".." << max << "]: ";
+    //   //       std::cout << "TRIGGER " << removal << std::endl;
+    //   //       std::cout << (ASSIGNED(removal)) << std::endl;
 
-      solver->trigger_event(id, removal);
-      return removal; 
-    }
+    //   solver->trigger_event(id, removal);
+    //   return removal; 
+    // }
 
     /// Remove all values but "v"
     inline Event set_domain(const int v) {
@@ -801,10 +1047,10 @@ namespace Mistral {
       min = lo;
       if(min == max) lower_bound |= VALUE_EVENT;
 
- //      display(std::cout);
-//       std::cout << " in [" << min << ".." << max << "]: ";
-//       std::cout << "TRIGGER " << lower_bound << std::endl;
-//       std::cout << (ASSIGNED(lower_bound)) << std::endl;
+      //      display(std::cout);
+      //       std::cout << " in [" << min << ".." << max << "]: ";
+      //       std::cout << "TRIGGER " << lower_bound << std::endl;
+      //       std::cout << (ASSIGNED(lower_bound)) << std::endl;
       
       solver->trigger_event(id, lower_bound);
       return lower_bound; 
@@ -823,10 +1069,10 @@ namespace Mistral {
       max = up;
       if(max == min) upper_bound |= VALUE_EVENT;
       
-//       display(std::cout);
-//       std::cout  << " in [" << min << ".." << max << "]: ";
-//       std::cout << "TRIGGER " << upper_bound << std::endl;
-//       std::cout << (ASSIGNED(upper_bound)) << std::endl;
+      //       display(std::cout);
+      //       std::cout  << " in [" << min << ".." << max << "]: ";
+      //       std::cout << "TRIGGER " << upper_bound << std::endl;
+      //       std::cout << (ASSIGNED(upper_bound)) << std::endl;
 
       solver->trigger_event(id, upper_bound);
       return upper_bound; 
@@ -834,18 +1080,18 @@ namespace Mistral {
 
 
     /// Remove all values that do not appear in the set "s"
-    inline Event set_domain(const BitSet& s) {
-      //return set_domain(s.next(min-1), s.prev(max+1));
-      return NO_EVENT;
-    }
+    inline Event set_domain(const BitSet& s);//  {
+    //   //return set_domain(s.next(min-1), s.prev(max+1));
+    //   return NO_EVENT;
+    // }
 
 
     Event set_domain(Variable x) ;
     /// Remove all values that do not appear in the current domain of the Variable "x"
-//     inline Event set_domain(Variable x) {
-//       //return set_domain(x.next(min-1), x.prev(max+1));
-//       return NO_EVENT;
-//     }
+    //     inline Event set_domain(Variable x) {
+    //       //return set_domain(x.next(min-1), x.prev(max+1));
+    //       return NO_EVENT;
+    //     }
 
     /// Remove all values that belong to the set "s"
     inline Event removeSet(const BitSet& s) {
@@ -854,7 +1100,7 @@ namespace Mistral {
     }
 
     /// Remove all values in the interval [l..u]
-    inline Event removeRange(const int lo, const int up) {
+    inline Event remove_interval(const int lo, const int up) {
       if(lo <= min) return set_min(up+1);
       if(up >= max) return set_max(lo-1);
       return NO_EVENT; 
@@ -871,7 +1117,8 @@ namespace Mistral {
       if(trail_.back() != solver->level) {
 	//Variable self(this, RANGE_VAR);
 	//solver->save(self);
-	solver->save(this, RANGE_VAR);
+	//solver->save(this, RANGE_VAR);
+	solver->save(id);
 	trail_.add(min);
 	trail_.add(max);
 	trail_.add(solver->level);
@@ -887,7 +1134,7 @@ namespace Mistral {
 
     virtual std::ostream& display(std::ostream& os) const
     {
-      os << "r" << id;
+      os << "x" << id;
       return os;
     }
 
@@ -896,29 +1143,29 @@ namespace Mistral {
   class VariableVirtual : public VariableBitmap {};
 
 
-//   class VariableStruct {
-//     union {
-//       int domain_type;
-//       int* bool_domain;
-//     };
-//     union {
-//       int constant_value;
-//       VariableImplementation* variable;
-//       VariableVirtual* virtual_domain;
-//       VariableBitmap* bitset_domain;
-//       VariableRange* range_domain;
-//       VariableList* list_domain;
-//       //Expression* expression;
-//       Constraint* constraint;
-//     };
-//   };
+  //   class VariableStruct {
+  //     union {
+  //       int domain_type;
+  //       int* bool_domain;
+  //     };
+  //     union {
+  //       int constant_value;
+  //       VariableImplementation* variable;
+  //       VariableVirtual* virtual_domain;
+  //       VariableBitmap* bitset_domain;
+  //       VariableRange* range_domain;
+  //       VariableList* list_domain;
+  //       //Expression* expression;
+  //       Constraint* constraint;
+  //     };
+  //   };
 
-//   class VariableBitmap;
-//   class VariableRange;
-//   class VariableList;
+  //   class VariableBitmap;
+  //   class VariableRange;
+  //   class VariableList;
 
 
-   class Expression;
+  class Expression;
 
 
   class Variable  {
@@ -944,10 +1191,38 @@ namespace Mistral {
     Variable(const int value);
     Variable(VariableImplementation* impl, const int type=DYN_VAR);
     Variable(Expression* impl);
-//     Variable(const int lo, const int up, const int type=DYN_VAR);
-//     Variable(Vector< int >& values, const int type=DYN_VAR);
+    //     Variable(const int lo, const int up, const int type=DYN_VAR);
+    //     Variable(Vector< int >& values, const int type=DYN_VAR);
     Variable(const int lo, const int up, const int type=EXPRESSION);
     Variable(Vector< int >& values, const int type=EXPRESSION);
+    Variable(Variable X, bool h);
+    //Variable(const int lo, const int up, BitSet& values, const int type=EXPRESSION);
+
+
+    ~Variable() { } //std::cout << "del "; this->display(std::cout); std::cout << std::endl; }
+
+    // class iterator {
+      
+    // private:
+    //   int *values;
+    //   int size;
+    //   int current;
+
+    // public:
+    //   iterator(Variable X) {
+	
+    //   }
+
+    //   virtual ~iterator()
+
+    // };
+
+    bool is_void() { return (domain_type != CONST_VAR && variable == NULL); }
+    void initialise_domain(const int lo, const int up, const int type);
+    void initialise_domain(Vector< int >& values, const int type);
+    //void set_history(Variable X);
+    //void set_bound_history(const int lb, const int ub, const int level);
+
 
     //Variable get_children();
     Variable get_var();
@@ -957,8 +1232,8 @@ namespace Mistral {
     Variable operator+(const int);
     Variable operator-(Variable);
     //    Variable operator-(const int);
-    //    Variable operator*(Variable);
-    //    Variable operator*(const int);
+    Variable operator*(Variable);
+    Variable operator*(const int);
     //    Variable operator/(Variable);
     //    Variable operator/(const int);
     Variable operator&&(Variable);
@@ -988,7 +1263,7 @@ namespace Mistral {
     
       //std::cout << "after init: " << domain_type << std::endl;
 
-      Variable x = get_var();
+      //Variable x = get_var();
 
       //std::cout << "pointed var: " << x.domain_type << std::endl;
 
@@ -997,7 +1272,7 @@ namespace Mistral {
       //std::cout << "after copy: " << domain_type << std::endl;
     }
     void initialise(Solver *s, const bool top=true);
-//    void initialise(Solver *s);
+    //    void initialise(Solver *s);
 
     Event setValue( const int val );    
     Event setState( const int vals );    
@@ -1009,6 +1284,8 @@ namespace Mistral {
     /// Returns the assigned value if it exists
     int get_value() const ; 
     int get_solution_value() const ; 
+    int get_solution_min() const ; 
+    int get_solution_max() const ; 
     /// Returns the domain 
     //Bitset_domain get_domain() const ; 
     std::string get_domain() const ; 
@@ -1021,13 +1298,13 @@ namespace Mistral {
     /// Returns the maximum value in the domain
     int get_max() const ; 
     /// Returns the minimum value that could belong to the domain
-    int get_minCapacity() const ;
+    int get_initial_min() const ;
     /// Returns 1 + the maximum value that could belong to the domain
-    int get_maxCapacity() const ;
+    int get_initial_max() const ;
     /// Returns the minimum absolute value in [0..infty] \\inter domain, NOVAL if there are none
-    int get_minPosAbs() const ;
+    int get_min_pos() const ;
     /// Returns the minimum absolute value in [-infty..0] \\inter domain, NOVAL if there are none
-    int get_minNegAbs() const ;
+    int get_max_neg() const ;
     /// Return the smallest value currently in the domain that is strictly greater than "v"
     int next(const int v) const ;
     /// Return the smallest value currently in the domain that is strictly greater than "v"
@@ -1063,9 +1340,9 @@ namespace Mistral {
     bool includes(const Variable& x) const ;
 
     /// Intersect its domain with a set s
-    void intersectTo( BitSet& s ) const ;
+    void intersect_to( BitSet& s ) const ;
     /// Do the union of its domain with a set s
-    void unionTo( BitSet& s ) const ;
+    void union_to( BitSet& s ) const ;
     //@}
 
     /*!@name Domain changing methods*/
@@ -1085,7 +1362,7 @@ namespace Mistral {
     /// Remove all values that belong to the set "s"
     Event removeSet(const BitSet& s) ;
     /// Remove all values in the interval [l..u]
-    Event removeRange(const int lo, const int up) ;
+    Event remove_interval(const int lo, const int up) ;
     //@}
 
     /*!@name Backtracking methods*/
@@ -1104,8 +1381,6 @@ namespace Mistral {
 
   std::ostream& operator<< (std::ostream& os, const Variable& x);
   std::ostream& operator<< (std::ostream& os, const Variable* x);
-
-
 
 
   /**********************************************
@@ -1204,7 +1479,7 @@ namespace Mistral {
 
     At any time, expressions can be replaced by their variable-object
     in the constraints' scopes. 
-   */
+  */
 
   // 1/ creation: A Variable object with domain type "EXPRESSION" and
   //              a pointer to an expression. 
@@ -1230,20 +1505,20 @@ namespace Mistral {
 
 
 
-// Variable objects can be expression (domain_type = EXPRESSION)
-// In this case, their implementation is an object predicate that:
-// 1/ keeps the tree structure (children)
-// 2/ can be 'extracted' to produce 
-//     a/ an extra variable and a constraint (when nested)
-//     b/ a constraint (when at the top level)
-// when adding a variable, the solver
-// 1/ check what type it is
-//   a/ if it is a variable, it initilise it and add it to the stack
-//   b/ if it is an expression, it first recursively add the children
-//      then:
-//      i/ at top level: extract a constraint and post it
-//      ii/ otherwise: extract a variable 
-//          then extract a constraint and post it
+  // Variable objects can be expression (domain_type = EXPRESSION)
+  // In this case, their implementation is an object predicate that:
+  // 1/ keeps the tree structure (children)
+  // 2/ can be 'extracted' to produce 
+  //     a/ an extra variable and a constraint (when nested)
+  //     b/ a constraint (when at the top level)
+  // when adding a variable, the solver
+  // 1/ check what type it is
+  //   a/ if it is a variable, it initilise it and add it to the stack
+  //   b/ if it is an expression, it first recursively add the children
+  //      then:
+  //      i/ at top level: extract a constraint and post it
+  //      ii/ otherwise: extract a variable 
+  //          then extract a constraint and post it
   class Expression : public VariableImplementation {
 
   public :
@@ -1253,246 +1528,402 @@ namespace Mistral {
     Vector< Variable > children;
     
     
-    Expression() : VariableImplementation() {}
+    Expression() : VariableImplementation() {  id=-1; }
     Expression(Variable X);
     Expression(Variable X, Variable Y);
-    Expression(Vector< Variable >& args);
     Expression(const int lo, const int up);
+    Expression(Vector< Variable >& args);
+    Expression(Vector< Variable >& args, const int lo, const int up);
+    Expression(std::vector< Variable >& args);
+    Expression(std::vector< Variable >& args, const int lo, const int up);
     Expression(Vector< int >& values);
-    ~Expression();
+    virtual ~Expression();
     
-    
+
     virtual void extract_constraint(Solver*) {}
     virtual void extract_predicate(Solver*) {}
+    //virtual void reify(Solver *s, Variable X);
     virtual void extract_variable(Solver*);
-    virtual const char* get_name() { return "var"; }
-    
-};
+    virtual const char* get_name() const { return "var"; }
+
+    virtual std::ostream& display(std::ostream& os) const;    
+  };
 
 
 
-// class BinaryExpression : public Expression {
 
-// public :
 
-//   BinaryExpression(Variable X, Variable Y);
-//   ~BinaryExpression();
 
-// };
+  // class BinaryExpression : public Expression {
 
-class AddExpression : public Expression {
+  // public :
 
-public:
+  //   BinaryExpression(Variable X, Variable Y);
+  //   ~BinaryExpression();
 
-  AddExpression(Variable X, Variable Y);
-  ~AddExpression();
+  // };
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+  class AddExpression : public Expression {
 
-};
+  public:
 
-class OffsetExpression : public Expression {
+    AddExpression(Variable X, Variable Y);
+    virtual ~AddExpression();
 
-public:
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  int offset;
+  };
 
-  OffsetExpression(Variable X, const int ofs);
-  ~OffsetExpression();
+  class MulExpression : public Expression {
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+  public:
 
-};
+    MulExpression(Variable X, Variable Y);
+    virtual ~MulExpression();
 
-class SubExpression : public Expression {
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-public:
+  };
 
-  SubExpression(Variable X, Variable Y);
-  ~SubExpression();
+  class OffsetExpression : public Expression {
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+  public:
 
-};
+    int offset;
 
-class AndExpression : public Expression {
+    OffsetExpression(Variable X, const int ofs);
+    virtual ~OffsetExpression();
 
-public:
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  AndExpression(Variable X, Variable Y);
-  ~AndExpression();
+  };
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+  class FactorExpression : public Expression {
 
-};
+  public:
 
-class OrExpression : public Expression {
+    int factor;
 
-public:
+    FactorExpression(Variable X, const int ofs);
+    virtual ~FactorExpression();
 
-  OrExpression(Variable X, Variable Y);
-  ~OrExpression();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+  };
 
-};
+  class SubExpression : public Expression {
 
-class NotExpression : public Expression {
+  public:
 
-public:
+    SubExpression(Variable X, Variable Y);
+    virtual ~SubExpression();
 
-  NotExpression(Variable X);
-  ~NotExpression();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+  };
 
-};
+  class AndExpression : public Expression {
 
-// class NeqExpression : public Expression {
+  public:
 
-// public:
+    AndExpression(Variable X, Variable Y);
+    virtual ~AndExpression();
 
-//   NeqExpression(Variable X, Variable Y);
-//   ~NeqExpression();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-//   virtual void extract_constraint(Solver*);
-//   virtual void extract_variable(Solver*);
-//   virtual void extract_predicate(Solver*);
-//   virtual const char* get_name();
+  };
 
-// };
+  class OrExpression : public Expression {
 
-// class EqualExpression : public Expression {
+  public:
 
-// public:
+    OrExpression(Variable X, Variable Y);
+    virtual ~OrExpression();
 
-//   EqualExpression(Variable X, Variable Y);
-//   ~EqualExpression();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-//   virtual void extract_constraint(Solver*);
-//   virtual void extract_variable(Solver*);
-//   virtual void extract_predicate(Solver*);
-//   virtual const char* get_name();
+  };
 
-// };
+  class NotExpression : public Expression {
 
-class EqualExpression : public Expression {
+  public:
 
-public:
+    NotExpression(Variable X);
+    virtual ~NotExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  // class NeqExpression : public Expression {
+
+  // public:
+
+  //   NeqExpression(Variable X, Variable Y);
+  //   virtual ~NeqExpression();
+
+  //   virtual void extract_constraint(Solver*);
+  //   virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
+  // class EqualExpression : public Expression {
+
+  // public:
+
+  //   EqualExpression(Variable X, Variable Y);
+  //   virtual ~EqualExpression();
+
+  //   virtual void extract_constraint(Solver*);
+  //   virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
+  class EqualExpression : public Expression {
+
+  public:
   
-  int spin;
-  int value;
+    int spin;
+    int value;
 
-  EqualExpression(Variable X, Variable Y, const int sp=1);
-  EqualExpression(Variable X, const int y, const int sp=1);
-  ~EqualExpression();
+    EqualExpression(Variable X, Variable Y, const int sp=1);
+    EqualExpression(Variable X, const int y, const int sp=1);
+    virtual ~EqualExpression();
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-};
+  };
 
-class PrecedenceExpression : public Expression {
+  class PrecedenceExpression : public Expression {
 
-public:
+  public:
 
-  int spin;
-  int offset;
+    int spin;
+    int offset;
 
-  PrecedenceExpression(Variable X, 
-		       const int of=0, const int sp=1);
-  PrecedenceExpression(Variable X, Variable Y, 
-		       const int of=0, const int sp=1);
-  ~PrecedenceExpression();
+    PrecedenceExpression(Variable X, 
+			 const int of=0, const int sp=1);
+    PrecedenceExpression(Variable X, Variable Y, 
+			 const int of=0, const int sp=1);
+    virtual ~PrecedenceExpression();
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-};
+  };
 
+  Variable Precedence(Variable X, const int d, Variable Y);
 
-class DisjunctiveExpression : public Expression {
+  class DisjunctiveExpression : public Expression {
 
-public:
+  public:
 
-  int processing_time[2];
+    int processing_time[2];
 
-  DisjunctiveExpression(Variable X, 
-			Variable Y,
-			const int p0=1, 
-			const int p1=1);
+    DisjunctiveExpression(Variable X, 
+			  Variable Y,
+			  const int p0=1, 
+			  const int p1=1);
 
-  ~DisjunctiveExpression();
+    virtual ~DisjunctiveExpression();
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-};
+  };
 
   Variable Disjunctive(Variable X, Variable Y, const int px, const int py);
   
 
-class AllDiffExpression : public Expression {
+  class AllDiffExpression : public Expression {
 
-public:
+  public:
 
-  int consistency_level;
+    int consistency_level;
 
-  AllDiffExpression(Vector< Variable >& args, const int ct);
-  ~AllDiffExpression();
+    AllDiffExpression(Vector< Variable >& args, const int ct);
+    virtual ~AllDiffExpression();
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-};
+  };
 
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 
 
-class BoolSumExpression : public Expression {
+  class BoolSumExpression : public Expression {
 
-public:
+  public:
 
-  int total;
+    int lb;
+    int ub;
 
-  BoolSumExpression(Vector< Variable >& args, const int ct);
-  ~BoolSumExpression();
+    BoolSumExpression(const int l, const int u);
+    BoolSumExpression(Vector< Variable >& args, const int l, const int u);
+    virtual ~BoolSumExpression();
 
-  virtual void extract_constraint(Solver*);
-  virtual void extract_variable(Solver*);
-  virtual void extract_predicate(Solver*);
-  virtual const char* get_name();
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-};
+  };
 
-  Variable BoolSum(Vector< Variable >& args, const int t);
+  Variable BoolSum(Vector< Variable >& args);
+  Variable BoolSum(Vector< Variable >& args, const int l, const int u);
+  Variable BoolSum(std::vector< Variable >& args, const int l, const int u);
 
+
+
+  class LinearExpression : public Expression {
+
+  public:
+
+    int lower_bound;
+    int upper_bound;
+    Vector< int > weight;
+
+
+    LinearExpression(Vector< Variable >& args, Vector< int >& wgt, const int l, const int u);
+    LinearExpression(std::vector< Variable >& args, std::vector< int >& wgt, const int l, const int u);
+    virtual ~LinearExpression();
+    void initialise_bounds();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T);
+  Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T);
+  Variable Sum(Vector< Variable >& args, Vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
+  Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
+
+
+
+  class ElementExpression : public Expression {
+
+  public:
+
+    int lower_bound;
+    int upper_bound;
+    int offset;
+    //BitSet domain;
+    Vector< int > values;
+
+    ElementExpression(Vector< Variable >& args, Variable X, int ofs);
+    virtual ~ElementExpression();
+    void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Element(Vector<Variable> X, Variable selector, int offset=0);
+  Variable Element(VarArray X, Variable selector, int offset=0);
+
+
+  class SetExpression : public BoolSumExpression {
+    
+  public:
+    
+    Vector< int > elements;
+ 
+    SetExpression(const int lelt, const int uelt, const int clb, const int cub);
+    virtual ~SetExpression();
+    
+    Variable get_elt_var(const int vali);
+    int get_element_index(const int vali);
+    
+    virtual const char* get_name() const;
+    virtual std::ostream& display(std::ostream& os) const;
+    virtual int get_solution_value() const ;//{ return solver->last_solution_lb[id] } ; 
+  };
+
+  Variable SetVariable(const int lelt, const int uelt, 
+  		       const int clb=0, const int cub=INFTY);
+  // Variable SetVariable(Vector<int> lb, Vector<int> ub, const int clb, const int cub);
+  // Variable SetVariable(std::vector<int> lb, std::vector<int> ub, const int clb, const int cub);
+  // Variable SetVariable(BitSet lb, Bitset ub, const int clb, const int cub);
+
+  Variable Card(Variable S); //{ return S; }
+
+
+  class SubsetExpression : public Expression {
+
+  public:
+
+    SubsetExpression(Variable X, Variable Y);
+    virtual ~SubsetExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Subset(Variable X, Variable Y);
+
+
+  class MemberExpression : public Expression {
+
+  public:
+
+    MemberExpression(Variable X, Variable Y);
+    virtual ~MemberExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Member(Variable X, Variable Y);
 
 
   class VarArray : public Vector< Variable > {
@@ -1511,64 +1942,166 @@ public:
       }
     }
 
-    ~VarArray() {}
-
-    //VarArray oper
-
-    // std::ostream& display(std::ostream& os) const;
-
+    virtual ~VarArray() {}
+    Variable operator[](Variable X);
+    Variable operator[](const int X);
   };
 
-//   std::ostream& operator<< (std::ostream& os, const VarArray& x);
-//   std::ostream& operator<< (std::ostream& os, const VarArray* x);
+
+  class Goal {
+
+  public:
+    
+    enum method { MINIMIZATION, MAXIMIZATION, SATISFACTION, ALLSOLUTIONS };
+    method            type;
+    int        lower_bound;
+    int        upper_bound;
+    Variable     objective;
+
+    Goal(method t); 
+    Goal(method t, Variable X);
+
+    virtual ~Goal();
+
+    bool enforce();
+    Outcome notify_solution(Solver *solver);
+    Outcome notify_exhausted();
+     
+  };
 
 
-//   template < class WORD_TYPE >
-//   /// Remove all values that do not appear in the current domain of the Variable "x"
-//   Event VariableBitset< WORD_TYPE >::set_domain(Variable x) {
-//     if(domain.size == 1) {
-//       return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
-//     } else {
-//       int xsize = x.get_size();
-//       if(xsize == 1) {
-// 	return set_domain(x.get_value());
-//       } else {
-// 	int xmin = x.get_min();
-// 	int xmax = x.get_max();
-// 	if(xsize == (xmax-xmin+1)) {
-// 	  return(set_min(xmin) | set_max(xmax));
-// 	} else if(x.includes(domain.values)) {
-// 	  return NO_EVENT;
-// 	} else if(x.intersect(domain.values)) {
-// 	  Event intersection = DOMAIN_EVENT;
-// 	  save();
-// 	  x.intersectTo(domain.values);
-// 	  domain.size = domain.values.size();
-// 	  if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
-// 	  if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
-// 	  if(domain.min == domain.max) intersection |= VALUE_EVENT;
+  //   std::ostream& operator<< (std::ostream& os, const VarArray& x);
+  //   std::ostream& operator<< (std::ostream& os, const VarArray* x);
+
+
+  //   template < class WORD_TYPE >
+  //   /// Remove all values that do not appear in the current domain of the Variable "x"
+  //   Event VariableBitset< WORD_TYPE >::set_domain(Variable x) {
+  //     if(domain.size == 1) {
+  //       return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
+  //     } else {
+  //       int xsize = x.get_size();
+  //       if(xsize == 1) {
+  // 	return set_domain(x.get_value());
+  //       } else {
+  // 	int xmin = x.get_min();
+  // 	int xmax = x.get_max();
+  // 	if(xsize == (xmax-xmin+1)) {
+  // 	  return(set_min(xmin) | set_max(xmax));
+  // 	} else if(x.includes(domain.values)) {
+  // 	  return NO_EVENT;
+  // 	} else if(x.intersect(domain.values)) {
+  // 	  Event intersection = DOMAIN_EVENT;
+  // 	  save();
+  // 	  x.intersect_to(domain.values);
+  // 	  domain.size = domain.values.size();
+  // 	  if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
+  // 	  if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
+  // 	  if(domain.min == domain.max) intersection |= VALUE_EVENT;
 	  
-// 	  solver->trigger_event(id, intersection);
+  // 	  solver->trigger_event(id, intersection);
 	  
-// 	} else return FAIL_EVENT;
-//       }
-//     }
-//     return NO_EVENT;
-//   }
+  // 	} else return FAIL_EVENT;
+  //       }
+  //     }
+  //     return NO_EVENT;
+  //   }
 
 
-//     /// Whether the domain has a nonempty intersection with the Variable x
-//   template < class WORD_TYPE >
-//   bool VariableBitset< WORD_TYPE >::intersect(Variable x) const { return x.intersect(domain.values); }
-//     /// Whether the domain is included in the Variable x 
-//   template < class WORD_TYPE >
-//   bool VariableBitset< WORD_TYPE >::included(Variable x) const { return x.includes(domain.values); }
-//     /// Whether the domain is included in the Variable x 
-//   template < class WORD_TYPE >
-//   bool VariableBitset< WORD_TYPE >::includes(Variable x) const { return x.included(domain.values); }
+  //     /// Whether the domain has a nonempty intersection with the Variable x
+  //   template < class WORD_TYPE >
+  //   bool VariableBitset< WORD_TYPE >::intersect(Variable x) const { return x.intersect(domain.values); }
+  //     /// Whether the domain is included in the Variable x 
+  //   template < class WORD_TYPE >
+  //   bool VariableBitset< WORD_TYPE >::included(Variable x) const { return x.includes(domain.values); }
+  //     /// Whether the domain is included in the Variable x 
+  //   template < class WORD_TYPE >
+  //   bool VariableBitset< WORD_TYPE >::includes(Variable x) const { return x.included(domain.values); }
 
+
+  inline Event VariableRange::remove(const int v) {
+    Event removal = DOMAIN_EVENT;
+    
+    // first check if we can abort early
+    if(min>v || max<v) {
+      return NO_EVENT;
+    }
+    if(min!=v && max!=v) {
+      solver->make_non_convex(id);
+
+      //std::cout << std::endl << solver->variables[id] << " in " << solver->variables[id].get_domain() << std::endl;
+
+      //std::cout << ((VariableBitmap*)(solver->variables[id].variable))->trail_ << std::endl;
+
+      removal = solver->variables[id].remove(v);
+
+      //std::cout << solver->variables[id] << " in " << solver->variables[id].get_domain() << std::endl << std::endl;
+
+
+      return removal;
+      //return NO_EVENT;
+    }
+    if(min==max) return FAIL_EVENT;
+
+      save();
+
+      if(min==v) {
+	++min;
+	removal |= LB_EVENT;
+      } else {
+	--max;
+	removal |= UB_EVENT;
+      }
+
+      if(min == max) removal |= VALUE_EVENT; 
+
+      //       display(std::cout);
+      //       std::cout << " in [" << min << ".." << max << "]: ";
+      //       std::cout << "TRIGGER " << removal << std::endl;
+      //       std::cout << (ASSIGNED(removal)) << std::endl;
+
+      solver->trigger_event(id, removal);
+      return removal; 
+    }
 
   
+   /// Remove all values that do not appear in the set "s"
+    inline Event VariableRange::set_domain(const BitSet& s) {
+      Event setdomain = NO_EVENT;
+
+      // std::cout << "include " << s.includes(min, max) << std::endl;
+      // std::cout << "intersect " << s.intersect(min, max) << std::endl;
+      // std::cout << "[" << s.next(min-1) << ".." << s.prev(max+1) << "]" << std::endl;
+      
+
+      if(s.includes(min, max)) return NO_EVENT;
+      if(!s.intersect(min, max)) return FAIL_EVENT;
+      int lb = s.next(min-1);
+      int ub = s.prev(max+1);
+      if(s.includes(lb, ub)) {
+	if(lb>min) {
+	  setdomain |= set_min(lb);
+	} 
+	if(ub<max) {
+	  setdomain |= set_max(ub);
+	}
+      } else {
+
+	// std::cout << "the intersection is not convex" << std::endl;
+
+	solver->make_non_convex(id);
+
+
+	// std::cout << solver->variables[id] << " in " 
+	// 	  << solver->variables[id].get_domain() << std::endl;
+
+	return solver->variables[id].set_domain(s);
+      }
+
+      //return set_domain(s.next(min-1), s.prev(max+1));
+      return setdomain;
+    }
+
 
 }
 

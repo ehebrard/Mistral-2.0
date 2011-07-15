@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <fstream>
 
+#include <math.h>
+
 #include <mistral_search.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
@@ -118,15 +120,15 @@ public:
 };
 
 template< int NUM_HEAD >
-class RandomCListRandomEraseAndRestore : public UnitTest {
+class RandomCListRandomRemoveAndRestore : public UnitTest {
 
 public:
 
   int NUM_ELT;
   
-  RandomCListRandomEraseAndRestore(const int ql=HIGH, 
+  RandomCListRandomRemoveAndRestore(const int ql=HIGH, 
 				   const int qt=MEDIUM); 
-  ~RandomCListRandomEraseAndRestore();
+  ~RandomCListRandomRemoveAndRestore();
 
   class NaiveImplementation : public Reversible {
 
@@ -139,7 +141,7 @@ public:
     NaiveImplementation(Solver *s) ;
 
     void create(int elt, int wl=0);
-    void reversible_erase(int elt, int wl);
+    void reversible_remove(int elt, int wl);
     void reversible_add(int elt, int wl=0);
     void save();
     void restore();
@@ -171,6 +173,8 @@ class CostasAllDiffAllSolutions : public UnitTest {
 
 public:
   
+  static const int num_sol[13];
+
   int size;
   int consistency;
   int domain;
@@ -181,12 +185,15 @@ public:
   virtual void run();
 };
 
+const int CostasAllDiffAllSolutions::num_sol[] = {0,0,0,0,0,0,116,200,444,760,2160,0,0};
 
 
 class CostasNotEqualAllSolutions : public UnitTest {
 
 public:
-  
+
+  static const int num_sol[13];
+    
   int size;
   
   CostasNotEqualAllSolutions(const int sz);
@@ -195,6 +202,7 @@ public:
   virtual void run();
 };
 
+const int CostasNotEqualAllSolutions::num_sol[] = {0,0,0,0,0,0,116,200,444,760,2160,0,0};
 
 class Reset : public UnitTest {
 
@@ -210,6 +218,8 @@ class Pigeons : public UnitTest {
 
 public:
   
+  static const int num_bts[13];
+
   int size;
   
   Pigeons(const int sz);
@@ -218,9 +228,14 @@ public:
   virtual void run();
 };
 
+const int Pigeons::num_bts[] = {0,0,0,0,0,0,119,719,5039,40319,362879,3628799,0};
+
+
 class BoolPigeons : public UnitTest {
 
 public:
+
+  static const int num_bts[13];
   
   int var_type;
   int size;
@@ -231,6 +246,7 @@ public:
   virtual void run();
 };
 
+const int BoolPigeons::num_bts[] = {0,0,0,0,0,0,119,719,5039,40319,362879,3628799,0};
 
 class VarStackDynamicTest : public UnitTest {
 
@@ -262,6 +278,56 @@ public:
   virtual void run();
 };
 
+class SubsetTest : public UnitTest {
+
+public:
+  
+  SubsetTest();
+  ~SubsetTest();
+
+  virtual void run();
+};
+
+class MemberTest : public UnitTest {
+
+public:
+  
+  MemberTest();
+  ~MemberTest();
+
+  virtual void run();
+};
+
+class WeightedSumTest : public UnitTest {
+
+public:
+  
+  WeightedSumTest();
+  ~WeightedSumTest();
+
+void run1();
+void run2();
+void run3();
+void run4();
+
+  virtual void run();
+};
+
+class ElementTest : public UnitTest {
+
+public:
+  
+  ElementTest();
+  ~ElementTest();
+
+  void run1();
+//void run2();
+//void run3();
+//void run4();
+
+  virtual void run();
+};
+
 class OpshopTest : public UnitTest {
 
 public:
@@ -282,10 +348,775 @@ public:
   virtual void run();
 };
 
+template<class CON_TYPE>
+class ConChecker {
+
+public:
+
+  std::string name;
+  
+  bool AC;
+  bool BC;
+  // AC = true, BC = false: = AC
+  // AC = false, BC = true: = BC
+  // AC = true, BC = true: BC <= P <= AC
+
+  int seed;
+  int arity;
+  int domsize;
+  int nbool;
+
+  Solver s1;
+  Solver s2;
+  Solver s3;
+
+  VarArray scope1;
+  VarArray scope2;
+  VarArray scope3;
+
+  CON_TYPE *con1;// = new CON_TYPE(scope1);
+  CON_TYPE *con2;// = new CON_TYPE(scope2);
+  CON_TYPE *con3;// = new CON_TYPE(scope3);
+
+  ConChecker(//CON_TYPE *cons, 
+	     std::string nm,
+	     const bool ac,
+	     const bool bc,
+	     const int s,
+	     const int a, 
+	     const int d, 
+	     const int n=0) : name(nm), AC(ac), BC(bc), seed(s), arity(a), domsize(d), nbool(n) {
+    
+    VarArray X1(arity-nbool, -domsize/2, +domsize/2);
+    VarArray b1(nbool, 0, 1);
+    
+    VarArray X2(arity-nbool, -domsize/2, +domsize/2);
+    VarArray b2(nbool, 0, 1);
+
+    VarArray X3(arity-nbool, -domsize/2, +domsize/2);
+    VarArray b3(nbool, 0, 1);
+    
+    for(int i=0; i<arity-nbool; ++i) {
+      scope1.add(X1[i]);
+      scope2.add(X2[i]);
+      scope3.add(X3[i]);
+    }
+    
+    for(int i=0; i<nbool; ++i) {
+      scope1.add(b1[i]);
+      scope2.add(b2[i]);
+      scope3.add(b3[i]);
+    }
+    
+    
+    con1 = new CON_TYPE(scope1);
+    con2 = new CON_TYPE(scope2);
+    con3 = new CON_TYPE(scope3);
+    
+    s1.add( con1 );
+    s1.rewrite();
+    s1.consolidate();
+    
+    s2.add( con2 );
+    s2.rewrite();
+    s2.consolidate();
+
+    s3.add( con3 );
+    s3.rewrite();
+    s3.consolidate();
+    
+    usrand(seed);
+  }
+
+
+  void run(int n_iterations=1) {
+
+    std::cout << ".";
+    std::cout.flush();
+
+    //std::cout << std::endl;
+
+    while(n_iterations--) {
+
+      //      std::cout << n_iterations << std::endl;
+
+      int n_reductions = 0;
+
+      //std::cout << s1  << std::endl;
+
+      PropagationOutcome wiped1 = CONSISTENT;
+      PropagationOutcome wiped2 = CONSISTENT;
+      PropagationOutcome wiped3 = CONSISTENT;
+    
+    s1.save();
+    if(AC) s2.save();
+    if(BC) s3.save();
+
+
+    bool finished = false;
+    while(!finished) {
+
+      for(int j=0; j<arity; ++j) {
+
+	bool is_ground = true;
+	for(int i=0; is_ground && i<arity; ++i) {
+	  is_ground = scope1[i].get_var().is_ground();
+	}
+	if(is_ground) {
+	  finished = true;
+	  break;
+	} else if(!scope1[j].get_var().is_ground()) {
+
+
+	  // std::cout << "reduce " << scope1[j].get_var() << "'s domain (" 
+	  // 	    << scope1[j].get_var().get_domain() << ")" << std::endl;
+
+	  int type = 0;
+	  if(j<(arity-nbool) && randint(3)<1) type = 1;
+	  
+	  int k = randint(scope1[j].get_var().get_max() - scope1[j].get_var().get_min() + 1) + scope1[j].get_var().get_min();
+	  
+	  ++n_reductions;
+	  
+	  // std::cout << "  " << n_reductions << std::endl;
+	  
+	  // if(n_iterations == 18 && n_reductions == 7) {
+	  
+	//   std::cout << "HERE" << std::endl;
+	//   s2.parameters.verbosity = 1;
+	// }
+	
+	if(type) {
+	  
+	  if(randint(2)) {
+	    
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+
+	    //std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << ">=" << k << std::endl;;
+	    
+	    if( IS_FAIL(scope1[j].get_var().set_min(k)) ) wiped1 = FAILURE(j);
+	    if( AC && IS_FAIL(scope2[j].get_var().set_min(k)) ) wiped2 = FAILURE(j);
+	    if( BC && IS_FAIL(scope3[j].get_var().set_min(k)) ) wiped3 = FAILURE(j);
+
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+
+	    //std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << ">=" << k << std::endl;;
+
+	  } else {
+	    
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+
+	    //std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "<=" << k << std::endl;;
+	    
+	    if( IS_FAIL(scope1[j].get_var().set_max(k)) ) wiped1 = FAILURE(j);
+	    if( AC && IS_FAIL(scope2[j].get_var().set_max(k)) ) wiped2 = FAILURE(j);
+	    if( BC && IS_FAIL(scope3[j].get_var().set_max(k)) ) wiped3 = FAILURE(j);
+
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+
+	    //std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "<=" << k << std::endl;;
+
+	  }
+	} else {
+
+	  if(randint(5)<1) {
+
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+	    
+	    //std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "==" << k << std::endl;;
+	    
+	    if( IS_FAIL(scope1[j].get_var().set_domain(k)) ) wiped1 = FAILURE(j);
+	    if( AC && IS_FAIL(scope2[j].get_var().set_domain(k)) ) wiped2 = FAILURE(j);
+	    if( BC && IS_FAIL(scope3[j].get_var().set_domain(k)) ) wiped3 = FAILURE(j);
+
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+
+	    //std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "==" << k << std::endl;;
+
+	  } else {
+
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+	    
+	    //std::cout << "b " << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "!=" << k << std::endl;;
+	    
+	    if( IS_FAIL(scope1[j].get_var().remove(k)) ) wiped1 = FAILURE(j);
+	    if( AC && IS_FAIL(scope2[j].get_var().remove(k)) ) wiped2 = FAILURE(j);
+	    if( BC && IS_FAIL(scope3[j].get_var().remove(k)) ) wiped3 = FAILURE(j);
+
+	    scope1[j] = scope1[j].get_var();
+	    scope2[j] = scope2[j].get_var();
+	    scope3[j] = scope3[j].get_var();
+
+	    //std::cout << "a " << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "!=" << k << std::endl;;
+
+	  }
+	}	
+	
+	// if( IS_OK(wiped1) ) {
+		
+	//   s1.active_constraints.select(con1);
+	//   wiped1 = con1->propagate();
+
+	//   s2.active_constraints.select(con2);
+	//   con2->changes.fill();
+	//   if(AC)
+	//     wiped2 = con2->checker_propagate();
+	//   else 
+	//     wiped2 = con2->bound_propagate();
+
+	//   s1.active_constraints.clear();
+	//   s2.active_constraints.clear();
+	
+	//   if( IS_OK(wiped1) ) {
+
+	//     //std::cout << "OK" << std::endl;
+
+	//     if(!(IS_OK(wiped2))) {
+	//       cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+	// 	   << endl << " propagator: " ;
+	//       for(int j=0; j<arity; ++j) {
+	// 	scope1[j] = scope1[j].get_var();
+	// 	scope2[j] = scope2[j].get_var();
+	// 	std::cout << scope1[j].get_domain() << " " ;
+	//       }
+	//       std::cout << std::endl << " generic AC: fail" << endl;
+	//       exit(1);
+	//     }
+	//     else for(int i=0; i<arity; ++i) {
+	// 	int vnxt1 = scope1[i].get_var().get_min();
+	// 	int vnxt2 = scope2[i].get_var().get_min();
+	// 	int val1 = vnxt1-1;
+	// 	int val2 = vnxt2-1;
+	// 	bool problem = false;
+	// 	while( !problem ) {
+	// 	  if(vnxt1 < vnxt2)  {
+	// 	    problem =true;
+	// 	  } else if(vnxt1 > vnxt2) {
+		 
+	// 	    if(!scope2[i].get_var().contain(vnxt1)) {
+	// 	      problem =true;
+	// 	    } else {
+	// 	      std::cout << "*";
+	// 	      vnxt2 = vnxt1;
+	// 	    }
+	// 	  } else if(val1 >= vnxt1) break;
+	// 	  val1 = vnxt1;
+	// 	  val2 = vnxt2;
+	// 	  vnxt1 = scope1[i].get_var().next(val1);
+	// 	  vnxt2 = scope2[i].get_var().next(val2);	    
+	// 	}
+		
+	// 	if(problem) {
+	// 	  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+	// 	       << endl << " propagator: " ;
+	// 	  for(int j=0; j<arity; ++j)
+	// 	    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+
+	// 	  std::cout << std::endl << " generic AC: ";		  
+	// 	  for(int j=0; j<arity; ++j)
+	// 	    std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+	// 	  std::cout << std::endl << std::endl;
+	// 	  exit(1);
+	// 	}
+	//       }
+
+	if( IS_OK(wiped1) ) {
+		
+	  s1.active_constraints.select(con1);
+	  wiped1 = con1->propagate();
+
+	  if(AC && IS_OK(wiped2)) {
+	    s2.active_constraints.select(con2);
+	    con2->changes.fill();
+	    wiped2 = con2->checker_propagate();
+	  }
+
+	  if(BC && IS_OK(wiped3)) {
+	    s3.active_constraints.select(con3);
+	    con3->changes.fill();
+	    wiped3 = con3->bound_propagate();
+	  }
+
+	  s1.active_constraints.clear();
+
+	  if(AC) {
+	    s2.active_constraints.clear();
+	  }
+
+	  if(BC) {
+	    s3.active_constraints.clear();
+	  }
+
+
+	  // test if there is a fail
+	  if( AC && BC ) {
+	    if(IS_OK(wiped2) && !IS_OK(wiped1)) {
+	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		   << endl << " propagator: fail " << endl ;
+	      std::cout << std::endl << " generic AC: "; 
+	      for(int j=0; j<arity; ++j) {
+		std::cout << scope2[j].get_var().get_domain() << " " ;
+	      }
+	      std::cout << std::endl;
+	      exit(1);
+	    }
+	    if(IS_OK(wiped1) && !IS_OK(wiped3)) {
+	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		   << endl << " propagator: " ;
+	      for(int j=0; j<arity; ++j) {
+		std::cout << scope1[j].get_domain() << " " ;
+	      }
+	      std::cout << std::endl << " generic BC: fail" << endl;
+	      exit(1);
+	    }
+	  } else if(AC) {
+	    if(IS_OK(wiped1) != IS_OK(wiped2)) {
+	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		   << endl << " propagator: " ;
+	      if(IS_OK(wiped1)) {
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope1[j].get_var().get_domain() << " " ;
+		}
+	      } else std::cout << "fail" ;
+
+	      std::cout << std::endl << " generic AC: "; 
+	      if(IS_OK(wiped2)) {
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope2[j].get_var().get_domain() << " " ;
+		}
+	      } else std::cout << "fail" ;
+
+	      exit(1);
+	    }
+	  } else if(BC) {
+	    if(IS_OK(wiped1) != IS_OK(wiped3)) {
+	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		   << endl << " propagator: " ;
+	      if(IS_OK(wiped1)) {
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope1[j].get_var().get_domain() << " " ;
+		}
+	      } else std::cout << "fail" ;
+
+	      std::cout << std::endl << " generic BC: "; 
+	      if(IS_OK(wiped3)) {
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope3[j].get_var().get_domain() << " " ;
+		}
+	      } else std::cout << "fail" ;
+
+	      exit(1);
+	    }
+	  }
+
+	  if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
+	    for(int i=0; i<arity; ++i) {
+	      int vnxt1 = scope1[i].get_var().get_min();
+	      int vnxt2 = scope2[i].get_var().get_min();
+	      int vnxt3 = scope3[i].get_var().get_min();
+	      int val1 = vnxt1-1;
+	      int val2 = vnxt2-1;
+	      int val3 = vnxt3-1;
+	      
+	      BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
+	      BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
+	      BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
+
+	      while(val1<vnxt1) {
+		val1 = vnxt1;
+		vnxt1 = scope1[i].get_var().next(val1);
+		d1.add(val1);
+	      }
+
+	      if(AC) {
+		while(val2<vnxt2) {
+		  val2 = vnxt2;
+		  vnxt2 = scope2[i].get_var().next(val2);
+		  d2.add(val2);
+		}
+	      }
+
+	      if(BC) {
+		while(val3<vnxt3) {
+		  val3 = vnxt3;
+		  vnxt3 = scope3[i].get_var().next(val3);
+		  d3.add(val3);
+		}
+	      }
+
+	      if( AC && BC ) {
+		if(!d1.includes(d2)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		       << endl << " propagator: " ;
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		  std::cout << std::endl << " generic AC: ";		  
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  std::cout << std::endl << std::endl;
+		  exit(1);
+		}
+		if(!d3.includes(d1)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		       << endl << " propagator: " ;
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		  std::cout << std::endl << " generic BC: ";		  
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  std::cout << std::endl << std::endl;
+		  exit(1);
+		}
+	      } else if(AC) {
+		if(d1 != d2) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		       << endl << " propagator: " ;
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		  std::cout << std::endl << " generic AC: ";		  
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  std::cout << std::endl << std::endl;
+		  exit(1);		  
+		}
+	      } else if(BC) {
+		if(d1 != d3) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		       << endl << " propagator: " ;
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		  std::cout << std::endl << " generic BC: ";		  
+		  for(int j=0; j<arity; ++j)
+		    std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  std::cout << std::endl << std::endl;
+		  exit(1);
+		}
+	      } 
+	    }
+	  } 	  
+	} else {
+	  finished = true;
+	  break;
+	}
+	}
+      }
+    }
+    
+    //std::cout << " restore " << std::endl << std::endl ;
+    
+    s1.restore(0);
+    if(AC) {
+      s2.restore(0);
+    }
+    if(BC) {
+      s3.restore(0);
+    }
+    //std::cout << n_reductions << " " ;
+    }
+    
+    //std::cout << std::endl;
+  }
+  
+  virtual ~ConChecker() {};
+};
+
+class CheckerTest : public UnitTest {
+  
+public:
+  
+  CheckerTest() : UnitTest() {}
+  virtual ~CheckerTest() {}
+
+ 
+  void run() {
+    
+    if(Verbosity) cout << "Run Checker test: "; 
+
+
+    ConChecker< PredicateLess > cc1a("<=", false,true,12345,3,20,1);
+    cc1a.run(100);
+
+    ConChecker< PredicateLess > cc1b("<=", false,true,12345,3,20,1);
+    cc1b.con1->offset = 3;
+    cc1b.con2->offset = 3;
+    cc1b.con3->offset = 3;
+    cc1b.run(100);
+
+    ConChecker< PredicateLess > cc1c("<=", false,true,12345,3,20,1);
+    cc1c.con1->offset = -3;
+    cc1c.con2->offset = -3;
+    cc1c.con3->offset = -3;
+    cc1c.run(100);
+
+    ConChecker< PredicateEqual > cc2a("==", true,false,12345,3,20,1);
+    cc2a.run(100);
+
+    ConChecker< PredicateEqual > cc2b("!=", true,false,12345,3,20,1);
+    cc2b.con1->spin = 0;
+    cc2b.con2->spin = 0;
+    cc2b.con3->spin = 0;
+    cc2b.run(100);
+
+
+    ConChecker< PredicateLowerBound > cc3a(">=-3", false,true,12345,2,20,1);
+    cc3a.con1->bound = -3;
+    cc3a.con2->bound = -3;
+    cc3a.con3->bound = -3;
+    cc3a.run(100);
+
+
+    ConChecker< PredicateLowerBound > cc3b(">=3", false,true,12345,2,20,1);
+    cc3b.con1->bound = 3;
+    cc3b.con2->bound = 3;
+    cc3b.con3->bound = 3;
+    cc3b.run(100);
+
+
+    ConChecker< PredicateUpperBound > cc4a("<=-3", false,true,12345,2,20,1);
+    cc4a.con1->bound = -3;
+    cc4a.con2->bound = -3;
+    cc4a.con3->bound = -3;
+    cc4a.run(100);
+
+    ConChecker< PredicateUpperBound > cc4b("<=3", false,true,12345,2,20,1);
+    cc4b.con1->bound = 3;
+    cc4b.con2->bound = 3;
+    cc4b.con3->bound = 3;
+    cc4b.run(100);
+
+
+    ConChecker< PredicateConstantEqual > cc5a("==0", true,false,12345,2,20,1);
+    cc5a.run(100);
+
+    ConChecker< PredicateConstantEqual > cc5b("!=0", true,false,12345,2,20,1);
+    cc5b.con1->spin = 0;
+    cc5b.con2->spin = 0;
+    cc5b.con3->spin = 0;
+    cc5b.run(100);
+
+
+    ConChecker< PredicateAnd > cc6a("and", true,false,12345,3,1,3);
+    cc6a.run(100);
+
+    ConChecker< PredicateOr > cc7a("or", true,false,12345,3,1,3);
+    cc7a.run(100);
+
+
+    ConChecker< PredicateAdd > cc8a("+", false,true,12345,3,20,0);
+    cc8a.run(100);
+
+    // ConChecker< PredicateSub > cc8a("-", false,true,12345,3,20,0);
+    // cc8a.run(100);
+
+    ConChecker< PredicateWeightedSum > cc9a("sum(1)", false,true,12345,5,10,0);
+    cc9a.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9b("sum(+)", false,true,12345,5,10,0);
+    for(int i=2; i<5; ++i) {
+      cc9b.con1->weight[i] = randint(4)+2;
+      cc9b.con2->weight[i] = cc9b.con1->weight[i];
+      cc9b.con3->weight[i] = cc9b.con1->weight[i];
+      if(!(cc9b.con1->weight[i]%2)) {
+	cc9b.con1->unknown_parity.reversible_remove(i);
+	cc9b.con2->unknown_parity.reversible_remove(i);
+	cc9b.con3->unknown_parity.reversible_remove(i);
+      }
+    }
+    cc9b.con1->wpos = 2;
+    cc9b.con2->wpos = 2;
+    cc9b.con3->wpos = 2;
+
+    ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
+    //std::cout << cc9b.con2 << std::endl;
+
+    cc9b.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9c("sum(-)", false,true,12345,5,10,0);
+    for(int i=3; i<5; ++i) {
+      cc9c.con1->weight[i] = -(randint(4)+1);
+      cc9c.con2->weight[i] = cc9c.con1->weight[i];
+      cc9c.con3->weight[i] = cc9c.con1->weight[i];
+      if(!(cc9c.con1->weight[i]%2)) {
+	cc9c.con1->unknown_parity.reversible_remove(i);
+	cc9c.con2->unknown_parity.reversible_remove(i);
+	cc9c.con3->unknown_parity.reversible_remove(i);
+      }
+    }
+    cc9c.con1->wpos = 3;
+    cc9c.con2->wpos = 3;
+    cc9c.con3->wpos = 3;
+    cc9c.con1->wneg = 3;
+    cc9c.con2->wneg = 3;
+    cc9c.con3->wneg = 3;
+    cc9c.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9d("sum(+/-)", false,true,12345,5,10,0);
+    for(int i=1; i<3; ++i) {
+      cc9d.con1->weight[i] = randint(4)+2;
+      cc9d.con2->weight[i] = cc9d.con1->weight[i];
+      cc9d.con3->weight[i] = cc9d.con1->weight[i];
+      if(!(cc9d.con1->weight[i]%2)) {
+	cc9d.con1->unknown_parity.reversible_remove(i);
+	cc9d.con2->unknown_parity.reversible_remove(i);
+	cc9d.con3->unknown_parity.reversible_remove(i);
+      }
+    }
+    for(int i=3; i<5; ++i) {
+      cc9d.con1->weight[i] = -(randint(4)+1);
+      cc9d.con2->weight[i] = cc9d.con1->weight[i];
+      cc9d.con3->weight[i] = cc9d.con1->weight[i];
+      if(!(cc9d.con1->weight[i]%2)) {
+	cc9d.con1->unknown_parity.reversible_remove(i);
+	cc9d.con2->unknown_parity.reversible_remove(i);
+	cc9d.con3->unknown_parity.reversible_remove(i);
+      }
+    }
+    cc9d.con1->wpos = 1;
+    cc9d.con2->wpos = 1;
+    cc9d.con3->wpos = 1;
+    cc9d.con1->wneg = 3;
+    cc9d.con2->wneg = 3;
+    cc9d.con3->wneg = 3;
+    cc9d.run(20);
+
+
+    ConChecker< PredicateElement > cc10a("[]", true,false,12345,6,10,0);
+    cc10a.run(100);
+
+
+    ConChecker< PredicateMul > cc11a("+", true,true,12345,3,20,0);
+    cc11a.run(100);
+
+    std::cout << " ";
+
+  }
+
+};
+
+
+class URCSPGenerator{
+private:
+  int comb(int b, int d);  
+  int i2comb(int& code, int ind, int base, int dim, int stop);
+  
+  //Random_ generator;
+  
+  int Var;
+  int Dom;
+  int Con; 
+  int Ari; 
+  int Ngd;
+  
+  
+  int c;
+  int t;
+  int selectedNG;
+  int selectedCT; 
+  int PossibleCTs; 
+  int PossibleNGs;
+  
+  int *CTarray;
+  int *NGarray;
+  
+  int uv;
+  int *unconnected_var; 
+  
+public: 
+  long Seed;
+  
+  /**@name Constructors*/
+  //@{
+  /// 
+  URCSPGenerator(int S, int v, int d, int c, int a, int n);
+  void initURCSP( int v, int d, int c, int a, int n );
+  ///
+  ~URCSPGenerator();
+  //@}
+  
+  /// An array of indices correponding to the constrained variables
+  int *vars;
+  /// An array corresponding to a nogood, such that vals[vars[i]] is the ith value of the nogood
+  int *vals;
+  /**
+   *  Initialisation function, to be called after every CSP generation
+   */
+  void reInit();
+  void reInit(int v, int d, int c, int a, int n);
+  /**
+   *  Generate a constraint scope and store it in vars
+   */
+  bool erateConstraint();
+  /**
+   *  Generate a nogood tuple and store it in vals
+   */
+  bool erateNogood();
+  
+};
+
+
 int main(int argc, char *argv[])
 {  
 
+  // BitSet s(0,1,BitSet::empt);
+
+  // cout << s << endl;
+
+  // s.add_interval(0,1);
+
+
+  // cout << s << endl;
+
+  // //std::cout << (-5%2) <<std::endl;
+
+  //   exit(1);
+
+
+  //std::cout << 
+
+
   usrand(12345);
+
+  // int Ari = 3;
+  // int Ngd = 10;
+  // int Con = 15;
+  // int Dom = 5;
+  // int Var = 10;
+  
+  // URCSPGenerator gen(11041979, Var, Dom, Con, Ari, Ngd);
+  
+  // while( gen.erateConstraint() ) {
+  //   for(int i=0; i<Ari; ++i) 
+  //     std::cout << " x" << gen.vars[i+1];
+  //   std::cout << std::endl << " ";
+  //   while( gen.erateNogood() ) {
+  //     std::cout << " " << gen.vals[0] ;
+  //     for(int i=1; i<Ari; ++i)  
+  // 	std::cout << "|" << gen.vals[i] ;
+  //   }
+  //    std::cout << std::endl;
+  // }
+
+  // exit(1);
+
+
 
 //   showUint((unsigned int)-2, std::cout);
 //   std::cout << std::endl;
@@ -310,6 +1141,7 @@ int main(int argc, char *argv[])
   //tests.push_back(new VarStackDynamicTest());
 
   int N = 8; //atoi(argv[1]);
+  if(argc>1) N=atoi(argv[1]);
   //
 
   //tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
@@ -320,16 +1152,22 @@ int main(int argc, char *argv[])
   
   //tests.push_back(new ModelTest());
 
+
+  tests.push_back(new CheckerTest());
+  tests.push_back(new WeightedSumTest());
+  tests.push_back(new ElementTest());
+  tests.push_back(new SubsetTest());
+  tests.push_back(new MemberTest());
   tests.push_back(new RewriteTest1());
   tests.push_back(new OpshopTest());
   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
   tests.push_back(new Pigeons(N+2)); 
-  tests.push_back(new CostasAllDiffAllSolutions(N, FORWARD_CHECKING));
-  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY, RANGE_VAR));
-  tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
-  tests.push_back(new CostasNotEqualAllSolutions(N)); 
-  tests.push_back(new RandomCListRandomEraseAndRestore<4>());
+  tests.push_back(new CostasAllDiffAllSolutions(N+1, FORWARD_CHECKING));
+  tests.push_back(new CostasAllDiffAllSolutions(N+1, BOUND_CONSISTENCY, RANGE_VAR));
+  tests.push_back(new CostasAllDiffAllSolutions(N+1, BOUND_CONSISTENCY));
+  tests.push_back(new CostasNotEqualAllSolutions(N+1));
+  tests.push_back(new RandomCListRandomRemoveAndRestore<4>());
   tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
   tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
   tests.push_back(new RandomDomainRandomSetDomainAndRestore());
@@ -337,6 +1175,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
+
 
 
   //tests[0]->Verbosity = HIGH;
@@ -480,7 +1319,7 @@ void RandomDomainRandomRemove::run() {
       for(int i=0; i<N; ++i) {
 
 	int lb = randint(dom_min) - (dom_min/2);
-	int ub = randint(dom_size) + lb;
+	int ub = randint(dom_size) + lb + 1;
 	
 	int nvalues = dom_size;
 	for(int j=0; j<nvalues; ++j) 
@@ -491,7 +1330,7 @@ void RandomDomainRandomRemove::run() {
 
 	//std::cout << "X.domain_type: " << X.domain_type << " / " << X.variable << std::endl;
 
-	X.add_to(&s);
+	//X.add_to(&s);
 	//s.add(X);
 	//X = X.get_var();
 	
@@ -499,6 +1338,11 @@ void RandomDomainRandomRemove::run() {
 
 	//s.initialise();
 	
+	s.add(X);
+	X = X.get_var();
+
+	//cout << s << endl;
+
 	if(Verbosity > MEDIUM) {
 	  cout << "    " << X << " in " << X.get_domain() << ": " << endl;
 	  cout << "    remove " << rand_values << endl; 
@@ -509,8 +1353,11 @@ void RandomDomainRandomRemove::run() {
 	  if(Verbosity > HIGH) {
 	    cout << "      remove " << rand_values[j] << " from " 
 		 << X << " in " << X.get_domain() << " => "; 
+	    cout.flush();
 	  }
 	  Event evt = X.remove(rand_values[j]);
+	  X = X.get_var();
+	  
 	  if( evt != FAIL_EVENT) {
 	    if(Verbosity > HIGH) {
 	      cout << "    " << X << " in " << X.get_domain() << endl; 
@@ -519,13 +1366,13 @@ void RandomDomainRandomRemove::run() {
 	    checkDomainIntegrity(X);
 	  
 	    if(X.contain(rand_values[j])) {
-	      cout << "Error on [remove " << rand_values[j]
+	      cout << "Error on remove " << rand_values[j]
 		   << " from " << X << " in " << X.get_domain() << endl;
 	      exit(1);
 	    }
 	  } else {
 	    if(!X.equal(rand_values[j]))  {
-	      cout << "Error on [remove " << rand_values[j]
+	      cout << "Error on remove " << rand_values[j]
 		   << " from " << X << " in " << X.get_domain() << endl;
 	      exit(1);
 	    }
@@ -858,6 +1705,10 @@ RandomDomainRandomSetDomainBitsetAndRestore::RandomDomainRandomSetDomainBitsetAn
 RandomDomainRandomSetDomainBitsetAndRestore::~RandomDomainRandomSetDomainBitsetAndRestore() {}
 
 void RandomDomainRandomSetDomainBitsetAndRestore::run() {
+
+  //Verbosity = EXTREME;
+  
+
   int N = (1<<(1<<Quantity));
 
   if(Verbosity) cout << "Run " << N << " random set_domain (bitset) checks " ; // << endl;
@@ -895,6 +1746,7 @@ void RandomDomainRandomSetDomainBitsetAndRestore::run() {
 	if(Verbosity > MEDIUM) cout << "    Set: " << vals << ": ";
 
 	Event evt = X.set_domain(vals);
+	X = X.get_var();
 
 	if(Verbosity > MEDIUM) cout << X << " in " << X.get_domain() << endl;
 
@@ -958,7 +1810,7 @@ RandomDomainRandomRemoveRangeAndRestore::
 void RandomDomainRandomRemoveRangeAndRestore::run() {
   int N = (1<<(1<<Quantity));
 
-  if(Verbosity) cout << "Run " << N << " random set_domain + removeRange checks " ;// << endl;
+  if(Verbosity) cout << "Run " << N << " random set_domain + remove_interval checks " ;// << endl;
   if(Verbosity>LOW) cout << endl;
 
   //Verbosity = EXTREME;
@@ -1033,12 +1885,12 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 	    if(Verbosity > HIGH) cout << "        remove [" << l << ".." 
 				      << m << "] from " << X << " in " 
 				      << X.get_domain() << ": ";
-	    Event evt2 = X.removeRange(l,m);
+	    Event evt2 = X.remove_interval(l,m);
 	    if(Verbosity > HIGH) cout << X << " in " << X.get_domain() << endl;
 	    if(evt2 != NO_EVENT && evt2 != FAIL_EVENT) {
 	      for(int v=l; v<=m; ++v) {
 		if(X.contain(v)) {
-		  cout << "Error on [removeRange] " 
+		  cout << "Error on [remove_interval] " 
 		       << " on " << X << " in " << X.get_domain() << endl;
 		  exit(1);
 		}
@@ -1069,17 +1921,17 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 
 
 template< int NUM_HEAD >
-RandomCListRandomEraseAndRestore< NUM_HEAD >::
-RandomCListRandomEraseAndRestore(const int ql, 
+RandomCListRandomRemoveAndRestore< NUM_HEAD >::
+RandomCListRandomRemoveAndRestore(const int ql, 
 				 const int qt) 
   : UnitTest(LOW, ql, qt) { NUM_ELT = 100*(1 << (1 << Quality)); }
 
 template< int NUM_HEAD >
-RandomCListRandomEraseAndRestore< NUM_HEAD >::
-~RandomCListRandomEraseAndRestore() {}
+RandomCListRandomRemoveAndRestore< NUM_HEAD >::
+~RandomCListRandomRemoveAndRestore() {}
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::run() {
 
   Solver s;
   //s.initialise();
@@ -1150,8 +2002,8 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
 	  while(!isIn.contain(j))
 	    j = randint(n_elts);
 	    
-	  alist.reversible_erase(idx1[j], wl[j]);
-	  blist.reversible_erase(idx2[j], wl[j]);
+	  alist.reversible_remove(idx1[j], wl[j]);
+	  blist.reversible_remove(idx2[j], wl[j]);
 	    
 	  if(Verbosity>MEDIUM) {
 	    for(int l=0; l<s.level; ++l) cout << " ";
@@ -1160,7 +2012,7 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
 	    //alistcout << alist << endl;
 	  }
 
-	  isIn.erase(j);
+	  isIn.remove(j);
 	  
 	}
 
@@ -1210,9 +2062,9 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::run() {
 }
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::
 checkEquality(ReversibleMultiList<int,NUM_HEAD>& alist, 
-	      RandomCListRandomEraseAndRestore< NUM_HEAD >::
+	      RandomCListRandomRemoveAndRestore< NUM_HEAD >::
 	      NaiveImplementation& blist) {
   BitSet inA(0, NUM_ELT, BitSet::empt);
   BitSet inB(0, NUM_ELT, BitSet::empt);
@@ -1241,11 +2093,11 @@ checkEquality(ReversibleMultiList<int,NUM_HEAD>& alist,
 }
 
 template< int NUM_HEAD >
-RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::NaiveImplementation(Solver *s) 
+RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::NaiveImplementation(Solver *s) 
   : Reversible(s) {}
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::create(int elt, int wl) {
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::create(int elt, int wl) {
   elements.add(elt);
   whichlist.add(wl);
   whichleveladded.add(env->level);
@@ -1253,22 +2105,22 @@ void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::create(i
 }
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::reversible_erase(int elt, int wl) {
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::reversible_remove(int elt, int wl) {
   whichlevelremoved[elt] = env->level;
 }
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::reversible_add(int elt, int wl) {
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::reversible_add(int elt, int wl) {
   create(elt, wl);
 }
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::save() {}
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::save() {}
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::restore() {}
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::restore() {}
 
 template< int NUM_HEAD >
-void RandomCListRandomEraseAndRestore< NUM_HEAD >::NaiveImplementation::print(int num_lists) {
+void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::print(int num_lists) {
   for(int i=0; i<num_lists; ++i) {
     cout << "[";
     for(unsigned int j=0; j<elements.size; ++j)
@@ -1348,7 +2200,7 @@ CostasAllDiffAllSolutions::~CostasAllDiffAllSolutions() {}
 
 void CostasAllDiffAllSolutions::run() {
 
-  if(Verbosity) cout << "Run costas array of order 8 (alldiff - "
+  if(Verbosity) cout << "Run costas array of order " << size << " (alldiff - "
 		     << (consistency==FORWARD_CHECKING ? "FC" : "BC" )
 		     << "), look for all solutions "; 
 
@@ -1386,9 +2238,9 @@ void CostasAllDiffAllSolutions::run() {
   }
 
   if(Verbosity) cout << "(" << num_solutions << ") " ;
-  if(num_solutions != 444) {
+  if(num_solutions != num_sol[size] /*444*/) {
     cout << "Error: wrong number of solutions!" << endl;
-    //exit(1);
+    exit(1);
   }
 }
 
@@ -1398,7 +2250,7 @@ CostasNotEqualAllSolutions::CostasNotEqualAllSolutions(const int sz)
 CostasNotEqualAllSolutions::~CostasNotEqualAllSolutions() {}
 
 void CostasNotEqualAllSolutions::run() {
-  if(Verbosity) cout << "Run costas array of order 8 (not equals), look for all solutions "; 
+  if(Verbosity) cout << "Run costas array of order " << size << " (not equals), look for all solutions "; 
 		       
 
   VarArray X(size, 1, size);
@@ -1442,9 +2294,9 @@ void CostasNotEqualAllSolutions::run() {
   }
 
   if(Verbosity) cout << "(" << num_solutions << ") " ;
-  if(num_solutions != 444) {
+  if(num_solutions != num_sol[size] /*444*/) {
     cout << "Error: wrong number of solutions!" << endl;
-    //exit(1);
+    exit(1);
   }
 
 }
@@ -1513,7 +2365,7 @@ Pigeons::Pigeons(const int sz)
 Pigeons::~Pigeons() {}
 
 void Pigeons::run() {
-  if(Verbosity) cout << "Run pigeon-hole of order 10: "; 
+  if(Verbosity) cout << "Run pigeon-hole of order " << size << ": "; 
 
   VarArray X(size, 1, size-1);
   Solver s;
@@ -1530,7 +2382,7 @@ void Pigeons::run() {
 		       new GenericHeuristic< NoOrder, MinValue >(&s), 
 		       new NoRestart);
   
-  if(s.statistics.num_backtracks != 362879) {
+  if((int)s.statistics.num_backtracks != num_bts[size] /*362879*/) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
     exit(1);
@@ -1556,7 +2408,7 @@ void BoolPigeons::run() {
     domain.clear();
     for(j=i*(size-1); j<(i+1)*(size-1); ++j)
       domain.add( X[j] );
-    s.add( BoolSum(domain, size-2) );
+    s.add( BoolSum(domain, size-2, size-2) );
     //s.add( BoolSum(X[i*(size-1), (i+1)*(size-1)], size-2) );
     for(j=i+1; j<size; ++j)
       for(k=0; k<size-1; ++k)
@@ -1566,19 +2418,22 @@ void BoolPigeons::run() {
 
   //cout << s << endl;
   
-  //exit(1);
+  
 
   s.consolidate();
-  //  std::cout << s << std::endl;
+  
+  // std::cout << s << std::endl;
+
+  //exit(1);
 
   s.depth_first_search(X, 
 		       new GenericHeuristic< Lexicographic, MinValue >(&s), 
 		       new NoRestart);
   
-  if(s.statistics.num_backtracks != 40319 /*362879*/) {
+  if((int)s.statistics.num_backtracks != num_bts[size] /*40319*/ /*362879*/) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
-    //exit(1);
+    exit(1);
   }
 
 }
@@ -1748,6 +2603,483 @@ void RewriteTest::run() {
 //   cout << s << endl;
 
 
+}
+
+
+
+
+SubsetTest::SubsetTest() : UnitTest() {}
+SubsetTest::~SubsetTest() {}
+
+void SubsetTest::run() {
+
+  if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Variable X = SetVariable(1,9,3,5);
+  Variable Y = SetVariable(1,9,2,4);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Subset(X,Y) );
+
+  // std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_value() << " subset of " << Y.get_solution_value() << endl;
+  }
+
+  if(s.statistics.num_backtracks != 713) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 714) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+
+
+MemberTest::MemberTest() : UnitTest() {}
+MemberTest::~MemberTest() {}
+
+void MemberTest::run() {
+
+  if(Verbosity) cout << "Run Member test: "; 
+
+  Solver s;
+
+  Variable X = Variable(0,10);
+  Variable Y = SetVariable(1,9,0,4);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Member(X,Y) );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_value() << " member of " << Y.get_solution_value() << endl;
+  }
+
+  if(s.statistics.num_backtracks != 836) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 837) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+WeightedSumTest::WeightedSumTest() : UnitTest() {}
+WeightedSumTest::~WeightedSumTest() {}
+
+void WeightedSumTest::run1() {
+
+  Solver s;
+
+  VarArray X(5,-3,3);
+  Vector<int> coefs;
+  coefs.add(-1);
+  coefs.add(3);
+  coefs.add(-2);
+  coefs.add(1);
+  coefs.add(1);
+
+
+
+  s.add( Sum(X, coefs, -2, 2) );
+
+  //std::cout << s << std::endl;
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.initialise_search(X,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    int total = coefs[0] * X[0].get_solution_value();
+    //cout << coefs[0] << "*" << X[0].get_solution_value() ;
+    for(int i=1; i<5; ++i) {
+      total += coefs[i] * X[i].get_solution_value();
+      //cout << " + " << coefs[i] << "*" << X[i].get_solution_value() ;
+    }
+    //cout << " = " << total << " (in [-1,1])" << endl; 
+    //cout << X.get_solution_value() << " subset of " << Y.get_solution_value() << endl;
+
+    if(total < -2 || total > 2) 
+      cout << "Error: wrong solution! (" 
+	   << (total) << ")" << endl;
+  }
+
+  //std::cout << num_solutions << " " << s.statistics.num_backtracks << std::endl;
+
+  if(s.statistics.num_backtracks != 3820) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 3821) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void WeightedSumTest::run2() {
+
+
+
+  Solver s;
+
+  VarArray X(5,-2,2);
+  Vector<int> coefs;
+  coefs.add(-1);
+  coefs.add(3);
+  coefs.add(-2);
+  coefs.add(1);
+  coefs.add(1);
+
+  Variable the_sum(-10, 10);
+  
+  s.add( (the_sum < -6) || (the_sum > 6) );
+
+  s.add( Sum(X, coefs) == the_sum );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  //exit(1);
+
+  s.initialise_search(X,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    int total = coefs[0] * X[0].get_solution_value();
+    //cout << coefs[0] << "*" << X[0].get_solution_value() ;
+    for(int i=1; i<5; ++i) {
+      total += coefs[i] * X[i].get_solution_value();
+      //cout << " + " << coefs[i] << "*" << X[i].get_solution_value() ;
+    }
+    //cout << " = " << total << " (in [-1,1])" << endl; 
+    //cout << X.get_solution_value() << " subset of " << Y.get_solution_value() << endl;
+
+    if(total >= -6 && total <= 6) 
+      cout << "Error: wrong solution! (" 
+	   << (total) << ")" << endl;
+  }
+
+  //std::cout << num_solutions << " " << s.statistics.num_backtracks << std::endl;
+
+  if(s.statistics.num_backtracks != 673) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 674) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void WeightedSumTest::run3() {
+
+  Solver s;
+
+  VarArray X(5,-3,3);
+  Vector<int> coefs;
+  coefs.add(-1);
+  coefs.add(3);
+  coefs.add(-2);
+  coefs.add(1);
+  coefs.add(1);
+
+  s.add( Sum(X, coefs) <= -10 );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  //exit(1);
+
+  s.initialise_search(X,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    int total = coefs[0] * X[0].get_solution_value();
+    //cout << coefs[0] << "*" << X[0].get_solution_value() ;
+    for(int i=1; i<5; ++i) {
+      total += coefs[i] * X[i].get_solution_value();
+      //cout << " + " << coefs[i] << "*" << X[i].get_solution_value() ;
+    }
+    //cout << " = " << total << " (in [-1,1])" << endl; 
+    //cout << X.get_solution_value() << " subset of " << Y.get_solution_value() << endl;
+
+    if(total > -10) 
+      cout << "Error: wrong solution! (" 
+	   << (total) << ")" << endl;
+  }
+
+  //std::cout << num_solutions << " " << s.statistics.num_backtracks << std::endl;
+
+  if(s.statistics.num_backtracks != 2137) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 2138) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void WeightedSumTest::run4() {
+
+  Solver s;
+
+  VarArray X(5,-3,3);
+  Vector<int> coefs;
+  coefs.add(-1);
+  coefs.add(3);
+  coefs.add(-2);
+  coefs.add(1);
+  coefs.add(1);
+
+  s.add( Sum(X, coefs, -INFTY, -10) );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  //exit(1);
+
+  s.initialise_search(X,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    int total = coefs[0] * X[0].get_solution_value();
+    //cout << coefs[0] << "*" << X[0].get_solution_value() ;
+    for(int i=1; i<5; ++i) {
+      total += coefs[i] * X[i].get_solution_value();
+      //cout << " + " << coefs[i] << "*" << X[i].get_solution_value() ;
+    }
+    //cout << " = " << total << " (in [-1,1])" << endl; 
+    //cout << X.get_solution_value() << " subset of " << Y.get_solution_value() << endl;
+
+    if(total > -10) 
+      cout << "Error: wrong solution! (" 
+	   << (total) << ")" << endl;
+  }
+
+  //std::cout << num_solutions << " " << s.statistics.num_backtracks << std::endl;
+
+  if(s.statistics.num_backtracks != 2137) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 2138) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+void WeightedSumTest::run() {
+  if(Verbosity) cout << "Run WeightedSum test: "; 
+  run1();
+  cout << " 1";
+  run2();
+  cout << " 2";
+  run3();
+  cout << " 3";
+  run4();
+  cout << " 4";
+
+  cout << " ";
+}
+
+
+ElementTest::ElementTest() : UnitTest() {}
+ElementTest::~ElementTest() {}
+
+void ElementTest::run1() {
+
+  Solver s;
+
+  VarArray X;
+
+  Variable x1(-10,10);
+  X.add(x1);
+
+  Variable x2(0,100);
+  X.add(x2);
+
+  Variable x3(-100,0);
+  X.add(x3);
+
+  Vector< int > vals;
+  vals.add(-250);
+  vals.add(-12);
+  vals.add(250);
+  Variable x4(vals);
+  X.add(x4);
+
+  Variable Y(0,3);
+
+  vals.add(12);
+  Variable Z(vals);
+
+
+  s.add( X[Y] == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(X, //s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+//     cout << Y.get_solution_value() << endl;
+//     cout << Z.get_solution_value() << endl;
+//     //cout << X[0].get_solution_value() << endl;
+// cout << X[1].get_solution_value() << endl;
+// cout << X[2].get_solution_value() << endl;
+// cout << X[3].get_solution_value() << endl;
+
+    // cout << "X[" << Y.get_solution_value() << "] = " << Z.get_solution_value() 
+    //  	 << " (" << X[Y.get_solution_value()].get_solution_value() << ")" << endl;
+  }
+
+  //std::cout << num_solutions << " " << s.statistics.num_backtracks << std::endl;
+
+
+  //cout << "After\n" << s << endl;  
+
+  if(s.statistics.num_backtracks != 432662) {
+    //if(s.statistics.num_backtracks != 428442) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 432663) {
+  //if(num_solutions != 428442) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void ElementTest::run() {
+  if(Verbosity) cout << "Run Element test: "; 
+  run1();
+  cout << " 1";
+  // run2();
+  // cout << " 2";
+  // run3();
+  // cout << " 3";
+  // run4();
+  // cout << " 4";
+
+  cout << " ";
 }
 
 
@@ -1954,7 +3286,7 @@ void OpshopTest::run() {
       s.add( task[i*nMachines+j] <= makespan-jobs[i][j] );
 
   //std::cout << s << std::endl;
-  s.specialise();
+  //s.specialise();
   //std::cout << s << std::endl;
 
   s.initialise_search(task, 
@@ -1967,14 +3299,14 @@ void OpshopTest::run() {
   }
 
 
-  if(s.statistics.num_backtracks != 774581) {
+  if(s.statistics.num_backtracks != 774518) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
     //exit(1);
   }
   if(num_solutions != 771316) {
     cout << "Error: wrong number of solutions! (" 
-	 << (s.statistics.num_backtracks) << ")" << endl;
+	 << (num_solutions) << ")" << endl;
     //exit(1);
   }
 
@@ -2014,6 +3346,8 @@ void RewriteTest1::run() {
   s.add(X == Y);
   for(int i=0; i<N; ++i) s.add(X == E[i]);
 
+  //std::cout << s << std::endl;
+
   s.rewrite();
 
   int sum_degree = X.get_degree() + Y.get_degree() + Z.get_degree();
@@ -2030,10 +3364,17 @@ void RewriteTest1::run() {
     exit(1);
   }
   
- s.consolidate();
+  //std::cout << s << std::endl;
+
+  //s.consolidate();
+
+  //std::cout << s << std::endl;
+
  s.add(E[4] > 1);
  s.propagate();
  s.consolidate();
+
+ //std::cout << s << std::endl;
 
  s.initialise_search(all_vars, 
 		     new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -2049,8 +3390,149 @@ void RewriteTest1::run() {
  cout << "(" << num_solutions << ") " ;
 
  if(num_solutions != 26) {
-   cout << "Error wrong number of solution!" << endl;
-   exit(1);
+   cout << "Error wrong number of solution! (" << num_solutions << ")" << endl;
+   //exit(1);
  }
 
 }
+
+
+
+/******************************************
+ * URCSPGenerator
+ ******************************************/
+
+URCSPGenerator::URCSPGenerator(int S, int v, int d, int c, int a, int n) 
+{
+  Seed = S;
+  usrand(Seed);
+  initURCSP( v, d, c, a, n );  
+}
+
+void URCSPGenerator::initURCSP( int v, int d, int c, int a, int n ) {
+  Var  = v;
+  Dom  = d;
+  Con  = c;
+  Ari  = a;
+  Ngd  = n;
+  
+  if (Var < 2) 
+    std::cerr<<" ***Illegal number of variables: "<<Var<<std::endl;
+  if (Dom < 2) 
+    std::cerr<<" ***Illegal domain size:"<<Dom<<std::endl;
+  if (Con < 0 || Con > comb(Var,Ari)) 
+    std::cerr<<" ***Illegal number of constraints: "<<Con << std::endl;
+  if (Ari < 2)
+    std::cerr<<" ***Illegal arity: "<<Ari<<std::endl;
+  if (Ngd < 0 || Ngd > ((int)(pow((double)Dom,Ari) - 1)))
+    std::cerr<<" ***Illegal tightness: "<<Ngd<<std::endl;
+
+  int i;
+  PossibleCTs = comb(Var,Ari);
+  CTarray = new int[PossibleCTs];
+  PossibleNGs = 1;
+  if( Ngd ) {
+    for( i=0; i<Ari; ++i )
+      PossibleNGs = PossibleNGs*Dom;
+  }
+  NGarray = new int[PossibleNGs];
+  vars = new int[Ari+1];
+  //vals = new int[Var];
+  vals = new int[Ari];
+  vars[0]=-1;
+  uv=Var;
+  unconnected_var = new int[Var];
+  reInit();
+}
+
+URCSPGenerator::~URCSPGenerator()
+{
+  delete [] CTarray;
+  delete [] NGarray;
+  delete [] vars;
+  delete [] vals;
+  delete [] unconnected_var;
+}
+
+int URCSPGenerator::comb(int b, int d){
+  int res = 1;
+  int x=1;
+  for(int i=0;i<d;i++){
+    res = res*b--;
+    x = x*(i+1);
+  }
+  return res/x;
+}
+
+int URCSPGenerator::i2comb(int& code, int ind, int base, int dim, int stop){ 
+  int c=comb(base,dim); 
+  if(ind == stop || code < c)       
+    return ind;        
+  else{     
+    code=(code-c);        
+    return i2comb(code, ind+1, base-1, dim,stop);
+  }
+}
+
+void URCSPGenerator::reInit() 
+{
+  int i;
+  for( i=0; i<PossibleCTs; ++i )
+    CTarray[i]=i;
+  for( i=0; i<Var; ++i )
+    unconnected_var[i]=1;
+  c = 0;
+}
+
+void URCSPGenerator::reInit( int v, int d, int c, int a, int n ) 
+{
+  delete [] CTarray;
+  delete [] NGarray;
+  delete [] vars;
+  delete [] vals;
+  delete [] unconnected_var;
+  initURCSP( v, d, c, a, n );
+}
+
+bool URCSPGenerator::erateConstraint() 
+{
+  t = 0;
+  if( c == Con ) return false;
+  /* Choose a random_ number between c and PossibleCTs - 1, inclusive. */
+  int qq = randint(PossibleCTs - c);
+  int i, r =  c + qq;
+  /* Swap elements [c] and [r]. */
+  selectedCT = CTarray[r];
+  CTarray[r] = CTarray[c];
+  CTarray[c] = selectedCT;
+  /* Create the constraint. */
+  for(i=0;i<Ari;i++) {
+    vars[i+1] = i2comb(CTarray[c],vars[i]+1,Var-(vars[i]+1)-1,Ari-1-i,Var-Ari+i);
+    if(unconnected_var[vars[i+1]]) {
+      unconnected_var[vars[i+1]]=0;	
+      --uv;
+    }
+  }
+  /* Initialize the NGarray. */
+  for (i=0; i<PossibleNGs; ++i)
+    NGarray[i] = i;
+  ++c;
+  return true;
+}
+
+
+bool URCSPGenerator::erateNogood() {
+  if( t == Ngd ) return false;
+  int r =  t + randint(PossibleNGs - t);
+  selectedNG = NGarray[r];
+  NGarray[r] = NGarray[t];
+  NGarray[t] = selectedNG;
+  /* Add the nogood to the constraint. */
+  for(int i=0;i<Ari;i++) {
+    int x = (int)(pow((double)Dom,(Ari-i-1)));	    
+    vals[i] = NGarray[t] / x;
+    NGarray[t] -= (vals[i]*x);
+  }
+  ++t;
+  return true;
+}  

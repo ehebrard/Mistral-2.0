@@ -21,9 +21,38 @@
 
 
 #include <mistral_search.hpp>
+
+#include <mistral_sat.hpp>
 #include <mistral_variable.hpp>
 
 
+Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
+  : solver(s) {
+  lit_activity = s->base->lit_activity.stack_;
+  var_activity = s->base->var_activity.stack_;
+  decay = solver->parameters.activity_decay;
+  n_vars = solver->base->scope.size;
+  solver->add((DecisionListener*)this);
+}
+
+Mistral::LiteralActivityManager::~LiteralActivityManager() {}
+    
+double *Mistral::LiteralActivityManager::get_weight() { return var_activity; }     
+
+void Mistral::LiteralActivityManager::notify_decision() {
+  // int i=solver->sequence.size, a;
+  // Variable *seq = solver->sequence.list_;
+  // while(i--) {
+  //   a = seq[i].id();
+  //   var_activity[a] *= decay;
+  //   lit_activity[2*a] *= decay;
+  //   lit_activity[2*a+1] *= decay;
+  // }
+  int i=n_vars;
+  while(i--) var_activity[i] *= decay;    
+  i=n_vars;
+  while(i--) lit_activity[i] *= decay;
+}    
 
 Mistral::RestartPolicy::RestartPolicy(const unsigned int b) {
   base = b;
@@ -53,14 +82,8 @@ Mistral::Luby::Luby(const unsigned int b)
 
 Mistral::Luby::~Luby() {}
 
-Mistral::VarOrdering::VarOrdering(Mistral::Solver *s) 
-//: length(s->sequence.size), variables(s->sequence.list_) 
-{ solver = s; }
-
-Mistral::VarOrdering::~VarOrdering() {}
-
 Mistral::NoOrder::NoOrder(Solver *s) 
-  : VarOrdering(s) {}
+  : solver(s) {}
 
 Mistral::NoOrder::~NoOrder() {}
 
@@ -69,16 +92,8 @@ Mistral::Variable Mistral::NoOrder::select() {
 }
 
 Mistral::Lexicographic::Lexicographic(Solver *s) 
-  : VarOrdering(s) {
+  : solver(s) {
   last.initialise(0,s);
-//   for(unsigned int i=0; i<solver->sequence.size; ++i)
-//     order.add(solver->sequence[i]);
-// //   int i=solver->sequence.size;
-// //   while( i-- ) {
-// //     order.add(solver->sequence[i]);
-// //   }
-
-//   std::cout << "order1: " << order << std::endl;
 }
 
 void Mistral::Lexicographic::initialise(VarStack< Variable >& seq) {
@@ -88,70 +103,35 @@ void Mistral::Lexicographic::initialise(VarStack< Variable >& seq) {
 }
 
 void Mistral::Lexicographic::initialise(Solver *s) {
-  VarOrdering::initialise(s);
+  solver = s;
   last.initialise(0,s);
-// //   for(unsigned int i=0; i<solver->sequence.size; ++i)
-// //     order.add(solver->sequence[i]);
-// // //   int i=solver->sequence.size;
-// // //   while( i-- ) {
-// // //     order.add(solver->sequence[i]);
-// // //   }
-//   for(unsigned int i=0; i<seq.size; ++i) {
-    
-//     order.add(seq[i]);
-
-//   std::cout << "order2: " << order << std::endl;
 }
 
 Mistral::Lexicographic::~Lexicographic() {}
 
 Mistral::Variable Mistral::Lexicographic::select() {
-//   while(last<solver->variables.size && solver->variables[last].is_ground()) { 
-//     ++last;
-//   }
-
-//   return solver->variables[last];
-
-//   std::cout << solver->variables << std::endl;
-//   std::cout << order << std::endl;
-
-//   std::cout << std::endl;
-
-
-
   while(last<order.size && order[last].is_ground()) { 
     ++last;
   }
-
-  //std::cout << "order[ " << last << "]: " << order << std::endl;
-
   return order[last];
 }
 
-// Mistral::IntVar Mistral::Search::backtrack() {
-//   unsigned int i = sequence.size;
-//   trail_.pop(sequence.size);
-//   while(i < sequence.size) sequence[i++]->unassign();
-//   return decision.pop();
-// }
-
-// void Mistral::Search::assign(IntVar x) { 
-//   if(sequence.member(x)) sequence.erase(x); 
-// }
-
-// void Mistral::Search::initialise(Solver *s) {
-//   sequence.initialise(s->variables, false);
-//   trail_.initialise(0, s->variables.size);
-//   decision.initialise(0, s->variables.size);
-// }
-
-// void Mistral::Search::init_search(Vector< IntVar >& seq, VarOrdering *h, RestartPolicy *p) {
-//   for(unsigned int i=seq.size; i;) 
-//     sequence.insert(seq[--i]);    
-//   if(heuristic) delete heuristic;
-//   if(policy) delete policy;
-//   //heuristic = (h ? h : new NoOrder(this));
-//   policy = p;
-// }
 
 
+
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomain& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverDegree& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverWeight& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight& x) {
+  return x.display(os);
+}

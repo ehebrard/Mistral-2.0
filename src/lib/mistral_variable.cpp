@@ -51,75 +51,112 @@ int BOOL_DOM = 3;
 
 Mistral::Variable::Variable(Vector< int >& values, const int type) {
 
+  //std::cout << values << std::endl;
+
+  if(values.back() - values.front() + 1 == (int)(values.size)) {
+    initialise_domain(values.front(), values.back(), type);
+  } else {
+    initialise_domain(values, type);
+
+    //std::cout << "variable constructor cannot yet take a vector of values as argument!" << std::endl;
+    //exit(1);
+  }
 }
 
 Mistral::Variable::Variable(const int lo, const int up, const int type) {
-    if(lo == up) {
-      domain_type = CONST_VAR;
-      constant_value = lo;
-    } else if(type == EXPRESSION) {
-      domain_type = EXPRESSION;
-      expression = new Expression(lo, up);
-    } else if((type & BOOL_VAR) && lo==0 && up==1) {
-      bool_domain = &BOOL_DOM;
-      variable = new VariableImplementation();
-    } else if(type & RANGE_VAR) {
-      domain_type = RANGE_VAR;
-      range_domain = new VariableRange(lo, up);
-    } else {
-      domain_type = BITSET_VAR;
+  initialise_domain(lo, up, type);
+}
+
+Mistral::Variable::Variable(Variable X, bool h) {
+  if(X.domain_type == RANGE_VAR) {
+    int lb = X.get_initial_min();
+    int ub = X.get_initial_max();
+    initialise_domain(lb, ub, BITSET_VAR);
+    variable->id = X.variable->id;
+    variable->solver = X.variable->solver;
+    ((VariableRange*)X.variable)->set_history((VariableBitmap*)variable);
+  }
+}
+
+void Mistral::Variable::initialise_domain(const int lo, const int up, const int type) {
+  if(lo == up) {
+    domain_type = CONST_VAR;
+    constant_value = lo;
+  } else if(type == EXPRESSION) {
+    domain_type = EXPRESSION;
+    expression = new Expression(lo, up);
+  } else if((type & BOOL_VAR) && lo==0 && up==1) {
+    bool_domain = &BOOL_DOM;
+    variable = new VariableImplementation();
+  } else if(type & RANGE_VAR) {
+    domain_type = RANGE_VAR;
+    range_domain = new VariableRange(lo, up);
+  } else {
+    domain_type = BITSET_VAR;
+
+    int nwords = 1+(up >> BitSet::EXP)-(lo >> BitSet::EXP);
 #ifdef _BIT64
-      int nwords = ((up-lo) / 64);
-      if(nwords < 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
-      else if(nwords < 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
-      else if(nwords < 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
+    // int nwords = ((up>=0 ? ((up+1)/64 + ((up+1)%64)!=0) : 0) + 
+    // 		  (lo<0 ? (-lo/64 + ((lo%64)!=0)) : 0)) ;//((up-lo) / 64);
+    if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
+    else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
+    else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
 #else
-      int nwords = ((up-lo) / 32);
-      if(nwords < 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
-      else if(nwords < 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
-      else if(nwords < 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
-      else if(nwords < 4) bitset_domain = new VariableWord<unsigned int, 4>(lo, up);
-      else if(nwords < 5) bitset_domain = new VariableWord<unsigned int, 5>(lo, up);
+    // int nwords = ((up>=0 ? ((up+1)/32 + ((up+1)%32)!=0) : 0) + 
+    // 		  (lo<0 ? (-lo/32 + ((lo%32)!=0)) : 0)) ;//((up-lo) / 32);
+
+    
+    //std::cout <<lo << "-" << up << " " <<  nwords << std::endl;
+
+    //int nwords = ((up-lo) / 32);
+    if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
+    else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
+    else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
+    else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(lo, up);
+    else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(lo, up);
 #endif
-      else bitset_domain = new VariableBitmap(lo, up);
-    }
+    else bitset_domain = new VariableBitmap(lo, up);
+  }
+}
+
+
+void Mistral::Variable::initialise_domain(Vector< int >& values, const int type) {
+  if(type == EXPRESSION) {
+    domain_type = EXPRESSION;
+    expression = new Expression(values);
+  } else {
+    domain_type = BITSET_VAR;
+    
+    int nwords = 1+(values[0] >> BitSet::EXP)-(values.back() >> BitSet::EXP);
+#ifdef _BIT64
+    if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(values);
+    else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(values);
+    else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(values);
+#else
+    if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(values);
+    else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(values);
+    else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(values);
+    else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(values);
+    else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(values);
+#endif
+    else bitset_domain = new VariableBitmap(values);
+  }
 }
 
 
 
 Mistral::Variable Mistral::Variable::get_var() {
- //  display(std::cout);
-//   std::cout << ".get_var()" << std::endl;
-
   if(domain_type == EXPRESSION) {
-    //   std::cout << "expression" << std::endl;
     return expression->self.get_var();
   } else if(domain_type == CONST_VAR || !variable->solver) {
-    //    std::cout << "self" << std::endl;
     return *this;
   }
-  //  std::cout << "solver's" << std::endl;
   return variable->solver->variables[variable->id];
-    //*this;
 }
 
 std::ostream& Mistral::Variable::display(std::ostream& os) const {
-  //os << domain_type << "|";
   if(domain_type == EXPRESSION) {
-    //Expression *exp = (Expression*)implementation;
-    if(expression->is_initialised())
-      os << expression->self << ":";
-      //os << expression->self;
-    //else {
-    os << expression->get_name() << "(" ;
-    if(expression->children.empty()) os << expression->self;
-    else {
-      os << expression->children[0];
-      for(unsigned int i=1; i<expression->children.size-expression->is_initialised(); ++i) {
-	os << ", " << expression->children[i];
-      }
-    }
-    os << ")";
+    expression->display(os);
     //}
   } else if(domain_type == CONST_VAR) {
     os << constant_value;
@@ -150,66 +187,27 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
 
 void Mistral::Variable::initialise(Solver *s, const bool top) {
   if(domain_type == EXPRESSION) {
-    
-//     std::cout << std::endl << "Add a new expression: " << this 
-//     	      << (top ? " at top-level" : " nested")
-// 	      << std::endl;
-    
-    //Expression *exp = (Expression*)implementation;
     if(!expression->is_initialised()) {
-
       for(unsigned int i=0; i<expression->children.size; ++i) {
-	//std::cout << this << " add child" << std::endl; 
 	expression->children[i].initialise(s, false);
       }
 
       if(top && !expression->children.empty()) {
 	expression->extract_constraint(s);
-	//std::cout << this << " extract constraint: " << s->constraints.back() << std::endl; 
       } else {
-	
-	//std::cout << this << " extract variable " << std::endl;
 	expression->extract_variable(s);
 	expression->id = expression->self.id();
 	expression->solver = s;	
 	expression->extract_predicate(s);//);
-	//std::cout << "now: " << this << std::endl;
       }
+      s->expression_store.add(expression);
     }
-
-    //else std::cout << this << " is known " << std::endl;
-    
   } else {
-
-//      std::cout << std::endl << "declare a new variable: " << this 
-//    		<< " in " << get_domain() << std::endl;
-     
-
     if(domain_type != CONST_VAR && variable->solver != s) {
-
- 
-      //variable->id = 
       s->declare(this->get_var());
-      //variable->solver = s;
-//       if(domain_type == BOOL_VAR) {
-// 	s->booleans.add(this);
-//       }
-//       if(domain_type == BOOL_VAR) { bool_domain = 
-// // 	  //(int)(new int[1]);
-// // 	  (int)(s->getNextBooleanSlot());
-// // 	//std::cout << "NEW DOMAIN: " << *((int*)domain_type) << std::endl;
-// 	  }
-
       s->sequence.declare(*this);
-
-//       std::cout << "declared a new variable: " << this 
-//    		<< " in " << get_domain() << std::endl;
     } 
-
-    //else std::cout << this << " is known " << std::endl;
   }
-
-  //  std::cout << "end initialise (" << id() << ")" << std::endl << std::endl ;
 }
 
 
@@ -284,6 +282,16 @@ int Mistral::Variable::get_solution_value() const {
 	 variable->get_solution_value());
 }
 
+int Mistral::Variable::get_solution_min() const {
+  return(domain_type == CONST_VAR ? constant_value :
+	 variable->get_solution_min());
+}
+
+int Mistral::Variable::get_solution_max() const {
+  return(domain_type == CONST_VAR ? constant_value :
+	 variable->get_solution_max());
+}
+
   int Mistral::Variable::get_value() const {
     if     (domain_type ==  BITSET_VAR) return bitset_domain->get_value();
     else if(domain_type ==    LIST_VAR) return list_domain->get_value();
@@ -318,7 +326,12 @@ std::string Mistral::Variable::get_domain() const {
   else if(domain_type ==    LIST_VAR) buf << list_domain->domain;
   else if(domain_type ==   RANGE_VAR) {
     //Mistral::VariableRange* r = (Mistral::VariableRange*)implementation;
-    buf << "[" << range_domain->get_min() << ".." <<  range_domain->get_max() << "]";
+    if(range_domain->get_min() == range_domain->get_max())
+      buf << "[" << range_domain->get_min() << "]";
+    // else if(range_domain->get_min() == range_domain->get_max()-1)
+    //   buf << "{" << range_domain->get_min() << "," <<  range_domain->get_max() << "}";
+    else 
+      buf << "[" << range_domain->get_min() << ".." <<  range_domain->get_max() << "]";
   }
   //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_domain();
   else if(domain_type ==   CONST_VAR)  {
@@ -356,43 +369,43 @@ std::string Mistral::Variable::get_domain() const {
     else  return (*bool_domain >> 1);
   }
 
-  int Mistral::Variable::get_minCapacity() const {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minCapacity();
-    else if(domain_type ==    LIST_VAR) return list_domain->get_minCapacity();
-    else if(domain_type ==   RANGE_VAR) return range_domain->get_minCapacity();
-    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minCapacity();
+  int Mistral::Variable::get_initial_min() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_initial_min();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_initial_min();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_initial_min();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_initial_min();
     else if(domain_type ==   CONST_VAR) return constant_value;
-    else if(domain_type ==   EXPRESSION) return expression->self.get_minCapacity();
+    else if(domain_type ==   EXPRESSION) return expression->self.get_initial_min();
     else  return 0;
   }
 
-  int Mistral::Variable::get_maxCapacity() const {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_maxCapacity();
-    else if(domain_type ==    LIST_VAR) return list_domain->get_maxCapacity();
-    else if(domain_type ==   RANGE_VAR) return range_domain->get_maxCapacity();
-    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_maxCapacity();
+  int Mistral::Variable::get_initial_max() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_initial_max();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_initial_max();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_initial_max();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_initial_max();
     else if(domain_type ==   CONST_VAR) return constant_value;
-    else if(domain_type ==   EXPRESSION) return expression->self.get_maxCapacity();
+    else if(domain_type ==   EXPRESSION) return expression->self.get_initial_max();
     else  return 1;
   }
 
-  int Mistral::Variable::get_minPosAbs() const {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minPosAbs();
-    else if(domain_type ==    LIST_VAR) return list_domain->get_minPosAbs();
-    else if(domain_type ==   RANGE_VAR) return range_domain->get_minPosAbs();
-    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minPosAbs();
+  int Mistral::Variable::get_min_pos() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_min_pos();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_min_pos();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_min_pos();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min_pos();
     else if(domain_type ==   CONST_VAR) return constant_value;
-    else if(domain_type ==   EXPRESSION) return expression->self.get_minPosAbs();
-    else  return (!(*bool_domain & 1));
+    else if(domain_type ==   EXPRESSION) return expression->self.get_min_pos();
+    else  return (*bool_domain >> 1); //(!(*bool_domain & 1));
   }
 
-  int Mistral::Variable::get_minNegAbs() const {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_minNegAbs();
-    else if(domain_type ==    LIST_VAR) return list_domain->get_minNegAbs();
-    else if(domain_type ==   RANGE_VAR) return range_domain->get_minNegAbs();
-    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_minNegAbs();
+  int Mistral::Variable::get_max_neg() const {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_max_neg();
+    else if(domain_type ==    LIST_VAR) return list_domain->get_max_neg();
+    else if(domain_type ==   RANGE_VAR) return range_domain->get_max_neg();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_max_neg();
     else if(domain_type ==   CONST_VAR) return constant_value;
-    else if(domain_type ==   EXPRESSION) return expression->self.get_minNegAbs();
+    else if(domain_type ==   EXPRESSION) return expression->self.get_max_neg();
     else  return (!(*bool_domain & 1));
   }
 
@@ -553,29 +566,29 @@ std::string Mistral::Variable::get_domain() const {
     return true;
   }
 
-  void Mistral::Variable::intersectTo( BitSet& s ) const {
-    if     (domain_type ==  BITSET_VAR) bitset_domain->intersectTo(s);
-    else if(domain_type ==    LIST_VAR) list_domain->intersectTo(s);
-    else if(domain_type ==   RANGE_VAR) range_domain->intersectTo(s);
-    else if(domain_type == VIRTUAL_VAR) virtual_domain->intersectTo(s);
+  void Mistral::Variable::intersect_to( BitSet& s ) const {
+    if     (domain_type ==  BITSET_VAR) bitset_domain->intersect_to(s);
+    else if(domain_type ==    LIST_VAR) list_domain->intersect_to(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->intersect_to(s);
+    else if(domain_type == VIRTUAL_VAR) virtual_domain->intersect_to(s);
     else if(domain_type ==   CONST_VAR) {
       if(s.contain(constant_value)) {
 	s.clear();
 	s.add(constant_value);
       } else s.clear();
     }
-    else if(domain_type ==   EXPRESSION) return expression->self.intersectTo(s);
-    else  return s.intersectWith(*bool_domain);
+    else if(domain_type ==   EXPRESSION) return expression->self.intersect_to(s);
+    else  return s.intersect_with(*bool_domain);
   }
 
-  void Mistral::Variable::unionTo( BitSet& s ) const {
-    if     (domain_type ==  BITSET_VAR) bitset_domain->unionTo(s);
-    else if(domain_type ==    LIST_VAR) list_domain->unionTo(s);
-    else if(domain_type ==   RANGE_VAR) range_domain->unionTo(s);
-    else if(domain_type == VIRTUAL_VAR) virtual_domain->unionTo(s);
+  void Mistral::Variable::union_to( BitSet& s ) const {
+    if     (domain_type ==  BITSET_VAR) bitset_domain->union_to(s);
+    else if(domain_type ==    LIST_VAR) list_domain->union_to(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->union_to(s);
+    else if(domain_type == VIRTUAL_VAR) virtual_domain->union_to(s);
     else if(domain_type ==   CONST_VAR) s.add(constant_value);
-    else if(domain_type ==   EXPRESSION) expression->self.unionTo(s);
-    else s.unionWith(*bool_domain);
+    else if(domain_type ==   EXPRESSION) expression->self.union_to(s);
+    else s.union_with(*bool_domain);
   }
 
   Mistral::Event Mistral::Variable::remove(const int v) {
@@ -586,6 +599,7 @@ std::string Mistral::Variable::get_domain() const {
     else if(domain_type ==   CONST_VAR) return (constant_value == v ? FAIL_EVENT : NO_EVENT);
     else if(domain_type ==   EXPRESSION) return expression->self.remove(v);
     else {
+
       return (v<0||v>1 ? NO_EVENT : setValue(2-v));
       
       //return ((v<0 || v>1) ? NO_EVENT : setValue(2-v));
@@ -608,6 +622,7 @@ std::string Mistral::Variable::get_domain() const {
     else if(domain_type ==   CONST_VAR) return (constant_value != v ? FAIL_EVENT : NO_EVENT);
     else if(domain_type ==   EXPRESSION) return expression->self.set_domain(v);
     else {
+
       return (v<0||v>1 ? FAIL_EVENT : setValue(1+v));
       //int dom = *bool_domain;
       //return ((dom==1+v) ? NO_EVENT : setValue(1+v));
@@ -622,6 +637,7 @@ std::string Mistral::Variable::get_domain() const {
     else if(domain_type ==   CONST_VAR) return (constant_value < lo ? FAIL_EVENT : NO_EVENT);
     else if(domain_type ==   EXPRESSION) return expression->self.set_min(lo);
     else {
+
       // 1 [1, inf[
       // 2 [2, inf[
       // 3 [2, inf[
@@ -641,6 +657,7 @@ std::string Mistral::Variable::get_domain() const {
     else if(domain_type ==   CONST_VAR) return (constant_value > up ? FAIL_EVENT : NO_EVENT);
     else if(domain_type ==   EXPRESSION) return expression->self.set_max(up);
     else {
+
       return(up==0 ? setValue(1) : (up<0 ? FAIL_EVENT : NO_EVENT));
 
 //       int dom = *bool_domain;
@@ -663,10 +680,22 @@ std::string Mistral::Variable::get_domain() const {
   }
 
   Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
-    if(x.is_ground()) return set_domain(x.get_min());
-    else if(x.is_range()) return (set_min(x.get_min()) | set_max(x.get_max()));
-    else if(x.domain_type ==  BITSET_VAR) return set_domain(bitset_domain->domain.values);
-    std::cout << "TODO!" << std::endl;
+
+
+    //if(x.is_ground()) return set_domain(x.get_min());
+    if(x.is_ground()) {
+      return  set_domain(x.get_min());
+    }
+    else if(x.is_range()) {
+      Event evt = (set_min(x.get_min()) | set_max(x.get_max()));
+      return evt;
+    }
+    else if(x.domain_type ==  BITSET_VAR) return set_domain(x.bitset_domain->domain.values);
+    else if(x.domain_type ==  EXPRESSION) return set_domain(x.expression->self);
+    else {
+      std::cout << "TODO! (set_domain(var))" << std::endl;
+      exit(1);
+    }
     return NO_EVENT;
   }
 
@@ -677,17 +706,23 @@ std::string Mistral::Variable::get_domain() const {
     else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeSet(s);
     else if(domain_type ==   CONST_VAR) return (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
     else if(domain_type ==   EXPRESSION) return expression->self.removeSet(s);
-    else  return ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
+    else {
+
+      return ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
+    }
   }
 
-  Mistral::Event Mistral::Variable::removeRange(const int lo, const int up) {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->removeRange(lo, up);
-    else if(domain_type ==    LIST_VAR) return list_domain->removeRange(lo, up);
-    else if(domain_type ==   RANGE_VAR) return range_domain->removeRange(lo, up);
-    else if(domain_type == VIRTUAL_VAR) return virtual_domain->removeRange(lo, up);
+  Mistral::Event Mistral::Variable::remove_interval(const int lo, const int up) {
+    if     (domain_type ==  BITSET_VAR) return bitset_domain->remove_interval(lo, up);
+    else if(domain_type ==    LIST_VAR) return list_domain->remove_interval(lo, up);
+    else if(domain_type ==   RANGE_VAR) return range_domain->remove_interval(lo, up);
+    else if(domain_type == VIRTUAL_VAR) return virtual_domain->remove_interval(lo, up);
     else if(domain_type ==   CONST_VAR) return ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
-    else if(domain_type ==   EXPRESSION) return expression->self.removeRange(lo, up);
-    else  return (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
+    else if(domain_type ==   EXPRESSION) return expression->self.remove_interval(lo, up);
+    else {
+
+      return (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
+    }
   }
 
   Mistral::Event Mistral::Variable::restore() {
@@ -717,15 +752,15 @@ std::string Mistral::Variable::get_domain() const {
 //   id = s->declare(*this);
 // }
 
-    int Mistral::VariableImplementation::get_solution_value() const { 
-      return solver->last_solution_lb[id] ;
-    }  
-    int Mistral::VariableImplementation::get_solution_lb() const { 
-      return solver->last_solution_lb[id] ; 
-    } 
-    int Mistral::VariableImplementation::get_solution_ub() const { 
-      return solver->last_solution_ub[id] ; 
-    }  
+int Mistral::VariableImplementation::get_solution_value() const { 
+  return solver->last_solution_lb[id] ;
+}  
+int Mistral::VariableImplementation::get_solution_min() const { 
+  return solver->last_solution_lb[id] ; 
+} 
+int Mistral::VariableImplementation::get_solution_max() const { 
+  return solver->last_solution_ub[id] ; 
+}  
 
 
 //void Mistral::VariableImplementation::trigger_value_event_and_save(Mistral::Variable *x) {
@@ -748,6 +783,17 @@ void Mistral::BitsetDomain::initialise(const int lb, const int ub, const bool va
   max = ub;
   size = ub-lb+1;
   if(vals) values.initialise(lb, ub, BitSet::full);
+}
+
+Mistral::BitsetDomain::BitsetDomain(Vector< int >& vals) {
+  initialise(vals);
+}
+
+void Mistral::BitsetDomain::initialise(Vector< int >& vals) {
+  min = vals.front();
+  max = vals.back();
+  size = vals.size;
+  values.initialise(vals);
 }
 
 bool Mistral::Decision::propagateRelation() {
@@ -793,17 +839,34 @@ Mistral::Expression::Expression(Vector< int >& values)
   self = x;
 }
 
-void Mistral::Expression::extract_variable(Solver *s) {
-  self.initialise(s, false);
-  self = self.get_var();
-}
-
 Mistral::Expression::Expression(Vector< Variable >& args) 
   : VariableImplementation() {
-    id=-1; 
-    for(unsigned int i=0; i<args.size; ++i)
-      children.add(args[i]);
-  }
+  id=-1; 
+  for(unsigned int i=0; i<args.size; ++i)
+    children.add(args[i]);
+}
+Mistral::Expression::Expression(Vector< Variable >& args, const int lo, const int up) 
+  : VariableImplementation() {
+  id=-1; 
+  Variable x(lo, up, DYN_VAR);
+  self = x;
+  for(unsigned int i=0; i<args.size; ++i)
+    children.add(args[i]);
+}
+Mistral::Expression::Expression(std::vector< Variable >& args) 
+  : VariableImplementation() {
+  id=-1; 
+  for(unsigned int i=0; i<args.size(); ++i)
+    children.add(args[i]);
+}
+Mistral::Expression::Expression(std::vector< Variable >& args, const int lo, const int up) 
+  : VariableImplementation() {
+  id=-1; 
+  Variable x(lo, up, DYN_VAR);
+  self = x;
+  for(unsigned int i=0; i<args.size(); ++i)
+    children.add(args[i]);
+}
 Mistral::Expression::Expression(Variable X, Variable Y) 
   : VariableImplementation() {
      children.add(X);
@@ -813,8 +876,43 @@ Mistral::Expression::Expression(Variable X)
   : VariableImplementation() {
      children.add(X);
   }
-Mistral::Expression::~Expression() {}
+Mistral::Expression::~Expression() {
 
+  // std::cout << "delete exp subvar: " << self << std::endl;
+
+  // int domain_type = self.domain_type;
+  // if     (domain_type ==  BITSET_VAR) delete self.bitset_domain;
+  // else if(domain_type ==    LIST_VAR) delete self.list_domain;
+  // else if(domain_type ==   RANGE_VAR) delete self.range_domain;
+  // else if(domain_type == VIRTUAL_VAR) delete self.virtual_domain;
+  // else if(domain_type ==  EXPRESSION) delete self.expression;
+  // else if(domain_type !=   CONST_VAR) delete self.variable;
+}
+
+void Mistral::Expression::extract_variable(Solver *s) {
+  self.initialise(s, false);
+  self = self.get_var();
+}
+
+// void Mistral::Expression::extract_variable(Solver *s) {
+//   self.initialise(s, false);
+//   self = self.get_var();
+// }
+
+std::ostream& Mistral::Expression::display(std::ostream& os) const {
+  if(is_initialised())
+    os << self << ":";
+  os << get_name() << "(" ;
+  if(children.empty()) os << self;
+  else {
+    os << children[0];
+    for(unsigned int i=1; i<children.size-is_initialised(); ++i) {
+      os << ", " << children[i];
+    }
+  }
+  os << ")";
+  return os;
+}
 //   Mistral::BinaryExpression::BinaryExpression(Variable X, Variable Y) 
 //     : Expression() {
 //     children.add(X);
@@ -823,25 +921,25 @@ Mistral::Expression::~Expression() {}
 //   Mistral::BinaryExpression::~BinaryExpression() {}
 
 
-  Mistral::AddExpression::AddExpression(Variable X, Variable Y) 
-    : Expression(X,Y) {
-  }
-  Mistral::AddExpression::~AddExpression() {}
-  
+Mistral::AddExpression::AddExpression(Variable X, Variable Y) 
+  : Expression(X,Y) {
+}
+Mistral::AddExpression::~AddExpression() {}
+
 void Mistral::AddExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Add predicate can't be used as a constraint" << std::endl;
   exit(0);
 }
 
-  void Mistral::AddExpression::extract_variable(Solver *s) {
+void Mistral::AddExpression::extract_variable(Solver *s) {
+//void Mistral::AddExpression::reify(Solver *s, Variable X) {
     //int lb = children[0].get_var().get_min()+children[1].get_var().get_min();
     //int ub = children[0].get_var().get_max()+children[1].get_var().get_max();
 
     int lb = children[0].get_min()+children[1].get_min();
     int ub = children[0].get_max()+children[1].get_max();
 
-    Variable aux(lb, ub, DYN_VAR
-		 );
+    Variable aux(lb, ub, DYN_VAR);
     self = aux;
 
     self.initialise(s, false);
@@ -849,7 +947,7 @@ void Mistral::AddExpression::extract_constraint(Solver *s) {
     children.add(self);
   }
 
-const char* Mistral::AddExpression::get_name() {
+const char* Mistral::AddExpression::get_name() const {
   return "add";
 }
 
@@ -870,18 +968,19 @@ void Mistral::OffsetExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::OffsetExpression::extract_variable(Solver *s) {
+//void Mistral::OffsetExpression::reify(Solver *s, Variable X) {
   int lb = children[0].get_min()+offset;
   int ub = children[0].get_max()+offset;
 
-  Variable aux(lb, ub, DYN_VAR);
-  self = aux;
+    Variable aux(lb, ub, DYN_VAR);
+    self = aux;
 
   self.initialise(s, false);
   self = self.get_var();
   children.add(self);
 }
 
-const char* Mistral::OffsetExpression::get_name() {
+const char* Mistral::OffsetExpression::get_name() const {
   return "offset";
 }
 
@@ -900,6 +999,88 @@ Mistral::Variable Mistral::Variable::operator+(int k) {
 }
 
 
+Mistral::MulExpression::MulExpression(Variable X, Variable Y) 
+  : Expression(X,Y) {
+}
+Mistral::MulExpression::~MulExpression() {}
+
+void Mistral::MulExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Mul predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::MulExpression::extract_variable(Solver *s) {
+
+  int z[4], lb = INFTY, ub = -INFTY, i = 4;
+  z[0] = children[0].get_min() * children[1].get_min();
+  z[1] = children[0].get_min() * children[1].get_max();
+  z[2] = children[0].get_max() * children[1].get_min();
+  z[3] = children[0].get_max() * children[1].get_max();  
+  while( i-- ) {
+    if( z[i] > ub ) ub = z[i];
+    if( z[i] < lb ) lb = z[i];
+  }
+
+  Variable aux(lb, ub, DYN_VAR);
+  self = aux;
+
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+}
+
+const char* Mistral::MulExpression::get_name() const {
+  return "mul";
+}
+
+void Mistral::MulExpression::extract_predicate(Solver *s) {
+  s->add(new PredicateMul(children));
+}
+
+
+Mistral::FactorExpression::FactorExpression(Variable X, const int fct) 
+  : Expression(X) { 
+  factor=fct; 
+}
+Mistral::FactorExpression::~FactorExpression() {}
+  
+void Mistral::FactorExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Factor predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::FactorExpression::extract_variable(Solver *s) {
+
+  int lb = (factor<0 ? children[0].get_max() : children[0].get_min())*factor;
+  int ub = (factor<0 ? children[0].get_min() : children[0].get_max())*factor;
+
+  Variable aux(lb, ub, DYN_VAR);
+  self = aux;
+  
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+}
+
+const char* Mistral::FactorExpression::get_name() const {
+  return "factor";
+}
+
+void Mistral::FactorExpression::extract_predicate(Solver *s) {
+  s->add(new PredicateFactor(children, factor));
+}
+
+Mistral::Variable Mistral::Variable::operator*(Variable x) {
+  Variable exp(new MulExpression(*this,x));
+  return exp;
+}
+
+Mistral::Variable Mistral::Variable::operator*(int k) {
+  Variable exp(new FactorExpression(*this,k));
+  return exp;
+}
+
+
   Mistral::SubExpression::SubExpression(Variable X, Variable Y) 
   : Expression(X,Y) {
 }
@@ -910,20 +1091,22 @@ void Mistral::SubExpression::extract_constraint(Solver *s) {
   exit(0);
   }
 
-  void Mistral::SubExpression::extract_variable(Solver *s) {
-    //int lb = children[0].get_var().get_min()-children[1].get_var().get_max();
-    //int ub = children[0].get_var().get_max()-children[1].get_var().get_min();
-    
-    int lb = children[0].get_min()-children[1].get_max();
-    int ub = children[0].get_max()-children[1].get_min();
-    Variable aux(lb, ub, DYN_VAR// , (RANGE_VAR | BOOL_VAR)
-		 );
+void Mistral::SubExpression::extract_variable(Solver *s) {
+  //void Mistral::SubExpression::reify(Solver *s, Variable X) {
+  //int lb = children[0].get_var().get_min()-children[1].get_var().get_max();
+  //int ub = children[0].get_var().get_max()-children[1].get_var().get_min();
+  
+  int lb = children[0].get_min()-children[1].get_max();
+  int ub = children[0].get_max()-children[1].get_min();
+  
+    Variable aux(lb, ub, DYN_VAR);
     self = aux;
 
-    self.initialise(s, false);
-    self = self.get_var();
-    children.add(self);
-  }
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+ 
+}
 
   void Mistral::SubExpression::extract_predicate(Solver *s) {
     Constraint *sub = new PredicateAdd();
@@ -934,7 +1117,7 @@ void Mistral::SubExpression::extract_constraint(Solver *s) {
     s->add(sub);
   }
 
-const char* Mistral::SubExpression::get_name() {
+const char* Mistral::SubExpression::get_name() const {
   return "sub";
 }
 
@@ -950,8 +1133,9 @@ Mistral::NotExpression::NotExpression(Variable X)
 Mistral::NotExpression::~NotExpression() {}
   
 void Mistral::NotExpression::extract_constraint(Solver *s) {
-  std::cerr << "Error: Not predicate can't be used as a constraint" << std::endl;
-  exit(0);
+  children[0].remove(0);
+  // std::cerr << "Error: Not predicate can't be used as a constraint" << std::endl;
+  // exit(0);
 }
 
 void Mistral::NotExpression::extract_variable(Solver *s) {
@@ -963,7 +1147,7 @@ void Mistral::NotExpression::extract_variable(Solver *s) {
   children.add(self);
 }
 
-const char* Mistral::NotExpression::get_name() {
+const char* Mistral::NotExpression::get_name() const {
   return "not";
 }
 
@@ -982,8 +1166,10 @@ Mistral::AndExpression::~AndExpression() {}
   
 void Mistral::AndExpression::extract_constraint(Solver *s) {
   //s->add(new ConstraintAnd(children));
-  std::cout << "not implemented" << std::endl;
-  exit(1);
+  //std::cout << "not implemented" << std::endl;
+  //exit(1);
+  children[0].remove(0);
+  children[1].remove(0);
 }
 
 void Mistral::AndExpression::extract_variable(Solver *s) {
@@ -999,7 +1185,7 @@ void Mistral::AndExpression::extract_predicate(Solver *s) {
   s->add(new PredicateAnd(children));
 }
 
-const char* Mistral::AndExpression::get_name() {
+const char* Mistral::AndExpression::get_name() const {
   return "and";
 }
 
@@ -1034,7 +1220,7 @@ void Mistral::OrExpression::extract_predicate(Solver *s) {
   s->add(new PredicateOr(children));
 }
 
-const char* Mistral::OrExpression::get_name() {
+const char* Mistral::OrExpression::get_name() const {
   return "or";
 }
 
@@ -1072,7 +1258,7 @@ Mistral::Variable Mistral::Variable::operator||(Variable x) {
 //     s->add(new PredicateEqual(children, false));
 //   }
 
-// const char* Mistral::NeqExpression::get_name() {
+// const char* Mistral::NeqExpression::get_name() const {
 //   return "neq";
 // }
 
@@ -1104,11 +1290,22 @@ void Mistral::EqualExpression::extract_variable(Solver *s) {
 }
 
 void Mistral::EqualExpression::extract_predicate(Solver *s) {
+
+  // if(children.size == 3)
+  //   std::cout << children[0] << " in " << children[0].get_domain() << std::endl
+  // 	      << children[1] << " in " << children[1].get_domain() << std::endl
+  // 	      << children[2] << " in " << children[2].get_domain() << std::endl;
+  // else if(children.size == 2)
+  //   std::cout << children[0] << " in " << children[0].get_domain() << std::endl
+  // 	      << children[1] << " in " << children[1].get_domain() << std::endl;
+  // else 
+  //   std::cout << "??" << std::endl;
+
   if(children.size==3) s->add(new PredicateEqual(children, spin));
   else s->add(new PredicateConstantEqual(children, value, spin));
 }
 
-const char* Mistral::EqualExpression::get_name() {
+const char* Mistral::EqualExpression::get_name() const {
   return "equal";
 }
 
@@ -1172,15 +1369,22 @@ void Mistral::PrecedenceExpression::extract_variable(Solver *s) {
 void Mistral::PrecedenceExpression::extract_predicate(Solver *s) {
   if(children.size==3) s->add(new PredicateLess(children, offset));
   else if(spin) {
-      s->add(new PredicateUpperBound(children, offset));
-    } else {
-      s->add(new PredicateLowerBound(children, offset));
-    }
+    s->add(new PredicateUpperBound(children, offset));
+  } else {
+    s->add(new PredicateLowerBound(children, offset));
   }
+}
 
-const char* Mistral::PrecedenceExpression::get_name() {
+const char* Mistral::PrecedenceExpression::get_name() const {
   return "prec";
 }
+
+Mistral::Variable Mistral::Precedence(Variable X, const int d, Variable Y) 
+{
+  Variable exp(new PrecedenceExpression(X,Y,d));
+  return exp;
+}
+
 
 Mistral::Variable Mistral::Variable::operator<(Variable x) {
   Variable exp(new PrecedenceExpression(*this,x,1));
@@ -1242,7 +1446,7 @@ void Mistral::DisjunctiveExpression::extract_predicate(Solver *s) {
   exit(0);
 }
 
-const char* Mistral::DisjunctiveExpression::get_name() {
+const char* Mistral::DisjunctiveExpression::get_name() const {
   return "dsijunct";
 }
 
@@ -1286,7 +1490,7 @@ void Mistral::AllDiffExpression::extract_predicate(Solver *s) {
   exit(0);
 }
 
-const char* Mistral::AllDiffExpression::get_name() {
+const char* Mistral::AllDiffExpression::get_name() const {
   return "alldiff";
 }
 
@@ -1296,134 +1500,563 @@ Mistral::Variable Mistral::AllDiff(Vector< Variable >& args, const int ct) {
 }
 
 
+Mistral::BoolSumExpression::BoolSumExpression(const int l, const int u) 
+  : Expression() {
+  lb = l;
+  ub = u;
+}
 
-Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const int t) 
-  : Expression(args) { total = t; }
+Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const int l, const int u) 
+  : Expression(args) {
+  lb = l;
+  ub = u;
+}
 
 Mistral::BoolSumExpression::~BoolSumExpression() {}
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) { 
-  s->add(new ConstraintBoolSumEqual(children,total)); 
+  s->add(new ConstraintBoolSumInterval(children,lb,ub)); 
 }
 
 void Mistral::BoolSumExpression::extract_variable(Solver *s) {
-      std::cerr << "Error: BoolSum constraint can't yet be used as a predicate" << std::endl;
-  exit(0);
+  Variable aux(lb, ub, DYN_VAR);
+  self = aux;
+  
+  self.initialise(s, false);
+  self = self.get_var();
+  //children.add(self);
 }
 
 void Mistral::BoolSumExpression::extract_predicate(Solver *s) { 
-      std::cerr << "Error: BoolSum constraint can't yet be used as a predicate" << std::endl;
-  exit(0);
+  s->add(new PredicateBoolSum(children, self)); 
 }
 
-const char* Mistral::BoolSumExpression::get_name() {
+const char* Mistral::BoolSumExpression::get_name() const {
   return "bool_sum";
 }
 
-Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const int t) {
-  Variable exp(new BoolSumExpression(args,t));
+Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const int l, const int u) {
+  Variable exp(new BoolSumExpression(args,l,u));
+  return exp;
+}
+
+Mistral::Variable Mistral::BoolSum(Vector< Variable >& args) {
+  Variable exp(new BoolSumExpression(args,0,args.size));
   return exp;
 }
 
 
+Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 
+					    Vector< int >& wgts, 
+					    const int l, const int u) 
+  : Expression(args) {
+  lower_bound = l;
+  upper_bound = u;
+  for(unsigned int i=0; i<wgts.size; ++i) {
+    weight.add(wgts[i]);
+  }
+}
 
+Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args, 
+					    std::vector< int >& wgts, 
+					    const int l, const int u) 
+  : Expression(args) {
+  lower_bound = l;
+  upper_bound = u;
+  for(unsigned int i=0; i<wgts.size(); ++i) {
+    weight.add(wgts[i]);
+  }
+}
 
-
-
-
-// class MistralSum : public Predicate {
-
-// private : 
+// Mistral::LinearExpression::LinearExpression(Variable X, const int coef) 
+//   : Expression(X) { 
+//   weight.add(coef);
+// }
+Mistral::LinearExpression::~LinearExpression() {}
   
-//   inline int check_add() {
-//     is_add == (is_add || 
-// 	       (coefficients.size == 5 &&
-// 		coefficients[4] == 0 && 
-// 		coefficients[3] == 0));
-//     if(is_add) {
-//       if(coefficients[0]*coefficients[1]*coefficients[2] == -1 &&
-// 	 coefficients[0]+coefficients[1]+coefficients[2] == 1) {
-// 	int neg_idx = 0;
-// 	while(coefficients[neg_idx] != -1) ++neg_idx;
-//       }
-//     } 
-//     return -1;
-//   }
+// -1 -1 -1: - x - y =  z: 
+// -1 -1  1: - x - y = -z: z = y + x
+// -1  1 -1: - x + y =  z: y = x + z
+// -1  1  1: - x + y = -z: x = y + z
+//  1 -1 -1: + x - y =  z: x = y + z
+//  1 -1  1: + x - y = -z: y = x + z
+//  1  1 -1: + x + y =  z: z = x + y
+//  1  1  1: + x + y = -z: 
 
-// public :
-
-//   // coefficients[0..children.size-1] stand for the coeffs of the linear sum
-//   // coefficients[children.size] stands for the lower bound of the sum
-//   // coefficients[children.size+1] stands for the upper bound of the sum
-//   Vector< int > coefficients;
-//   bool is_add;
-
-//   MistralSum(Vector< Variable > args, Vector< int > coef) {
-//     for(int i=0; i<args.size; ++i) {
-//       children.add(args[i]);
-//       coefficients.add(coef[i]);
-//     }
-// //     if(coef.size>args.size) {
-// //       coefficients.add(coef[args.size]);
-// //       coefficients.add(coef[args.size+1]);
-// //     } else {
-// //       coefficients.add(0);
-// //       coefficients.add(0);
-// //     }
-//     is_add = false;
-//   }
-//   MistralSum(Variable X, Variable Y, Variable Z) {
-//     children.add(X);
-//     children.add(Y);
-//     children.add(Z);
-// //     coefficients.add(1);
-// //     coefficients.add(1);
-// //     coefficients.add(-1);
-// //     coefficients.add(0);
-// //     coefficients.add(0);
-//     is_add = true;
-//   }
-//   ~MistralSum() {}
+void Mistral::LinearExpression::extract_constraint(Solver *s) {
+  // check if we can use an 'Add' or 'Sub' predicate
+  int post_add = false;
+  if(children.size == 3 && 
+     std::abs(weight[0]) == 1 &&
+     std::abs(weight[1]) == 1 &&
+     std::abs(weight[2]) == 1
+     ) {
+    int i=0;
+    for(; i<3; ++i)
+      if(weight[i] != weight[(i+1)%3] && weight[(i+1)%3] == weight[(i+2)%3]) {
+	Variable x = children[i];
+	children[i] = children[2];
+	children[2] = x;
+	weight[0] = weight[1] = 1;
+	weight[2] = -1;
+	break;
+      }
+    if(i<3) {
+      post_add = true;
+      s->add( new PredicateAdd(children) );
+    }  
+  }
   
-//   virtual Constraint* extract_constraint() { return NULL; }
-//   virtual Constraint* extract_predicate() { 
-//     // check if it is a simple 'Add'
-//     int neg_idx = check_add();
-//     if(neg_idx>=0) {
-//       Vector< Variable > scope;
-//       scope.add(children[(neg_idx+1)%3]);
-//       scope.add(children[(neg_idx+2)%3]);
-//       scope.add(children[neg_idx]);
-//       return PredicateAdd(scope);
-//     } else {
-//       std::cout << "Not implemented" << std::endl;
-//       exit(1);
-//     } 
+  if(!post_add)
+    s->add(new PredicateWeightedSum(children, weight, lower_bound, upper_bound));
+}
 
 
-//   };
-//   virtual void extract_variable(Variable& x) {
-//     x.domain_type = 
-//   }
+void Mistral::LinearExpression::initialise_bounds() {
+  int tlb=0;
+  int tub=0;
 
-// };
-
-
-//  /// Remove all values that do not appear in the current domain of the Variable "x"
-// Mistral::Event Mistral::VariableRange::setDomain(Variable x) {
-//     //return setDomain(x.next(min-1), x.prev(max+1));
-//     return NO_EVENT;
-//   }
-
-
+  int lb = children[0].get_min()*weight[0];
+  int ub = children[0].get_max()*weight[0];
   
-//   /// Whether the domain has a nonempty intersection with the Variable x
-//   bool Mistral::VariableRange::intersect(Variable x) const { return x.intersect(min,max); }
-//   /// Whether the domain is included in the Variable x 
-//   bool Mistral::VariableRange::included(Variable x) const { return x.includes(min,max); }
-//   /// Whether the domain is included in the Variable x 
-//   bool Mistral::VariableRange::includes(Variable x) const { return x.included(min,max); }
- 
+  if(lb < ub) {
+    tlb += lb;
+    tub += ub;
+  } else {
+    tlb += ub;
+    tub += lb;
+  }
+
+  for(unsigned int i=1; i<children.size; ++i) {
+    lb = children[i].get_min()*weight[i];
+    ub = children[i].get_max()*weight[i];
+  
+    if(lb < ub) {
+      tlb += lb;
+      tub += ub;
+    } else {
+      tlb += ub;
+      tub += lb;
+    }
+  }
+
+  if(tlb > lower_bound) lower_bound = tlb;
+  if(tub < upper_bound) upper_bound = tub;
+}
+
+void Mistral::LinearExpression::extract_variable(Solver *s) {
+  initialise_bounds();
+
+  Variable aux(lower_bound, upper_bound, DYN_VAR);
+  self = aux;
+
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+  weight.add(-1);
+}
+
+const char* Mistral::LinearExpression::get_name() const {
+  return "linear_sum";
+}
+
+void Mistral::LinearExpression::extract_predicate(Solver *s) {
+  s->add(new PredicateWeightedSum(children, weight, 0, 0));
+}
+
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T) {
+  LinearExpression *lexpr = new LinearExpression(args,wgts,0,0);
+  lexpr->children.add(T);
+  lexpr->weight.add(-1);
+  Variable exp(lexpr);
+  return exp;
+}
+Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T) {
+  LinearExpression *lexpr = new LinearExpression(args,wgts,0,0);
+  lexpr->children.add(T);
+  lexpr->weight.add(-1);
+  Variable exp(lexpr);
+  return exp;
+}
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, const int l, const int u) {
+  Variable exp( new LinearExpression(args, wgts, l, u) );
+  return exp;
+}
+Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l, const int u) {
+  Variable exp( new LinearExpression(args, wgts, l, u) );
+  return exp;
+}
+
+
+Mistral::ElementExpression::ElementExpression(Vector< Variable >& args, 
+					      Variable X, int ofs) 
+  : Expression(), offset(ofs) {
+  for(unsigned int i=0; i<args.size; ++i) children.add(args[i]);
+  children.add(X);
+}
+
+Mistral::ElementExpression::~ElementExpression() {}
+
+
+void Mistral::ElementExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Element predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::ElementExpression::initialise_domain() {
+
+  lower_bound = INFTY;
+  upper_bound = -INFTY;
+
+  int arity = children.size-1;
+  //Vector< int > values;
+
+  BitSet domain;
+
+  int i, nxt = children[arity].get_min();
+  do {
+    i = nxt-offset;
+    
+    if(i>=0 && i<arity) {
+      if(children[i].get_min() < lower_bound) lower_bound = children[i].get_min();
+      if(children[i].get_max() > upper_bound) upper_bound = children[i].get_max();
+    }
+
+    nxt = children[arity].next(i+offset);
+  } while(i+offset<nxt);
+  
+
+  domain.initialise(lower_bound, upper_bound, BitSet::empt);
+  
+  nxt = children[arity].get_min();
+  do {
+    i = nxt-offset;
+    
+    if(i>=0 && i<arity) {
+      children[i].union_to(domain);
+    }
+
+    nxt = children[arity].next(i+offset);
+  } while(i+offset<nxt);
+
+
+  nxt = lower_bound;
+  do {
+    i = nxt;
+    values.add(i);
+    nxt = domain.next(i);
+  } while(i<nxt);
+  
+}
+
+void Mistral::ElementExpression::extract_variable(Solver *s) {
+  initialise_domain();
+
+  Variable aux(values, DYN_VAR);
+  self = aux;
+
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+}
+
+const char* Mistral::ElementExpression::get_name() const {
+  return "element";
+}
+
+void Mistral::ElementExpression::extract_predicate(Solver *s) {
+  s->add(new PredicateElement(children, offset));
+}
+
+
+Mistral::Variable Mistral::VarArray::operator[](Variable X) {
+  Variable exp( new ElementExpression(*this, X, 0) );
+  return exp;
+}
+
+Mistral::Variable Mistral::VarArray::operator[](const int X) {
+  return stack_[X];
+}
+
+Mistral::Variable Mistral::Element(Vector<Variable> X, Variable selector, int offset) {
+  Variable exp( new ElementExpression(X, selector, offset) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Element(VarArray X, Variable selector, int offset) {
+  Variable exp( new ElementExpression(X, selector, offset) );
+  return exp;
+}
+
+
+Mistral::SetExpression::SetExpression(const int lelt, const int uelt, 
+				      const int clb, const int cub) 
+  : BoolSumExpression(clb, cub) {
+  elements.initialise(0, uelt-lelt+1);
+  for(int elt=lelt; elt<=uelt; ++elt) {
+    elements.add(elt);
+    Variable x(0, 1, BOOL_VAR);
+    children.add(x);
+  }
+}
+
+Mistral::SetExpression::~SetExpression() {}
+
+const char* Mistral::SetExpression::get_name() const {
+  return "set";
+}
+
+int Mistral::SetExpression::get_element_index(const int vali)  {
+  int target, lb = 0, ub = elements.size-1, idx = -1;
+  while(lb <= ub) {
+
+    //std::cout << vali << " [" << lb << "," << ub << "] -> " ; //<< std::endl;
+
+    target = (lb+ub)/2;
+
+    // std::cout << target << ": " << elements[target] << " " << idx << " -- " <<
+    // 	      elements << std::endl;
+
+    if(elements[target] == vali) { idx=target; break; }
+    else if(elements[target] > vali) ub = target-1;
+    else lb = target+1;
+  }
+  //  std::cout << " ==> " << idx << std::endl; 
+  return idx;
+}
+
+Mistral::Variable Mistral::SetExpression::get_elt_var(const int vali) {
+  // int target = 0, lb = -1, ub = elements.size;
+  // while(lb < ub) {
+  //   target = lb+ub/2;
+  //   if(elements[target] == vali) break;
+  //   else if(elements[target] > vali) ub = target;
+  //   else lb = target;
+  // }
+  // return children[target];
+  int target = get_element_index(vali);
+  if(target>=0) return children[target];
+  Variable x;
+  return x;
+}
+
+std::ostream& Mistral::SetExpression::display(std::ostream& os) const {
+  os << "{" ;
+  if(children[0].get_min()) os << elements[0];
+  for(unsigned int i=1; i<elements.size; ++i) {
+    if(children[i].get_min()) os << ", " << elements[i];
+  }
+  os << "} <= S" << id << " <= {"; 
+  if(children[0].get_max()) os << elements[0];
+  for(unsigned int i=1; i<elements.size; ++i) {
+    if(children[i].get_max()) os << ", " << elements[i];
+  }
+  os << "}";
+  return os;
+}
+
+int Mistral::SetExpression::get_solution_value() const { 
+  int i=elements.size;
+  int t = 0;
+  int m = 1;
+  while(--i>=0) {
+    if(solver->last_solution_lb[children[i].id()]) {
+      t += m*elements[i];
+      m *= 10;
+    }
+  }
+  return t;
+} 
+
+Mistral::Variable Mistral::SetVariable(const int lelt, const int uelt, const int clb, const int cub) {
+  int ub = cub;
+  if(cub > uelt-lelt+1) ub = (uelt-lelt+1);
+  SetExpression *se = new SetExpression(lelt, uelt, clb, ub);
+  //std::cout << "create " << se << std::endl;
+  Variable exp(se);
+  return exp;
+}
+
+Mistral::Variable Mistral::Card(Variable S) { return S; }
+
+Mistral::SubsetExpression::SubsetExpression(Variable X, Variable Y) 
+  : Expression(X,Y) { 
+}
+
+Mistral::SubsetExpression::~SubsetExpression() {}
+
+void Mistral::SubsetExpression::extract_constraint(Solver *s) { 
+  unsigned int i = 0, j = 0;
+  SetExpression *x = (SetExpression*)(children[0].expression);
+  SetExpression *y = (SetExpression*)(children[1].expression);
+
+  s->add(children[0] <= children[1]);
+
+  while(i<x->elements.size && j<y->elements.size) {
+    if(x->elements[i] == y->elements[j]) {
+      s->add(x->children[i] <= y->children[j]);
+      ++i;
+      ++j;
+    } else if(x->elements[i] <= y->elements[j]) {
+      s->add(x->children[i] == 0);
+      ++i;
+    } else {
+      ++j;
+    }
+  }
+  while(i<x->elements.size) {
+    s->add(x->children[i] == 0);
+    ++i;
+  }
+}
+
+void Mistral::SubsetExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: Subset constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+void Mistral::SubsetExpression::extract_predicate(Solver *s) { 
+  std::cerr << "Error: Subset constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::SubsetExpression::get_name() const {
+  return "subset";
+}
+
+Mistral::Variable Mistral::Subset(Variable X, Variable Y) {
+  Variable exp(new SubsetExpression(X, Y));
+  return exp;
+}
+
+
+Mistral::MemberExpression::MemberExpression(Variable X, Variable Y) 
+  : Expression(X,Y) { 
+}
+
+Mistral::MemberExpression::~MemberExpression() {}
+
+void Mistral::MemberExpression::extract_constraint(Solver *s) { 
+
+  //unsigned int i = 0, j = 0;
+  SetExpression *y = (SetExpression*)(children[1].expression);
+
+  s->add(children[1] >= 1); // at least one element in the set
+
+  int vali, vnxt = children[0].get_min(), idx;
+  do {
+
+    vali = vnxt;
+
+    idx = y->get_element_index(vali);
+
+    if(idx>=0) {
+      s->add((children[0] == vali) <= y->children[idx]);
+    } else {
+      s->add(children[0] != vali);
+    }
+    vnxt = children[0].next(vali);
+
+
+  } while(vali < vnxt);
+
+}
+
+void Mistral::MemberExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: Member constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+void Mistral::MemberExpression::extract_predicate(Solver *s) { 
+  std::cerr << "Error: Member constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::MemberExpression::get_name() const {
+  return "member";
+}
+
+Mistral::Variable Mistral::Member(Variable X, Variable Y) {
+  Variable exp(new MemberExpression(X, Y));
+  return exp;
+}
+
+
+Mistral::Goal::Goal(method t) : type(t) {
+  lower_bound = 0;
+  upper_bound = 0;
+}
+
+Mistral::Goal::Goal(method t, Variable X) : type(t) {
+  objective = X;
+
+  // std::cout << "OBJECTIVE=" << objective << " in " << objective.get_domain() << std::endl;
+
+  lower_bound = objective.get_min()-1;
+  upper_bound = objective.get_max()+1;
+}
+
+Mistral::Goal::~Goal() {}
+
+bool Mistral::Goal::enforce() {
+  if(type == MINIMIZATION) {
+    return IS_FAIL(objective.set_max(upper_bound-1));
+  } else if(type == MAXIMIZATION) {
+    return IS_FAIL(objective.set_min(lower_bound+1));
+  }
+  return false;
+}
+    
+
+Mistral::Outcome Mistral::Goal::notify_exhausted() {
+  if(type == SATISFACTION)
+    return UNSAT;
+  return OPT;
+}
+
+Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
+  if(type == MINIMIZATION) {
+
+    //std::cout << "minimization algorithm: new solution (ub=" ;
+    upper_bound = objective.get_min();
+    //std::cout << upper_bound << ")" << std::endl;
+    
+    //std::cout << objective << " in " << objective.get_domain() << std::endl;
+    if(!solver->level) lower_bound = upper_bound;
+    if(upper_bound == lower_bound) return OPT;
+
+
+    //std::cout << solver->level << " " << solver->decisions.size << std::endl;
+    solver->branch_right();
+    return UNKNOWN; //(upper_bound == lower_bound ? OPT : UNKNOWN);
+  }
+  else if(type == MAXIMIZATION) {
+
+    lower_bound = objective.get_max();
+
+    if(!solver->level) upper_bound = lower_bound;
+    if(upper_bound == lower_bound) return OPT;
+
+
+    //std::cout << solver->level << " " << solver->decisions.size << std::endl;
+    solver->branch_right();
+    return UNKNOWN; //(upper_bound == lower_bound ? OPT : UNKNOWN);
+
+    // solver->branch_right();
+    // return (upper_bound == lower_bound ? OPT : UNKNOWN);
+  }
+  else if(type == ALLSOLUTIONS) {
+    //solver->store_solution();
+
+    if(!solver->level) return OPT;
+    solver->branch_right();
+    return UNKNOWN;
+  }
+
+  //std::cout << "satisfaction algorithm: new solution" << std::endl;
+  return SAT;
+}
+
 
 
 

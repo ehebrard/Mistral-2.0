@@ -100,8 +100,17 @@ namespace Mistral {
     /// variables sequence shuffle between restarts
     bool shuffle;
 
+
+    int backjump;
+
     /// whether solutions are checked
-    bool checked;
+    // 0 -> not checked
+    // 1 -> check constraints which variables are all assigned
+    // 2 -> 1+check that there exist a support for other constraints
+    // 3 -> 2+check that all values are consistent for other constraints
+    // NOT IMPLEMENTED! 4 -> check that the solution can be extended to all variables
+    int checked; 
+     
 
 
     /////// PARAMETERS FOR SAT SOLVING ///////
@@ -210,10 +219,14 @@ namespace Mistral {
     inline Constraint* select(Vector<Constraint*>& constraints) {
       int cons_id = triggers[higher_priority].pop();
       Constraint *cons = constraints[cons_id];
-      _set_.fastErase(cons_id);
+      _set_.fast_remove(cons_id);
       if(triggers[higher_priority].empty()) reset_higher_priority();
       taboo_constraint = cons->freeze();
       return cons;
+    }
+    inline void select(Constraint* cons) {
+      //_set_.remove(cons->id);
+      taboo_constraint = cons->freeze();
     }
     inline void clear() {
       while(higher_priority>=min_priority) triggers[higher_priority--].clear();
@@ -256,16 +269,21 @@ namespace Mistral {
   //typedef Varstack< ConstraintElement > ConstraintStack;
 
   class RestartListener;
-  class DecisionListener;
   class SuccessListener;
   class FailureListener;
+  class DecisionListener;
+  class VariableListener;
+  class ConstraintListener;
   class BranchingHeuristic;
   class RestartPolicy;
   class Reversible;
+  class Expression;
   class Decision;
   class Variable;
   class VarArray;
+  class Goal;
   class VariableImplementation;
+  class ConstraintClauseBase;
   class Solver : public Environment {
 
   public:
@@ -278,11 +296,14 @@ namespace Mistral {
       level k: after k decisions
     */
     //int level;
-    bool search_started;
+    bool     search_started;
+    int      backtrack_level;
+    //Decision deduction;
 
     /// The set of variables, in the initial order, that is as loaded from the model
-    Vector< Variable > variables;
-    Vector< int >   domain_types;
+    Vector< Variable >   variables;
+    Vector< int >     domain_types;
+    Vector< int > assignment_level;
 
     /// The set of constraints, with special accessors for triggers
     Vector< Constraint* >         constraints;
@@ -294,7 +315,8 @@ namespace Mistral {
 
     /// For each level, the list of reversible objects that changed at this level, 
     /// and will need to be restored
-    Vector< Variable > saved_vars;
+    //Vector< Variable > saved_vars;
+    Vector< int > saved_vars;
     /// For each level, the list of reversible objects that changed at this level, 
     /// and will need to be restored
     Vector< Constraint* > saved_cons;
@@ -313,19 +335,29 @@ namespace Mistral {
     /// These are the search variables.
     VarStack < Variable > sequence;
     Vector< Decision > decisions;
+    Vector< Clause* > reason;
+    Vector< Lit > learnt_clause;
+    BitSet visited;
+    int num_search_variables;
+    ConstraintClauseBase *base;
 
     /// The delimitation between different levels is kept by this vector of integers
     Vector< int > trail_;
     Vector< int > con_trail_;
 
+    /// Variable selection and branching
     BranchingHeuristic *heuristic;
+    /// Restart policy
     RestartPolicy *policy; 
+    /// Goal 
+    Goal *objective;
 
-
-    Vector<RestartListener*> restart_triggers;
-    Vector<DecisionListener*> decision_triggers;
-    Vector<SuccessListener*> success_triggers;
-    Vector<FailureListener*> failure_triggers;
+    Vector<RestartListener*>       restart_triggers;
+    Vector<SuccessListener*>       success_triggers;
+    Vector<FailureListener*>       failure_triggers;
+    Vector<DecisionListener*>     decision_triggers;
+    Vector<VariableListener*>     variable_triggers;
+    Vector<ConstraintListener*> constraint_triggers;
 
     /// the constraint responsible for the last fail (NULL otherwise) 
     Constraint *culprit;
@@ -334,7 +366,10 @@ namespace Mistral {
     /// the overall-index of the variable responsible for the last trigger before a failure
     int wiper_idx;
 
+    Vector< Expression* > expression_store;
+
     Outcome satisfied();
+    Outcome exhausted();
 
     /*!@name Constructor*/
     //@{
@@ -350,8 +385,8 @@ namespace Mistral {
 
       BooleanMemoryManager() {
 	size.add(0);
-	int *nslot = new int[1000];
-	std::fill(nslot, nslot+1000, 3);
+	int *nslot = new int[1024];
+	std::fill(nslot, nslot+1024, 3);
 	slots.add(nslot);
       }
       virtual ~BooleanMemoryManager() {
@@ -381,10 +416,14 @@ namespace Mistral {
     void add(Variable x);
     void add(VarArray& x);
     void add(Constraint* x); 
+    void add(Vector< Lit >& clause); 
+    //void add(ConstraintW x); 
     void add(RestartListener* l);
-    void add(DecisionListener* l);
     void add(SuccessListener* l);
     void add(FailureListener* l);
+    void add(DecisionListener* l);
+    void add(VariableListener* l);
+    void add(ConstraintListener* l);
     void mark_non_convex(const int i) { 
       domain_types[i] &= (~RANGE_VAR); 
     }
@@ -405,9 +444,9 @@ namespace Mistral {
     /// called by reversible objects when they want to be restored when backtrack to this level
     inline void save(Reversible* object) { saved_objs.add(object); }
     inline void save(Constraint* c) { saved_cons.add(c); }
-    void save(Variable x); 
+    //void save(Variable x); 
     void save(const int idx); 
-    void save(VariableImplementation *x, int dtype); 
+    //void save(VariableImplementation *x, int dtype); 
     //@}
 
     /*!@name Propagation accessors*/
@@ -416,14 +455,20 @@ namespace Mistral {
     void notify_success();
     void notify_decision();
     void notify_restart();
+    void notify_relax(Constraint *c);
+    void notify_post(Constraint *c);
+    void notify_add_variable();
     /// called when the var'th variable of constraint cons changes (with event type evt)
     void trigger_event(const int var, const Event evt);
 
     /// achieve propagation closure
+    PropagationOutcome propagate(Constraint *c);
     bool propagate(); 
     bool rewrite(); 
     void consolidate(); 
-    void specialise(); 
+    void make_non_convex(const int idx);
+    //void specialise(); 
+    //void initialise_domains(); 
     //@}
 
     /*!@name Search accesors*/
@@ -432,16 +477,19 @@ namespace Mistral {
     void branch_left();
     /// undo the previous branching decision and enforce the complementary constraint
     void branch_right();
+    void backjump();
 
     /// backtrack one level
     void restore();
     /// backtrack to a given level
     void restore(const int);
+    
 
     //Solution *get_solution(Vector< Variable >& seq);
     void initialise_search(Vector< Variable >& seq, 
 			   BranchingHeuristic *heu=NULL, 
-			   RestartPolicy *pol=NULL);
+			   RestartPolicy *pol=NULL,
+			   Goal *goal=NULL);
     Outcome get_next_solution();
 
     /*!
@@ -451,25 +499,34 @@ namespace Mistral {
     */
     Outcome depth_first_search(Vector< Variable >& seq, 
 			       BranchingHeuristic *heu=NULL, 
-			       RestartPolicy *pol=NULL);
+			       RestartPolicy *pol=NULL,
+			       Goal *goal=NULL);
     /*!
       Launches a depth first search on all variables
       with variable ordering 'heu' and restart policy 'pol'.
       Returns an outcome (SAT/UNSAT/OPT/UNKNOWN) and undo all decisions before returning.
     */
     Outcome depth_first_search(BranchingHeuristic *heu=NULL, 
-			       RestartPolicy *pol=NULL);
+			       RestartPolicy *pol=NULL,
+			       Goal *goal=NULL);
 
     /*!
       Black box search.
     */
     Outcome solve();
+    Outcome minimize(Variable X);
+    Outcome maximize(Variable X);
 
     ///
     bool limits_expired();
 
     /// depth first search algorithm
-    Outcome iterative_dfs();
+    Outcome chronological_dfs();
+
+    /// sat search algorithm
+    Outcome conflict_directed_backjump();
+    void learn_nogood();
+    void forget();
     //@}
 
 

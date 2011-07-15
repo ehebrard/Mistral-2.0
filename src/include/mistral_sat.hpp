@@ -45,11 +45,11 @@
 
 namespace Mistral {
 
-  typedef unsigned int Lit;
-  typedef unsigned int Atom;
-  typedef unsigned int Value;
+  // typedef unsigned int Lit;
+  // typedef unsigned int Atom;
+  // typedef unsigned int Value;
 
-  typedef Array<Lit> Clause;
+  // typedef Array<Lit> Clause;
 
 
   std::ostream& operator<< (std::ostream& os, const Clause& x);
@@ -66,6 +66,8 @@ namespace Mistral {
 #define V_FALSE   0
 #define V_UNKNOWN 2
 
+  void print_clause(std::ostream& o, Clause* cl) ;
+  void print_literal(std::ostream& o, Lit l, bool dir=true) ;
 
   class RestartPolicy;
 
@@ -135,6 +137,7 @@ namespace Mistral {
 
     /// Lit Activity 
     Vector< double > activity;
+
   
     /// utils
     BitSet visited;
@@ -170,8 +173,6 @@ namespace Mistral {
     void print_watchers(std::ostream& o, int beg=NOVAL, int end=NOVAL) const;
     void print_decisions(std::ostream& o, bool m=true) const;
     void print_clauses(std::ostream& o) const;
-    void print_clause(std::ostream& o, Clause* cl) const;
-    void print_literal(std::ostream& o, Lit l) const;
     //@}
 
     /**@name Solving Methods*/
@@ -248,16 +249,22 @@ namespace Mistral {
 
     /**@name Parameters*/
     //@{ 
-    Vector< Clause* > reason;
+    // if there was a conflict it is stored there:
+    Clause* conflict;
+    //Vector< Clause* > reason;
+    Clause** reason;
+    Vector< double > lit_activity;
+    Vector< double > var_activity;
     // list of clauses
     Vector< Clause* > clauses;
+    Vector< Clause* > learnt;
     // the watched literals data structure
     Vector< Vector< Clause* > > is_watched_by;
     //@}
     
     /**@name Constructors*/
     //@{
-    ConstraintClauseBase() : Constraint() {}
+    ConstraintClauseBase() : Constraint() { conflict = NULL; }
     ConstraintClauseBase(Vector< Variable >& scp);
     virtual void mark_domain();
     virtual Constraint *clone() { return new ConstraintClauseBase(scope); }
@@ -265,7 +272,10 @@ namespace Mistral {
     virtual ~ConstraintClauseBase();
     
     void add( Variable x );
-    void add( Vector < Lit >& clause );
+    void add( Vector < Lit >& clause, double init_activity=0.0 );
+    void learn( Vector < Lit >& clause );
+    void remove( const int cidx );
+    void forget( double forgetfulness );
     //@}
 
     /**@name Solving*/
@@ -283,8 +293,6 @@ namespace Mistral {
     //@}
     
   };
-
-
 
 };
 
@@ -481,10 +489,10 @@ inline int SatSolver::iterative_search()
     
     Clause *conflict = unit_propagate();
     
-#ifdef _DEBUG_SEARCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-  print_decisions(std::cout);
-#endif
+// #ifdef _DEBUG_SEARCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//   print_decisions(std::cout);
+// #endif
 
   if(decisions.size == 0 && assumptions.size) simplify_data_base();
   
@@ -494,7 +502,6 @@ inline int SatSolver::iterative_search()
       for(unsigned int d=0; d<decisions.size; ++d) std::cout << " ";
       std::cout << "conflict: ";
       print_clause(std::cout, conflict);
-      std::cout << " => " ;//<< (assumptions.size) << std::endl;
 #endif
 
       if( decisions.size == 0 ) status = UNSAT;
@@ -505,16 +512,21 @@ inline int SatSolver::iterative_search()
 #endif
 
 	return UNKNOWN;
-      } else if( rlimit_expired() ) {
+      } else {
 
-#ifdef _DEBUG_SEARCH
-	std::cout << " restart limit reached" << std::endl;
-#endif
-
-	backtrack_to(0);
-	status = LIMITOUT;
-      } 
-      else backtrack_to( analyze( conflict, p, true ) );
+	int bt_level = 	analyze( conflict, p, true );
+	
+	if( rlimit_expired() ) {
+	  
+// #ifdef _DEBUG_SEARCH
+// 	  std::cout << " restart limit reached" << std::endl;
+// #endif
+	  
+	  backtrack_to(0);
+	  status = LIMITOUT;
+	} 
+	else backtrack_to( bt_level ); //analyze( conflict, p, true ) );
+      }
       if(status != LIMITOUT) {
 	a = ATOM(p);
 
@@ -524,9 +536,10 @@ inline int SatSolver::iterative_search()
 	  next_deduction = assumptions.size;
 
 #ifdef _DEBUG_SEARCH
+	  std::cout << "c " ;
 	  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-	  std::cout << "deduce: " ;
-	  print_literal(std::cout, p);
+	  //std::cout << "deduce: " ;
+	  print_literal(std::cout, p, false);
 	  std::cout << std::endl;
 #endif
 
@@ -567,8 +580,6 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
   Atom a;
   unsigned int lvl;
   
-  //if(conflict->size) {
-  
   learnt_clause.add(p);
   
   do {
@@ -593,8 +604,9 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
 #endif
 
       if( !visited.fast_contain(a) ) {
+
 	activity[q] += params.activity_increment;
-	visited.fastAdd(a);
+	visited.fast_add(a);
 	// we'll need to replace 'a' by its parents since its level is too high
 	if(lvl >= decisions.back()) {
 
@@ -645,7 +657,7 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
     if( pathC > 1 ) {
       // there are still atoms to expand, we start with 'a'
       conflict = reason[a];
-      visited.fastAdd(a);
+      visited.fast_add(a);
     } 
 #ifdef _DEBUG_NOGOOD
     else {
@@ -656,7 +668,7 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
   } while( --pathC );
   // p is the last decision, since all atoms above it in the
   // assumption stack have been skipped or expended.
-  learnt_clause[0] = (p^1);    
+  learnt_clause[0] = NEG(p);    
 
 #ifdef _DEBUG_SEARCH
   std::cout << " (";
@@ -672,7 +684,7 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
     reason[UNSIGNED(p)] = learnt.back();
   }
   visited.clear();
-  lit = (p^1); 
+  lit = NEG(p); 
 
   // get the backtrack level from the index
   lvl = decisions.size-1;
@@ -686,8 +698,6 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
 #endif
 
 #endif
-
-  ++stats.num_failures;
 
   return backtrackLevel;
 }
@@ -737,44 +747,64 @@ inline Lit SatSolver::choice()
 {
   decay_activity();
 
-  unsigned int crd = 0;
-  double best[params.randomization], cur;
-  unsigned int i=assumptions.size, j, k;
-  Atom x[params.randomization], y;
   Lit p;
-  while(i < state.size)
-    {	       
-      y = 2*assumptions[i];
 
-      cur = activity[y];
-      cur += activity[NEG(y)]; 
-
-      //std::cout << "activity of " << (assumptions[i]+1) << " = " << cur << std::endl;
-
-      for(j=crd; j && cur>best[j-1]; --j);
-      for(k=crd; k>j; --k) {
-	x[k] = x[k-1];
-	best[k] = best[k-1];
+  if(params.randomization) {
+    unsigned int crd = 0;
+    double best[params.randomization], cur;
+    unsigned int i=assumptions.size, j, k;
+    Atom x[params.randomization], y;
+    
+    while(i < state.size)
+      {	       
+	y = 2*assumptions[i];
+	
+	cur = activity[y];
+	cur += activity[NEG(y)]; 
+	
+	//std::cout << "activity of b" << UNSIGNED(y) << " = " << cur << std::endl;
+	
+	for(j=crd; j && cur>best[j-1]; --j);
+	for(k=crd; k>j; --k) {
+	  x[k] = x[k-1];
+	  best[k] = best[k-1];
+	}
+	best[j] = cur;
+	x[j] = y;
+	
+	if(crd<params.randomization) ++crd;
+	++i;
       }
-      best[j] = cur;
-      x[j] = y;
+    
+    j = randint(crd);
+    
+    //case FALSE_FIRST : 
+    p = x[j]; //break;
+  } else {
+    p = 2*assumptions.back(0);
+  }
 
-      if(crd<params.randomization) ++crd;
-      ++i;
-    }
 
-  j = randint(crd);
+  // switch( params.value_selection ) 
+  //   {
+  //   case TRUE_FIRST  : p = NEG(x[j]); break;
+  //   case LEAST_ACTIVE: p = (activity[NEG(x[j])] > activity[x[j]] ? NEG(x[j]) : x[j]); break;
+  //   case MOST_ACTIVE : p = (activity[NEG(x[j])] > activity[x[j]] ? x[j] : NEG(x[j])); break;
+  //   case RANDOM      : p = (x[j] | (randint(2))); break;
+  //   case PERSISTENT  : p = (x[j] | SIGN(state[UNSIGNED(x[j])])); break;
+  //   }
 
-  //case FALSE_FIRST : 
-  p = x[j]; //break;
+
   switch( params.value_selection ) 
     {
-    case TRUE_FIRST  : p = NEG(x[j]); break;
-    case LEAST_ACTIVE: p = (activity[NEG(x[j])] > activity[x[j]] ? NEG(x[j]) : x[j]); break;
-    case MOST_ACTIVE : p = (activity[NEG(x[j])] > activity[x[j]] ? x[j] : NEG(x[j])); break;
-    case RANDOM      : p = (x[j] | (randint(2))); break;
-    case PERSISTENT  : p = (x[j] | SIGN(state[UNSIGNED(x[j])])); break;
+    case TRUE_FIRST  : p = NEG(p); break;
+    case LEAST_ACTIVE: p = (activity[NEG(p)] > activity[p] ? NEG(p) : p); break;
+    case MOST_ACTIVE : p = (activity[NEG(p)] > activity[p] ? p : NEG(p)); break;
+    case RANDOM      : p |= (randint(2)); break;
+    case PERSISTENT  : p |= SIGN(state[UNSIGNED(p)]); break;
+    default: ; //{std::cout << "default choice" << std::endl;} ;
     }
+
 
   return p;    
 }
@@ -783,8 +813,9 @@ inline void SatSolver::make_decision(const Lit l)
 {
 
 #ifdef _DEBUG_SEARCH
+  std::cout << "c  ";
   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-  std::cout << "decide: " ;
+  //std::cout << "decide: " ;
   print_literal(std::cout, l);
   std::cout << std::endl;
 #endif
@@ -803,10 +834,10 @@ inline void SatSolver::backtrack_to( const int backtrackLevel )
 
   assumptions.pop_until( decisions.pop_until(backtrackLevel) );
 
-#ifdef _DEBUG_SEARCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-  std::cout << "backtrack to level " << backtrackLevel << std::endl;
-#endif
+// #ifdef _DEBUG_SEARCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//   std::cout << "backtrack to level " << backtrackLevel << std::endl;
+// #endif
   
 }
 
@@ -822,15 +853,15 @@ inline Clause* SatSolver::unit_propagate()
   int cw;
   Lit p;
   Atom a;
-  while( next_deduction < (int)(assumptions.size) && !conflict ) {
+  while( next_deduction < (int)(assumptions.size) ) {
     ++stats.num_propagations;
     a = assumptions[next_deduction];
-    p = (2*a)|((SIGN(state[a]))^1);
+    p = (2*a)|NEG((SIGN(state[a])));
 
-#ifdef _DEBUGPROPAGATE
+#ifdef _DEBUG_UNITPROP
     for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
     std::cout << "propagate " ;
-    print_literal(std::cout, (p^1));
+    print_literal(std::cout, NEG(p));
     std::cout << " " << is_watched_by[p].size << std::endl;
 #endif
 
@@ -839,7 +870,14 @@ inline Clause* SatSolver::unit_propagate()
       conflict = update_watcher(cw, p);
     }
     ++next_deduction;
+
+    if(conflict) {
+      ++stats.num_failures;
+      break;
+    }
   }
+
+
   return conflict;
 }
   
@@ -852,11 +890,17 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
   Atom v, w;
 
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-  std::cout << " ";
-  print_clause( std::cout, is_watched_by[p][cw] );
-  std::cout << std::endl;
+  std::cout << "update watchers for " << clause 
+	    << " because " << (SIGN(p) ? "" : "~") << UNSIGNED(p)
+	    << " <-> b" << UNSIGNED(p) << " in " 
+	    << (SIGN(p) ? "{0}" : "{1}") << std::endl;
 #endif
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//   std::cout << " ";
+//   print_clause( std::cout, is_watched_by[p][cw] );
+//   std::cout << std::endl;
+// #endif
 
   //ensure that p is the second watched lit
   if( clause[1] != p ) {
@@ -866,31 +910,41 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
   } else q = clause[0];
   v=state[UNSIGNED(q)];
 
-#ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-   std::cout << " second watched: ";
-   print_literal(std::cout, q);
-   std::cout << std::endl;
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//    std::cout << " second watched: ";
+//    print_literal(std::cout, q);
+//    std::cout << std::endl;
 
-   if( LEVEL(v) < assumptions.size && SIGN(v) == SIGN(q) ) {
-     for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-     std::cout << " satisfied by second watched" << std::endl;
-   }
-#endif
+//    if( LEVEL(v) < assumptions.size && SIGN(v) == SIGN(q) ) {
+//      for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//      std::cout << " satisfied by second watched" << std::endl;
+//    }
+// #endif
 
   //check if the other watched lit is assigned
   if( LEVEL(v) >= assumptions.size || SIGN(v) != SIGN(q) ) {
+
+#ifdef _DEBUG_WATCH    
+    std::cout << "  the second watcher does not satisfy the clause, we need a replacement" << std::endl;
+#endif
+
     for(j=2; j<clause.size; ++j) {
       // for each literal q of the clause,
       r = clause[j];
       w = state[UNSIGNED(r)];
 
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-       std::cout << "\tcheck another lit: ";
-       print_literal(std::cout, r);
-       std::cout << std::endl;
+      std::cout << "    what about " << (SIGN(r) ? "" : "~") << UNSIGNED(r)
+		<< " <-> b" << UNSIGNED(r) << " in " << (LEVEL(w) >= assumptions.size ? "{0,1}" : 
+							 (SIGN(w) ? "{1}" : "{0}")) << std::endl; 
 #endif
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+//        std::cout << "\tcheck another lit: ";
+//        print_literal(std::cout, r);
+//        std::cout << std::endl;
+// #endif
 
       if( LEVEL(w) >= assumptions.size ) { // this literal is not set
 	// then it is a good candidate to replace p
@@ -900,9 +954,13 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
 	is_watched_by[r].add(cl);
 
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-	std::cout << " new watched" << std::endl;
+	std::cout << "    ok!" // << clause << " " << (cl)
+		  << std::endl;
 #endif
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	std::cout << " new watched" << std::endl;
+// #endif
 
 	break;	
       }
@@ -910,9 +968,12 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
       else if( SIGN(w) == SIGN(r) ) {
 
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-	std::cout << " satisfied" << std::endl;
+	std::cout << "    ok! (satisfied)" << std::endl;
 #endif
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	std::cout << " satisfied" << std::endl;
+// #endif
 
 	break;
       }
@@ -922,23 +983,30 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
       { 
 
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-	std::cout << " no more watched" << std::endl;
+	std::cout << "  couldn't find a replacement!" << std::endl;
 #endif
+
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	std::cout << " no more watched" << std::endl;
+// #endif
 
 	if( LEVEL(v) >= assumptions.size ) {
 	  // the last literal (other watched lit) is not set yet, we set it
 	  add_lit(q);
 	  reason[UNSIGNED(q)] = cl;
 
-	  //#ifdef _DEBUGNOGOOD
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-	  std::cout //<< "unit prune disjunct b" << y 
-	    << " because ";
-	  print_clause( std::cout, cl );
-	  std::cout << std::endl;
+	  std::cout << "    -> b" << UNSIGNED(q) << " in " << (SIGN(q) ? "{1}" : "{0}") << std::endl;
 #endif
+// 	  //#ifdef _DEBUGNOGOOD
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	  std::cout //<< "unit prune disjunct b" << y 
+// 	    << " because ";
+// 	  print_clause( std::cout, cl );
+// 	  std::cout << std::endl;
+// #endif
 
 	  //	  std::cout << " prop " << q << std::endl;
 	  
@@ -949,9 +1017,12 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
 	      ) {
 
 #ifdef _DEBUG_WATCH
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-	    std::cout << " fail" << std::endl;
+	    std::cout << "    -> fail!" << std::endl;
 #endif
+// #ifdef _DEBUG_WATCH
+//   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+// 	    std::cout << " fail" << std::endl;
+// #endif
 
 	    return cl;
 	  }
@@ -960,6 +1031,7 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
 
   return NULL;
 }
+
 
 
 

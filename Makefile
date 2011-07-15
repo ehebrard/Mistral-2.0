@@ -1,64 +1,15 @@
 
+
+#COPTIMIZE = -g 
+#COMPILFLAGS = -Wall -D_UNIX -D_BIT32 -DNDEBUG -D_DEBUG_SEARCH -D_DEBUG_PROPAG -D_DEBUG_MUL #-D_DEBUG_NOGOOD -D_DEBUG_UNITPROP -D_DEBUG_WATCH #-D_DEBUG_PROPAG #-D_DEBUG_REWRITE #-D_DEBUG_AC  #-D_CHRONOLOGICAL #-D_DEBUG_AC 
+
+
+include ./template.mk
+
 DATE := $(shell date '+%y-%m-%d')
 
-
-OPTFLAGS = -O3 #-m32
-#OPTFLAGS = -g 
-
-#COMPILFLAGS = -Wall -D_UNIX -D_BIT32 -D_DEBUG_SEARCH #-D_DEBUG_AC -D_DEBUG_PROPAG #-D_DELTA 
-COMPILFLAGS = -Wall -D_UNIX -D_BIT32 -DNDEBUG #-D_DEBUG_SEARCH #-D_DEBUG_AC -D_DEBUG_PROPAG #-D_DEBUG_NOGOOD #-D_CHRONOLOGICAL #-D_DEBUG_AC 
-
-CCC = g++ $(OPTFLAGS) $(COMPILFLAGS)
-
-BIN=bin
-SRC=src/lib
-MOD=examples
-OBJ=src/obj
-INC=src/include
-DOC=doc
-
-CFLAGS = -I$(INC) 
-LFLAGS = -L$(OBJ)
-
-
-MODELS = $(wildcard $(MOD)/src/*.cpp)
-BINS = $(patsubst $(MOD)/src/%, $(BIN)/%, $(MODELS:.cpp=))
-
-
-PINCSRC = $(wildcard $(INC)/*.hpp)
-PLIBSRC = $(wildcard $(SRC)/*.cpp)
-PLIBAUX = $(PLIBSRC:.cpp=.o)
-PLIBOBJ = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
-
-
-#------------------------------------------------------------
-#  make all      : to compile the examples.
-#------------------------------------------------------------
-
-all: lib $(PLIBOBJ) $(BINS)
-
 clean : 
-	rm -rf $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ *~ $(BIN)/* $(DOC)/*~
-
-# The library
-lib: $(PLIBOBJ)
-$(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
-	@echo 'compile '$<
-	$(CCC) $(CFLAGS) -c $< -o $@ 
-
-# The examples
-$(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
-	@echo 'link '$<
-	$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $@
-
-$(MOD)/obj/%.o: $(MOD)/src/%.cpp
-	@echo 'compile '$<
-	$(CCC) $(CFLAGS) -c $< -o $@ 
-
-# Examples, one at a time
-%: $(MOD)/obj/%.o $(PLIBOBJ)
-	@echo 'link '$<	
-	$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
+	rm -rf $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~
 
 release: 
 	@echo Export Mistral version 2.0.$(DATE)

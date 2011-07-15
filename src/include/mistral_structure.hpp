@@ -22,7 +22,7 @@
 
 
 /*! \file mistral_structure.hpp
-    \brief Header file for the basic data-structures.
+  \brief Header file for the basic data-structures.
 */
 
 
@@ -37,15 +37,15 @@
 #ifndef __STRUCTURE_HPP
 #define __STRUCTURE_HPP
 
-  template <class WORD_TYPE>
-  void showUint(WORD_TYPE n, std::ostream& os) {
-    WORD_TYPE mask=1;
-    while(mask){
-      if(mask & n) os<<1;
-      else os<<0;
-      mask = mask << 1;
-    }
+template <class WORD_TYPE>
+void showUint(WORD_TYPE n, std::ostream& os) {
+  WORD_TYPE mask=1;
+  while(mask){
+    if(mask & n) os<<1;
+    else os<<0;
+    mask = mask << 1;
   }
+}
 
 const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 
@@ -93,7 +93,7 @@ namespace Mistral {
     Vector(const int n)
     {
       capacity = n;
-      size = 0;
+      size = n;
       if( capacity )
 	stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
       else stack_ = NULL;
@@ -120,17 +120,17 @@ namespace Mistral {
       std::fill(stack_, stack_+capacity, x);
     }
 
-//     void extendStack()
-//     {
-//       unsigned int new_capacity = ((capacity+1) << 1);
-//       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, new_capacity*sizeof(DATA_TYPE));
-//       stack_ = new_stack;
+    //     void extendStack()
+    //     {
+    //       unsigned int new_capacity = ((capacity+1) << 1);
+    //       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, new_capacity*sizeof(DATA_TYPE));
+    //       stack_ = new_stack;
 
-//       DATA_TYPE x;
-//       std::fill(stack_+capacity, stack_+new_capacity, x);
+    //       DATA_TYPE x;
+    //       std::fill(stack_+capacity, stack_+new_capacity, x);
       
-//       capacity = new_capacity;
-//     }
+    //       capacity = new_capacity;
+    //     }
 
     void extendStack( const unsigned int l=0 )
     {
@@ -222,6 +222,11 @@ namespace Mistral {
     inline void setBack(const DATA_TYPE& x, const int k=1)
     {
       stack_[size-k] = x;
+    }
+
+    inline DATA_TYPE& front(const int k=0)
+    {
+      return stack_[k];
     }
 
     inline DATA_TYPE& back(const int k=1)
@@ -488,19 +493,19 @@ namespace Mistral {
 
     /*!@name Miscellaneous*/
     //@{
-//     std::string getString() const {
-//       std::string return_str = "{{";
-//       bool first = true;
-//       for(int v=lb_; v<=ub_; ++v) {
-// 	if(occurrence_[v] > 0) {
-// 	  if(first) first = false;
-// 	  else return_str += ",";
-// 	  return_str += ("("+toString((int)(occurrence_[v]))+"*"+toString(v)+")");
-// 	}
-//       }
-//       return_str += "}}";
-//       return return_str;
-//     }
+    //     std::string getString() const {
+    //       std::string return_str = "{{";
+    //       bool first = true;
+    //       for(int v=lb_; v<=ub_; ++v) {
+    // 	if(occurrence_[v] > 0) {
+    // 	  if(first) first = false;
+    // 	  else return_str += ",";
+    // 	  return_str += ("("+toString((int)(occurrence_[v]))+"*"+toString(v)+")");
+    // 	}
+    //       }
+    //       return_str += "}}";
+    //       return return_str;
+    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "{{";
@@ -587,27 +592,27 @@ namespace Mistral {
       int ub = capacity+lb-1, new_ub = ub;
 
 
-//       std::cout << "create a new element: " << new_elt << std::endl;
+      //       std::cout << "create a new element: " << new_elt << std::endl;
 
       if(new_elt < lb) {
 	new_lb = new_elt;
-// 	std::cout << "   new lb" << std::endl; 
+	// 	std::cout << "   new lb" << std::endl; 
       } else if(new_elt > ub) {
 	new_ub = new_elt;
-// 	std::cout << "   new ub" << std::endl; 
+	// 	std::cout << "   new ub" << std::endl; 
       } else {
-// 	std::cout << "   already in" << std::endl; 
+	// 	std::cout << "   already in" << std::endl; 
 	return;
       }
       
       unsigned int new_capacity = new_ub-new_lb+1;
 
-//       std::cout << "requires a capacity of at least " << new_capacity
-// 		<< " (was: " << capacity << ")" << std::endl;
+      //       std::cout << "requires a capacity of at least " << new_capacity
+      // 		<< " (was: " << capacity << ")" << std::endl;
 
       if(new_capacity < capacity*2) new_capacity = capacity*2;
 
-//       std::cout << "   allocate: " << new_capacity << std::endl;
+      //       std::cout << "   allocate: " << new_capacity << std::endl;
 
       if(new_lb < lb) {
 	new_lb = ub-new_capacity+1;
@@ -615,8 +620,8 @@ namespace Mistral {
 	new_ub = lb+new_capacity-1;
       }
 
-//       std::cout << "extend to: [" << new_lb 
-// 		<< ".." << new_ub << "]" << std::endl; 
+      //       std::cout << "extend to: [" << new_lb 
+      // 		<< ".." << new_ub << "]" << std::endl; 
 
       int *aux_list = list_;
       list_ = new int[new_capacity];
@@ -644,7 +649,12 @@ namespace Mistral {
     //@}    
 
     /*!@name Accessors*/
-    //@{  
+    //@{ 
+    inline bool safe_contain(const int elt) const 
+    {
+      return ((unsigned)(elt-(int)(start_-index_))<capacity && index_[elt]<size);
+    } 
+ 
     inline bool contain(const int elt) const 
     {
       return index_[elt]<size;
@@ -684,7 +694,7 @@ namespace Mistral {
       size = 0;
     }
   
-    inline void setTo(const int elt)
+    inline void set_to(const int elt)
     {
       size=1;
       index_[*list_] = index_[elt];
@@ -693,7 +703,7 @@ namespace Mistral {
       index_[elt] = 0;
     }
 
-    inline void erase(const int elt)
+    inline void remove(const int elt)
     {
       --size;
       index_[list_[size]] = index_[elt];
@@ -735,8 +745,8 @@ namespace Mistral {
 
     inline void add(const int elt)
     {
-//       std::cout << elt << ", " << size << " <= " << capacity << std::endl; 
-//       std::cout << index_[elt] << " <= " << capacity << std::endl; 
+      //       std::cout << elt << ", " << size << " <= " << capacity << std::endl; 
+      //       std::cout << index_[elt] << " <= " << capacity << std::endl; 
 
       index_[list_[size]] = index_[elt];
       list_[index_[elt]] = list_[size];
@@ -771,7 +781,7 @@ namespace Mistral {
     }
 
 
-    inline void revertTo(const int level)
+    inline void revert_to(const int level)
     {
       size = level;
     }
@@ -785,15 +795,15 @@ namespace Mistral {
 
     /*!@name Miscellaneous*/
     //@{
-//     std::string getString() const {
-//       std::string return_str = "(";
-//       if(size) return_str += toString(list_[0]);
-//       for(unsigned int i=1; i<size; ++i)
-// 	return_str += (" "+toString(list_[i]));
-//       return_str += ")";
+    //     std::string getString() const {
+    //       std::string return_str = "(";
+    //       if(size) return_str += toString(list_[0]);
+    //       for(unsigned int i=1; i<size; ++i)
+    // 	return_str += (" "+toString(list_[i]));
+    //       return_str += ")";
       
-//       return return_str;
-//     }
+    //       return return_str;
+    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "(";
@@ -924,7 +934,7 @@ namespace Mistral {
       size = 0;
     }
   
-    inline void setTo(const PTR_TYPE elt)
+    inline void set_to(const PTR_TYPE elt)
     {
       int idx = elt->id;
       size=1;
@@ -1015,7 +1025,7 @@ namespace Mistral {
       ++size;
     }
 
-    inline void revertTo(const int level)
+    inline void revert_to(const int level)
     {
       size = level;
     }
@@ -1029,15 +1039,15 @@ namespace Mistral {
 
     /*!@name Miscellaneous*/
     //@{
-//     std::string getString() const {
-//       std::string return_str = "(";
-//       if(size) return_str += toString(list_[0]);
-//       for(unsigned int i=1; i<size; ++i)
-// 	return_str += (" "+toString(list_[i]));
-//       return_str += ")";
+    //     std::string getString() const {
+    //       std::string return_str = "(";
+    //       if(size) return_str += toString(list_[0]);
+    //       for(unsigned int i=1; i<size; ++i)
+    // 	return_str += (" "+toString(list_[i]));
+    //       return_str += ")";
       
-//       return return_str;
-//     }
+    //       return return_str;
+    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "(";
@@ -1235,7 +1245,7 @@ namespace Mistral {
       size = 0;
     }
   
-    inline void setTo(const VAR_TYPE elt)
+    inline void set_to(const VAR_TYPE elt)
     {
       int idx = elt.id();
       size=1;
@@ -1326,9 +1336,14 @@ namespace Mistral {
       ++size;
     }
 
-    inline void revertTo(const int level)
+    inline void revert_to(const int level)
     {
       size = level;
+    }
+
+    inline int index(const int elt_idx) {
+      if(elt_idx>(capacity-offset)) return -1;
+      return index_[elt_idx];
     }
 
     inline void index()
@@ -1340,15 +1355,15 @@ namespace Mistral {
 
     /*!@name Miscellaneous*/
     //@{
-//     std::string getString() const {
-//       std::string return_str = "(";
-//       if(size) return_str += toString(list_[0]);
-//       for(unsigned int i=1; i<size; ++i)
-// 	return_str += (" "+toString(list_[i]));
-//       return_str += ")";
+    //     std::string getString() const {
+    //       std::string return_str = "(";
+    //       if(size) return_str += toString(list_[0]);
+    //       for(unsigned int i=1; i<size; ++i)
+    // 	return_str += (" "+toString(list_[i]));
+    //       return_str += ")";
       
-//       return return_str;
-//     }
+    //       return return_str;
+    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "(";
@@ -1535,7 +1550,7 @@ namespace Mistral {
       size = 0;
     }
   
-    inline void setTo(const CON_TYPE elt)
+    inline void set_to(const CON_TYPE elt)
     {
       int idx = elt->id;
       size=1;
@@ -1626,7 +1641,7 @@ namespace Mistral {
       ++size;
     }
 
-    inline void revertTo(const int level)
+    inline void revert_to(const int level)
     {
       size = level;
     }
@@ -1640,15 +1655,15 @@ namespace Mistral {
 
     /*!@name Miscellaneous*/
     //@{
-//     std::string getString() const {
-//       std::string return_str = "(";
-//       if(size) return_str += toString(list_[0]);
-//       for(unsigned int i=1; i<size; ++i)
-// 	return_str += (" "+toString(list_[i]));
-//       return_str += ")";
+    //     std::string getString() const {
+    //       std::string return_str = "(";
+    //       if(size) return_str += toString(list_[0]);
+    //       for(unsigned int i=1; i<size; ++i)
+    // 	return_str += (" "+toString(list_[i]));
+    //       return_str += ")";
       
-//       return return_str;
-//     }
+    //       return return_str;
+    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "(";
@@ -1754,7 +1769,7 @@ namespace Mistral {
       size = 0;
     }
   
-    inline void setTo(DATA_TYPE elt)
+    inline void set_to(DATA_TYPE elt)
     {
       int idx = elt.get_stack_id();
       size=1;
@@ -1817,7 +1832,7 @@ namespace Mistral {
       ++size;
     }
 
-    inline void revertTo(const int level)
+    inline void revert_to(const int level)
     {
       size = level;
     }
@@ -1858,10 +1873,10 @@ namespace Mistral {
     /*!@name Miscellaneous*/
     //@{
     /// Print on out stream
-//     std::string getString() const {
-//       std::string return_str = "("+toString(prev)+"|"+toString(elt)+"|"+toString(next)+")";
-//       return return_str;
-//     }
+    //     std::string getString() const {
+    //       std::string return_str = "("+toString(prev)+"|"+toString(elt)+"|"+toString(next)+")";
+    //       return return_str;
+    //     }
     std::ostream& display(std::ostream& os) const {
       //os << "(" << prev << "|" << elt << "|" << next << ")";
       os << elt;
@@ -1919,55 +1934,55 @@ namespace Mistral {
       ++degree;
     }
 
-    inline void erase(const int idx, const int k=0) {
+    inline void remove(const int idx, const int k=0) {
 
-//       std::cout << (int*)this << std::endl;
+      //       std::cout << (int*)this << std::endl;
 
       int succ = data.stack_[idx].next;
       int prec = data.stack_[idx].prev;   
    
-//       std::cout << "ERASE " << idx << " " << prec << " " << succ << std::endl;
-//       std::cout << "ERASE " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl;
+      //       std::cout << "REMOVE " << idx << " " << prec << " " << succ << std::endl;
+      //       std::cout << "REMOVE " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl;
 
 
       data.stack_[succ].prev = prec;
       data.stack_[prec].next = succ;
 
-//       std::cout << "ERASE " << idx << " " << prec << " " << succ << std::endl;
-//       std::cout << "ERASE " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl << std::endl;
+      //       std::cout << "REMOVE " << idx << " " << prec << " " << succ << std::endl;
+      //       std::cout << "REMOVE " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl << std::endl;
       --degree;
 
       //      std::cout << contain(idx) << std::endl;
     }
 
-//     inline bool contain(const int idx) {
+    //     inline bool contain(const int idx) {
 
-//  //      // std::cout << (int*)this << std::endl;
+    //  //      // std::cout << (int*)this << std::endl;
 
 
-// //       int succ = data.stack_[idx].next;
-// //       int prec = data.stack_[idx].prev;   
+    // //       int succ = data.stack_[idx].next;
+    // //       int prec = data.stack_[idx].prev;   
    
-// //       std::cout << "CONTAIN " << idx << " " << prec << " " << succ << std::endl;
-// //       std::cout << "CONTAIN " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl;
+    // //       std::cout << "CONTAIN " << idx << " " << prec << " " << succ << std::endl;
+    // //       std::cout << "CONTAIN " << idx << " " << data.stack_[succ].prev << " " << data.stack_[prec].next << std::endl;
 
-// // //       int succ = data.stack_[idx].next;
-// // //       int prec = data.stack_[idx].prev;   
+    // // //       int succ = data.stack_[idx].next;
+    // // //       int prec = data.stack_[idx].prev;   
 
-// // //       std::cout << "CONTAIN " << idx << "? " << prec << "->" 
-// // // 		<< data.stack_[prec].next
-// // // 		<< " " << succ << "<-" 
-// // // 		<< data.stack_[succ].prev << std::endl;
+    // // //       std::cout << "CONTAIN " << idx << "? " << prec << "->" 
+    // // // 		<< data.stack_[prec].next
+    // // // 		<< " " << succ << "<-" 
+    // // // 		<< data.stack_[succ].prev << std::endl;
 
    
-// //       return(  data.stack_[succ].prev == idx
-// // 	       && 
-// // 	       data.stack_[prec].next == idx
-// // 	       );
+    // //       return(  data.stack_[succ].prev == idx
+    // // 	       && 
+    // // 	       data.stack_[prec].next == idx
+    // // 	       );
 
-//       return ( data.stack_[idx].prev != idx );
+    //       return ( data.stack_[idx].prev != idx );
      
-//     }
+    //     }
 
     inline Node<DATA_TYPE>& first(const int h) {
       //int idx = ;
@@ -1981,7 +1996,7 @@ namespace Mistral {
 
     inline DATA_TYPE pop(const int h) {
       int idx = data.stack_[head[h+1]].prev;
-      erase(idx, h);
+      remove(idx, h);
       return data.stack_[idx].elt;
     }
 
@@ -2013,49 +2028,49 @@ namespace Mistral {
     /*!@name Miscellaneous*/
     //@{
     /// Print on out stream
-//     std::string getString() const {
-//       std::string return_str = "";
-//       for(unsigned int i=0; i<data.size; ++i)
-// 	return_str += toString(data[i]);
-//       return return_str;
-//     }
+    //     std::string getString() const {
+    //       std::string return_str = "";
+    //       for(unsigned int i=0; i<data.size; ++i)
+    // 	return_str += toString(data[i]);
+    //       return return_str;
+    //     }
     std::ostream& display(std::ostream& os) const;//  {
-//       //for(unsigned int i=0; i<data.size; ++i)
-//       //os << data[i];
+    //       //for(unsigned int i=0; i<data.size; ++i)
+    //       //os << data[i];
     
-//       for(int k=0; k<NUM_HEAD; ++k) {
+    //       for(int k=0; k<NUM_HEAD; ++k) {
 
-// 	int min_elt =  INFTY;
-// 	int max_elt = -INFTY;
+    // 	int min_elt =  INFTY;
+    // 	int max_elt = -INFTY;
       
-// 	Node< DATA_TYPE > nd = data.stack_[head[k]];
-// 	while(next(nd)) {
-// 	  if(min_elt > (int)nd) min_elt = (int)nd;
-// 	  if(max_elt < (int)nd) max_elt = (int)nd;
-// 	}
+    // 	Node< DATA_TYPE > nd = data.stack_[head[k]];
+    // 	while(next(nd)) {
+    // 	  if(min_elt > (int)nd) min_elt = (int)nd;
+    // 	  if(max_elt < (int)nd) max_elt = (int)nd;
+    // 	}
 	
-// 	BitSet tmp(min_elt, max_elt, BitSet::empt);
+    // 	BitSet tmp(min_elt, max_elt, BitSet::empt);
 
-// 	Node< DATA_TYPE > nd = data.stack_[head[k]];
-// 	while(next(nd)) {
-// 	  tmp.add((int)nd);
-// 	}
+    // 	Node< DATA_TYPE > nd = data.stack_[head[k]];
+    // 	while(next(nd)) {
+    // 	  tmp.add((int)nd);
+    // 	}
 
-// 	os << tmp;
-//       }
-//       return os;
+    // 	os << tmp;
+    //       }
+    //       return os;
 
-//   //     for(int k=0; k<NUM_HEAD; ++k) {
-// // 	os << "[ ";
+    //   //     for(int k=0; k<NUM_HEAD; ++k) {
+    // // 	os << "[ ";
 
-// // 	Node< DATA_TYPE > nd = data.stack_[head[k]];
-// // 	while(next(nd)) {
-// // 	  os << nd << " ";
-// // 	}
-// // 	os << "] ";
-// //       }
-// //       return os;
-//     }
+    // // 	Node< DATA_TYPE > nd = data.stack_[head[k]];
+    // // 	while(next(nd)) {
+    // // 	  os << nd << " ";
+    // // 	}
+    // // 	os << "] ";
+    // //       }
+    // //       return os;
+    //     }
 
     void debug_print(std::ostream& os) const 
     {
@@ -2135,6 +2150,30 @@ namespace Mistral {
       initialise();
     }
 
+    Bitset(int sz)
+    {
+      if(sz>0) {
+	initialise(sz,0);
+      } else {
+      	initialise();
+      }
+    }
+
+    // Bitset(const Bitset< WORD_TYPE, FLOAT_TYPE >& s)
+    // {
+    //   initialise(s);
+    // }
+    
+    // void initialise(const Bitset< WORD_TYPE, FLOAT_TYPE >& s)
+    // {
+    //   pos_words = s.pos_words;
+    //   neg_words = s.neg_words;
+   
+    //   table = new WORD_TYPE[pos_words-neg_words];
+    //   for(int i=neg_words; i<pos_words; ++i) 
+    // 	table[i]=s.table[i];
+    // }
+
     void initialise()
     {
       pos_words = 0;
@@ -2157,9 +2196,26 @@ namespace Mistral {
 	add( elt[i] );
     }
 
+    void initialise(Vector< int >& elt) 
+    {
+      int lb = elt.front();
+      int ub = elt.back();
+
+      initialise(lb,ub,empt);
+
+      for(unsigned int i=0; i<elt.size; ++i) 
+	add( elt[i] );
+    }
+
+
     Bitset(const int lb, const int ub, const WORD_TYPE p)//, WORD_TYPE *pool=NULL) 
     {
       initialise(lb,ub,p,NULL);
+    }
+
+    inline int word_index(const int elt) const
+    {
+      return (elt >> EXP);
     }
 
     bool operator==(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) {
@@ -2170,12 +2226,13 @@ namespace Mistral {
       return !equal(s);
     }
 
-//     Bitset<WORD_TYPE,FLOAT_TYPE>& operator=(const Bitset<WORD_TYPE,FLOAT_TYPE>& q) 
-//     {
-//       pos_words = q.pos_words;
-//       neg_words = q.neg_words;
-//       table = q.table;
-//     }
+    Bitset<WORD_TYPE,FLOAT_TYPE>& operator=(const Bitset<WORD_TYPE,FLOAT_TYPE>& q) 
+    {
+      //table += neg_words;
+      //delete [] table; 
+      clone(q);
+      return *this;
+    }
 
     void reinitialise(const int lb, const int ub, const WORD_TYPE p) 
     {
@@ -2191,7 +2248,7 @@ namespace Mistral {
 
       if( sz>=0 ) {
 	table = new WORD_TYPE[pos_words];
-	for(unsigned int i=0; i<pos_words; ++i) 
+	for(int i=0; i<pos_words; ++i) 
 	  table[i]=p;
       } else table = NULL;
     }
@@ -2229,7 +2286,7 @@ namespace Mistral {
 	{
 	  extend(elt);
 	}
-      fastAdd(elt);
+      fast_add(elt);
     }
 
 
@@ -2261,8 +2318,14 @@ namespace Mistral {
 	    table = new WORD_TYPE[new_pos_words-new_neg_words];
 	    table -= new_neg_words;
 	    
-	    memcpy(table+new_neg_words, aux+neg_words, 
-			(pos_words-neg_words)*sizeof(WORD_TYPE));
+	    memcpy(table+neg_words, aux+neg_words, 
+		   (pos_words-neg_words)*sizeof(WORD_TYPE));
+
+	    if(new_neg_words < neg_words)
+	      std::fill(table+new_neg_words, table+neg_words, 0);
+
+	    if(new_pos_words > pos_words)
+	      std::fill(table+pos_words, table+new_pos_words, 0);
 	    
 	    aux += neg_words;
 	    delete [] aux;
@@ -2288,14 +2351,14 @@ namespace Mistral {
       table -= neg_words;
     }
 
-    void pointTo(Bitset<WORD_TYPE,FLOAT_TYPE>& s)
+    void point_to(Bitset<WORD_TYPE,FLOAT_TYPE>& s)
     {
       neg_words = s.neg_words;
       pos_words = s.pos_words;
       table = s.table;
     }
 
-    void pointTo(WORD_TYPE *t)
+    void point_to(WORD_TYPE *t)
     {
       neg_words = 0;
       pos_words = 1;
@@ -2386,7 +2449,7 @@ namespace Mistral {
       return NOVAL;
     }
 
-    inline void  erase(const int elt) 
+    inline void  remove(const int elt) 
     {
       int i = (elt >> EXP);
       if( (i >= neg_words) && 
@@ -2394,12 +2457,12 @@ namespace Mistral {
 	table[i] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
     }
 
-    inline void  fastErase(const int elt) 
+    inline void  fast_remove(const int elt) 
     {
       table[(elt >> EXP)] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
     }
 
-    inline void  wordErase(const int elt) 
+    inline void  word_remove(const int elt) 
     {
       table[neg_words] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
     }
@@ -2441,7 +2504,7 @@ namespace Mistral {
       return elt;
     }
 
-    inline void xorTo(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
       int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
@@ -2449,14 +2512,14 @@ namespace Mistral {
 	s.table[i] ^= table[i];
     }
 
-    inline void fastXorTo(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void fast_xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = pos_words;
       while( i-- > neg_words )
 	s.table[i] ^= table[i];
     }
 
-    inline void xorWith(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
       int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
@@ -2464,14 +2527,14 @@ namespace Mistral {
 	table[i] ^= s.table[i];
     }
 
-    inline void fastXorWith(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void fast_xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = pos_words;
       while( i-- > neg_words )
 	table[i] ^= s.table[i];
     }
 
-    inline void unionWith(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void union_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
       int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
@@ -2479,17 +2542,17 @@ namespace Mistral {
 	table[i] |= s.table[i];
     }
 
-    inline void unionWith(const int s) 
+    inline void union_with(const int s) 
     {
       if(pos_words>0 && neg_words<=0) table[0] |= s;
     }
 
-    inline void unionTo(Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
+    inline void union_to(Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
     {
-      s.unionWith( *this );
+      s.union_with( *this );
     }
 
-    inline void intersectWith(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void intersect_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
       int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
@@ -2506,7 +2569,7 @@ namespace Mistral {
 	table[k] = empt;
     }
 
-    inline void intersectWith(const int s) 
+    inline void intersect_with(const int s) 
     {
       int i=pos_words;
       while(i-- > 1) table[i] = empt;
@@ -2515,12 +2578,12 @@ namespace Mistral {
       if(pos_words>0 && neg_words<=0) table[0] &= s;
     }
 
-    inline void intersectTo(Bitset<WORD_TYPE,FLOAT_TYPE>& s) const
+    inline void intersect_to(Bitset<WORD_TYPE,FLOAT_TYPE>& s) const
     {
-      s.intersectWith( *this );
+      s.intersect_with( *this );
     }
 
-    inline void setminusWith (const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    inline void setminus_with (const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
       int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
@@ -2528,43 +2591,43 @@ namespace Mistral {
 	table[i] &= (~(s.table[i]));
     }
 
-    inline void setminusTo (Bitset<WORD_TYPE,FLOAT_TYPE>& s) const
+    inline void setminus_to (Bitset<WORD_TYPE,FLOAT_TYPE>& s) const
     {
-      s.setminusWith( *this );
+      s.setminus_with( *this );
     }
 
-    inline void xorWith(const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
+    inline void xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
     {
-      xorWith(*s);
+      xor_with(*s);
     }
 
-    inline void unionWith  (const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
+    inline void union_with  (const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
     {
-      unionWith(*s);
+      union_with(*s);
     }
 
-    inline void intersectWith(const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
+    inline void intersect_with(const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
     {
-      intersectWith(*s);
+      intersect_with(*s);
     }
 
-    inline void setminusWith (const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
+    inline void setminus_with (const Bitset<WORD_TYPE,FLOAT_TYPE>* s) 
     {
-      setminusWith(*s);
+      setminus_with(*s);
     }
-    inline void unionTo  (Bitset<WORD_TYPE,FLOAT_TYPE>* s) const
+    inline void union_to  (Bitset<WORD_TYPE,FLOAT_TYPE>* s) const
     {
-      s->unionWith(*this);
-    }
-
-    inline void intersectTo(Bitset<WORD_TYPE,FLOAT_TYPE>* s) const
-    {
-      s->intersectWith(*this);
+      s->union_with(*this);
     }
 
-    inline void setminusTo (Bitset<WORD_TYPE,FLOAT_TYPE>* s) const
+    inline void intersect_to(Bitset<WORD_TYPE,FLOAT_TYPE>* s) const
     {
-      s->setminusWith(*this);
+      s->intersect_with(*this);
+    }
+
+    inline void setminus_to (Bitset<WORD_TYPE,FLOAT_TYPE>* s) const
+    {
+      s->setminus_with(*this);
     }
 
     inline bool equal(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
@@ -2702,6 +2765,7 @@ namespace Mistral {
       }
     }
 
+
     /*!
      * Returns the number of bits set in v.
      * For a derivation of this algorithm, see
@@ -2746,6 +2810,7 @@ namespace Mistral {
     }
 
 
+
     /*!
       Check if element elt belong to the set [O(1)]
     */
@@ -2778,7 +2843,7 @@ namespace Mistral {
 	table[i] |= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
-    inline  void fastAdd(const int elt)
+    inline  void fast_add(const int elt)
     {
 
       //std::cout << neg_words << " " << pos_words << " " << (elt >> EXP) << std::endl;
@@ -2786,13 +2851,13 @@ namespace Mistral {
       table[(elt >> EXP)] |= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
-    inline   void wordAdd(const int elt)
+    inline   void word_add(const int elt)
     {
       table[neg_words] |= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
     /*!
-      Add element elt into the set or erase it if it is already contain [O(1)]
+      Add element elt into the set or remove it if it is already contain [O(1)]
     */
     inline  void invert(const int elt)
     {
@@ -2802,12 +2867,12 @@ namespace Mistral {
 	table[i] ^= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
-    inline  void fastInvert(const int elt)
+    inline  void fast_invert(const int elt)
     {
       table[(elt >> EXP)] ^= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
-    inline  void wordInvert(const int elt)
+    inline  void word_invert(const int elt)
     {
       table[neg_words] ^= ((WORD_TYPE)1 << (elt & CACHE));
     }
@@ -2843,12 +2908,12 @@ namespace Mistral {
       return(pos_words && neg_words<1 && (table[0]&s));
     }
 
-    inline bool wordIntersect(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
+    inline bool word_intersect(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) const 
     {
       return ( table[neg_words] & s.table[neg_words] ) ;
     }
 
-    inline  bool fastIntersect(const Bitset<WORD_TYPE,FLOAT_TYPE>& s, int& idx)const
+    inline  bool fast_intersect(const Bitset<WORD_TYPE,FLOAT_TYPE>& s, int& idx)const
     {
       if( table[idx] & s.table[idx] ) return true; 
       if( pos_words > neg_words ) {
@@ -2895,7 +2960,7 @@ namespace Mistral {
     /*!
       Increment by x all elements in the set.
       Any element greater or equal than the capacity 
-      of the set minus x is erased [O(N/32)]
+      of the set minus x is removed [O(N/32)]
     */
     inline void increment(const int v)
     {
@@ -2913,7 +2978,7 @@ namespace Mistral {
 
     /*!
       Decrement by x all elements in the set.
-      Any element lower than x is erased [O(N/32)]
+      Any element lower than x is removed [O(N/32)]
     */
     inline  void decrement(const int v)
     {
@@ -2967,8 +3032,45 @@ namespace Mistral {
 	table[--i] = full;
     }
 
+    inline  void fill(const int lb, const int ub)
+    {
+      int i = (ub >> EXP);
+      int j = (lb >> EXP);
+      
+      if( i >= neg_words || j < pos_words ) {
+	
+	// if( i >= pos_words ) 
+	// 	i = pos_words-1;
+	// if( j < neg_words ) 
+	// 	j = neg_words;
+	
+	WORD_TYPE masked_lb = (full << (lb & CACHE));
+	WORD_TYPE masked_ub = (full >> (CACHE - (ub & CACHE)));
+	
+	if( i == j ) {
+	  if( table[i] |= (masked_lb & masked_ub) );
+	} else {
+	  
+	  if( i >= pos_words ) {
+	    i = pos_words-1;
+	  } else {
+	    table[i--] |= masked_ub;
+	  }
+	  
+	  if( j < neg_words ) {
+	    j = neg_words;
+	  } else {
+	    table[j++] |= masked_lb;
+	  }
+	  
+	  while( i >= j )
+	    table[i--] |= full;
+	}
+      }
+    }
+
     /*!
-      Erase all elements [O(N/32)]
+      Remove all elements [O(N/32)]
     */
     inline  void clear()
     {
@@ -2978,9 +3080,9 @@ namespace Mistral {
     }
 
     /*!
-      Erase all elements but v [O(N/32)]
+      Remove all elements but v [O(N/32)]
     */
-    inline  void setTo( const int v )
+    inline  void set_to( const int v )
     {
       int i, j = (v >> EXP);
       for(i=neg_words; i<j; ++i)
@@ -3001,7 +3103,7 @@ namespace Mistral {
     }
 
     /*!
-      Erase all elements strictly lower than l [O(N/32)]
+      Remove all elements strictly lower than l [O(N/32)]
     */
     inline void set_min(const int bound)
     {
@@ -3016,7 +3118,7 @@ namespace Mistral {
     }
 
     /*!
-      Erase all elements strictly greater than u [O(N/32)]
+      Remove all elements strictly greater than u [O(N/32)]
     */
     inline void set_max(const int bound)
     {
@@ -3031,9 +3133,9 @@ namespace Mistral {
     }
 
     /*!
-      Erase all elements in the interval [l..u] [O(N/32)]
+      Remove all elements in the interval [l..u] [O(N/32)]
     */
-    inline  void removeInterval(const int lb, const int ub)
+    inline  void remove_interval(const int lb, const int ub)
     {
       if( lb <= ub ) {
 	int lb_word = lb >> EXP;
@@ -3065,8 +3167,9 @@ namespace Mistral {
     /*!
       Add all elements in the interval [l..u] [O(N/32)]
     */
-    inline void addInterval(int lb, int ub)
+    inline void add_interval(int lb, int ub)
     {
+
       if( lb <= ub ) {
 	int lb_word = lb >> EXP;
 	int ub_word = ub >> EXP;
@@ -3077,10 +3180,18 @@ namespace Mistral {
 	WORD_TYPE masked_lb = full;
 	WORD_TYPE masked_ub = full;
 	if( lb_word >= neg_words ) 
-	  masked_lb ^= (full >> (CACHE - (lb & CACHE) + 1));
+	  //masked_lb ^= (full >> (CACHE - (lb & CACHE) + 1));
+	  masked_lb ^= ((full/2) >> (CACHE - (lb & CACHE)));
 	if( ub_word < pos_words ) 
-	  masked_ub ^= ((full-1) << (ub & CACHE) );
-    
+	  //masked_ub ^= ((full-1) << (ub & CACHE) );
+	  masked_ub ^= ((full-1) << (ub & CACHE));
+
+	// std::cout << std::endl;
+	// showUint( masked_lb, std::cout );
+	// std::cout << std::endl;
+	// showUint( masked_ub, std::cout );
+	// std::cout << std::endl;    
+
 	if( lb_word == ub_word ) 
 	  table[lb_word] |= (masked_lb & masked_ub);
 	else {
@@ -3090,6 +3201,9 @@ namespace Mistral {
 	    table[ub_word] = full;
 	}
       }
+
+      //std::cout << " => " << table[neg_words] << std::endl;
+
     }
 
     inline bool operator[](const int i)
@@ -3097,31 +3211,31 @@ namespace Mistral {
       return fast_contain(i);
     }
 
-//     std::string getString() const {  
-//       std::string return_str = "{";
-//       if( !empty() ) {
-// 	int last = NOVAL, cur=min(), aft;
+    //     std::string getString() const {  
+    //       std::string return_str = "{";
+    //       if( !empty() ) {
+    // 	int last = NOVAL, cur=min(), aft;
 
-// 	bool flag=false;
-// 	do{
-// 	  aft = next(cur);
+    // 	bool flag=false;
+    // 	do{
+    // 	  aft = next(cur);
 
-// 	  if(aft != cur+1 || cur != last+1) {
-// 	    if( flag )
-// 	      return_str += ",";
-// 	    return_str += toString(cur);
-// 	    flag = true;
-// 	  } else if(flag) {
-// 	    return_str += "..";
-// 	    flag = false;
-// 	  }
-// 	  last = cur;
-// 	  cur = aft;
-// 	} while( cur != NOVAL && cur != last );
-//       }
-//       return_str += "}";
-//       return return_str;
-//     }
+    // 	  if(aft != cur+1 || cur != last+1) {
+    // 	    if( flag )
+    // 	      return_str += ",";
+    // 	    return_str += toString(cur);
+    // 	    flag = true;
+    // 	  } else if(flag) {
+    // 	    return_str += "..";
+    // 	    flag = false;
+    // 	  }
+    // 	  last = cur;
+    // 	  cur = aft;
+    // 	} while( cur != NOVAL && cur != last );
+    //       }
+    //       return_str += "}";
+    //       return return_str;
+    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "{";
@@ -3149,45 +3263,45 @@ namespace Mistral {
       return os;
     }
 
-//     void  print(std::ostream & os) const 
-//     {
-//       //simplePrint();
-//       if( table )
-// 	print( os, "{,}" );
-//     }
+    //     void  print(std::ostream & os) const 
+    //     {
+    //       //simplePrint();
+    //       if( table )
+    // 	print( os, "{,}" );
+    //     }
 
-//     void  print(std::ostream & os, 
-// 		const char *delim) const
-//     {
-//       os << delim[0];
-//       if( !empty() ) {
-// 	int last = NOVAL, cur=min(), aft;
+    //     void  print(std::ostream & os, 
+    // 		const char *delim) const
+    //     {
+    //       os << delim[0];
+    //       if( !empty() ) {
+    // 	int last = NOVAL, cur=min(), aft;
 
-// 	bool flag=false;
-// 	do{
-// 	  aft = next(cur);
+    // 	bool flag=false;
+    // 	do{
+    // 	  aft = next(cur);
 
-// 	  if(aft != cur+1 || cur != last+1) {
-// 	    if( flag )
-// 	      os << delim[1];
-// 	    os << cur;
-// 	    flag = true;
-// 	  } else if(flag) {
-// 	    os << "..";
-// 	    flag = false;
-// 	  }
-// 	  last = cur;
-// 	  cur = aft;
-// 	} while( cur != NOVAL && cur != last );
-//       }
-//       os << delim[2];
-//     }
+    // 	  if(aft != cur+1 || cur != last+1) {
+    // 	    if( flag )
+    // 	      os << delim[1];
+    // 	    os << cur;
+    // 	    flag = true;
+    // 	  } else if(flag) {
+    // 	    os << "..";
+    // 	    flag = false;
+    // 	  }
+    // 	  last = cur;
+    // 	  cur = aft;
+    // 	} while( cur != NOVAL && cur != last );
+    //       }
+    //       os << delim[2];
+    //     }
 
     void  printBits(std::ostream & os) const 
     {
       os << "[";
       for(int i=neg_words; i<pos_words; ++i)
- 	showUint( table[i], os );
+	showUint( table[i], os );
       os << "]";
     }
 
@@ -3278,6 +3392,10 @@ namespace Mistral {
       next = NULL;
       offset = 0;
     }
+    bool is_initialised() 
+    {
+      return (next != NULL);
+    }
     void initialise(const int n)
     {
       next = new int[n+1];
@@ -3302,128 +3420,128 @@ namespace Mistral {
 
       if(new_lb < offset || new_ub >= _head) {
 
-// 	std::cout << "EXTEND QUEUE" << std::endl;
+	// 	std::cout << "EXTEND QUEUE" << std::endl;
 	
 	int *old_next = next;
 	int old_head = _head;
 	int old_tail = _tail;
 	int old_offset = offset;
 
-// 	std::cout << "before: "
-// 		  << _head << " " 
-// 		  << _tail << " "
-// 		  << next[_head] 
-// 		  << std::endl;
+	// 	std::cout << "before: "
+	// 		  << _head << " " 
+	// 		  << _tail << " "
+	// 		  << next[_head] 
+	// 		  << std::endl;
 
 	initialise(new_lb, new_ub);
 
-// 	std::cout << "afteri: "
-// 		  << _head << " " 
-// 		  << _tail << " "
-// 		  << next[_head] 
-// 		  << std::endl;
+	// 	std::cout << "afteri: "
+	// 		  << _head << " " 
+	// 		  << _tail << " "
+	// 		  << next[_head] 
+	// 		  << std::endl;
 
 
-// 	std::cout << " saved: "
-// 		  << old_head << " " 
-// 		  << old_tail << " "
-// 		  << old_next[old_head] 
-// 		  << std::endl;
+	// 	std::cout << " saved: "
+	// 		  << old_head << " " 
+	// 		  << old_tail << " "
+	// 		  << old_next[old_head] 
+	// 		  << std::endl;
 	
 	if(old_tail != old_head) {
 	  int elt = old_next[old_head];
 	  while(elt != old_head) {
 	    //std::cout << "ADD " << elt << std::endl;
- 	    add(elt);
+	    add(elt);
 	    elt = old_next[elt];
 	  }
 	}
 
-// 	std::cout << " after: "
-// 		  << _head << " " 
-// 		  << _tail << " "
-// 		  << next[_head] 
-// 		  << std::endl;
+	// 	std::cout << " after: "
+	// 		  << _head << " " 
+	// 		  << _tail << " "
+	// 		  << next[_head] 
+	// 		  << std::endl;
 
 
-// 	int *aux = next;
-// 	next = new int[new_ub-new_lb+2];
-// 	std::fill(next, next+new_ub-new_lb+2, NOVAL);
-// 	next-=new_lb;
-// 	//memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
-
-	
-	
-
-// // 	for(int i=new_lb; i<=new_ub+1; ++i)
-// // 	  if(next[i] != NOVAL)
-// // 	    std::cout << std::setw(3) << next[i] ;
-// // 	  else 
-// // 	    std::cout << " . ";
-// // 	std::cout << std::endl;
-// // 	for(int i=new_lb; i<=new_ub+1; ++i)	  
-// // 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
-// // 	    std::cout << std::setw(3) << next[i] ;
-// // 	  else 
-// // 	    std::cout << " . ";
-// // 	std::cout << std::endl;
-
-
-// 	for(int i=new_lb; i<offset; ++i)
-// 	  next[i] = NOVAL;
-
-// 	for(int i=_head+1; i<new_ub+1; ++i)
-// 	  next[i] = NOVAL;
-
-// 	if(_tail == _head) {
-// 	  _tail = new_ub+1;
-// 	}
-	
-// 	next[_tail] = new_ub+1;
-// 	next[new_ub+1] = next[_head];
-	
-
-// 	for(int i=new_lb; i<=new_ub+1; ++i)
-// 	  if(next[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
-// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
-// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
-
-// 	//exit(1);
+	// 	int *aux = next;
+	// 	next = new int[new_ub-new_lb+2];
+	// 	std::fill(next, next+new_ub-new_lb+2, NOVAL);
+	// 	next-=new_lb;
+	// 	//memcpy(next+offset, aux+offset, (_head-offset+1)*sizeof(int));
 
 	
-// // 	if(_head <= new_ub) {
-// // 	  next[new_ub+1] = aux[_head];
-// // 	  next[_head] = NOVAL;
-// // 	}
+	
 
-// 	for(int i=new_lb; i<=new_ub+1; ++i)
-// 	  if(next[i] != NOVAL)
-// 	    std::cout << std::setw(3) << next[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
-// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
-// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
-// 	    std::cout << std::setw(3) << aux[i] ;
-// 	  else 
-// 	    std::cout << " . ";
-// 	std::cout << std::endl;
+	// // 	for(int i=new_lb; i<=new_ub+1; ++i)
+	// // 	  if(next[i] != NOVAL)
+	// // 	    std::cout << std::setw(3) << next[i] ;
+	// // 	  else 
+	// // 	    std::cout << " . ";
+	// // 	std::cout << std::endl;
+	// // 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+	// // 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+	// // 	    std::cout << std::setw(3) << next[i] ;
+	// // 	  else 
+	// // 	    std::cout << " . ";
+	// // 	std::cout << std::endl;
 
-// // 	//exit(1);
 
-// 	aux += offset;
-// 	delete [] aux;
+	// 	for(int i=new_lb; i<offset; ++i)
+	// 	  next[i] = NOVAL;
 
-// 	offset = new_lb;
-// 	_head = new_ub+1;
+	// 	for(int i=_head+1; i<new_ub+1; ++i)
+	// 	  next[i] = NOVAL;
+
+	// 	if(_tail == _head) {
+	// 	  _tail = new_ub+1;
+	// 	}
+	
+	// 	next[_tail] = new_ub+1;
+	// 	next[new_ub+1] = next[_head];
+	
+
+	// 	for(int i=new_lb; i<=new_ub+1; ++i)
+	// 	  if(next[i] != NOVAL)
+	// 	    std::cout << std::setw(3) << next[i] ;
+	// 	  else 
+	// 	    std::cout << " . ";
+	// 	std::cout << std::endl;
+	// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+	// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+	// 	    std::cout << std::setw(3) << next[i] ;
+	// 	  else 
+	// 	    std::cout << " . ";
+	// 	std::cout << std::endl;
+
+	// 	//exit(1);
+
+	
+	// // 	if(_head <= new_ub) {
+	// // 	  next[new_ub+1] = aux[_head];
+	// // 	  next[_head] = NOVAL;
+	// // 	}
+
+	// 	for(int i=new_lb; i<=new_ub+1; ++i)
+	// 	  if(next[i] != NOVAL)
+	// 	    std::cout << std::setw(3) << next[i] ;
+	// 	  else 
+	// 	    std::cout << " . ";
+	// 	std::cout << std::endl;
+	// 	for(int i=new_lb; i<=new_ub+1; ++i)	  
+	// 	  if(i>=offset && i<=_head && aux[i] != NOVAL)
+	// 	    std::cout << std::setw(3) << aux[i] ;
+	// 	  else 
+	// 	    std::cout << " . ";
+	// 	std::cout << std::endl;
+
+	// // 	//exit(1);
+
+	// 	aux += offset;
+	// 	delete [] aux;
+
+	// 	offset = new_lb;
+	// 	_head = new_ub+1;
 
 	old_next += old_offset;
 	delete [] old_next;
@@ -3474,13 +3592,13 @@ namespace Mistral {
     }
     //@}
     
-     Queue& operator=(const Queue& q) {
-       _head = q._head;
-       _tail = q._tail;
-       next = q.next;
-       offset = q.offset;
-       return *this;
-     }
+    Queue& operator=(const Queue& q) {
+      _head = q._head;
+      _tail = q._tail;
+      next = q.next;
+      offset = q.offset;
+      return *this;
+    }
 
     /*!@name Miscellanous*/
     //@{ 
@@ -3629,39 +3747,39 @@ namespace Mistral {
 
 
 
-//   template < class DATA_TYPE > 
-//   std::string toString(const Vector< DATA_TYPE >& x) {
-//     std::ostringstream os;
-//     os << x;
-//     return os.str();
-//   }
+  //   template < class DATA_TYPE > 
+  //   std::string toString(const Vector< DATA_TYPE >& x) {
+  //     std::ostringstream os;
+  //     os << x;
+  //     return os.str();
+  //   }
   
-//   template < class DATA_TYPE > 
-//   std::string toString(const Stack< DATA_TYPE >& x) {
-//     std::ostringstream os;
-//     os << x;
-//     return os.str();
-//   }
+  //   template < class DATA_TYPE > 
+  //   std::string toString(const Stack< DATA_TYPE >& x) {
+  //     std::ostringstream os;
+  //     os << x;
+  //     return os.str();
+  //   }
   
-//   template < class DATA_TYPE > 
-//   std::string toString(const Array< DATA_TYPE >& x) {
-//     return x.getString();
-//   }
+  //   template < class DATA_TYPE > 
+  //   std::string toString(const Array< DATA_TYPE >& x) {
+  //     return x.getString();
+  //   }
 
-//   template < class DATA_TYPE > 
-//   std::string toString(const Node< DATA_TYPE >& x) {
-//     return x.getString();
-//   }
+  //   template < class DATA_TYPE > 
+  //   std::string toString(const Node< DATA_TYPE >& x) {
+  //     return x.getString();
+  //   }
 
-//   template < class DATA_TYPE, int NUM_HEAD > 
-//   std::string toString(const MultiList< DATA_TYPE, NUM_HEAD >& x) {
-//     return x.getString();
-//   }
+  //   template < class DATA_TYPE, int NUM_HEAD > 
+  //   std::string toString(const MultiList< DATA_TYPE, NUM_HEAD >& x) {
+  //     return x.getString();
+  //   }
 
-//   template< class WORD_TYPE, class FLOAT_TYPE >
-//   std::string toString(const Bitset< WORD_TYPE, FLOAT_TYPE >& x) {
-//     return x.getString();
-//   }
+  //   template< class WORD_TYPE, class FLOAT_TYPE >
+  //   std::string toString(const Bitset< WORD_TYPE, FLOAT_TYPE >& x) {
+  //     return x.getString();
+  //   }
 
 
 
@@ -3754,48 +3872,48 @@ namespace Mistral {
     return x->display(os);
   }
 
-//   template < class DATA_TYPE, int NUM_HEAD > 
-//   std::ostream& operator<< (std::ostream& os, const MultiList< DATA_TYPE, NUM_HEAD >* x) {
-//     return x->display(os);
-//   }
+  //   template < class DATA_TYPE, int NUM_HEAD > 
+  //   std::ostream& operator<< (std::ostream& os, const MultiList< DATA_TYPE, NUM_HEAD >* x) {
+  //     return x->display(os);
+  //   }
 
   template< class WORD_TYPE, class FLOAT_TYPE >
   std::ostream& operator<< (std::ostream& os, const Bitset< WORD_TYPE, FLOAT_TYPE >* x) {
     return x->display(os);
   }
 
-//   template < class DATA_TYPE, int NUM_HEAD >
-//   std::ostream& MultiList< DATA_TYPE, NUM_HEAD >::display(std::ostream& os) const {
-//     //for(unsigned int i=0; i<data.size; ++i)
-//     //os << data[i];
+  //   template < class DATA_TYPE, int NUM_HEAD >
+  //   std::ostream& MultiList< DATA_TYPE, NUM_HEAD >::display(std::ostream& os) const {
+  //     //for(unsigned int i=0; i<data.size; ++i)
+  //     //os << data[i];
     
-//     for(int k=0; k<NUM_HEAD; ++k) {
+  //     for(int k=0; k<NUM_HEAD; ++k) {
       
-//       int min_elt =  NOVAL;
-//       int max_elt = -NOVAL;
+  //       int min_elt =  NOVAL;
+  //       int max_elt = -NOVAL;
       
-//       Node< DATA_TYPE > nd = data.stack_[head[k]];
-//       while(next(nd)) {
-// 	if(min_elt > (int)nd) min_elt = (int)nd;
-// 	if(max_elt < (int)nd) max_elt = (int)nd;
-//       }
+  //       Node< DATA_TYPE > nd = data.stack_[head[k]];
+  //       while(next(nd)) {
+  // 	if(min_elt > (int)nd) min_elt = (int)nd;
+  // 	if(max_elt < (int)nd) max_elt = (int)nd;
+  //       }
       
-//       if(min_elt == NOVAL) {
-// 	min_elt = 0;
-// 	max_elt = 1;
-//       }
+  //       if(min_elt == NOVAL) {
+  // 	min_elt = 0;
+  // 	max_elt = 1;
+  //       }
       
-//       BitSet tmp(min_elt, max_elt, BitSet::empt);
+  //       BitSet tmp(min_elt, max_elt, BitSet::empt);
       
-//       nd = data.stack_[head[k]];
-//       while(next(nd)) {
-// 	tmp.add((int)nd);
-//       }
+  //       nd = data.stack_[head[k]];
+  //       while(next(nd)) {
+  // 	tmp.add((int)nd);
+  //       }
       
-//       os << tmp;
-//     }
-//     return os;
-//   }
+  //       os << tmp;
+  //     }
+  //     return os;
+  //   }
 
 }
 

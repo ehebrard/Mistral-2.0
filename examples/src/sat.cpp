@@ -35,20 +35,22 @@ const char* int_man[nia] = {
 			      
 int int_param[nia];
 
-const int nsa = 5;
+const int nsa = 6;
 const char* str_ident[nsa] = {
   "-restart_factor",
   "-decay",
   "-forget",
   "-policy",
-  "-normalize"
+  "-normalize",
+  "-algo"
 };
 const char* str_man[nsa] = {
   "restart factor",
   "1 - activity decay rate",
   "forgetfulness ratio",
   "restart policy {luby, geom}",
-  "activity is normalized before search"
+  "activity is normalized before search",
+  "method: sat / cp"
 };
 const char* str_param[nsa];
 
@@ -101,18 +103,28 @@ int main(int argc, char **argv)
       params.normalize_activity = ( strcmp(str_param[4],"nil") ? atof(str_param[4]) : 0 );
       params.dynamic_value      = (params.value_selection>5);
 
-      
-      //SatSolver solver;
+      int method = ( strcmp(str_param[5],"sat") ? 0 : 1 );
 
-      Solver solver;
+     
+      if(method) {
 
-      solver.parse_dimacs(argv[1]);
+	SatSolver solver;
+	solver.parse_dimacs(argv[1]);
+	solver.params.verbosity = 2;
+	solver.solve();
 
-      //cout << solver << endl;
+      } else {
 
-      //solver.propagate();
+	Solver solver;
+	solver.parse_dimacs(argv[1]);
+	solver.parameters.verbosity = 1;
+	solver.parameters.backjump = 1;
+	solver.depth_first_search(solver.variables, 
+				  new VSIDS(&solver),
+				  new Geometric(200,1.05)
+				  );
 
-      solver.solve();
+      }
     }
   return 0;
 }

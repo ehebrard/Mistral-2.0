@@ -1,7 +1,6 @@
 
 #include <mistral_sat.hpp>
 
-
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,8 +22,35 @@ void initSort(double *sa)
   sorting_array = sa;
 }
 
+
 using namespace Mistral;
 using namespace std;
+
+
+void Mistral::print_literal(ostream& o, Lit l, bool dir) 
+{
+
+  o << "b" << UNSIGNED(l) ;
+  if(dir)
+    o << " == " << (l%2) ; 
+  else
+    o << " =/= " << (1-(l%2)) ; 
+  //o << (l%2 ? "+" : "-") << UNSIGNED(l)+1;
+}
+
+void Mistral::print_clause(ostream& o, Clause *cl) 
+{
+  Clause& clause = *cl;
+  o //<< " " << cl 
+    << "(";
+  for(unsigned int i=0; i<clause.size-1; ++i) {
+    print_literal(o,clause[i]);
+    o << " ";
+  }
+  print_literal(o,clause[clause.size-1]);
+  o << ")";
+}
+
 
 void SatSolver::set_parameters(SolverParameters& p) {
   params = p;
@@ -211,24 +237,6 @@ void SatSolver::print_decisions(ostream& o, bool mode) const
   }
 }
 
-void SatSolver::print_literal(ostream& o, Lit l) const
-{
-  o << (l%2 ? "+" : "-") << UNSIGNED(l)+1;
-}
-
-void SatSolver::print_clause(ostream& o, Clause *cl) const
-{
-  Clause& clause = *cl;
-  o //<< " " << cl 
-    << "(";
-  for(unsigned int i=0; i<clause.size-1; ++i) {
-    print_literal(o,clause[i]);
-    o << " ";
-  }
-  print_literal(o,clause[clause.size-1]);
-  o << ")";
-}
-
 void SatSolver::print_clauses(ostream& o) const
 {
   o << "base (" << base.size << "):" << endl;
@@ -385,7 +393,9 @@ int SatSolver::check_solution()
 
 
 Mistral::ConstraintClauseBase::ConstraintClauseBase(Vector< Variable >& scp) 
-  : Constraint(scp) { }
+  : Constraint(scp) { 
+  conflict = NULL;
+}
 
 void Mistral::ConstraintClauseBase::mark_domain() {
   for(unsigned int i=0; i<scope.size; ++i) {
@@ -395,50 +405,94 @@ void Mistral::ConstraintClauseBase::mark_domain() {
 
 void Mistral::ConstraintClauseBase::initialise() {
   Constraint::initialise();
+  //solver->base = this;
+
   for(unsigned int i=0; i<scope.size; ++i) {
     trigger_on(_VALUE_, i);
   }
   set_idempotent(true);
 
   is_watched_by.initialise(0,2*scope.size);
-  reason.initialise(0,scope.size);
+  lit_activity.initialise(0,2*scope.size);
+  var_activity.initialise(0,scope.size);
+  //reason.initialise(0,scope.size);
   
 
-  for(unsigned int i=0; i<scope.size; ++i) {
-    reason.add(NULL);
-  //   is_watched_by[i] = new Vector< Clause* >;
-  //   is_watched_by[i]-=scope[i].get_min();
-  }
+  // for(unsigned int i=0; i<scope.size; ++i) {
+  //   reason.add(NULL);
+  // //   is_watched_by[i] = new Vector< Clause* >;
+  // //   is_watched_by[i]-=scope[i].get_min();
+  // }
+
+  //reason = solver->reason.stack_;
+
 }
 
 Mistral::ConstraintClauseBase::~ConstraintClauseBase() {
+  for(unsigned int i=0; i<clauses.size; ++i) {
+    delete clauses[i];
+  }
+  for(unsigned int i=0; i<learnt.size; ++i) {
+    delete learnt[i];
+  }
 }
 
 void Mistral::ConstraintClauseBase::add(Variable x) {
   unsigned int idx = x.id();
   if(idx == scope.size) {
     scope.add(x);
-    reason.add(NULL);
-    while(is_watched_by.capacity <= 2*idx)
-      is_watched_by.extendStack();
+    //reason.add(NULL);
+
   } else if(idx > scope.size) {
     while(scope.capacity <= idx)
       scope.extendStack();
     scope[idx] = x;
 
-    while(reason.capacity <= idx)
-      reason.extendStack();
-    reason[idx] = NULL;
+    // // while(reason.capacity <= idx)
+    // //   reason.extendStack();
+    // // reason[idx] = NULL;
 
-    while(is_watched_by.capacity <= idx)
-      is_watched_by.extendStack();
+    // while(is_watched_by.capacity <= 2*idx)
+    //   is_watched_by.extendStack();
+    // while(lit_activity.capacity <= 2*idx)
+    //   lit_activity.extendStack();
+    // while(var_activity.capacity <= idx)
+    //   var_activity.extendStack();
   }
+
+    while(is_watched_by.capacity <= 2*idx)
+      is_watched_by.extendStack();
+    while(lit_activity.capacity <= 2*idx)
+      lit_activity.extendStack();
+    while(var_activity.capacity <= idx)
+      var_activity.extendStack();
+
+  //reason = solver->reason.stack_;
 }
 
-void Mistral::ConstraintClauseBase::add( Vector < Lit >& clause ) {
+void Mistral::ConstraintClauseBase::add( Vector < Lit >& clause, double activity_increment ) {
  if(clause.size > 1) {
    Clause *cl = Clause::Array_new(clause);
    clauses.add( cl );
+   is_watched_by[clause[0]].add(cl);
+   is_watched_by[clause[1]].add(cl);
+
+   if(activity_increment > 0.0) {
+     int i=clause.size;
+     while(i--) {
+       lit_activity[clause[i]] += activity_increment;
+       var_activity[UNSIGNED(clause[i])] += activity_increment;
+     }
+   }
+ } else {
+   scope[UNSIGNED(clause[0])].set_domain(SIGN(clause[0]));
+ }
+}
+
+void Mistral::ConstraintClauseBase::learn( Vector < Lit >& clause ) {
+ if(clause.size > 1) {
+   Clause *cl = Clause::Array_new(clause);
+   learnt.add( cl );
    is_watched_by[clause[0]].add(cl);
    is_watched_by[clause[1]].add(cl);
  } else {
@@ -454,11 +508,11 @@ int Mistral::ConstraintClauseBase::check( const int* sol ) const {
     falsified = true;
     Clause& clause = *(clauses[i]);
 
-    std::cout << clause << " " ;
-    for(j=0; j<clause.size; ++j) {
-      std::cout << " " << (sol[UNSIGNED(clause[j])]) ;
-    }
-    std::cout << std::endl;
+    // std::cout << clause << " " ;
+    // for(j=0; j<clause.size; ++j) {
+    //   std::cout << " " << (sol[UNSIGNED(clause[j])]) ;
+    // }
+    // std::cout << std::endl;
 
     for(j=0; falsified && j<clause.size; ++j) {
       falsified = //clause[j].check(sol[j]);
@@ -470,22 +524,78 @@ int Mistral::ConstraintClauseBase::check( const int* sol ) const {
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
-  Clause *conflict=NULL;
+//   conflict=NULL;
+//   PropagationOutcome wiped = CONSISTENT;
+
+//   int x, v, cw;
+//   Lit p;
+
+//   while( !conflict && !changes.empty() ) {
+//     x = changes.pop();
+//     v = scope[x].get_min();
+//     p = NEG(2*x+v);
+
+// #ifdef _DEBUG_UNITPROP
+//     for(unsigned int i=0; i<solver->level; ++i) std::cout << " " ;
+//     std::cout << "propagate " ;
+//     print_literal(std::cout, NEG(p));
+//     std::cout << " " << is_watched_by[p].size << std::endl;
+// #endif
+
+//     cw = is_watched_by[p].size;
+//     while(cw-- && !conflict) {
+//       conflict = update_watcher(cw, p, wiped);
+//     }
+//   }
+
+//   return wiped;
+
+  conflict=NULL;
+  Variable *assumptions = solver->sequence.list_;
+  unsigned int i=0, n=changes.size, index = solver->sequence.size;
   PropagationOutcome wiped = CONSISTENT;
 
   int x, v, cw;
   Lit p;
-  //unsigned int i;
-  while( !changes.empty() ) {
-    //std::cout << changes << std::endl;
-    //std::cout << scope << std::endl;
-    x = changes.pop();
-    //std::cout << scope[x] << " in " << scope[x].get_domain() << std::endl;
-    v = scope[x].get_min();
 
+
+  //std::cout << "+++++++++++++++++" << std::endl;
+
+  while( !conflict && i<n ) {
+    x = changes[i];
+    v = scope[x].get_min();
     p = NEG(2*x+v);
 
-    //std::cout << x << "=" << v << ": " << is_watched_by[p] << std::endl;
+#ifdef _DEBUG_UNITPROP
+    for(int j=0; j<solver->level; ++j) std::cout << " " ;
+    std::cout << "propagate " ;
+    print_literal(std::cout, NEG(p));
+    std::cout << " " << is_watched_by[p].size << std::endl;
+#endif
+
+    cw = is_watched_by[p].size;
+    while(cw-- && !conflict) {
+      conflict = update_watcher(cw, p, wiped);
+    }
+
+    ++i;
+  }
+
+
+  //std::cout << "::::::::::::::::+" << std::endl;
+
+  //n = solver->sequence.size;
+  while( !conflict && --index>=solver->sequence.size ) {
+    x = assumptions[index].id();
+    v = assumptions[index].get_min();
+    p = NEG(2*x+v);
+
+#ifdef _DEBUG_UNITPROP
+    for(int j=0; j<solver->level; ++j) std::cout << " " ;
+    std::cout << "propagate " ;
+    print_literal(std::cout, NEG(p));
+    std::cout << " " << is_watched_by[p].size << std::endl;
+#endif
 
     cw = is_watched_by[p].size;
     while(cw-- && !conflict) {
@@ -493,42 +603,23 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
     }
   }
 
-
-  // if(scope[112].is_ground() && scope[243].is_ground() && scope[77].is_ground())
-  //   {
-  //     exit(1);
-  //   }
-
-  // if(conflict) {
-
-  //     // here we should do some conflict analysis
-  // }
+  //std::cout << "]]]]]]]]]]]]]]]]+" << std::endl;
 
   return wiped;
 }
 
-#define _DEBUG_WATCH true
 
-inline Clause* ConstraintClauseBase::update_watcher(const int cw, 
-						    const Lit p,
-						    PropagationOutcome& po)
+Mistral::Clause* Mistral::ConstraintClauseBase::update_watcher(const int cw, 
+							       const Lit p,
+							       PropagationOutcome& po)
 {
   Clause *cl = is_watched_by[p][cw];
   Clause& clause = *cl;
   unsigned int j;
 
-
-  // BitSet e(0, scope.size, BitSet::empt);
-  // for(j=0; j<clause.size; ++j) 
-  //   {
-  //     e.add(UNSIGNED(clause[j]));
-  //   }
-  // std::cout << e << std::endl;
-
-
   Lit q, r;
-  //Atom v, w;
   Variable v, w;
+  int vb, wb;
 
 #ifdef _DEBUG_WATCH
   std::cout << "update watchers for " << clause 
@@ -544,9 +635,11 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw,
     clause[1] = p;
   } else q = clause[0];
   v=scope[UNSIGNED(q)];
+  vb=*(v.bool_domain);
 
   //check if the other watched lit is assigned
-  if( !v.is_ground() || v.get_min() != (int)SIGN(q) ) {
+  //if( !v.is_ground() || v.get_min() != (int)SIGN(q) ) {
+  if( vb==3 || vb>>1 != (int)SIGN(q) ) {
 
 #ifdef _DEBUG_WATCH    
     std::cout << "  the second watcher does not satisfy the clause, we need a replacement" << std::endl;
@@ -556,13 +649,15 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw,
       // for each literal r of the clause,
       r = clause[j];
       w = scope[UNSIGNED(r)];
+      wb = *(w.bool_domain);
 
 #ifdef _DEBUG_WATCH
       std::cout << "    what about " << (SIGN(r) ? "" : "~") << UNSIGNED(r)
 		<< " <-> " << w << " in " << w.get_domain() << std::endl; 
 #endif
 
-      if( !w.is_ground() ) { // this literal is not set
+      if( wb == 3 ) { // this literal is not set
+	//if( !w.is_ground() ) { // this literal is not set
 	// then it is a good candidate to replace p
 
 	clause[1] = r;
@@ -578,7 +673,8 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw,
 	break;	
       }
       // if it is set true, then the clause is satisfied
-      else if( w.get_min() == (int)SIGN(r) ) {
+      //else if( w.get_min() == (int)SIGN(r) ) {
+      else if( wb>>1 == (int)SIGN(r) ) {
 
 #ifdef _DEBUG_WATCH
 	std::cout << "    ok! (satisfied)" << std::endl;
@@ -595,12 +691,13 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw,
 	std::cout << "  couldn't find a replacement!" << std::endl;
 #endif
 
-	if( !v.is_ground() ) {
+	//if( !v.is_ground() ) {
+	if( vb == 3 ) {
 	  // the last literal (other watched lit) is not set yet, we set it
 	  //add_lit(q);
 	  v.set_domain(SIGN(q));
 	  reason[UNSIGNED(q)] = cl;
-	  changes.add(UNSIGNED(q));
+	  //changes.add(UNSIGNED(q));
 
 #ifdef _DEBUG_WATCH
 	  std::cout << "    -> " << v << " in " << v.get_domain() << std::endl;
@@ -608,7 +705,8 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw,
 
 	} else 
 	  // it is set to false already, we fail
-	  if( v.get_min() != (int)SIGN(q) ) {
+	  //if( v.get_min() != (int)SIGN(q) ) {
+	  if( vb>>1 != (int)SIGN(q) ) {
 
 #ifdef _DEBUG_WATCH
 	    std::cout << "    -> fail!" << std::endl;
@@ -622,6 +720,56 @@ inline Clause* ConstraintClauseBase::update_watcher(const int cw,
 
   return NULL;
 }
+
+void Mistral::ConstraintClauseBase::remove( const int cidx )
+{
+  Clause *clause = learnt[cidx];
+
+  is_watched_by[clause->data[0]].remove_elt( clause );
+  is_watched_by[clause->data[1]].remove_elt( clause );
+  learnt.remove( cidx );
+
+  free(clause);
+}
+
+
+void Mistral::ConstraintClauseBase::forget(double forgetfulness)
+{
+  if( forgetfulness > 0.0 ) {
+    int nlearnt = learnt.size;
+    double sa[nlearnt];
+    Clause *tmp[nlearnt];
+    int i, j, order[nlearnt];
+    initSort(&(sa[0]));
+    for(i=0; i<nlearnt; ++i)
+      {
+	order[i] = i;
+	sa[i] = 0.0;
+	Clause& clause = *(learnt[i]);
+	j=clause.size;
+	while(j--)
+	  sa[i] += lit_activity[clause[j]];
+	sa[i] /= (clause.size * clause.size);
+      }
+    qsort(order, nlearnt, sizeof(int), compar);
+    for(i=0; i<nlearnt; ++i)
+      tmp[i] = learnt[order[i]]; 
+    for(i=0; i<nlearnt; ++i) {
+      learnt[i] = tmp[i];
+    }
+    
+    int keep = (int)((double)nlearnt * (1.0-forgetfulness));
+    
+    for(i=nlearnt; i>keep;)
+      remove( --i );
+    while(i>1) {
+      --i;
+      if(sa[order[i]] == sa[order[i-1]])
+	remove( i );
+    }
+  }
+}
+
 
 std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
   // os << " (";

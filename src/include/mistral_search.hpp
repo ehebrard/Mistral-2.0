@@ -28,11 +28,12 @@
 #include <mistral_global.hpp>
 #include <mistral_structure.hpp>
 #include <mistral_variable.hpp>
+#include <mistral_solver.hpp>
+
 
 
 namespace Mistral {
 
-  class Solver;
 
   class RestartListener {
   public:
@@ -57,6 +58,121 @@ namespace Mistral {
     int fid;
     virtual void notify_failure() = 0;
   };
+
+  class ConstraintListener {
+  public:
+    int cid;
+    virtual void notify_post(Constraint *c) = 0;
+    virtual void notify_relax(Constraint *c) = 0;
+  };
+
+  class VariableListener {
+  public:
+    int vid;
+    virtual void notify_add_variable() = 0;
+  };
+
+
+  class LiteralActivityManager : public DecisionListener {
+
+  public:
+
+    Solver *solver;
+    double *lit_activity; 
+    double *var_activity;
+    int n_vars;
+ 
+    double decay;
+
+    LiteralActivityManager(Solver *s) ;
+    virtual ~LiteralActivityManager() ;
+
+    virtual void notify_decision() ;    
+    double *get_weight() ;
+    
+  };
+
+
+  class FailureCountManager : public FailureListener, public ConstraintListener {
+
+  public:
+
+    Solver *solver;
+
+    Vector<double> constraint_weight;
+    Vector<double> variable_weight;
+
+    FailureCountManager(Solver *s) : solver(s) {
+      for(unsigned int i=0; i<solver->variables.size; ++i) {
+	variable_weight.add(solver->variables[i].get_degree());
+      }
+      for(unsigned int i=0; i<solver->constraints.size; ++i) {
+	constraint_weight.add(1);
+      }
+
+      solver->add((FailureListener*)this);
+      solver->add((ConstraintListener*)this);
+    }
+
+    virtual ~FailureCountManager() {}
+
+    double *get_weight() { return variable_weight.stack_; }     
+
+    virtual void notify_failure() {
+      Constraint *con = solver->culprit;
+      if(con) {
+	int i = con->scope.size;
+	++constraint_weight[con->id];
+	while(i--) ++variable_weight[con->scope[i].id()];
+      }
+    }
+
+    virtual void notify_post(Constraint *con) {
+      int i = con->stress;
+      while(i--) {
+	variable_weight[con->scope[con->active[i]].id()] += constraint_weight[con->id];
+      }
+    }
+
+    virtual void notify_relax(Constraint *con) {
+      int i = con->active.size;
+      while(i--) {
+	variable_weight[con->scope[con->active[i]].id()] -= constraint_weight[con->id];
+      }
+    }
+  };
+
+
+  class PruningCountManager : public SuccessListener {
+
+  public:
+
+    Solver *solver;
+
+    Vector<double> variable_weight;
+
+    PruningCountManager(Solver *s) : solver(s) {
+      for(unsigned int i=0; i<solver->variables.size; ++i) {
+	variable_weight.add(solver->variables[i].get_degree());
+      }
+      solver->add((SuccessListener*)this);
+    }
+
+    double *get_weight() { return variable_weight.stack_; }     
+
+    virtual void notify_success() {
+      int // last_decision = solver->decisions.back().var.id(),
+	id;
+      unsigned int i = solver->trail_.back(), n=solver->saved_vars.size;
+      while(++i<n) {
+	id = solver->saved_vars[i]; //.id();
+	//if(id != last_decision) 
+	++variable_weight[id];
+      }
+    }
+  };
+
+
 
 
 
@@ -138,8 +254,6 @@ namespace Mistral {
   public:
     
     Solver *solver;
-    //unsigned int& length;
-    //Variable *variables;
 
     BranchingHeuristic(Solver *s) {solver = s;}
     virtual ~BranchingHeuristic() {}
@@ -151,23 +265,24 @@ namespace Mistral {
   };
 
 
-  class VarOrdering {
+  // class VarOrdering {
+
+  // public: 
+  //   Solver *solver;
+
+  //   VarOrdering() {}
+  //   VarOrdering(Solver *s);
+  //   void initialise(Solver *s) { solver = s; }
+  //   virtual ~VarOrdering();
+    
+  // };
+
+  class NoOrder {
 
   public: 
     Solver *solver;
 
-    VarOrdering() {}
-    VarOrdering(Solver *s);
-    void initialise(Solver *s) { solver = s; }
-    virtual ~VarOrdering();
-    
-  };
-
-  class NoOrder : public VarOrdering {
-
-  public: 
-
-    NoOrder() {}
+    NoOrder() { solver = NULL; }
     NoOrder(Solver *s);
     virtual ~NoOrder();
     void initialise(Solver *s) { solver = s; }
@@ -177,16 +292,16 @@ namespace Mistral {
 
   };
 
-  class Lexicographic : public VarOrdering {
+  class Lexicographic {
 
   public: 
     
+    Solver *solver;
     Vector< Variable >           order;
     ReversibleNum< unsigned int > last;
 
-    Lexicographic() {}
+    Lexicographic() { solver = NULL; }
     Lexicographic(Solver *s);
-    //Lexicographic(Vector< Variable >& seq);
     void initialise(Solver *s);
     void initialise(VarStack< Variable >& seq);
     virtual ~Lexicographic();
@@ -206,22 +321,130 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    MinDomain() {d_ = NOVAL;}
+    MinDomain() {dom_ = LARGE_VALUE;}
     //@}
 
     /**@name Parameters*/
     //@{ 
-    int d_;
+    int dom_;
     //@}  
 
     /**@name Utils*/
     //@{
-    inline double value() { return 1.0/((double)d_); } 
-    inline bool operator<( MinDomain& x ) const { return d_ < x.d_; }
-    inline void operator=( MinDomain& x ) { d_ = x.d_; }
-    inline void operator=( Variable x ) { d_ = x.get_size(); }
+    inline double value() { return (double)dom_; } 
+    inline bool operator<( MinDomain& x ) const { return dom_ < x.dom_; }
+    inline void operator=( MinDomain& x ) { dom_ = x.dom_; }
+    inline void operator=( Variable x ) { dom_ = x.get_size(); }
     //@}  
+
+    std::ostream& display(std::ostream& os) {
+      os << dom_;
+      return os;
+    }
   };
+
+  std::ostream& operator<<(std::ostream& os, MinDomain& x);
+
+
+  class MinDomainOverDegree 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinDomainOverDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    int dom_;
+    int deg_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return (deg_ ? (double)dom_/(double)deg_ : (double)INFTY); } 
+    inline bool operator<( MinDomainOverDegree& x ) const { return dom_*x.deg_ < x.dom_*deg_; }
+    inline void operator=( MinDomainOverDegree& x ) { dom_ = x.dom_; deg_ = x.deg_; }
+    inline void operator=( Variable x ) { dom_ = x.get_size(); deg_ = x.get_degree(); }
+    //@}  
+
+    std::ostream& display(std::ostream& os) {
+      os << dom_ << "/" << deg_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MinDomainOverDegree& x);
+
+
+  class MinDomainOverWeight
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
+    //MinDomainOverWeight(int *w) : weight(w) {dom_ = LARGE_VALUE; wei_ = 0;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    double *weight;
+    int dom_;
+    double wei_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return (wei_ ? (double)dom_/wei_ : (double)INFTY); } 
+    inline bool operator<( MinDomainOverWeight& x ) const { return dom_*x.wei_ < x.dom_*wei_; }
+    inline void operator=( MinDomainOverWeight& x ) { dom_ = x.dom_; wei_ = x.wei_; }
+    inline void operator=( Variable x ) { dom_ = x.get_size(); wei_ = weight[x.id()]; }
+    //@}  
+
+    std::ostream& display(std::ostream& os) {
+      os << dom_ << "/" << wei_;
+      return os;
+    }
+  };
+
+
+  class MaxWeight
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MaxWeight() {wei_ = 0;}
+    //MaxWeight(int *w) : weight(w) {wei_ = 0;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    double *weight;
+    double wei_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return wei_ ; } 
+    inline bool operator<( MaxWeight& x ) const { return x.wei_ < wei_; }
+    inline void operator=( MaxWeight& x ) { wei_ = x.wei_; }
+    inline void operator=( Variable x ) { 
+      //std::cout << "activity of " << x << " = " << weight[x.id()] << std::endl;
+      wei_ = weight[x.id()]; 
+    }
+    //@}  
+
+    std::ostream& display(std::ostream& os) {
+      os << wei_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MaxWeight& x);
+
 
   /**********************************************
    * Value Selection
@@ -242,6 +465,20 @@ namespace Mistral {
 
   };
 
+  class MaxValue {
+
+  public: 
+    
+    MaxValue() {}
+    MaxValue(Solver *s) {}
+    virtual ~MaxValue() {};
+    
+    inline Decision make(Variable x) {
+      Decision d(x, Decision::ASSIGNMENT, x.get_max());
+      return d;
+    }
+
+  };
 
   class HalfSplit {
 
@@ -258,17 +495,89 @@ namespace Mistral {
 
   };
 
+  class RandomMinMax {
+
+  public: 
+    
+    RandomMinMax() {}
+    RandomMinMax(Solver *s) {}
+    virtual ~RandomMinMax() {};
+    
+    inline Decision make(Variable x) {
+      Decision d(x, Decision::ASSIGNMENT, 
+		 (randint(2) ? x.get_min() : x.get_max()));
+      return d;
+    }
+
+  };
+
+
+  class MinWeightValue {
+
+  public: 
+
+    double **weight;
+    
+    MinWeightValue() {}
+    MinWeightValue(Solver *s) {}
+    virtual ~MinWeightValue() {};
+    
+    inline Decision make(Variable x) {
+      int // id_x = x.id(),
+	best_val = x.get_min();
+      double *wgt = weight[x.id()];
+      //double min_weight = weight[id_x][best_val]// [best_val][id_x]
+      double min_weight = wgt[best_val]// [best_val][id_x]
+	, aux_weight;
+      int vali, vnxt=x.next(best_val);
+      do {
+	vali = vnxt;
+	vnxt = x.next(vali);
+	aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
+	if(aux_weight < min_weight) {
+	  min_weight = aux_weight;
+	  best_val = vali;
+	}
+      } while(vali<vnxt);
+      
+      Decision d(x, Decision::ASSIGNMENT, best_val);
+      return d;
+    }
+
+  };
+
+
+  class BoolMinWeightValue {
+
+  public: 
+
+    double **weight;
+    
+    BoolMinWeightValue() {}
+    BoolMinWeightValue(Solver *s) {}
+    virtual ~BoolMinWeightValue() {};
+    
+    inline Decision make(Variable x) {
+      double *wgt = weight[x.id()];
+      Decision d(x, Decision::ASSIGNMENT, (wgt[0]<wgt[1] ? 0 : 1));
+      return d;
+    }
+
+  };
+
+
   /**********************************************
    * Generic heuristic
    **********************************************/
   
   template < class VarSelector >
-  class GenericDVO : public VarOrdering
+  class GenericDVO 
   {
   public: 
     
     /**@name Parameters*/
     //@{ 
+    Solver   *solver;
     VarSelector best;
     VarSelector current;
 
@@ -277,10 +586,10 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    GenericDVO() : VarOrdering() {}
-    GenericDVO(Solver* s) : VarOrdering(s) {}
-    void initialise(Solver *s) { solver = s; }
-    void initialise(VarStack< Variable >& seq) {}
+    GenericDVO() { solver = NULL; }
+    GenericDVO(Solver* s) : solver(s) {}
+    virtual void initialise(Solver *s) { solver = s; }
+    virtual void initialise(VarStack< Variable >& seq) {}
     //@}
     
     /**@name Utils*/
@@ -288,16 +597,22 @@ namespace Mistral {
     Variable select()
     {    
       Variable *variables = solver->sequence.list_;
-      unsigned int length = solver->sequence.size;
-      Variable var = variables[0];
+      unsigned int length = solver->sequence.size-1;
+      Variable var = variables[length];
       best = var;
-      for(unsigned int i=1; i<length; ++i) {
+      //std::cout << var << ":" ;
+      //best.display(std::cout);
+      //for(unsigned int i=1; i<length; ++i) {
+      for(unsigned int i=length; i--;) {
 	current = variables[i];
 	if( current < best ) {
 	  best = current;
 	  var = variables[i];
-	} 
+	  //std::cout << " < " << var << ":" ;
+	  //best.display(std::cout);
+	}
       }
+      //std::cout << std::endl;
       return var;
     }
     //@}
@@ -309,12 +624,13 @@ namespace Mistral {
    **********************************************/
   
   template < class VarSelector, int RAND >
-  class GenericRandomDVO : public VarOrdering
+  class GenericRandomDVO 
   {
   public: 
 
     /**@name Parameters*/
     //@{ 
+    Solver      *solver;
     VarSelector   bests[RAND+1];
     VarSelector current;
     Variable   bestvars[RAND+1];
@@ -322,23 +638,18 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    GenericRandomDVO() : VarOrdering()
+    GenericRandomDVO()
     {
-      bests = NULL;
-      bestvars = NULL;
+      solver = NULL;
     }
-    GenericRandomDVO(Solver* s)  : VarOrdering(s) 
+    GenericRandomDVO(Solver* s)  : solver(s) 
     {
-      bests = new VarSelector[RAND+1];
-      bestvars = new Variable[RAND+1];
     }
-    void initialise(Solver *s) { solver = s; }
-    void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise(Solver *s) { solver = s; }
+    virtual void initialise(VarStack< Variable >& seq) {}
 
     virtual ~GenericRandomDVO() 
     {
-      delete [] bests;
-      delete [] bestvars;
     }
     //@}
 
@@ -347,10 +658,10 @@ namespace Mistral {
     Variable select()
     {
       Variable *variables = solver->sequence.list_;
-      unsigned int length = solver->sequence.size;
+      unsigned int length = solver->sequence.size-1;
       unsigned int realsize=1, i, j;
-      bests[0] = bestvars[0] = variables[0];
-      for(j=1; j<length; ++j)
+      bests[0] = bestvars[0] = variables[length];
+      for(j=length; j--;)
 	{  
 	  current = variables[j];
 	  i = realsize;
@@ -367,6 +678,78 @@ namespace Mistral {
       return bestvars[randint(realsize)];
     }
     //@}
+  };
+
+
+
+  template < class WeightManager, class VarSelector >
+  class GenericWeightedDVO : public GenericDVO< VarSelector >
+  {
+  public: 
+    
+    /**@name Parameters*/
+    //@{ 
+    WeightManager *manager;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    GenericWeightedDVO() : GenericDVO< VarSelector >() { manager=NULL; }
+    GenericWeightedDVO(Solver* s) : GenericDVO< VarSelector >(s) {
+      initialise_manager();
+    }
+    virtual ~GenericWeightedDVO() { delete manager; }
+    virtual void initialise(Solver *s) { 
+      GenericDVO< VarSelector >::initialise(s);
+      initialise_manager();
+    }
+    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise_manager() {
+      manager = new WeightManager(GenericDVO< VarSelector >::solver);
+      //GenericDVO< VarSelector >::solver->add(manager);
+      GenericDVO< VarSelector >::best.weight = manager->get_weight();
+      GenericDVO< VarSelector >::current.weight = manager->get_weight();
+    }
+    //@}
+    
+  };
+
+
+  /**********************************************
+   * Generic Random Weighted heuristic
+   **********************************************/
+  
+  template < class WeightManager, class VarSelector, int RAND >
+  class GenericWeightedRandomDVO : public GenericRandomDVO< VarSelector, RAND >
+  {
+  public: 
+    
+    /**@name Parameters*/
+    //@{ 
+    WeightManager *manager;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    GenericWeightedRandomDVO() : GenericRandomDVO< VarSelector, RAND >() { manager=NULL; }
+    GenericWeightedRandomDVO(Solver* s) : GenericRandomDVO< VarSelector, RAND >(s) {
+      initialise_manager();
+    }
+    virtual ~GenericWeightedRandomDVO() { delete manager; }
+    virtual void initialise(Solver *s) { 
+      GenericRandomDVO< VarSelector, RAND >::initialise(s);
+      initialise_manager();
+    }
+    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise_manager() {
+      manager = new WeightManager(GenericRandomDVO< VarSelector, RAND >::solver);
+      //GenericRandomDVO< VarSelector >::solver->add(manager);
+      GenericRandomDVO< VarSelector, RAND >::current.weight = manager->get_weight();
+      for(int i=0; i<=RAND; ++i)
+	GenericRandomDVO< VarSelector, RAND >::bests[i].weight = manager->get_weight();
+    }
+    //@}
+    
   };
 
 
@@ -392,6 +775,43 @@ namespace Mistral {
 
   };
 
+
+   // typedef GenericHeuristic< 
+   //  GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
+   //  MinValue >                                                          VSIDS;
+
+  class VSIDS : public GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
+					 BoolMinWeightValue > {
+
+  public:
+    
+    VSIDS(Solver *s) : GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
+					 BoolMinWeightValue >(s) {
+      int j, i, n=var.manager->n_vars;
+      choice.weight = new double*[n];
+      for(i=0; i<n; ++i) {
+	choice.weight[i] = new double[2];
+      }
+      // choice.weight[0] = new double[n];
+      // choice.weight[1] = new double[n];
+
+      
+	for(i=0; i<n; ++i) 
+	  for(j=0; j<2; ++j)
+	    choice.weight[i][j] = var.manager->lit_activity[2*i+j];
+    }
+
+    virtual ~VSIDS() {
+      int  i, n=var.manager->n_vars;
+      for(i=0; i<n; ++i) 
+	delete [] choice.weight[i];
+  
+      // delete [] choice.weight[0];
+      // delete [] choice.weight[1];
+      delete [] choice.weight;
+    }
+    
+  };
 
 //   template < class VarSelector, class ValSelector >
 //   class GenericPtrHeuristic : public BranchingHeuristic {
