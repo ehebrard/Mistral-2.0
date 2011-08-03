@@ -69,7 +69,8 @@ namespace Mistral {
   class VariableListener {
   public:
     int vid;
-    virtual void notify_add_variable() = 0;
+    virtual void notify_add() = 0;
+    virtual void notify_change(const int idx) = 0;
   };
 
 
@@ -121,23 +122,28 @@ namespace Mistral {
     virtual void notify_failure() {
       Constraint *con = solver->culprit;
       if(con) {
-	int i = con->scope.size;
+	int i = con->scope.size, idx;
 	++constraint_weight[con->id];
-	while(i--) ++variable_weight[con->scope[i].id()];
+	while(i--) {
+	  idx = con->scope[i].id();
+	  if(idx>=0) ++variable_weight[idx];
+	}
       }
     }
 
     virtual void notify_post(Constraint *con) {
-      int i = con->stress;
+      int i = con->stress, idx;
       while(i--) {
-	variable_weight[con->scope[con->active[i]].id()] += constraint_weight[con->id];
+	idx = con->scope[con->active[i]].id();
+	if(idx>=0) variable_weight[idx] += constraint_weight[con->id];
       }
     }
 
     virtual void notify_relax(Constraint *con) {
-      int i = con->active.size;
+      int i = con->active.size, idx;
       while(i--) {
-	variable_weight[con->scope[con->active[i]].id()] -= constraint_weight[con->id];
+	idx = con->scope[con->active[i]].id();
+	if(idx>=0) variable_weight[idx] -= constraint_weight[con->id];
       }
     }
   };
@@ -292,12 +298,13 @@ namespace Mistral {
 
   };
 
-  class Lexicographic {
+  class Lexicographic : public VariableListener {
 
   public: 
     
     Solver *solver;
     Vector< Variable >           order;
+    Vector< int >                index;
     ReversibleNum< unsigned int > last;
 
     Lexicographic() { solver = NULL; }
@@ -305,6 +312,9 @@ namespace Mistral {
     void initialise(Solver *s);
     void initialise(VarStack< Variable >& seq);
     virtual ~Lexicographic();
+
+    virtual void notify_add() {};
+    virtual void notify_change(const int idx);
     
     Variable select();
 

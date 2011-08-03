@@ -110,6 +110,16 @@ namespace Mistral {
 
     /*!@name Initialisation*/
     //@{
+    void initialise(const unsigned int c)
+    {
+      size = 0;
+      capacity = c;
+      stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+
+      DATA_TYPE x(0);
+      std::fill(stack_, stack_+capacity, x);
+    }
+
     void initialise(const unsigned int s, const unsigned int c)
     {
       size = s;
@@ -225,6 +235,11 @@ namespace Mistral {
     }
 
     inline DATA_TYPE& front(const int k=0)
+    {
+      return stack_[k];
+    }
+
+    inline const DATA_TYPE front(const int k=0) const
     {
       return stack_[k];
     }
@@ -2696,17 +2711,21 @@ namespace Mistral {
     {
       int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
       int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
-      int k = pos_words;
+      int k = s.pos_words;
       while( k > i ) {
 	--k;
 	if( s.table[k] ) return false;
       }
       while( k > j ) {
 	--k;
-	if( s.table[k] != (table[k] & s.table[k]) ) return false;
+	if( s.table[k] != (table[k] & s.table[k]) ) {
+	  return false;
+	}
       }
-      while( k-- > neg_words )
+      while( k-- > s.neg_words ) {
 	if( s.table[k] ) return false;
+      }
+
       return true;
     }
 

@@ -457,6 +457,7 @@ namespace Mistral {
     void notify_restart();
     void notify_relax(Constraint *c);
     void notify_post(Constraint *c);
+    void notify_change_variable(const int idx);
     void notify_add_variable();
     /// called when the var'th variable of constraint cons changes (with event type evt)
     void trigger_event(const int var, const Event evt);

@@ -169,6 +169,13 @@ namespace Mistral {
 
     inline void defrost() {
       if(is_posted && active.size <= stress) {
+
+#ifdef _DEBUG_CGRAPH
+	std::cout << " ---> relax " ;
+	display(std::cout);
+	std::cout << std::endl;
+#endif
+
 	relax();
       }
       if(changes.list_ == events.list_) 
@@ -595,6 +602,99 @@ namespace Mistral {
     virtual int check( const int* sol ) const { return((sol[0] == sol[1]) == (sol[2] ^ spin)); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "are_equal"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Interval Membership Predicate
+   **********************************************/
+  /*! \class PredicateIntervalMember
+    \brief  Truth value of a binary equality ((x0 = x1) <-> y)
+  */
+  class PredicateIntervalMember : public Constraint
+  {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int spin;
+    int lower_bound;
+    int upper_bound;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateIntervalMember() : Constraint() {}
+    PredicateIntervalMember(Vector< Variable >& scp, const int lb=-INFTY, const int ub=+INFTY, const int sp=1) 
+      : Constraint(scp) { spin = sp; lower_bound=lb; upper_bound=ub; }
+    PredicateIntervalMember(std::vector< Variable >& scp, const int lb, const int ub, const int sp=1) 
+      : Constraint(scp) { spin = sp; lower_bound=lb; upper_bound=ub; }
+    virtual Constraint *clone() { return new PredicateIntervalMember(scope, lower_bound, upper_bound, spin); }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual ~PredicateIntervalMember() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { return(((sol[0]>=lower_bound) && (sol[0]<=upper_bound)) 
+						       == (sol[1] ^ spin)); }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "are_equal"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Set Membership Predicate
+   **********************************************/
+  /*! \class PredicateSetMember
+    \brief  Truth value of a binary equality ((x0 = x1) <-> y)
+  */
+  class PredicateSetMember : public Constraint
+  {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int spin;
+    BitSet values;
+    BitSet non_values;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateSetMember() : Constraint() {}
+    PredicateSetMember(Vector< Variable >& scp, const int sp=1) 
+      : Constraint(scp) { spin = sp; }
+    PredicateSetMember(Vector< Variable >& scp, const BitSet& vals, const int sp=1) 
+      : Constraint(scp) { spin = sp; values=vals; }
+    PredicateSetMember(std::vector< Variable >& scp, const BitSet& vals, const int sp=1) 
+      : Constraint(scp) { spin = sp; values=vals; }
+    virtual Constraint *clone() { return new PredicateSetMember(scope, values, spin); }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual ~PredicateSetMember() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { return((values.contain(sol[0]) == (sol[1] ^ spin))); }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1360,6 +1460,45 @@ namespace Mistral {
     virtual std::string name() const { return "sum"; }
     //@}
   };
+
+
+  // /**********************************************
+  //  * BoolElement Predicate
+  //  **********************************************/
+  // /*! \class PredicateBoolElement
+  //   \brief  
+  // */
+  // class PredicateBoolElement : public Constraint {
+
+  // public:
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   BitSet aux_dom;
+  //   int offset;
+  //   //@}
+
+  //   /**@name Constructors*/
+  //   //@{
+  //   PredicateBoolElement(Vector< Variable >& scp, const int o=0);
+  //   PredicateBoolElement(std::vector< Variable >& scp, const int o=0);
+  //   virtual ~PredicateBoolElement();
+  //   virtual Constraint *clone() { return new PredicateBoolElement(scope, offset); }
+  //   virtual void initialise();
+  //   //@}
+
+  //   /**@name Solving*/
+  //   //@{
+  //   virtual int check( const int* sol ) const ;
+  //   virtual PropagationOutcome propagate();
+  //   //virtual PropagationOutcome rewrite();
+  //   //@}
+
+  //   /**@name Miscellaneous*/
+  //   //@{  
+  //   virtual std::ostream& display(std::ostream&) const ;
+  //   virtual std::string name() const { return "sum"; }
+  //   //@}
+  // };
 
 
   /**********************************************

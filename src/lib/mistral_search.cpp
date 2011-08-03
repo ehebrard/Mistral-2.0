@@ -93,17 +93,24 @@ Mistral::Variable Mistral::NoOrder::select() {
 
 Mistral::Lexicographic::Lexicographic(Solver *s) 
   : solver(s) {
+  index.initialise(s->variables.size);
+  solver->add(this);
   last.initialise(0,s);
 }
 
 void Mistral::Lexicographic::initialise(VarStack< Variable >& seq) {
+  int n = solver->variables.size;
+  std::fill(index.stack_, index.stack_+n, -1);
   for(unsigned int i=0; i<seq.size; ++i) {
+    index[seq[i].id()] = order.size;
     order.add(seq[i]);
   }
 }
 
 void Mistral::Lexicographic::initialise(Solver *s) {
   solver = s;
+  index.initialise(s->variables.size);
+  solver->add(this);
   last.initialise(0,s);
 }
 
@@ -116,7 +123,12 @@ Mistral::Variable Mistral::Lexicographic::select() {
   return order[last];
 }
 
-
+void Mistral::Lexicographic::notify_change(const int idx) {
+  int ido = index[idx];
+  if(ido>=0) {
+    order[ido] = solver->variables[idx];
+  }
+}
 
 
 

@@ -188,15 +188,34 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
 void Mistral::Variable::initialise(Solver *s, const bool top) {
   if(domain_type == EXPRESSION) {
     if(!expression->is_initialised()) {
+
+      // std::cout << "initialise children of " << std::endl;
+      // //Variable X(expression);
+
+      // std::cout << *this << std::endl;
+
+      // for(unsigned int i=0; i<expression->children.size; ++i) {
+      //  std::cout << "  " << expression->children[i] << std::endl;
+      // }
+     
+
       for(unsigned int i=0; i<expression->children.size; ++i) {
 	expression->children[i].initialise(s, false);
       }
+
+      // std::cout << "initialise " << std::endl;
+      // //Variable X(expression);
+
+      // std::cout << *this << std::endl;
 
       if(top && !expression->children.empty()) {
 	expression->extract_constraint(s);
       } else {
 	expression->extract_variable(s);
-	expression->id = expression->self.id();
+
+	Variable X = expression->self;
+
+	expression->id = (X.domain_type == CONST_VAR ? s->variables.size-1 : X.id());
 	expression->solver = s;	
 	expression->extract_predicate(s);//);
       }
@@ -277,9 +296,18 @@ Mistral::Event Mistral::Variable::setState( const int vals )
   return VALUE_EVENT;
 }
 
-int Mistral::Variable::get_solution_value() const {
+int Mistral::Variable::get_solution_int_value() const {
   return(domain_type == CONST_VAR ? constant_value :
-	 variable->get_solution_value());
+	 variable->get_solution_int_value());
+}
+
+std::string Mistral::Variable::get_solution_str_value() const {
+  std::ostringstream ret_str;
+  if(domain_type == CONST_VAR)
+    ret_str << constant_value ;
+  else
+    ret_str << variable->get_solution_str_value();
+  return ret_str.str();
 }
 
 int Mistral::Variable::get_solution_min() const {
@@ -725,7 +753,20 @@ std::string Mistral::Variable::get_domain() const {
     }
   }
 
+
+
+
   Mistral::Event Mistral::Variable::restore() {
+
+    // if(id() == 17) {
+    //   for(int i=0; i<((VariableImplementation*)(variable))->solver->level; ++i)
+    // 	std::cout << " ";
+    //   std::cout << "restore " ;
+    //   display(std::cout);
+    //   std::cout << " in " << get_domain() << " " 
+    // 		<< ((VariableBitmap*)(variable))->trail_ << std::endl;
+    // }
+
     if     (domain_type ==  BITSET_VAR) return bitset_domain->restore();
     //else if(domain_type ==    LIST_VAR) return list_domain->restore();
     else if(domain_type ==   RANGE_VAR) return range_domain->restore();
@@ -752,8 +793,13 @@ std::string Mistral::Variable::get_domain() const {
 //   id = s->declare(*this);
 // }
 
-int Mistral::VariableImplementation::get_solution_value() const { 
+int Mistral::VariableImplementation::get_solution_int_value() const { 
   return solver->last_solution_lb[id] ;
+}  
+std::string Mistral::VariableImplementation::get_solution_str_value() const { 
+  std::ostringstream ret_str;
+  ret_str <<  solver->last_solution_lb[id] ;
+  return ret_str.str();
 }  
 int Mistral::VariableImplementation::get_solution_min() const { 
   return solver->last_solution_lb[id] ; 
@@ -1011,15 +1057,49 @@ void Mistral::MulExpression::extract_constraint(Solver *s) {
 
 void Mistral::MulExpression::extract_variable(Solver *s) {
 
-  int z[4], lb = INFTY, ub = -INFTY, i = 4;
-  z[0] = children[0].get_min() * children[1].get_min();
-  z[1] = children[0].get_min() * children[1].get_max();
-  z[2] = children[0].get_max() * children[1].get_min();
-  z[3] = children[0].get_max() * children[1].get_max();  
+  int z[4], lb = INFTY, ub = -INFTY, i = 4, j, k = 0, b[4];
+
+
+  // std::cout << children[0].get_domain() << " x "
+  // 	    << children[1].get_domain() << std::endl;
+
+
+
+  while(i-->2) { std::cout << i-2 << std::endl; b[i] = children[i-2].get_min(); }
+  do { std::cout << i << std::endl; b[i] = children[i].get_max(); } while(i--);
+
+  //0.1
+  //0.3
+  
+
+  //std::cout << b[0] << " " << b[1] << " " << b[2] << " " << b[3] << std::endl; 
+
+  for(i=0; i<4; i+=2) 
+    for(j=1; j<4; j+=2) {
+      z[k] = b[i]*b[j];
+      if(((b[i]>0 && b[j]>0) || (b[i]<0 && b[j]<0)) && z[k]<0) // int overflow
+	z[k] = INFTY;
+      else if(((b[i]>0 && b[j]<0) || (b[i]<0 && b[j]>0)) && z[k]>0) // int overflow
+	z[k] = -INFTY;
+
+
+      //std::cout << i << "." << j << " " << b[i] << " * " << b[j] << std::endl;
+
+      ++k;
+    }
+  
+  i = 4;
   while( i-- ) {
     if( z[i] > ub ) ub = z[i];
     if( z[i] < lb ) lb = z[i];
   }
+
+  // std::cout << children[0].get_domain() << " x "
+  // 	    << children[1].get_domain() << " = ["
+  // 	    << lb << ".." << ub << "]" << std::endl;
+
+
+  // exit(1);
 
   Variable aux(lb, ub, DYN_VAR);
   self = aux;
@@ -1272,10 +1352,149 @@ Mistral::EqualExpression::~EqualExpression() {}
 
 void Mistral::EqualExpression::extract_constraint(Solver *s) {
   if(spin) {
-    if(children.size==2) s->add(new ConstraintEqual(children));
+    if(children[0].domain_type == EXPRESSION && children[0].expression->is_set()) {
+      unsigned int i = 0, j = 0;
+      SetExpression *x = (SetExpression*)(children[0].expression);
+      SetExpression *y = (SetExpression*)(children[1].expression);
+      Variable bx;
+      Variable by;
+
+      s->add(new ConstraintEqual(children));
+
+      Vector<Variable> scp;
+
+      //std::cout << x->elts_ub << " == " << y->elts_ub << std::endl;
+
+
+      while(i<x->elts_ub.size && j<y->elts_ub.size) {
+
+	// std::cout << i << " - " << j << std::endl;
+	
+	// std::cout << x->get_index_var(i) << std::endl;
+
+	// std::cout << y->get_index_var(j) << std::endl;
+
+	scp.clear();
+	bx = x->get_index_var(i);
+	by = y->get_index_var(j);
+	if(x->elts_ub[i] == y->elts_ub[j]) {
+	  if(bx.is_ground()) {
+	    by.set_domain(bx.get_min());
+	  } else if(by.is_ground()) {
+	    bx.set_domain(by.get_min());
+	  } else {
+	    scp.add(by);
+	    scp.add(bx);
+	    s->add(new ConstraintEqual(scp));
+	  }
+	  ++i;
+	  ++j;
+	} else if(x->elts_ub[i] <= y->elts_ub[j]) {
+	  // x->elts_ub[i] can't be in Y
+	  bx.set_domain(0);
+	  ++i;
+	} else {
+	  // y->elts_ub[j] can't be in X
+	  by.set_domain(0);
+	  ++j;
+	}
+      }
+    
+      // remaining values of X
+      while(i<x->elts_ub.size) {
+	bx = x->get_index_var(i);
+	bx.set_domain(0);
+	++i;
+      }
+      
+      // remaining values of Y
+      while(j<y->elts_ub.size) {
+	by = y->get_index_var(j);
+	by.set_domain(0);
+	++j;
+      }
+    }
+    else if(children.size==2) s->add(new ConstraintEqual(children));
     else children[0].set_domain(value);
   } else {
-    if(children.size==2) s->add(new ConstraintNotEqual(children));
+    if(children[0].domain_type == EXPRESSION && children[0].expression->is_set()) {
+      unsigned int i = 0, j = 0;
+      SetExpression *x = (SetExpression*)(children[0].expression);
+      SetExpression *y = (SetExpression*)(children[1].expression);
+      Variable bx;
+      Variable by;
+
+      Vector<Variable> scp;
+      Vector<Variable> disjunction;
+
+      while(i<x->elts_ub.size && j<y->elts_ub.size) {
+	Variable b(0,1);
+
+	scp.clear();
+	bx = x->get_index_var(i);
+	by = y->get_index_var(j);
+	if(x->elts_ub[i] == y->elts_ub[j]) {
+	  if(bx.is_ground()) {
+	    scp.add(by);
+	    scp.add(b);
+	    s->add(new PredicateConstantEqual(scp,bx.get_min()));
+	    disjunction.add(b);
+	  } else if(by.is_ground()) {
+	    scp.add(bx);
+	    scp.add(b);
+	    s->add(new PredicateConstantEqual(scp,by.get_min()));
+	    disjunction.add(b);
+	  } else {
+	    scp.add(by);
+	    scp.add(bx);
+	    scp.add(b);
+	    s->add(new PredicateConstantEqual(scp));
+	    disjunction.add(b);
+	  }
+	  ++i;
+	  ++j;
+	} else if(x->elts_ub[i] <= y->elts_ub[j]) {
+	  // x->elts_ub[i] can't be in Y
+	  scp.add(bx);
+	  scp.add(b);
+	  s->add(new PredicateConstantEqual(scp,0));
+	  disjunction.add(b);
+	  ++i;
+	} else {
+	  // y->elts_ub[j] can't be in X
+	  scp.add(by);
+	  scp.add(b);
+	  s->add(new PredicateConstantEqual(scp,0));
+	  disjunction.add(b);
+	  ++j;
+	}
+      }
+    
+      // remaining values of X
+      while(i<x->elts_ub.size) {
+	Variable b(0,1);
+	bx = x->get_index_var(i);
+	scp.add(bx);
+	scp.add(b);
+	s->add(new PredicateConstantEqual(scp,0));
+	disjunction.add(b);
+	++i;
+      }
+      
+      // remaining values of Y
+      while(j<y->elts_ub.size) {
+	Variable b(0,1);
+	by = y->get_index_var(j);
+	scp.add(by);
+	scp.add(b);
+	s->add(new PredicateConstantEqual(scp,0));
+	disjunction.add(b);
+	++j;
+      }
+
+      s->add(new ConstraintBoolSumInterval(disjunction,0,disjunction.size-1));
+    }
+    else if(children.size==2) s->add(new ConstraintNotEqual(children));
     else children[0].remove(value);
   }
 }
@@ -1290,26 +1509,147 @@ void Mistral::EqualExpression::extract_variable(Solver *s) {
 }
 
 void Mistral::EqualExpression::extract_predicate(Solver *s) {
+  
+  if(children.size==3) {
+    if(children[0].domain_type == EXPRESSION && children[0].expression->is_set()) {
+      
+      s->add(new PredicateEqual(children, 1));
 
-  // if(children.size == 3)
-  //   std::cout << children[0] << " in " << children[0].get_domain() << std::endl
-  // 	      << children[1] << " in " << children[1].get_domain() << std::endl
-  // 	      << children[2] << " in " << children[2].get_domain() << std::endl;
-  // else if(children.size == 2)
-  //   std::cout << children[0] << " in " << children[0].get_domain() << std::endl
-  // 	      << children[1] << " in " << children[1].get_domain() << std::endl;
-  // else 
-  //   std::cout << "??" << std::endl;
+      unsigned int i = 0, j = 0;
+      SetExpression *x = (SetExpression*)(children[0].expression);
+      SetExpression *y = (SetExpression*)(children[1].expression);
+      Variable bx;
+      Variable by;
 
-  if(children.size==3) s->add(new PredicateEqual(children, spin));
-  else s->add(new PredicateConstantEqual(children, value, spin));
+      Vector<Variable> aux;
+      Vector<Variable> scp;
+
+      while(i<x->elts_ub.size && j<y->elts_ub.size) {
+	scp.clear();
+	Variable b(0,1);
+	b.initialise(s, false);
+	aux.add(b);
+	scp.add(children[2]);
+	scp.add(aux.back());
+	s->add(new ConstraintLess(scp));
+	scp.clear();
+	if(x->elts_ub[i] == y->elts_ub[j]) {
+	  bx = x->get_index_var(i);
+	  by = y->get_index_var(j);
+	  if(bx.is_ground()) {
+	    scp.add(by);
+	    scp.add(aux.back());
+	    s->add(new PredicateConstantEqual(scp, bx.get_min(), 1));
+	  } else if(by.is_ground()) {
+	    scp.add(bx);
+	    scp.add(aux.back());
+	    s->add(new PredicateConstantEqual(scp, by.get_min(), 1));
+	  } else {
+	    scp.add(bx);
+	    scp.add(by);
+	    scp.add(aux.back());
+	    s->add(new PredicateEqual(scp, 1));
+	  }
+	  ++i;
+	  ++j;
+	} else if(x->elts_ub[i] <= y->elts_ub[j]) {
+	  // x->elts_ub[i] can't be in Y
+	  scp.add(by);
+	  scp.add(aux.back());
+	  s->add(new PredicateConstantEqual(scp, 0, 1));
+	  ++i;
+	} else {
+	  // y->elts_ub[j] can't be in X
+	  scp.add(bx);
+	  scp.add(aux.back());
+	  s->add(new PredicateConstantEqual(scp, 0, 1));
+	  ++j;
+	}
+      }
+    
+      // remaining values of X
+      while(i<x->elts_ub.size) {
+	
+	scp.add(by);
+	scp.add(aux.back());
+	s->add(new PredicateConstantEqual(scp, 0, 1));
+	++i;
+      }
+      
+      // remaining values of Y
+      while(j<y->elts_ub.size) {
+	
+	scp.add(bx);
+	scp.add(aux.back());
+	s->add(new PredicateConstantEqual(scp, 0, 1));
+	++j;
+      }
+
+      //s->add( Sum() )
+
+    } else {
+      s->add(new PredicateEqual(children, spin));
+    }
+  } else s->add(new PredicateConstantEqual(children, value, spin));
 }
 
 const char* Mistral::EqualExpression::get_name() const {
   return "equal";
 }
 
+// Mistral::EqualSetExpression::EqualSetExpression(Variable X, Variable Y, const int sp) 
+//   : Expression(X,Y) { spin=sp; value=NOVAL; }
+// Mistral::EqualSetExpression::EqualSetExpression(Variable X, const int y, const int sp) 
+//   : Expression() { children.add(X); value=y; spin=sp; }
+// Mistral::EqualSetExpression::~EqualSetExpression() {}
+
+// void Mistral::EqualSetExpression::extract_constraint(Solver *s) {
+//   if(spin) {
+//     if(children.size==2) s->add(new ConstraintEqual(children));
+//     else children[0].set_domain(value);
+//   } else {
+//     if(children.size==2) s->add(new ConstraintNotEqual(children));
+//     else children[0].remove(value);
+//   }
+// }
+
+// void Mistral::EqualSetExpression::extract_variable(Solver *s) {
+//   Variable aux(0, 1, BOOL_VAR);
+//   self = aux;
+  
+//   self.initialise(s, false);
+//   self = self.get_var();
+//   children.add(self);
+// }
+
+// void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
+
+//   // if(children.size == 3)
+//   //   std::cout << children[0] << " in " << children[0].get_domain() << std::endl
+//   // 	      << children[1] << " in " << children[1].get_domain() << std::endl
+//   // 	      << children[2] << " in " << children[2].get_domain() << std::endl;
+//   // else if(children.size == 2)
+//   //   std::cout << children[0] << " in " << children[0].get_domain() << std::endl
+//   // 	      << children[1] << " in " << children[1].get_domain() << std::endl;
+//   // else 
+//   //   std::cout << "??" << std::endl;
+
+//   if(children.size==3) s->add(new PredicateEqual(children, spin));
+//   else s->add(new PredicateConstantEqual(children, value, spin));
+// }
+
+// const char* Mistral::EqualSetExpression::get_name() const {
+//   return "equal";
+// }
+
 Mistral::Variable Mistral::Variable::operator==(Variable x) {
+  // Variable exp;
+  // if(domain_type == EXPRESSION && is_set()) {
+  //   exp = Variable(new EqualSetExpression(*this,x,1));
+  // } else {
+  //   exp = Variable(new EqualExpression(*this,x,1));
+  // }
+  // return exp;
   Variable exp(new EqualExpression(*this,x,1));
   return exp;
 }
@@ -1447,7 +1787,7 @@ void Mistral::DisjunctiveExpression::extract_predicate(Solver *s) {
 }
 
 const char* Mistral::DisjunctiveExpression::get_name() const {
-  return "dsijunct";
+  return "disjunct";
 }
 
 Mistral::Variable Mistral::Disjunctive(Variable X, Variable Y, 
@@ -1769,6 +2109,261 @@ void Mistral::ElementExpression::extract_predicate(Solver *s) {
 }
 
 
+Mistral::ElementSetExpression::ElementSetExpression(Vector< Variable >& args, 
+						    Variable X, int ofs) 
+  : SetExpression(), offset(ofs) {
+  for(unsigned int i=0; i<args.size; ++i) children.add(args[i]);
+  children.add(X);
+  num_args = children.size;
+  initialise_domain();
+  initialise_elements();
+}
+
+Mistral::ElementSetExpression::~ElementSetExpression() {}
+
+
+void Mistral::ElementSetExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: ElementSet predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+// Mistral::Variable Mistral::ElementSetExpression::get_index_var(const int idx) {
+//   ((SetExpression*)(self.variable))->children[i];
+// }
+
+void Mistral::ElementSetExpression::initialise_domain() {
+
+  // lb and ub stand for the cardinality's bounds
+
+  // val_ub and val_lb stand for the values' bounds
+  int val_lb = INFTY;
+  int val_ub = -INFTY;
+  lb = INFTY;
+  ub = -INFTY;
+
+  int arity = num_args-1;
+
+
+  // first, we go through the children to get the cardinality's and values' bounds
+
+  SetExpression *S;
+  int i, j, nxt = children[arity].get_min(), bound;
+  //unsigned int j;
+  do {
+    i = nxt-offset;
+    
+    if(i>=0 && i<arity) {
+      S = (SetExpression*)(children[i].variable);
+
+      bound = S->elts_ub.front();
+      if(bound<val_lb) val_lb = bound;
+
+      bound = S->elts_ub.back();
+      if(bound>val_ub) val_ub = bound;
+
+      bound = S->lb;
+      if(bound<lb) lb = bound;
+
+      bound = S->ub;
+      if(bound>ub) ub = bound;
+    }
+
+    nxt = children[arity].next(i+offset);
+  } while(i+offset<nxt);
+  
+
+
+  // then we go once more over the children to get the lower and upper bounds of the set var
+  BitSet lb_domain(0,arity-1,BitSet::full);
+  BitSet ub_domain(0,arity-1,BitSet::empt);
+  BitSet aux(0,arity-1,BitSet::empt);
+  nxt = children[arity].get_min();
+
+  do {
+    i = nxt-offset;
+    
+    if(i>=0 && i<arity) {
+      S = (SetExpression*)(children[i].variable);
+      for(j=0; j<S->elts_ub.size; ++j) {
+	ub_domain.add(S->elts_ub[j]);
+      }
+
+      for(j=0; j<S->elts_lb.size; ++j) {
+	aux.add(S->elts_lb[j]);
+      }
+
+      lb_domain.intersect_with(aux);
+      aux.clear();
+    }
+
+    nxt = children[arity].next(i+offset);
+  } while(i+offset<nxt);
+
+
+  //std::cout << lb_domain << " << S << " << ub_domain << std::endl;
+
+  i = ub_domain.min();
+  j = ub_domain.max();
+
+  do {
+    elts_ub.add(i);
+    nxt = i;
+    i = ub_domain.next(nxt);
+  } while(nxt<i);
+
+  
+ //  for(int elt=0; elt<arity; ++elt) { // for each element 
+ //    nxt = children[arity].get_min();
+ //  do {
+ //    i = nxt-offset;
+    
+ //    if(i>=0 && i<arity) {
+ //      if(children[i].get_min()==0) {
+ // 	ub_domain.add()
+ //      }
+ // < lower_bound) lower_bound = children[i].get_min();
+ //      if(children[i].get_max() > upper_bound) upper_bound = children[i].get_max();
+ //    }
+
+ //    nxt = children[arity].next(i+offset);
+ //  } while(i+offset<nxt);
+  
+
+ //  domain.initialise(lower_bound, upper_bound, BitSet::empt);
+  
+ //  nxt = children[arity].get_min();
+ //  do {
+ //    i = nxt-offset;
+    
+ //    if(i>=0 && i<arity) {
+ //      children[i].union_to(domain);
+ //    }
+
+ //    nxt = children[arity].next(i+offset);
+ //  } while(i+offset<nxt);
+
+
+ //  nxt = lower_bound;
+ //  do {
+ //    i = nxt;
+ //    values.add(i);
+ //    nxt = domain.next(i);
+ //  } while(i<nxt);
+  
+}
+
+// void Mistral::ElementSetExpression::extract_variable(Solver *s) {
+//   initialise_domain();
+
+//   Variable aux(new SetExpression(elts_lb, elts_ub, lb, ub));
+//   self = aux;
+
+//   self.initialise(s, false);
+//   //self = self.get_var();
+//   //children.add(self);
+// }
+
+const char* Mistral::ElementSetExpression::get_name() const {
+  return "set_element";
+}
+
+void Mistral::ElementSetExpression::extract_predicate(Solver *s) {
+ int arity = num_args-1;
+ unsigned int i, j, k;
+
+ // std::cout << "HERE " << std::endl;
+ // std::cout << children[arity] << " in " << children[arity].get_domain() << std::endl;
+
+ //int nxt = children[arity].get_min();
+ int lb_index = children[arity].get_min();
+ int ub_index = children[arity].get_max();
+ SetExpression *S;
+ 
+ //VarArray scp[ub_index-lb_index+1];
+ Vector<Variable> scp[elts_ub.size];
+ 
+ for(i=lb_index; i<=ub_index; ++i) {
+   if(i-offset>=0 && i-offset<arity) {
+     if(children[arity].contain(i)) {
+
+       //std::cout << children[i-offset] << std::endl;
+
+       S = (SetExpression*)(children[i-offset].variable);
+
+	   // std::cout << S->children << std::endl;
+	   // std::cout << S->elts_ub << std::endl;
+	   // std::cout << S->num_args << std::endl;
+
+
+       k=0;
+       for(j=0; j<elts_ub.size; ++j) {
+
+	 //   std::cout << k << std::endl;
+	 
+	 // int hh = elts_ub[j];
+	 // int jj = S->elts_ub[k];
+
+	 // if(hh == jj) {
+
+	 if(k<S->elts_ub.size && elts_ub[j] == S->elts_ub[k]) {
+	   scp[j].add(S->get_index_var(k++));
+	 } else {
+	   Variable x(0);
+	   scp[j].add(x);
+	 }
+       }
+     } else {
+       for(j=0; j<elts_ub.size; ++j) {
+	 Variable x(0);
+	 scp[j].add(x);
+       }
+     }
+   }
+ }
+
+ 
+ for(j=0; j<elts_ub.size; ++j) {
+   //std::cout << scp[j] << std::endl;
+
+   scp[j].add(children[arity]);
+   scp[j].add(get_index_var(j));
+   
+   s->add(new PredicateElement(scp[j], offset));
+   
+   
+   //std::cout << std::endl << std::endl << s << std::endl;
+   
+   
+   // s->add(Element(scp[j], children[arity].get_var(), offset) == 
+   // 	   ((SetExpression*)(self.variable))->children[j].get_var());
+ }
+ 
+ scp[0].clear();
+ for(i=0; i<=arity; ++i) {
+   scp[0].add(children[i]);
+ }
+ scp[0].add(self);
+ s->add(new PredicateElement(scp[0], offset));
+
+  // do {
+  //   i = nxt-offset;
+
+  //   if(i>=0 && i<arity) {
+  //     S = (SetExpression*)(children[i].variable);
+
+  //     k=0;
+  //     for(unsigned int j=0; j<elts_ub.size; ++j) {
+  // 	if(elts_ub[j] == S->elts_ub[k]) {
+	  
+  // 	}
+  //     }
+
+  //   nxt = children[arity].next(i+offset);
+  // } while(i+offset<nxt);
+
+  //s->add(new PredicateElementSet(children, offset));
+}
+
 Mistral::Variable Mistral::VarArray::operator[](Variable X) {
   Variable exp( new ElementExpression(*this, X, 0) );
   return exp;
@@ -1778,13 +2373,24 @@ Mistral::Variable Mistral::VarArray::operator[](const int X) {
   return stack_[X];
 }
 
-Mistral::Variable Mistral::Element(Vector<Variable> X, Variable selector, int offset) {
+Mistral::Variable Mistral::Element(Vector<Variable>& X, Variable selector, int offset) {
   Variable exp( new ElementExpression(X, selector, offset) );
   return exp;
 }
 
-Mistral::Variable Mistral::Element(VarArray X, Variable selector, int offset) {
+Mistral::Variable Mistral::Element(VarArray& X, Variable selector, int offset) {
   Variable exp( new ElementExpression(X, selector, offset) );
+  return exp;
+}
+
+
+Mistral::Variable Mistral::ElementSet(Vector<Variable>& X, Variable selector, int offset) {
+  Variable exp( new ElementSetExpression(X, selector, offset) );
+  return exp;
+}
+
+Mistral::Variable Mistral::ElementSet(VarArray& X, Variable selector, int offset) {
+  Variable exp( new ElementSetExpression(X, selector, offset) );
   return exp;
 }
 
@@ -1792,13 +2398,66 @@ Mistral::Variable Mistral::Element(VarArray X, Variable selector, int offset) {
 Mistral::SetExpression::SetExpression(const int lelt, const int uelt, 
 				      const int clb, const int cub) 
   : BoolSumExpression(clb, cub) {
-  elements.initialise(0, uelt-lelt+1);
+  num_args = 0;
+  elts_ub.initialise(0, uelt-lelt+1);
   for(int elt=lelt; elt<=uelt; ++elt) {
-    elements.add(elt);
-    Variable x(0, 1, BOOL_VAR);
-    children.add(x);
+    elts_ub.add(elt);
+    // Variable x(0, 1, BOOL_VAR);
+    // children.add(x);
+  }
+  initialise_elements();
+}
+
+
+// Mistral::SetExpression::SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
+
+Mistral::SetExpression::SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub)
+  : BoolSumExpression(clb, cub) {
+  // elts_ub.initialise(0, ub.back()-ub.front()+1);
+  // unsigned int i=0, j=0;
+  // while(i<ub.size) {
+  //   elts_ub.add(ub[i]);
+  //   if(lb.size>j && lb[j] == ub[i]) {
+  //     elts_lb.add(lb[j++]);
+  //     Variable c(1, 1, CONST_VAR);
+  //     children.add(c);
+  //   } else {
+  //     Variable x(0, 1, BOOL_VAR);
+  //     children.add(x);
+  //   }
+  //   ++i;
+  // }
+  num_args = 0;
+  elts_ub.initialise(0, ub.back()-ub.front()+1);
+  elts_ub.initialise(0, lb.back()-lb.front()+1);
+  unsigned int i=0;
+  while(i<ub.size) {
+    elts_ub.add(ub[i++]);
+  }
+
+  i=0;
+  while(i<lb.size) {
+    elts_lb.add(lb[i++]);
+  }
+  initialise_elements();
+}
+
+
+void Mistral::SetExpression::initialise_elements() {
+  unsigned int i=0, j=0;
+  while(i<elts_ub.size) {
+    if(elts_lb.size>j && elts_lb[j] == elts_ub[i]) {
+      ++j;
+      Variable c(1);
+      children.add(c);
+    } else {
+      Variable x(0, 1);
+      children.add(x);
+    }
+    ++i;
   }
 }
+
 
 Mistral::SetExpression::~SetExpression() {}
 
@@ -1807,30 +2466,35 @@ const char* Mistral::SetExpression::get_name() const {
 }
 
 int Mistral::SetExpression::get_element_index(const int vali)  {
-  int target, lb = 0, ub = elements.size-1, idx = -1;
-  while(lb <= ub) {
+  int target, xlb = 0, xub = elts_ub.size-1, idx = -1;
+  while(xlb <= xub) {
 
-    //std::cout << vali << " [" << lb << "," << ub << "] -> " ; //<< std::endl;
+    //std::cout << vali << " [" << xlb << "," << xub << "] -> " ; //<< std::endl;
 
-    target = (lb+ub)/2;
+    target = (xlb+xub)/2;
 
-    // std::cout << target << ": " << elements[target] << " " << idx << " -- " <<
-    // 	      elements << std::endl;
+    // std::cout << target << ": " << elts_ub[target] << " " << idx << " -- " <<
+    // 	      elts_ub << std::endl;
 
-    if(elements[target] == vali) { idx=target; break; }
-    else if(elements[target] > vali) ub = target-1;
-    else lb = target+1;
+    if(elts_ub[target] == vali) { idx=target; break; }
+    else if(elts_ub[target] > vali) xub = target-1;
+    else xlb = target+1;
   }
   //  std::cout << " ==> " << idx << std::endl; 
   return idx;
 }
 
+// Mistral::Variable Mistral::SetExpression::get_index_var(const int idx) {
+//   return children[idx];
+// }
+
+
 Mistral::Variable Mistral::SetExpression::get_elt_var(const int vali) {
-  // int target = 0, lb = -1, ub = elements.size;
+  // int target = 0, lb = -1, ub = elts_ub.size;
   // while(lb < ub) {
   //   target = lb+ub/2;
-  //   if(elements[target] == vali) break;
-  //   else if(elements[target] > vali) ub = target;
+  //   if(elts_ub[target] == vali) break;
+  //   else if(elts_ub[target] > vali) ub = target;
   //   else lb = target;
   // }
   // return children[target];
@@ -1841,31 +2505,76 @@ Mistral::Variable Mistral::SetExpression::get_elt_var(const int vali) {
 }
 
 std::ostream& Mistral::SetExpression::display(std::ostream& os) const {
+  // os << std::endl << elts_lb << std::endl
+  //    << elts_ub << std::endl;
+  // for(unsigned int i=0; i<elts_ub.size; ++i) {
+  //   os << " " << children[i].get_domain();
+  // }
+  // os << std::endl;
+
+  
+  //std::cout << children << std::endl;
+
+
+  bool first=true;
   os << "{" ;
-  if(children[0].get_min()) os << elements[0];
-  for(unsigned int i=1; i<elements.size; ++i) {
-    if(children[i].get_min()) os << ", " << elements[i];
+  //if(children[0].get_min()) os << elts_ub[0];
+  for(unsigned int i=0; i<elts_ub.size; ++i) {
+    if(children[num_args+i].get_min()) {
+      if(!first) os << ", " ;
+      else first = false; 
+      os << elts_ub[i];
+    }
   }
+  first=true;
   os << "} <= S" << id << " <= {"; 
-  if(children[0].get_max()) os << elements[0];
-  for(unsigned int i=1; i<elements.size; ++i) {
-    if(children[i].get_max()) os << ", " << elements[i];
+  //if(children[0].get_max()) os << elts_ub[0];
+  for(unsigned int i=0; i<elts_ub.size; ++i) {
+    if(children[num_args+i].get_max()) {
+      if(!first) os << ", " ;
+      else first = false;
+      os << elts_ub[i];
+    }
   }
   os << "}";
   return os;
 }
 
-int Mistral::SetExpression::get_solution_value() const { 
-  int i=elements.size;
+int Mistral::SetExpression::get_solution_int_value() const { 
+  int i=elts_ub.size;
   int t = 0;
   int m = 1;
   while(--i>=0) {
-    if(solver->last_solution_lb[children[i].id()]) {
-      t += m*elements[i];
+    if((children[i].domain_type == CONST_VAR && children[i].constant_value == 1) ||
+       solver->last_solution_lb[children[i].id()]) {
+      t += m*elts_ub[i];
       m *= 10;
     }
   }
   return t;
+} 
+
+std::string Mistral::SetExpression::get_solution_str_value() const { 
+  std::ostringstream  ret_str;
+
+  ret_str << "{";
+  bool first = true;
+
+  for(unsigned int i=0; i<elts_ub.size; ++i) {
+    if((children[i].domain_type == CONST_VAR && children[i].constant_value == 1) ||
+       solver->last_solution_lb[children[i].id()]) {
+      if(!first) {
+	ret_str << ", " ;
+      } else {
+	first = false;
+      }
+      ret_str << elts_ub[i];
+    }
+  }
+
+  ret_str << "}";
+
+  return ret_str.str();
 } 
 
 Mistral::Variable Mistral::SetVariable(const int lelt, const int uelt, const int clb, const int cub) {
@@ -1873,6 +2582,13 @@ Mistral::Variable Mistral::SetVariable(const int lelt, const int uelt, const int
   if(cub > uelt-lelt+1) ub = (uelt-lelt+1);
   SetExpression *se = new SetExpression(lelt, uelt, clb, ub);
   //std::cout << "create " << se << std::endl;
+  Variable exp(se);
+  return exp;
+}
+
+Mistral::Variable Mistral::SetVariable(const Vector<int>& slb, const Vector<int>& sub, 
+				       const int clb, const int cub) {
+  SetExpression *se = new SetExpression(slb, sub, clb, cub);
   Variable exp(se);
   return exp;
 }
@@ -1890,24 +2606,110 @@ void Mistral::SubsetExpression::extract_constraint(Solver *s) {
   SetExpression *x = (SetExpression*)(children[0].expression);
   SetExpression *y = (SetExpression*)(children[1].expression);
 
-  s->add(children[0] <= children[1]);
 
-  while(i<x->elements.size && j<y->elements.size) {
-    if(x->elements[i] == y->elements[j]) {
-      s->add(x->children[i] <= y->children[j]);
+  
+  // if there are k elements of Y that can't be in X, then card(X) + k <= card(Y)
+  Vector<Variable> extras;
+  int c_offset=0;
+  
+  while(i<x->elts_ub.size && j<y->elts_ub.size) {
+
+     // std::cout << std::endl << x->elts_ub[i] << " - " <<  y->elts_ub[j] << std::endl;
+
+
+    // //std::cout << std::endl;
+    // for(int nx=0; nx<x->children.size; ++nx) {
+    //   std::cout << "X: " << x->children[nx] << " in " << x->children[nx].get_domain() << ", ";
+    // }
+
+    // std::cout << std::endl;
+    // for(int ny=0; ny<y->children.size; ++ny) {
+    //   std::cout  << "Y: " << y->children[ny] << " in " << y->children[ny].get_domain() << ", ";
+    // }
+
+
+    if(x->elts_ub[i] == y->elts_ub[j]) {
+
+       // std::cout << " -> equal, post prec constraint " << x->get_index_var(i) << " in " << x->get_index_var(i).get_domain() << " <= " << y->get_index_var(j) << " in " << y->get_index_var(j).get_domain() << std::endl;
+
+      s->add(x->get_index_var(i) <= y->get_index_var(j));
+
+      //      std::cout << s << std::endl << std::endl;
+
       ++i;
       ++j;
-    } else if(x->elements[i] <= y->elements[j]) {
-      s->add(x->children[i] == 0);
+    } else if(x->elts_ub[i] <= y->elts_ub[j]) {
+
+       // std::cout << " -> " << x->elts_ub[i] << " can't be in Y, hence in X " << x->get_index_var(i) << " in "
+       // 		<< x->get_index_var(i).get_domain() << std::endl;
+
+      s->add(x->get_index_var(i) == 0);
+      //x->get_index_var(i).set_domain(0);
+
+
+      //      std::cout << s << std::endl << std::endl;
+
       ++i;
     } else {
+
+      //    std::cout << " -> " << y->elts_ub[j] << " is not in X, don't care" << std::endl;
+
+      if(y->get_index_var(j).get_min()>0) {
+	//std::cout << " (but must be in Y)" << std::endl;
+	++c_offset;
+      } else {
+	//std::cout << " (may be in Y)" << std::endl;
+	extras.add(y->get_index_var(j));
+      }
+
       ++j;
     }
   }
-  while(i<x->elements.size) {
-    s->add(x->children[i] == 0);
+
+  // remaining values of X
+  while(i<x->elts_ub.size) {
+
+    // std::cout << x->elts_ub[i] << " - " <<  y->elts_ub[j] << std::endl;
+    // std::cout << " -> " << x->elts_ub[i] << " can't be in Y, hence in X* " << x->get_index_var(i) << std::endl;
+
+    s->add(x->get_index_var(i) == 0);
+
+    //std::cout << s << std::endl << std::endl;
+
     ++i;
   }
+
+  // remaining values of Y
+  while(j<y->elts_ub.size) {
+
+    // std::cout << x->elts_ub[i] << " - " <<  y->elts_ub[j] << std::endl;
+    // std::cout << " -> " << y->elts_ub[j] << " is not in X, don't care" << std::endl;
+
+    if(y->get_index_var(j).get_min()>0) {
+      //std::cout << " (but must be in Y)" << std::endl;
+      ++c_offset;
+    } else {
+      //std::cout << " (may be in Y)" << std::endl;
+      extras.add(y->get_index_var(j));
+    }
+    //std::cout << s << std::endl << std::endl;
+
+    ++j;
+  }
+
+
+  // std::cout << extras << std::endl;
+
+  if(extras.size>0) {
+    //extras.add(children[0].get_var());
+    s->add(Precedence((BoolSum(extras) + children[0]), c_offset, children[1]));
+    //s->add(children[0].get_var() + Sum() <= children[1].get_var());
+  } else {
+    s->add(Precedence(children[0], c_offset, children[1]));
+    //s->add(children[0].get_var() <= children[1].get_var());
+  }
+
+  //s->add(children[0].get_var() <= children[1].get_var());
 }
 
 void Mistral::SubsetExpression::extract_variable(Solver *s) {
@@ -1932,6 +2734,30 @@ Mistral::Variable Mistral::Subset(Variable X, Variable Y) {
 
 Mistral::MemberExpression::MemberExpression(Variable X, Variable Y) 
   : Expression(X,Y) { 
+  lb = +INFTY;
+  ub = -INFTY;
+  size = 0;
+}
+
+Mistral::MemberExpression::MemberExpression(Variable X, const int lo, const int up) 
+  : Expression(X) { 
+  lb = lo;
+  ub = up;
+  size = ub-lb+1;
+}
+
+Mistral::MemberExpression::MemberExpression(Variable X, const BitSet& s) 
+  : Expression(X) {
+  lb = s.min();
+  ub = s.max();
+  size = s.size();
+}
+
+Mistral::MemberExpression::MemberExpression(Variable X, const Vector<int>& s) 
+  : Expression(X) {
+  lb = s.front();
+  ub = s.back();
+  size = s.size; 
 }
 
 Mistral::MemberExpression::~MemberExpression() {}
@@ -1939,37 +2765,126 @@ Mistral::MemberExpression::~MemberExpression() {}
 void Mistral::MemberExpression::extract_constraint(Solver *s) { 
 
   //unsigned int i = 0, j = 0;
-  SetExpression *y = (SetExpression*)(children[1].expression);
+  if(children.size == 2) {
+    // set variable
+    
+    VarArray scp;
+    SetExpression *y = (SetExpression*)(children[1].expression);
+    s->add(children[1] >= 1); // at least one element in the set
+    int vali, vnxt = children[0].get_min(), idx;
+    do {
+      scp.clear();
+      vali = vnxt;
+      idx = y->get_element_index(vali);
+      if(idx>=0) {
+	Variable x(0,1);
+	scp.add(children[0]);
+	scp.add(x);
+	s->add(new PredicateConstantEqual(scp,vali));
+	
+	scp.clear();
+	scp.add(x);
+	scp.add(y->children[idx]);
+	s->add(new ConstraintLess(scp));
 
-  s->add(children[1] >= 1); // at least one element in the set
+	//s->add((children[0] == vali) <= y->children[idx]);
+      } else {
+	children[0].remove(vali);
 
-  int vali, vnxt = children[0].get_min(), idx;
-  do {
+	//s->add(children[0] != vali);
+      }
+      vnxt = children[0].next(vali);
+    } while(vali < vnxt);
+  } else if(size == (ub-lb+1)) {
+    // interval 
+    
+    children[0].set_min(lb);
+    children[0].set_max(ub);
+  } else {
+    // set
 
-    vali = vnxt;
-
-    idx = y->get_element_index(vali);
-
-    if(idx>=0) {
-      s->add((children[0] == vali) <= y->children[idx]);
-    } else {
-      s->add(children[0] != vali);
-    }
-    vnxt = children[0].next(vali);
-
-
-  } while(vali < vnxt);
+    children[0].set_domain(values);
+  }   
 
 }
 
 void Mistral::MemberExpression::extract_variable(Solver *s) {
-  std::cerr << "Error: Member constraint can't yet be used as a predicate" << std::endl;
-  exit(0);
+  Variable aux(0, 1, BOOL_VAR);
+  self = aux;
+  
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
 }
 
 void Mistral::MemberExpression::extract_predicate(Solver *s) { 
-  std::cerr << "Error: Member constraint can't yet be used as a predicate" << std::endl;
-  exit(0);
+
+  //unsigned int i = 0, j = 0;
+  if(children.size == 3) {
+    // set variable
+    
+    VarArray scp;
+    VarArray conjunction;
+    SetExpression *y = (SetExpression*)(children[1].expression);
+
+    Variable empty(0,1);
+    scp.add(children[1]);
+    scp.add(empty);
+    s->add(new PredicateLowerBound(scp, 1) );
+
+    scp.clear();
+    scp.add(children[2]);
+    scp.add(empty);
+    s->add(new ConstraintLess(scp));
+
+    //s->add(children[1] >= 1); // at least one element in the set
+    int vali, vnxt = children[0].get_min(), idx;
+    do {
+      scp.clear();
+      vali = vnxt;
+      idx = y->get_element_index(vali);
+      if(idx>=0) {
+	Variable x(0,1);
+	scp.add(children[0]);
+	scp.add(x);
+	s->add(new PredicateConstantEqual(scp,vali,1));
+	
+    	scp.clear();
+
+	Variable b(0,1);
+	scp.add(x);
+	scp.add(y->children[idx]);
+	scp.add(b);
+	s->add(new PredicateLess(scp));
+
+	conjunction.add(b);
+
+	//s->add((children[0] == vali) <= y->children[idx]);
+      } else {
+
+	Variable b(0,1);
+	scp.add(children[0]);
+	scp.add(b);
+	s->add(new PredicateConstantEqual(scp,vali,0));
+
+	//children[0].remove(vali);
+
+	//s->add(children[0] != vali);
+      }
+      vnxt = children[0].next(vali);
+    } while(vali < vnxt);
+  } else if(size == (ub-lb+1)) {
+    // interval 
+    
+    s->add(new PredicateIntervalMember(children,lb,ub));
+    //children[0]->set_min(lb);
+    //children[0]->set_max(ub);
+  } else {
+    // set
+    
+    s->add(new PredicateSetMember(children,values));
+    //children[0]->set_domain(values);
+  }
 }
 
 const char* Mistral::MemberExpression::get_name() const {
@@ -1978,6 +2893,21 @@ const char* Mistral::MemberExpression::get_name() const {
 
 Mistral::Variable Mistral::Member(Variable X, Variable Y) {
   Variable exp(new MemberExpression(X, Y));
+  return exp;
+}
+
+Mistral::Variable Mistral::Member(Variable X, const int lo, const int up) {
+  Variable exp(new MemberExpression(X, lo, up));
+  return exp;
+}
+
+Mistral::Variable Mistral::Member(Variable X, const BitSet& s) {
+  Variable exp(new MemberExpression(X, s));
+  return exp;
+}
+
+Mistral::Variable Mistral::Member(Variable X, const Vector<int>& s) {
+  Variable exp(new MemberExpression(X, s));
   return exp;
 }
 

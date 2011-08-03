@@ -71,8 +71,9 @@ namespace Mistral {
 #define BITSET_VAR  8
 #define LIST_VAR    16
 #define VIRTUAL_VAR 0
-  //#define DYN_VAR     27
-#define DYN_VAR     31
+#define DYN_VAR     27
+  //#define DYN_VAR     31
+#define REMOVED_VAR 512
 #define EXPRESSION  3
   
 #define DOMAIN_C     1

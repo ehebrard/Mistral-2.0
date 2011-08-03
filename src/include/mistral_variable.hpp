@@ -66,7 +66,8 @@ namespace Mistral {
       return id>-1;
     }
 
-    virtual int get_solution_value() const ;//{ return solver->last_solution_lb[id] } ; 
+    virtual int get_solution_int_value() const ;//{ return solver->last_solution_lb[id] } ; 
+    virtual std::string get_solution_str_value() const ;//{ return solver->last_solution_lb[id] } ; 
     virtual int get_solution_min() const ;//{ return solver->last_solution_lb[id] } ; 
     virtual int get_solution_max() const ;//{ return solver->last_solution_ub[id] } ; 
 
@@ -377,6 +378,12 @@ namespace Mistral {
 
     inline Event remove(const int v) {
       Event removal = DOMAIN_EVENT;
+
+   // if(id==17) {
+   //    std::cout << "xremove " << v << std::endl;
+      
+   //  }
+
 
       // first check if we can abort early
       if(!contain(v)) return NO_EVENT;
@@ -1276,14 +1283,15 @@ namespace Mistral {
 
     Event setValue( const int val );    
     Event setState( const int vals );    
-    inline int id() const {return variable->id;}
+    inline int id() const {return (domain_type == CONST_VAR ? -1 : variable->id);}
     inline Solver* get_solver() {return variable->solver;}
 
     /*!@name Constant Accessors and Iterators*/
     //@{
     /// Returns the assigned value if it exists
     int get_value() const ; 
-    int get_solution_value() const ; 
+    std::string get_solution_str_value() const ; 
+    int get_solution_int_value() const ; 
     int get_solution_min() const ; 
     int get_solution_max() const ; 
     /// Returns the domain 
@@ -1545,6 +1553,10 @@ namespace Mistral {
     //virtual void reify(Solver *s, Variable X);
     virtual void extract_variable(Solver*);
     virtual const char* get_name() const { return "var"; }
+    bool is_set() const {
+      std::string name = get_name();
+      return (name[0] == 's' && name[1] == 'e' && name[2] == 't');
+    }
 
     virtual std::ostream& display(std::ostream& os) const;    
   };
@@ -1725,6 +1737,24 @@ namespace Mistral {
 
   };
 
+  // class EqualSetExpression : public Expression {
+
+  // public:
+  
+  //   int spin;
+  //   int value;
+
+  //   EqualSetExpression(Variable X, Variable Y, const int sp=1);
+  //   EqualSetExpression(Variable X, const int y, const int sp=1);
+  //   virtual ~EqualSetExpression();
+
+  //   virtual void extract_constraint(Solver*);
+  //   virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
   class PrecedenceExpression : public Expression {
 
   public:
@@ -1796,6 +1826,7 @@ namespace Mistral {
     int lb;
     int ub;
 
+    BoolSumExpression() : Expression() {}
     BoolSumExpression(const int l, const int u);
     BoolSumExpression(Vector< Variable >& args, const int l, const int u);
     virtual ~BoolSumExpression();
@@ -1834,6 +1865,7 @@ namespace Mistral {
 
   };
 
+  //Variable Sum(Vector< Variable >& args);
   Variable Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T);
   Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T);
   Variable Sum(Vector< Variable >& args, Vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
@@ -1862,34 +1894,76 @@ namespace Mistral {
 
   };
 
-  Variable Element(Vector<Variable> X, Variable selector, int offset=0);
-  Variable Element(VarArray X, Variable selector, int offset=0);
+  Variable Element(Vector<Variable>& X, Variable selector, int offset=0);
+  Variable Element(VarArray& X, Variable selector, int offset=0);
 
 
   class SetExpression : public BoolSumExpression {
     
   public:
     
-    Vector< int > elements;
+    //VarArray elements;
+    Vector< int > elts_ub;
+    Vector< int > elts_lb;
+    int num_args;
+    // BitSet required;
+    // BitSet allowed;
  
+    SetExpression() : BoolSumExpression() {}
     SetExpression(const int lelt, const int uelt, const int clb, const int cub);
+    // SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
+    SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub);
+    void initialise_elements();
     virtual ~SetExpression();
     
+    Variable get_index_var(const int idx) {return children[num_args+idx];}
     Variable get_elt_var(const int vali);
     int get_element_index(const int vali);
     
+    // bool can_be_in(const int vali) { return allowed.contain(vali); }
+    // bool must_be_in(const int vali) { return required.contain(vali); }
+    // int get_smallest_elt() { return elements.front(); }
+    // int get_highest_elt() { return elements.back(); }
+
     virtual const char* get_name() const;
     virtual std::ostream& display(std::ostream& os) const;
-    virtual int get_solution_value() const ;//{ return solver->last_solution_lb[id] } ; 
+    virtual int get_solution_int_value() const ;
+    virtual std::string get_solution_str_value() const ;
   };
 
   Variable SetVariable(const int lelt, const int uelt, 
   		       const int clb=0, const int cub=INFTY);
-  // Variable SetVariable(Vector<int> lb, Vector<int> ub, const int clb, const int cub);
+  Variable SetVariable(const Vector<int>& lb, const Vector<int>& ub, 
+		       const int clb, const int cub);
   // Variable SetVariable(std::vector<int> lb, std::vector<int> ub, const int clb, const int cub);
   // Variable SetVariable(BitSet lb, Bitset ub, const int clb, const int cub);
 
   Variable Card(Variable S); //{ return S; }
+
+
+  class ElementSetExpression : public SetExpression {
+
+  public:
+
+    int offset;
+    //VarArray elements;
+    //Vector< int > values;
+
+    ElementSetExpression(Vector< Variable >& args, Variable X, int ofs);
+    virtual ~ElementSetExpression();
+    void initialise_domain();
+
+    //virtual Variable get_index_var(const int idx);
+
+    virtual void extract_constraint(Solver*);
+    //virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable ElementSet(Vector<Variable>& X, Variable selector, int offset=0);
+  Variable ElementSet(VarArray& X, Variable selector, int offset=0);
 
 
   class SubsetExpression : public Expression {
@@ -1913,7 +1987,15 @@ namespace Mistral {
 
   public:
 
+    int lb;
+    int ub;
+    int size;
+    BitSet values;
+
     MemberExpression(Variable X, Variable Y);
+    MemberExpression(Variable X, const int lo, const int up);
+    MemberExpression(Variable X, const BitSet& s);
+    MemberExpression(Variable X, const Vector<int>& s);
     virtual ~MemberExpression();
 
     virtual void extract_constraint(Solver*);
@@ -1924,6 +2006,9 @@ namespace Mistral {
   };
 
   Variable Member(Variable X, Variable Y);
+  Variable Member(Variable X, const int lo, const int up);
+  Variable Member(Variable X, const BitSet& s);
+  Variable Member(Variable X, const Vector<int>& s);
 
 
   class VarArray : public Vector< Variable > {
@@ -2022,6 +2107,12 @@ namespace Mistral {
   inline Event VariableRange::remove(const int v) {
     Event removal = DOMAIN_EVENT;
     
+    // if(id==17) {
+    //   std::cout << "rremove " << v << std::endl;
+      
+    // }
+
+
     // first check if we can abort early
     if(min>v || max<v) {
       return NO_EVENT;

@@ -123,6 +123,7 @@ Mistral::Constraint::Constraint(std::vector< Variable >& scp) {
   for(unsigned int i=0; i<scp.size(); ++i) {
     scope.add(scp[i]);
   }
+
 }
 
 void Mistral::Constraint::add(Variable X) {
@@ -176,6 +177,11 @@ void Mistral::Constraint::restore() {
   // }
 
   if(!is_posted) {
+
+#ifdef _DEBUG_CGRAPH
+	std::cout << " ---> post " << this << std::endl;
+#endif
+
     is_posted = true;
     solver->notify_post(this);
   }
@@ -773,6 +779,9 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
       // j is 1 iff degree(x0) > degree(x1), 
       // in that case we want to transfer x1's constraints on x0.
       // x[j] <- x[1-j]
+
+      solver->domain_types[k[j]] |= REMOVED_VAR;
+
       
       ConstraintNode nd;
       nd = solver->constraint_graph[k[j]]->first(_VALUE_);
@@ -804,7 +813,6 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::propagate() {
 
   unsigned int i;
   int var;
-
   PropagationOutcome wiped = CONSISTENT;
   if(active.size) {
     for(i=0; IS_OK(wiped) && i<changes.size; ++i) {
@@ -1122,6 +1130,13 @@ void Mistral::PredicateEqual::mark_domain() {
 }
 
 Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
+
+  // if(id==49) {
+  //   std::cout << is_posted << " rewrite (" << scope[0] << " in " << scope[0].get_domain()
+  // 	      << " == " << scope[1] << " in " << scope[1].get_domain()
+  // 	      << ") <-> " << scope[2] << " in " << scope[2].get_domain() << std::endl;
+  // }
+
   Mistral::PropagationOutcome wiped = propagate();
   if( active.size == 2 ) {
     relax();
@@ -1130,6 +1145,10 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
       if( (spin + scope[2].get_min()) == 1 ) {
 	solver->add(new ConstraintNotEqual(scope));
       } else {
+
+	// std::cout << "   => change to an equal constraint" << std::endl;
+
+	--scope.size;
 	solver->add(new ConstraintEqual(scope));
       }
     } else {
@@ -1195,11 +1214,11 @@ void Mistral::PredicateConstantEqual::initialise() {
 }
 
 void Mistral::PredicateConstantEqual::mark_domain() {
-  if(!spin && 
-     value > scope[0].get_min() && 
-     value < scope[0].get_max()) {
-    solver->mark_non_convex(scope[0].id());
-  }
+  // if(!spin && 
+  //    value > scope[0].get_min() && 
+  //    value < scope[0].get_max()) {
+  solver->mark_non_convex(scope[0].id());
+  //  }
 }
 
 Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate() {      
@@ -1226,6 +1245,91 @@ std::ostream& Mistral::PredicateConstantEqual::display(std::ostream& os) const {
   os << scope[1] << " <=> (";
   if(spin) os << scope[0] << " == " << value;
   else os << scope[0] << " =/= " << value;
+  os << ")";
+  return os;
+}
+
+
+void Mistral::PredicateIntervalMember::initialise() {
+  Constraint::initialise();
+  trigger_on(_DOMAIN_, 0);
+  trigger_on(_VALUE_, 1);
+  set_idempotent(false);
+}
+
+void Mistral::PredicateIntervalMember::mark_domain() {
+  solver->mark_non_convex(scope[0].id());
+}
+
+Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  if( scope[1].is_ground() ) {
+    if( (spin + scope[1].get_min()) == 1 ) {
+      if( IS_FAIL(scope[0].remove_interval(lower_bound, upper_bound)) ) wiped = FAILURE(0);
+    } else {
+      //if( IS_FAIL(scope[0].set_domain(lower_bound, upper_bound)) ) wiped = FAILURE(0);
+      if( IS_FAIL(scope[0].set_min(lower_bound)) ) wiped = FAILURE(0);
+      else if( IS_FAIL(scope[0].set_max(upper_bound)) ) wiped = FAILURE(0);
+    }
+  } else {
+    if( !(scope[0].intersect(lower_bound, upper_bound)) ) {
+      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+    } else if( scope[0].included(lower_bound, upper_bound) ) {
+      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+    }
+  }
+  
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateIntervalMember::display(std::ostream& os) const {
+  os << scope[1] << " <=> (";
+  if(spin) os << scope[0] << " in [" << lower_bound << ".." << upper_bound << "]";
+  else os << scope[0] << " in ..]" << lower_bound << "," << upper_bound << "[..";
+  os << ")";
+  return os;
+}
+
+
+void Mistral::PredicateSetMember::initialise() {
+  Constraint::initialise();
+  trigger_on(_DOMAIN_, 0);
+  trigger_on(_VALUE_, 1);
+  set_idempotent(false);
+
+  non_values.initialise(scope[0].get_min(), scope[0].get_max(), BitSet::full);
+  non_values.setminus_with(values);
+}
+
+void Mistral::PredicateSetMember::mark_domain() {
+  solver->mark_non_convex(scope[0].id());
+}
+
+Mistral::PropagationOutcome Mistral::PredicateSetMember::propagate() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  if( scope[1].is_ground() ) {
+    if( (spin + scope[1].get_min()) == 1 ) {
+      if( IS_FAIL(scope[0].set_domain(non_values)) ) wiped = FAILURE(0);
+    } else {
+      if( IS_FAIL(scope[0].set_domain(values)) ) wiped = FAILURE(0);
+    }
+  } else {
+    if( !(scope[0].intersect(values)) ) {
+      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+    } else if( scope[0].included(values) ) {
+      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+    }
+  }
+  
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateSetMember::display(std::ostream& os) const {
+  os << scope[1] << " <=> (" << scope[0] ;
+  if(!spin) os << " not";
+  os << " in " << values; 
   os << ")";
   return os;
 }
@@ -1992,7 +2096,8 @@ Mistral::PropagationOutcome Mistral::PredicateMul::pruneTernary(const int revise
 #endif
 
       int (*oper)(const int, const int, int&);
-      int x, y, bound[6], zero[3], lb, ub, v[4], i, r;
+      int x, y, bound[6], // zero[3],
+	lb, ub, v[4], i, r;
       
       for(i=0; i<3; ++i)
 	{     
@@ -2190,9 +2295,9 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
 #ifdef _DEBUG_MUL
   std::cout << "revise bounds of " << scope[Z].get_domain() << " = " 
 	    << scope[X].get_domain() << "/" << scope[Y].get_domain() 
-	    // << " = [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
-	    // << (zero[Z] ? "{0}" : "_") << "|" 
-	    // << min_pos[Z] << ".." << max_pos[Z] << "]" 
+	    << " = [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
+	    << (zero[Z] ? "{0}" : "_") << "|" 
+	    << min_pos[Z] << ".." << max_pos[Z] << "]" 
 	    << std::endl; 
 #endif
 
@@ -2204,7 +2309,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
   int lb_pos=min_pos[Z], ub_pos=max_pos[Z], lb_neg=min_neg[Z], ub_neg=max_neg[Z], 
     nlb1, nlb2, nub1, nub2;
     //lb_aux, ub_aux;
-  bool pruning_flag = false, pzero = false;
+  bool pruning_flag = false, pzero = false, ppos = max_pos[Z]<=0, pneg = min_neg[Z]>=0;
   
   // first rule: if X can be 0, and Y can be 0, then Z can be anything
   if(!zero[X]) { // if X cannot be 0, then neither can Y nor Z
@@ -2261,10 +2366,13 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
 	  ub_pos = nub1;
 	  pruning_flag = true;
 	}
+
+	if(lb_pos > max_pos[Z] || ub_pos < min_pos[Z]) ppos = true;
+
       } else if(pzero || !zero[Z]) // if(lb_pos || ub_pos)
 	{
-	lb_pos = min_neg[Z];
-	ub_pos = max_neg[Z];
+	  lb_pos = min_neg[Z];
+	  ub_pos = max_neg[Z];
 	} else {
 	lb_pos = ub_pos = 0; 
       }
@@ -2292,7 +2400,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
 	if(nub1<nub2) nub1 = nub2;
 
 	//std::cout << "negative bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
-
+	
 	if(lb_neg<nlb1) {
 	  lb_neg = nlb1;
 	  pruning_flag = true;
@@ -2301,17 +2409,24 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
 	  ub_neg = nub1;
 	  pruning_flag = true;
 	}
+
+	if(lb_neg > max_neg[Z] || ub_neg < min_neg[Z]) pneg = true;
+
      } else if(pzero || !zero[Z])// if(lb_neg || ub_neg)
        {
-       lb_neg = min_pos[Z];
-       ub_neg = max_pos[Z];
+	 lb_neg = min_pos[Z];
+	 ub_neg = max_pos[Z];
        } else {
        lb_neg = ub_neg = 0;
      }
     }
   }
+  
+  //std::cout << pneg <<  (pzero || !zero[Z]) <<  ppos << std::endl;
 
-  if(pruning_flag) {
+  if(pneg && (pzero || !zero[Z]) && ppos) {
+    wiped = FAILURE(Z);
+  } else if(pruning_flag) {
     
 #ifdef _DEBUG_MUL
     std::cout << "set bounds to " // << scope[Z].get_domain() << " = " 
@@ -2494,6 +2609,15 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_multiplication(const i
 }
 
 
+// Mistral::PropagationOutcome Mistral::PredicateMul::revise_Zs_bounds() {
+//   // Z's bounds must be multiple of some value in X and of some value in Y
+//   int modulo;
+
+//   for(int i=0; i<2; ++i) {
+//     modulo = max_pos[2]%max_pos[0];
+    
+
+// }
 
 Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg, 
 							 const int ub_neg, 
@@ -2531,8 +2655,8 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
   else {
     if(lb_neg>min_neg[Z]) {
 
-      // std::cout // << lb_neg << ">" << min_neg[Z] 
-      // 		<< " -> update lb" << std::endl;
+      // std::cout  << lb_neg << ">" << min_neg[Z] 
+      // 		 << " -> update lb" << std::endl;
 
       evt = scope[Z].set_min( lb_neg );
       if( IS_FAIL(evt) ) wiped = FAILURE(Z);
@@ -2547,9 +2671,9 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
       }
     }
     if(IS_OK(wiped) && ub_pos<max_pos[Z]) {
-
-      // std::cout // << ub_pos << ">" << max_pos[Z] 
-      // 		<< " -> update ub" << std::endl;
+      
+      // std::cout  << ub_pos << ">" << max_pos[Z] 
+      // 		 << " -> update ub" << std::endl;
 
       evt = scope[Z].set_max( ub_pos );
       if( IS_FAIL(evt) ) wiped = FAILURE(Z);
@@ -2571,10 +2695,10 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
       
       if(lb_pos-1>ub_neg && (pzero || (!zero[Z] && (min_pos[Z]<lb_pos || max_neg[Z]>ub_neg)))) {
 	  
-	// std::cout // << lb_pos << ">" << min_pos[Z] 
-	// 	  // << " or " << ub_neg << "<" << max_neg[Z]
-	// 	  << " -> update inbounds" << std::endl;
-
+	// std::cout  << lb_pos << ">" << min_pos[Z] 
+	//  	   << " or " << ub_neg << "<" << max_neg[Z]
+	// 	   << " -> update inbounds" << std::endl;
+	
 	evt = scope[Z].remove_interval(ub_neg+1, lb_pos-1);
 	if( IS_FAIL(evt) ) wiped = FAILURE(Z);
 	else {
@@ -2592,8 +2716,8 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
 	if(lb_pos>1 && min_pos[Z]<lb_pos) {
 
 
-	  // std::cout //<< lb_pos << ">" << min_pos[Z] 
-	  // 	  << " -> update negative ub" << std::endl;
+	  // std::cout << lb_pos << ">" << min_pos[Z] 
+	  // 	    << " -> update negative ub" << std::endl;
 
 	  evt = scope[Z].remove_interval(1, lb_pos-1);
 	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
@@ -2612,8 +2736,8 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
 	if(ub_neg<-1 && max_neg[Z]>ub_neg) {
 
 	  // std::cout 
-	  //   //<< ub_neg << "<" << max_neg[Z]
-	  // 	  << " -> update positive lb" << std::endl;
+	  //   << ub_neg << "<" << max_neg[Z]
+	  //   << " -> update positive lb" << std::endl;
 
 	  evt = scope[Z].remove_interval(ub_neg+1, -1);
 	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
@@ -2897,11 +3021,11 @@ void Mistral::PredicateMul::refine_bounds(const int evt_idx) {
 Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
   
-// #ifdef _DEBUG_MUL
-//   std::cout << std::endl << std::endl << scope[0].get_domain() 
-// 	    << " * " << scope[1].get_domain() 
-//     	    << " = " << scope[2].get_domain() << std::endl;
-// #endif
+#ifdef _DEBUG_MUL
+   std::cout << std::endl << std::endl << scope[0].get_domain() 
+ 	    << " * " << scope[1].get_domain() 
+     	    << " = " << scope[2].get_domain() << std::endl;
+#endif
 
 //   int i, j, k, v, changedIdx;
   
@@ -3460,7 +3584,9 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
 //       }
 //     }
 //   }
-  
+
+
+  //std::cout << wiped << std::endl << std::endl;
   
   return wiped;
 }
@@ -4294,122 +4420,153 @@ Mistral::PredicateElement::~PredicateElement()
 }
 
 //#define _DEBUG_ELEMENT true
+//#define _DEBUG_ELEMENT ((id==23))
 
 Mistral::PropagationOutcome Mistral::PredicateElement::propagate() 
 {
   PropagationOutcome wiped = CONSISTENT;
   int i, n = scope.size-2, evt, nxt; //, lb, ub, val;
-  Variable N = scope[n];
-  Variable V = scope[n+1];
+  //Variable N = scope[n];
+  //Variable V = scope[n+1];
   bool update_V = true;
 
-#ifdef _DEBUG_ELEMENT
-  std::cout << std::endl << std::endl << "X: " << scope[0].get_domain();
-  for(i=1; i<n; ++i) {
-    std::cout << " " << scope[i].get_domain();
-  }
-  std::cout << "[" << scope[n].get_domain() << "-" << offset << "] = " << scope[n+1].get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+  if(_DEBUG_ELEMENT) {
+    std::cout << std::endl << std::endl << "X: " << scope[0].get_domain();
+    for(i=1; i<n; ++i) {
+      std::cout << " " << scope[i].get_domain();
+    }
+    std::cout << "[" << scope[n].get_domain() << "-" << offset << "] = " << scope[n+1].get_domain() << std::endl;
+  } 
 #endif
 
   while(IS_OK(wiped) && update_V) {
     update_V = false;
     while(IS_OK(wiped) && !changes.empty()) {
-
-#ifdef _DEBUG_ELEMENT
-           std::cout << changes << std::endl;
+    
+#ifdef _DEBUG_ELEMENT 
+      if(_DEBUG_ELEMENT) {
+	std::cout << changes << " " << events << std::endl;
+      } 
 #endif
       evt = changes.pop();
-
-#ifdef _DEBUG_ELEMENT
-           std::cout << "react to " << scope[evt] << " in " << scope[evt].get_domain() << std::endl;
+  
+#ifdef _DEBUG_ELEMENT 
+      if(_DEBUG_ELEMENT) {
+	std::cout << "react to " << scope[evt] << " in " << scope[evt].get_domain() << std::endl;
+      } 
 #endif
-      if(evt < n && N.contain(evt)) {
-
-#ifdef _DEBUG_ELEMENT
-	std::cout << "  update " << N << " in " << N.get_domain() << ": "
-		  << V << " in " << V.get_domain() << " inter "
-		  << scope[evt] << " in " << scope[evt].get_domain() << "?" << std::endl;
+      if(evt < n && scope[n].contain(evt+offset)) {
+  
+#ifdef _DEBUG_ELEMENT 
+	if(_DEBUG_ELEMENT) {
+	  std::cout << "  update " << scope[n] << " in " << scope[n].get_domain() << ": "
+		    << scope[n+1] << " in " << scope[n+1].get_domain() << " inter "
+		    << scope[evt] << " in " << scope[evt].get_domain() << "?" << std::endl;
+	} 
 #endif
 	update_V = true;
-		// N may change if V changes, or any X changes
-	if( !V.intersect(scope[evt]) ) {
-
-	  event_type[n] = N.remove(evt+offset);
+	// scope[n] may change if scope[n+1] changes, or any X changes
+	if( !scope[n+1].intersect(scope[evt]) ) {
+	  
+	  event_type[n] = scope[n].remove(evt+offset);
 	  if( IS_FAIL(event_type[n]) ) {
 	    wiped = FAILURE(n);
-
-#ifdef _DEBUG_ELEMENT
-	    	    std::cout << "  => FAIL" << std::endl;
+	    
+#ifdef _DEBUG_ELEMENT 
+	    if(_DEBUG_ELEMENT) {
+	      std::cout << "  => FAIL" << std::endl;
+	    } 
 #endif	
 	  } else if(!changes.contain(n)) {
 	    changes.add(n);
 
-#ifdef _DEBUG_ELEMENT
-	    	    std::cout << "  => " << N << " in " << N.get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	    if(_DEBUG_ELEMENT) {
+	      std::cout << "  => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+	    } 
 #endif
 	  }
 	}
       } else if(evt == n) {
 	update_V = true;
 	if(ASSIGNED(event_type[n])) {
-	  // X may change if N becomes assigned 
-	  i = N.get_min()-offset;
+	  // X may change if scope[n] becomes assigned 
+	  i = scope[n].get_min()-offset;
 	  
-#ifdef _DEBUG_ELEMENT
-	  std::cout << V << " in " << V.get_domain() << " == "
-		    << scope[i] << " in " << scope[i].get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	  if(_DEBUG_ELEMENT) {
+	    std::cout << scope[n+1] << " in " << scope[n+1].get_domain() << " == "
+		      << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	  } 
 #endif
 	  
-	  event_type[i] = scope[i].set_domain(V);
+	  event_type[i] = scope[i].set_domain(scope[n+1]);
 	  if( IS_FAIL(event_type[i]) ) { 
-#ifdef _DEBUG_ELEMENT
-	    std::cout << "  => FAIL" << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	    if(_DEBUG_ELEMENT) {
+	      std::cout << "  => FAIL" << std::endl;
+	    } 
 #endif
 	    wiped = FAILURE(i);
 	  } else {
 	    if( event_type[i] != NO_EVENT && !changes.contain(i) ) {
 	      changes.add(i);
-#ifdef _DEBUG_ELEMENT
-	      std::cout << "  => " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	      if(_DEBUG_ELEMENT) {
+		std::cout << "  => " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	      } 
 #endif
 	    }
-	    event_type[n+1] = V.set_domain(scope[i]);
+	    event_type[n+1] = scope[n+1].set_domain(scope[i]);
 	    if( IS_FAIL(event_type[n+1]) ) {
-#ifdef _DEBUG_ELEMENT
-	      std::cout << "  => FAIL" << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	      if(_DEBUG_ELEMENT) {
+		std::cout << "  => FAIL" << std::endl;
+	      } 
 #endif
 	      wiped = FAILURE(n+1);
-	  } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
-	    changes.add(n+1);
-#ifdef _DEBUG_ELEMENT
-	    std::cout << "  => " << V << " in " << V.get_domain() << std::endl;
+	    } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
+	      changes.add(n+1);
+#ifdef _DEBUG_ELEMENT 
+	      if(_DEBUG_ELEMENT) {
+		std::cout << "  => " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
+	      } 
 #endif
 	    }
 	  }
 	}
       } else if(evt == n+1) {
-#ifdef _DEBUG_ELEMENT
-	std::cout << "  update " << N << " in " << N.get_domain() << ": "
-		  << V << " in " << V.get_domain() << " inter " << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	if(_DEBUG_ELEMENT) {
+	  std::cout << "  update " << scope[n] << " in " << scope[n].get_domain() << ": "
+		    << scope[n+1] << " in " << scope[n+1].get_domain() << " inter " << std::endl;
+	} 
 #endif
 	
-	if( N.is_ground() ) {
-#ifdef _DEBUG_ELEMENT
-	  std::cout << "  update " << V << " in " << V.get_domain() << std::endl;
+	if( scope[n].is_ground() ) {
+#ifdef _DEBUG_ELEMENT 
+	  if(_DEBUG_ELEMENT) {
+	    std::cout << "  update " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
+	  } 
 #endif
 	  
-	  i = N.get_min()-offset;
-	  event_type[i] = scope[i].set_domain(V);
+	  i = scope[n].get_min()-offset;
+	  event_type[i] = scope[i].set_domain(scope[n+1]);
 	  if( IS_FAIL(event_type[i]) ) { 
-#ifdef _DEBUG_ELEMENT
-	    std::cout << "  => FAIL" << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	    if(_DEBUG_ELEMENT) {
+	      std::cout << "  => FAIL" << std::endl;
+	    } 
 #endif
 	    wiped = FAILURE(i);
 	  } else {
 	    if( event_type[i] != NO_EVENT && !changes.contain(i) ) {
 	      changes.add(i);
-#ifdef _DEBUG_ELEMENT
-	      std::cout << "  => " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	      if(_DEBUG_ELEMENT) {
+		std::cout << "  => " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	      } 
 #endif
 	    }
 	  }
@@ -4427,38 +4584,52 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	// std::cout << std::endl;
 
 	  
-	nxt = N.get_min();
+	nxt = scope[n].get_min();
 	do {
 	  i = nxt;
-	  nxt = N.next(i);
+	  nxt = scope[n].next(i);
 
-#ifdef _DEBUG_ELEMENT
-	  std::cout << "  " << scope[i-offset] << " in " << scope[i-offset].get_domain() << "?" ;
+#ifdef _DEBUG_ELEMENT 
+	  if(_DEBUG_ELEMENT) {
+	    std::cout << "  " << scope[i-offset] << " in " << scope[i-offset].get_domain() << "?" ;
+	  } 
 #endif
-	  if( !V.intersect(scope[i-offset]) ) {
-#ifdef _DEBUG_ELEMENT
-	    std::cout << " NO" << std::endl;
+	  if( !scope[n+1].intersect(scope[i-offset]) ) {
+#ifdef _DEBUG_ELEMENT 
+	    if(_DEBUG_ELEMENT) {
+	      std::cout << " NO" << std::endl;
+	    } 
 #endif	 
-	    event_type[n] = N.remove(i);
+
+	    //std::cout << n << " " << N << " " << N.get_domain() << " " << i << std::endl;
+
+	    event_type[n] = scope[n].remove(i);
 	    if( IS_FAIL(event_type[n]) ) {
-#ifdef _DEBUG_ELEMENT
-	      std::cout << "  => FAIL" << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	      if(_DEBUG_ELEMENT) {
+		std::cout << "  => FAIL" << std::endl;
+	      } 
 #endif
 	      wiped = FAILURE(n);
 	    } else if( event_type[n] != NO_EVENT && !changes.contain(n) ) {
 	      changes.add(n);
-#ifdef _DEBUG_ELEMENT
-	      std::cout << "  => " << N << " in " << N.get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	      if(_DEBUG_ELEMENT) {
+		std::cout << "  => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+	      } 
 #endif
 	    } 
-#ifdef _DEBUG_ELEMENT
-	    if(event_type[n] == NO_EVENT) {
-	      std::cout << "  => NO EVENT" << std::endl;
-	    }
+#ifdef _DEBUG_ELEMENT 
+	    if(_DEBUG_ELEMENT) {
+	      if(event_type[n] == NO_EVENT) {
+		std::cout << "  => NO EVENT" << std::endl;
+	      }
+	    } 
 #endif	    
 	  } 
-#ifdef _DEBUG_ELEMENT
-	  else {
+#ifdef _DEBUG_ELEMENT 
+	  
+	  else if(_DEBUG_ELEMENT) {
 	    std::cout << " YES" << std::endl;
 	  }
 #endif
@@ -4467,13 +4638,15 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
     }
     
     if(IS_OK(wiped) && update_V) {
-#ifdef _DEBUG_ELEMENT
-      std::cout << "  update " << V << " in " << V.get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+      if(_DEBUG_ELEMENT) {
+	std::cout << "  update " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
+      } 
 #endif
       aux_dom.clear();
       //lb=INFTY; ub=-INFTY;
       
-      nxt = N.get_min();
+      nxt = scope[n].get_min();
       do {
 	i = nxt;
 	// if(scope[i-offset].is_range()) {
@@ -4482,40 +4655,48 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	//   val = scope[i-offset].get_max();
 	//   if(ub<val) ub = val;
 	// } else {
-	  scope[i-offset].union_to(aux_dom);
-	  //}
-	nxt = N.next(i);
-#ifdef _DEBUG_ELEMENT
-	std::cout << " + " << scope[i-offset] << " in " << scope[i-offset].get_domain() << ": " << aux_dom << std::endl; 
+	scope[i-offset].union_to(aux_dom);
+	//}
+	nxt = scope[n].next(i);
+#ifdef _DEBUG_ELEMENT 
+	if(_DEBUG_ELEMENT) {
+	  std::cout << " + " << scope[i-offset] << " in " << scope[i-offset].get_domain() << ": " << aux_dom << std::endl; 
+	} 
 #endif
       } while( i<nxt );
       // if(lb<=ub) aux_dom.fill(lb,ub);
       // std::cout << aux_dom << std::endl;
-
-      event_type[n+1] = V.set_domain(aux_dom);
-
+      
+      event_type[n+1] = scope[n+1].set_domain(aux_dom);
+      
       if( IS_FAIL(event_type[n+1]) ) { 
-#ifdef _DEBUG_ELEMENT
-	std::cout << "  => FAIL" << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	if(_DEBUG_ELEMENT) {
+	  std::cout << "  => FAIL" << std::endl;
+	} 
 #endif
 	wiped = FAILURE(n+1);
       } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
 	changes.add(n+1);
-#ifdef _DEBUG_ELEMENT
-	std::cout << "  => " << V << " in " << V.get_domain() << std::endl;
+#ifdef _DEBUG_ELEMENT 
+	if(_DEBUG_ELEMENT) {
+	  std::cout << "  => " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
+	} 
 #endif
       }
     }
   }
 
-#ifdef _DEBUG_ELEMENT
-  std::cout << "return " << wiped << std::endl;
-  std::cout << "X: " << scope[0].get_domain();
-  for(i=1; i<n; ++i) {
-    std::cout << " " << scope[i].get_domain();
-  }
-  std::cout << "[" << scope[n].get_domain() << "] = " << scope[n+1].get_domain() << std::endl << std::endl ;
-#endif
+#ifdef _DEBUG_ELEMENT 
+  if(_DEBUG_ELEMENT) { 
+    std::cout << "return " << wiped << std::endl;
+    std::cout << "X: " << scope[0].get_domain();
+    for(i=1; i<n; ++i) {
+      std::cout << " " << scope[i].get_domain();
+    }
+    std::cout << "[" << scope[n].get_domain() << "] = " << scope[n+1].get_domain() << std::endl << std::endl ;
+  } 
+#endif 
 
   return wiped;
 }
