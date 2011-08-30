@@ -1,0 +1,20 @@
+var int: obj;
+int: N;
+N = 4;
+array[1 .. N] of int: ItemHeight;
+ItemHeight = [ 4, 4, 4, 3 ];
+array[1 .. N] of int: ItemWidth;
+ItemWidth = [ 1, 1, 2, 3 ];
+int: H;
+H = 10;
+int: W;
+W = 5;
+int: K;
+K = 2;
+array[1 .. K, 1 .. N] of var 0 .. 1: item;
+array[1 .. K] of var 0 .. 1: bin;
+output 
+  [ "Number of used bins = ", show(obj), "\n" ] ++ 
+  ([ "Items in bins = \n\t" ] ++ 
+  ([ show(item[k, j]) ++ if j = N then "\n\t" else " " endif | 
+    k in 1 .. K, j in 1 .. N ] ++ [ "\n" ]));

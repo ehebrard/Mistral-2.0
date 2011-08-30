@@ -1,0 +1,25 @@
+int: Table = 0;
+int: n_blocks;
+int: n_steps;
+n_steps = 6;
+int: end = n_steps;
+set of int: steps = 1 .. n_steps;
+int: e = 5;
+int: d = 4;
+int: c = 3;
+int: b = 2;
+int: a = 1;
+n_blocks = 5;
+set of int: locs = (- n_blocks) .. n_blocks;
+set of int: blocks = 1 .. n_blocks;
+array[steps, blocks] of var locs: on;
+set of int: table_or_blocks = { Table } union blocks;
+array[blocks] of table_or_blocks: final_loc;
+final_loc = [ b, c, d, e, Table ];
+array[blocks] of table_or_blocks: initial_loc;
+initial_loc = [ Table, a, b, c, d ];
+output 
+  [ "[Negative locations denote the table.]\n" ] ++ 
+  [ if b = 1 then "Step " ++ (show(s) ++ ":\n") else "" endif ++ 
+  ("  block " ++ (show(b) ++ (" on " ++ (show(on[s, b]) ++ "\n")))) | 
+    s in 1 .. n_steps, b in 1 .. n_blocks ];

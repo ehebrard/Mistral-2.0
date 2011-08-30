@@ -1,0 +1,7 @@
+int: size = 9;
+set of int: range = 1 .. size;
+array[range, range, range] of var 0 .. 1: x;
+output 
+  [ if (j = 1) /\ (k = 1) then "\n" else "" endif ++ 
+  if fix(x[i, j, k]) = 1 then show(k) else "" endif | i, j, k in range ] ++ 
+  [ "\n" ];

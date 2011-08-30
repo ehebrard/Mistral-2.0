@@ -1,0 +1,6 @@
+int: n = 7;
+int: k = 2;
+int: nk = n * k;
+array[1 .. n] of var 1 .. nk: Fst;
+array[1 .. nk] of var 1 .. n: a;
+output [ "a = ", show(a), ";\n" ];

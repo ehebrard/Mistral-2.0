@@ -1,0 +1,6 @@
+int: n;
+n = 5;
+array[1 .. n, 1 .. n] of var 1 .. n * n: a;
+int: s = (n * ((n * n) + 1)) div 2;
+output 
+  [ show(a[r, c]) ++ if c = n then "\n" else " " endif | r, c in 1 .. n ];

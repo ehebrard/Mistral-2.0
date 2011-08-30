@@ -1,0 +1,24 @@
+int: NumJobs;
+NumJobs = 3;
+int: NumTanks;
+NumTanks = 3;
+array[1 .. NumTanks] of int: MaxTime;
+MaxTime = [ 10, 25, 10 ];
+int: PerMax = sum([ MaxTime[i] | i in 1 .. NumTanks ]);
+var 0 .. PerMax: Period;
+array[0 .. NumTanks] of var 0 .. NumJobs * PerMax: Removal;
+array[0 .. NumTanks] of var 0 .. NumJobs * PerMax: Entry;
+array[1 .. NumTanks] of int: MinTime;
+MinTime = [ 10, 25, 10 ];
+array[0 .. NumTanks] of int: Full;
+Full = array1d(0 .. NumTanks, [ 4, 4, 4, 5 ]);
+array[0 .. NumTanks, 0 .. NumTanks] of int: Empty;
+Empty = 
+  array2d(
+    0 .. NumTanks, 0 .. NumTanks, 
+    [ 0, 2, 3, 3, 2, 0, 2, 3, 3, 2, 0, 2, 3, 3, 2, 0 ]);
+output 
+  [ "singHoist2:\n", "Period = ", show(Period), "\n", "Entry[] =   [", 
+    show(Entry[0]), " ", show(Entry[1]), " ", show(Entry[2]), " ", 
+    show(Entry[3]), "]\n", "Removal[] = [", show(Removal[0]), " ", 
+    show(Removal[1]), " ", show(Removal[2]), " ", show(Removal[3]), "]\n" ];

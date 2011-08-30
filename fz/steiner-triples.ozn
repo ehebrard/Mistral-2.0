@@ -1,0 +1,5 @@
+int: n;
+n = 7;
+int: nb = (n * (n - 1)) div 6;
+array[1 .. nb] of var set of 1 .. n: sets;
+output [ " " ++ show(sets[i]) | i in 1 .. nb ] ++ [ "\n" ];

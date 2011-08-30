@@ -1,0 +1,8 @@
+int: n;
+n = 32;
+array[1 .. n] of var 1 .. 2 * n: y;
+array[1 .. n] of var 1 .. 2 * n: x;
+output 
+  [ "x = ", show(x), "\n", "y = ", show(y), "\n", "sum = ", 
+    show(((2 * n) * ((2 * n) + 1)) div 4), "\n", "sum of squares = ", 
+    show((((2 * n) * ((2 * n) + 1)) * ((4 * n) + 1)) div 12), "\n" ];

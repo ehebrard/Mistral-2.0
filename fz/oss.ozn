@@ -1,0 +1,15 @@
+int: NJobs;
+NJobs = 3;
+set of int: Jobs = 1 .. NJobs;
+int: NMachines;
+NMachines = 3;
+set of int: Machines = 1 .. NMachines;
+array[Machines, Jobs] of int: duration;
+duration = 
+  array2d(1 .. 3, 1 .. 3, [ 661, 6, 333, 168, 489, 343, 171, 505, 324 ]);
+int: Endtime;
+Endtime = 1509;
+var 0 .. Endtime: makespan;
+array[Machines, Jobs] of var 0 .. Endtime: start;
+output 
+  [ "oss:\nmakespan = ", show(makespan), "\nstart = ", show(start), "\n" ];

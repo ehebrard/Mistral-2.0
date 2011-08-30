@@ -1,0 +1,4 @@
+array[0 .. 6] of var 0 .. 10: x;
+output 
+  [ "eq20 ", show(x[0]), " ", show(x[1]), " ", show(x[2]), " ", show(x[3]), 
+    " ", show(x[4]), " ", show(x[5]), "\n" ];

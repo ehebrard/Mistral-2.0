@@ -1,0 +1,20 @@
+int: n;
+int: m;
+n = 5;
+set of int: Columns = 1 .. n;
+m = 5;
+var 0 .. m * n: K;
+set of int: Rows = 1 .. m;
+array[Rows, Columns] of int: Intensity;
+Intensity = 
+  array2d(
+    1 .. 5, 1 .. 5, 
+    [ 7, 2, 14, 8, 9, 13, 4, 1, 2, 9, 5, 12, 2, 11, 9, 10, 2, 4, 9, 7, 10, 
+      2, 8, 11, 1 ]);
+int: Ints_sum = sum(i in Rows, j in Columns) (Intensity[i, j]);
+var 0 .. Ints_sum: Beamtime;
+int: Bt_max = max(i in Rows, j in Columns) (Intensity[i, j]);
+set of int: BTimes = 1 .. Bt_max;
+array[Rows, Columns, BTimes] of var 0 .. m * n: Q;
+array[BTimes] of var 0 .. m * n: N;
+output [ "radiation:\n", "B / K = ", show(Beamtime), " / ", show(K), "\n" ];

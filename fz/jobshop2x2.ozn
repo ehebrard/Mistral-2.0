@@ -1,0 +1,10 @@
+int: size;
+size = 2;
+array[1 .. size, 1 .. size] of int: d;
+d = array2d(1 .. 2, 1 .. 2, [ 2, 5, 3, 4 ]);
+int: total = sum(i, j in 1 .. size) (d[i, j]);
+var 0 .. total: end;
+array[1 .. size, 1 .. size] of var 0 .. total: s;
+output 
+  [ "jobshop2x2\n", "s[1..2, 1..2] = [", show(s[1, 1]), " ", show(s[1, 2]), 
+    "\n", "                 ", show(s[2, 1]), " ", show(s[2, 2]), "]\n" ];

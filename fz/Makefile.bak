@@ -1,0 +1,32 @@
+CHDRS     = $(wildcard *.hpp) $(wildcard $(MTL)/*.h)
+EXEC      = mistral-fz
+
+
+SRC=../src/lib
+OBJ=../src/obj
+INC=../src/include
+
+CFLAGS    =  -I$(INC)/  -Wall -ffloat-store 
+LFLAGS    = 
+
+
+PINCSRC = $(wildcard $(INC)/*.hpp)
+PLIBSRC = $(wildcard $(SRC)/*.cpp)
+PLIBAUX = $(PLIBSRC:.cpp=.o)
+
+COREOBJS  = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
+CSRCS     = $(wildcard *.cpp) lexer.yy.cpp parser.tab.cpp
+COBJS     = $(addsuffix .o, $(basename $(CSRCS))) $(COREOBJS)
+
+$(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
+	$(CCC) $(CFLAGS) -c $< -o $@ 
+
+
+include ./template.mk
+
+lexer.yy.cpp: lexer.lxx
+	flex -o lexer.yy.cpp lexer.lxx
+
+parser.tab.cpp parser.tab.hh: parser.yxx
+	bison -t -o parser.tab.cpp -d $<
+

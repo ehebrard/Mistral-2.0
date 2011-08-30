@@ -1,0 +1,23 @@
+int: n;
+n = 21;
+array[1 .. n] of int: pack_s;
+pack_s = 
+  [ 50, 42, 37, 35, 33, 29, 27, 25, 24, 19, 18, 17, 16, 15, 11, 9, 8, 7, 6, 
+    4, 2 ];
+int: pack_y;
+pack_y = 112;
+array[1 .. n] of var 0 .. pack_y - 1: y;
+int: pack_x;
+pack_x = 112;
+array[1 .. n] of var 0 .. pack_x - 1: x;
+output 
+  [ "packing ", show(n), " squares into a ", show(pack_x), "x", 
+    show(pack_y), " rectangle:\n" ] ++ 
+  [ "square " ++ 
+  (show(i) ++ 
+  (", size " ++ 
+  (show(pack_s[i]) ++ 
+  ("x" ++ 
+  (show(pack_s[i]) ++ 
+  (", at (" ++ (show(x[i]) ++ (", " ++ (show(y[i]) ++ ")\n"))))))))) | 
+    i in 1 .. n ];

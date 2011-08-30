@@ -1,0 +1,6 @@
+int: n = 100;
+int: t = ((n * (n + 1)) * ((2 * n) + 1)) div 6;
+set of int: squares = { i * i | i in 1 .. (n * n) where (i * i) <= t };
+array[1 .. n] of var 0 .. 1: x;
+var squares: k;
+output [ show(k), "\n" ];
