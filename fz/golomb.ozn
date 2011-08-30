@@ -1,5 +1,0 @@
-int: m = 4;
-int: n = m * m;
-array[1 .. m] of var 0 .. n: mark;
-array[1 .. (m * (m - 1)) div 2] of var 0 .. n: differences;
-output [ "golomb ", show(mark), "\n" ];

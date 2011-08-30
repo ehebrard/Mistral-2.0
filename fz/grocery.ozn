@@ -1,2 +1,0 @@
-array[0 .. 3] of var 0 .. 711: item;
-output [ "grocery ", show(item), "\n" ];

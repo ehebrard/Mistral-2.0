@@ -1,7 +1,0 @@
-int: n = 8;
-set of int: rg = 0 .. (n - 1);
-array[rg, rg] of var 0 .. 1: q;
-output 
-  [ "8 queens, IP version:" ] ++ 
-  ([ if j = 0 then "\n" else "" endif ++ 
-  if fix(q[i, j]) = 1 then "Q " else ". " endif | i, j in rg ] ++ [ "\n" ]);

@@ -1,7 +1,0 @@
-int: N;
-N = 5;
-array[1 .. N, 1 .. N] of var 1 .. N: q;
-output 
-  [ "Bennett quasigroup of size " ++ (show(N) ++ ":\n") ] ++ 
-  ([ if y = 1 then "\n  " else "  " endif ++ show(q[x, y]) | x, y in 1 .. N ] ++ 
-  [ "\n" ]);
