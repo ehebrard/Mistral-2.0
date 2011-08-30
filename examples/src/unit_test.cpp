@@ -297,8 +297,45 @@ public:
   MemberTest();
   ~MemberTest();
 
+  void run1();
+  void run2();
   virtual void run();
 };
+
+
+class CardTest : public UnitTest {
+
+public:
+  
+  CardTest();
+  ~CardTest();
+
+  //void run1();
+  //void run2();
+  virtual void run();
+};
+
+class IntersectionTest : public UnitTest {
+
+public:
+  
+  IntersectionTest();
+  ~IntersectionTest();
+
+  virtual void run();
+};
+
+
+class LexTest : public UnitTest {
+
+public:
+  
+  LexTest();
+  ~LexTest();
+
+  virtual void run();
+};
+
 
 class WeightedSumTest : public UnitTest {
 
@@ -329,6 +366,20 @@ public:
 
   virtual void run();
 };
+
+class MinMaxTest : public UnitTest {
+
+public:
+  
+  MinMaxTest();
+  ~MinMaxTest();
+
+  void run1();
+  void run2();
+
+  virtual void run();
+};
+
 
 class OpshopTest : public UnitTest {
 
@@ -415,48 +466,37 @@ public:
     con2 = new CON_TYPE(scope2);
     con3 = new CON_TYPE(scope3);
 
-
-    std::cout << con1 << std::endl;
-
-    std::cout << con2 << std::endl;
-
-    std::cout << con3 << std::endl;
-
-    
-    s1.add( con1 );
-    std::cout << con1 << std::endl;
-    s1.rewrite();
-    s1.consolidate();
-    
-    s2.add( con2 );
-    std::cout << con2 << std::endl;
-    s2.rewrite();
-    s2.consolidate();
-
-    s3.add( con3 );
-    std::cout << con3 << std::endl;
-    s3.rewrite();
-    s3.consolidate();
-
-
-    std::cout << con1 << std::endl;
-
-    std::cout << con2 << std::endl;
-
-    std::cout << con3 << std::endl;
     
     usrand(seed);
   }
 
-  #define _DEBUG_CHECKER true
+  //#define _DEBUG_CHECKER true
+
+  void init() {
+
+     s1.add( con1 );
+     s1.rewrite();
+    s1.consolidate();
+
+
+    s2.add( con2 );
+    s2.rewrite();
+    s2.consolidate();
+
+    s3.add( con3 );
+    s3.rewrite();
+    s3.consolidate();
+
+  }
 
 
   void run(int n_iterations=1) {
 
+
     std::cout << ".";
     std::cout.flush();
 
-    //std::cout << std::endl;
+    //std::cout << std::endl << con1 << std::endl;
 
     while(n_iterations--) {
 
@@ -470,428 +510,455 @@ public:
       PropagationOutcome wiped2 = CONSISTENT;
       PropagationOutcome wiped3 = CONSISTENT;
     
-    s1.save();
-    if(AC) s2.save();
-    if(BC) s3.save();
+      s1.save();
+      if(AC) s2.save();
+      if(BC) s3.save();
 
 #ifdef _DEBUG_CHECKER
-    std::cout << std::endl << " check " << name << std::endl;
-    for(int j=0; j<arity; ++j) {
-      std::cout << scope1[j].get_domain() << " " ;
-    }
-    if(AC) {
-      std::cout << std::endl;
+      std::cout << std::endl << n_iterations << " check " << name << " " << con1 << std::endl;
       for(int j=0; j<arity; ++j) {
-	std::cout << scope2[j].get_domain() << " " ;
-      }	
-    }
-    if(BC) {
-      std::cout << std::endl;
-      for(int j=0; j<arity; ++j) {
-	std::cout << scope3[j].get_domain() << " " ;
-      }	
-    }
-    std::cout << std::endl;
-#endif
-
-
-
-    bool finished = false;
-    while(!finished) {
-
-      for(int j=0; j<arity; ++j) {
-	
-	bool is_ground = true;
-	for(int i=0; is_ground && i<arity; ++i) {
-	  is_ground = scope1[i].get_var().is_ground();
-	}
-	if(is_ground) {
-	  finished = true;
-	  break;
-	} else if(!scope1[j].get_var().is_ground()) {
-
-
-	  // std::cout << "reduce " << scope1[j].get_var() << "'s domain (" 
-	  // 	    << scope1[j].get_var().get_domain() << ")" << std::endl;
-
-	  int type = 0;
-	  if(j<(arity-nbool) && randint(3)<1) type = 1;
-	  
-	  int k = randint(scope1[j].get_var().get_max() - scope1[j].get_var().get_min() + 1) + scope1[j].get_var().get_min();
-	  
-	  ++n_reductions;
-	  
-	  // std::cout << "  " << n_reductions << std::endl;
-	  
-	  // if(n_iterations == 18 && n_reductions == 7) {
-	  
-	//   std::cout << "HERE" << std::endl;
-	//   s2.parameters.verbosity = 1;
-	// }
-	
-	if(type) {
-	  
-	  if(randint(2)) {
-	    
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-
-#ifdef _DEBUG_CHECKER
-	    std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << ">=" << k << std::endl;;
-#endif
-
-	    if( IS_FAIL(scope1[j].get_var().set_min(k)) ) wiped1 = FAILURE(j);
-	    if( AC && IS_FAIL(scope2[j].get_var().set_min(k)) ) wiped2 = FAILURE(j);
-	    if( BC && IS_FAIL(scope3[j].get_var().set_min(k)) ) wiped3 = FAILURE(j);
-
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-
-	  } else {
-	    
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-
-#ifdef _DEBUG_CHECKER
-	    std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "<=" << k << std::endl;;
-#endif
-
-	    if( IS_FAIL(scope1[j].get_var().set_max(k)) ) wiped1 = FAILURE(j);
-	    if( AC && IS_FAIL(scope2[j].get_var().set_max(k)) ) wiped2 = FAILURE(j);
-	    if( BC && IS_FAIL(scope3[j].get_var().set_max(k)) ) wiped3 = FAILURE(j);
-
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-
-	  }
-	} else {
-
-	  if(randint(5)<1) {
-
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-	    
-#ifdef _DEBUG_CHECKER
-	    std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "==" << k << std::endl;;
-#endif
-	    
-	    if( IS_FAIL(scope1[j].get_var().set_domain(k)) ) wiped1 = FAILURE(j);
-	    if( AC && IS_FAIL(scope2[j].get_var().set_domain(k)) ) wiped2 = FAILURE(j);
-	    if( BC && IS_FAIL(scope3[j].get_var().set_domain(k)) ) wiped3 = FAILURE(j);
-
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-
-	  } else {
-
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-	    
-#ifdef _DEBUG_CHECKER
-	    std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "!=" << k << std::endl;;
-#endif
-	    
-	    if( IS_FAIL(scope1[j].get_var().remove(k)) ) wiped1 = FAILURE(j);
-	    if( AC && IS_FAIL(scope2[j].get_var().remove(k)) ) wiped2 = FAILURE(j);
-	    if( BC && IS_FAIL(scope3[j].get_var().remove(k)) ) wiped3 = FAILURE(j);
-
-	    scope1[j] = scope1[j].get_var();
-	    scope2[j] = scope2[j].get_var();
-	    scope3[j] = scope3[j].get_var();
-
-	  }
-	}
-
-#ifdef _DEBUG_CHECKER
-	for(int j=0; j<arity; ++j) {
-	  std::cout << scope1[j].get_domain() << " " ;
-	}
-	if(AC) {
-	  std::cout << std::endl;
-	  for(int j=0; j<arity; ++j) {
-	    std::cout << scope2[j].get_domain() << " " ;
-	  }	
-	}
-	if(BC) {
-	  std::cout << std::endl;
-	  for(int j=0; j<arity; ++j) {
-	    std::cout << scope3[j].get_domain() << " " ;
-	  }	
-	}
+	std::cout << scope1[j].get_var().get_domain() << " " ;
+      }
+      if(AC) {
 	std::cout << std::endl;
+	for(int j=0; j<arity; ++j) {
+	  std::cout << scope2[j].get_var().get_domain() << " " ;
+	}	
+      }
+      if(BC) {
+	std::cout << std::endl;
+	for(int j=0; j<arity; ++j) {
+	  std::cout << scope3[j].get_var().get_domain() << " " ;
+	}	
+      }
+      std::cout << std::endl;
 #endif
 
-	// if( IS_OK(wiped1) ) {
-		
-	//   s1.active_constraints.select(con1);
-	//   wiped1 = con1->propagate();
 
-	//   s2.active_constraints.select(con2);
-	//   con2->changes.fill();
-	//   if(AC)
-	//     wiped2 = con2->checker_propagate();
-	//   else 
-	//     wiped2 = con2->bound_propagate();
+      bool finished = false;
+      while(!finished) {
 
-	//   s1.active_constraints.clear();
-	//   s2.active_constraints.clear();
-	
-	//   if( IS_OK(wiped1) ) {
+	for(int j=0; j<arity; ++j) {
 
-	//     //std::cout << "OK" << std::endl;
+	  
+	  // if(BC && !AC && scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
+	  //   std::cout << 11 << std::endl;
+	  // }
 
-	//     if(!(IS_OK(wiped2))) {
-	//       cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-	// 	   << endl << " propagator: " ;
-	//       for(int j=0; j<arity; ++j) {
-	// 	scope1[j] = scope1[j].get_var();
-	// 	scope2[j] = scope2[j].get_var();
-	// 	std::cout << scope1[j].get_domain() << " " ;
-	//       }
-	//       std::cout << std::endl << " generic AC: fail" << endl;
-	//       exit(1);
-	//     }
-	//     else for(int i=0; i<arity; ++i) {
-	// 	int vnxt1 = scope1[i].get_var().get_min();
-	// 	int vnxt2 = scope2[i].get_var().get_min();
-	// 	int val1 = vnxt1-1;
-	// 	int val2 = vnxt2-1;
-	// 	bool problem = false;
-	// 	while( !problem ) {
-	// 	  if(vnxt1 < vnxt2)  {
-	// 	    problem =true;
-	// 	  } else if(vnxt1 > vnxt2) {
-		 
-	// 	    if(!scope2[i].get_var().contain(vnxt1)) {
-	// 	      problem =true;
-	// 	    } else {
-	// 	      std::cout << "*";
-	// 	      vnxt2 = vnxt1;
-	// 	    }
-	// 	  } else if(val1 >= vnxt1) break;
-	// 	  val1 = vnxt1;
-	// 	  val2 = vnxt2;
-	// 	  vnxt1 = scope1[i].get_var().next(val1);
-	// 	  vnxt2 = scope2[i].get_var().next(val2);	    
-	// 	}
-		
-	// 	if(problem) {
-	// 	  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-	// 	       << endl << " propagator: " ;
-	// 	  for(int j=0; j<arity; ++j)
-	// 	    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-
-	// 	  std::cout << std::endl << " generic AC: ";		  
-	// 	  for(int j=0; j<arity; ++j)
-	// 	    std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-	// 	  std::cout << std::endl << std::endl;
-	// 	  exit(1);
-	// 	}
-	//       }
-
-	if( IS_OK(wiped1) ) {
-		
-	  s1.active_constraints.select(con1);
-	  wiped1 = con1->propagate();
-
-	  if(AC && IS_OK(wiped2)) {
-	    s2.active_constraints.select(con2);
-	    con2->changes.fill();
-	    wiped2 = con2->checker_propagate();
+	  bool is_ground = true;
+	  for(int i=0; is_ground && i<arity; ++i) {
+	    is_ground = scope1[i].get_var().is_ground();
 	  }
+	  if(is_ground) {
+	    finished = true;
+	    break;
+	  } else if(!scope1[j].get_var().is_ground()) {
 
-	  if(BC && IS_OK(wiped3)) {
-	    s3.active_constraints.select(con3);
-	    con3->changes.fill();
-	    wiped3 = con3->bound_propagate();
-	  }
+	    // std::cout << "reduce " << scope1[j].get_var() << "'s domain (" 
+	    // 	    << scope1[j].get_var().get_domain() << ")" << std::endl;
+	  
+	    int type = 0;
+	    if(j<(arity-nbool) && randint(3)<1) type = 1;
+	  
+	    int k = randint(scope1[j].get_var().get_max() - scope1[j].get_var().get_min() + 1) + scope1[j].get_var().get_min();
+	  
+	    ++n_reductions;
+	  
+	    // std::cout << "  " << n_reductions << std::endl;
+	  
+	    // if(n_iterations == 18 && n_reductions == 7) {
+	  
+	    //   std::cout << "HERE" << std::endl;
+	    //   s2.parameters.verbosity = 1;
+	    // }
 
-	  s1.active_constraints.clear();
+#ifdef _DEBUG_CHECKER
+		std::cout << std::endl << std::endl;;
+#endif
 
-	  if(AC) {
-	    s2.active_constraints.clear();
-	  }
+	  
+	    if(type) {
 
-	  if(BC) {
-	    s3.active_constraints.clear();
-	  }
+	      // if(BC && !AC && scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
+	      // 	std::cout << 22 << std::endl;
+	      // }
 
-
-	  // test if there is a fail
-	  if( AC && BC ) {
-	    if(IS_OK(wiped2) && !IS_OK(wiped1)) {
-	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-		   << endl << " propagator: fail " << endl ;
-	      std::cout << std::endl << " generic AC: "; 
-	      for(int j=0; j<arity; ++j) {
-		std::cout << scope2[j].get_var().get_domain() << " " ;
-	      }
-	      std::cout << std::endl;
-	      exit(1);
-	    }
-	    if(IS_OK(wiped1) && !IS_OK(wiped3)) {
-	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-		   << endl << " propagator: " ;
-	      for(int j=0; j<arity; ++j) {
-		std::cout << scope1[j].get_domain() << " " ;
-	      }
-	      std::cout << std::endl << " generic BC: fail" << endl;
-	      exit(1);
-	    }
-	  } else if(AC) {
-	    if(IS_OK(wiped1) != IS_OK(wiped2)) {
-	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-		   << endl << " propagator: " ;
-	      if(IS_OK(wiped1)) {
-		for(int j=0; j<arity; ++j) {
-		  std::cout << scope1[j].get_var().get_domain() << " " ;
-		}
-	      } else std::cout << "fail" ;
-
-	      std::cout << std::endl << " generic AC: "; 
-	      if(IS_OK(wiped2)) {
-		for(int j=0; j<arity; ++j) {
-		  std::cout << scope2[j].get_var().get_domain() << " " ;
-		}
-	      } else std::cout << "fail" ;
-
-	      exit(1);
-	    }
-	  } else if(BC) {
-	    if(IS_OK(wiped1) != IS_OK(wiped3)) {
-	      cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-		   << endl << " propagator: " ;
-	      if(IS_OK(wiped1)) {
-		for(int j=0; j<arity; ++j) {
-		  std::cout << scope1[j].get_var().get_domain() << " " ;
-		}
-	      } else std::cout << "fail" ;
-
-	      std::cout << std::endl << " generic BC: "; 
-	      if(IS_OK(wiped3)) {
-		for(int j=0; j<arity; ++j) {
-		  std::cout << scope3[j].get_var().get_domain() << " " ;
-		}
-	      } else std::cout << "fail" ;
-
-	      exit(1);
-	    }
-	  }
-
-	  if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
-	    for(int i=0; i<arity; ++i) {
-	      int vnxt1 = scope1[i].get_var().get_min();
-	      int vnxt2 = scope2[i].get_var().get_min();
-	      int vnxt3 = scope3[i].get_var().get_min();
-	      int val1 = vnxt1-1;
-	      int val2 = vnxt2-1;
-	      int val3 = vnxt3-1;
+	    
+	      if(randint(2)) {
 	      
-	      BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
-	      BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
-	      BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
 
-	      while(val1<vnxt1) {
-		val1 = vnxt1;
-		vnxt1 = scope1[i].get_var().next(val1);
-		d1.add(val1);
+#ifdef _DEBUG_CHECKER
+		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << ">=" << k << std::endl;;
+#endif
+
+		if( IS_FAIL(scope1[j].get_var().set_min(k)) ) wiped1 = FAILURE(j);
+		if( AC && IS_FAIL(scope2[j].get_var().set_min(k)) ) wiped2 = FAILURE(j);
+		if( BC && IS_FAIL(scope3[j].get_var().set_min(k)) ) wiped3 = FAILURE(j);
+
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+
+	      } else {
+	    
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+
+#ifdef _DEBUG_CHECKER
+		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "<=" << k << std::endl;;
+#endif
+
+		if( IS_FAIL(scope1[j].get_var().set_max(k)) ) wiped1 = FAILURE(j);
+		if( AC && IS_FAIL(scope2[j].get_var().set_max(k)) ) wiped2 = FAILURE(j);
+		if( BC && IS_FAIL(scope3[j].get_var().set_max(k)) ) wiped3 = FAILURE(j);
+
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+
 	      }
+	    } else {
+
+	      if(randint(5)<1) {
+
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+	    
+#ifdef _DEBUG_CHECKER
+		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "==" << k << std::endl;;
+#endif
+	    
+		if( IS_FAIL(scope1[j].get_var().set_domain(k)) ) wiped1 = FAILURE(j);
+		if( AC && IS_FAIL(scope2[j].get_var().set_domain(k)) ) wiped2 = FAILURE(j);
+		if( BC && IS_FAIL(scope3[j].get_var().set_domain(k)) ) wiped3 = FAILURE(j);
+
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+
+	      } else {
+
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+	    
+#ifdef _DEBUG_CHECKER
+		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "!=" << k << std::endl;;
+#endif
+	    
+		if( IS_FAIL(scope1[j].get_var().remove(k)) ) wiped1 = FAILURE(j);
+		if( AC && IS_FAIL(scope2[j].get_var().remove(k)) ) wiped2 = FAILURE(j);
+		if( BC && IS_FAIL(scope3[j].get_var().remove(k)) ) wiped3 = FAILURE(j);
+
+		scope1[j] = scope1[j].get_var();
+		scope2[j] = scope2[j].get_var();
+		scope3[j] = scope3[j].get_var();
+
+	      }
+	    }
+
+#ifdef _DEBUG_CHECKER
+	    Variable tmp;
+	    for(int j=0; j<arity; ++j) {
+	      tmp =  scope1[j].get_var();
+	      std::cout // <<tmp << " in " 
+			<<tmp.get_domain() << " " ;//<< " |" <<tmp.get_size() << "| + ";
+	      //if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
+	    }
+	    // if(AC) {
+	    //   std::cout << std::endl;
+	    //   for(int j=0; j<arity; ++j) {
+	    // 	std::cout << scope2[j].get_var() << " in " << scope2[j].get_var().get_domain() << " " ;
+	    //   }	
+	    // }
+	    // if(BC) {
+	    //   std::cout << std::endl;
+	    //   for(int j=0; j<arity; ++j) {
+	    // 	tmp = scope3[j].get_var();
+	    // 	std::cout << tmp << " in " << tmp.get_domain() << " " ;//<< " |" << tmp.get_size() << "| + ";
+	    // 	//if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
+	    //   }	
+	    //   std::cout << std::endl;
+	    //   for(int j=0; j<arity; ++j) {
+	    // 	tmp = con3->scope[j];
+	    // 	std::cout << tmp << " in " << tmp.get_domain() << " " ;//<< " |" << tmp.get_size() << "| + ";
+	    // 	//if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
+	    //   }	
+	    // }
+	    std::cout << std::endl;
+
+	    //std::cout << scope1[2].get_var().get_size() << " =? " << scope3[2].get_var().get_size() << std::endl;
+	    
+#endif
+
+	    // if(BC && !AC && scope3.size>2) {
+	    //   Variable tmp = scope3[2].get_var();
+	    //   if(tmp.domain_type == BITSET_VAR) {
+	    // 	std::cout  << std::endl << "before pruning, x3[2]: " << std::endl;
+	    // 	((VariableBitmap*)(tmp.variable))->debug_print();
+	    //   }
+	    // }
+
+	    if( IS_OK(wiped1) ) {
+		
+	      s1.active_constraints.select(con1);
+	      //con1->consolidate();
+	      wiped1 = con1->propagate();
+
+	      if(AC && IS_OK(wiped2)) {
+		s2.active_constraints.select(con2);
+		//con2->consolidate();
+		con2->changes.fill();
+		wiped2 = con2->checker_propagate();
+	      }
+
+	      if(BC && IS_OK(wiped3)) {
+		s3.active_constraints.select(con3);
+		//con3->consolidate();
+		con3->changes.fill();
+		wiped3 = con3->bound_propagate();
+	      }
+
+	      s1.active_constraints.clear();
 
 	      if(AC) {
-		while(val2<vnxt2) {
-		  val2 = vnxt2;
-		  vnxt2 = scope2[i].get_var().next(val2);
-		  d2.add(val2);
-		}
+		s2.active_constraints.clear();
 	      }
 
 	      if(BC) {
-		while(val3<vnxt3) {
-		  val3 = vnxt3;
-		  vnxt3 = scope3[i].get_var().next(val3);
-		  d3.add(val3);
-		}
+		s3.active_constraints.clear();
 	      }
+	      
+	      
+#ifdef _DEBUG_CHECKER
+	      std::cout << "=> ";
+	      for(int j=0; j<arity; ++j) {
+		std::cout << scope1[j].get_var().get_domain() << " ";
+	      }
+	    if(AC) {
+	      std::cout << std::endl << "=> ";
+	      for(int j=0; j<arity; ++j) {
+		std::cout << scope2[j].get_var().get_domain() << " " ;
+	      }	
+	    }
+	    if(BC) {
+	      std::cout << std::endl << "=> ";
+	      for(int j=0; j<arity; ++j) {
+		tmp = scope3[j].get_var();
+		std::cout << tmp.get_domain() << " " ;
+	      }	
+	    }
+	    std::cout << std::endl;
 
+	    //std::cout << scope1[2].get_var().get_size() << " =? " << scope3[2].get_var().get_size() << std::endl;
+	    
+#endif
+
+	    // if(BC && !AC && scope3.size>2) {
+	    //   Variable tmp = scope3[2].get_var();
+	    //   if(tmp.domain_type == BITSET_VAR) {
+	    // 	std::cout << "after pruning, x3[2]: " << std::endl;
+	    // 	((VariableBitmap*)(tmp.variable))->debug_print();
+	    // 	//std::cout << std::endl;
+	    //   }
+	    // }
+
+	  
+	  
+	      // test if there is a fail
 	      if( AC && BC ) {
-		if(!d1.includes(d2)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-		       << endl << " propagator: " ;
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  
-		  std::cout << std::endl << " generic AC: ";		  
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  std::cout << std::endl << std::endl;
+		if(IS_OK(wiped2) && !IS_OK(wiped1)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result propag </= AC)" 
+		       << endl << " propagator: fail " << endl ;
+		  std::cout << std::endl << " generic AC: "; 
+		  for(int j=0; j<arity; ++j) {
+		    std::cout << scope2[j].get_var().get_domain() << " " ;
+		  }
+		  std::cout << std::endl;
 		  exit(1);
 		}
-		if(!d3.includes(d1)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		if(IS_OK(wiped1) && !IS_OK(wiped3)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
 		       << endl << " propagator: " ;
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  
-		  std::cout << std::endl << " generic BC: ";		  
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  std::cout << std::endl << std::endl;
+		  for(int j=0; j<arity; ++j) {
+		    std::cout << scope1[j].get_domain() << " " ;
+		  }
+		  std::cout << std::endl << " generic BC: fail" << endl;
 		  exit(1);
 		}
 	      } else if(AC) {
-		if(d1 != d2) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
+		if(IS_OK(wiped1) != IS_OK(wiped2)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
 		       << endl << " propagator: " ;
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  
-		  std::cout << std::endl << " generic AC: ";		  
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  std::cout << std::endl << std::endl;
-		  exit(1);		  
-		}
-	      } else if(BC) {
-		if(d1 != d3) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"!" 
-		       << endl << " propagator: " ;
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  
-		  std::cout << std::endl << " generic BC: ";		  
-		  for(int j=0; j<arity; ++j)
-		    std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  std::cout << std::endl << std::endl;
+		  if(IS_OK(wiped1)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope1[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail" ;
+
+		  std::cout << std::endl << " generic AC: "; 
+		  if(IS_OK(wiped2)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope2[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail" ;
+		  std::cout << endl;
 		  exit(1);
 		}
-	      } 
+	      } else if(BC) {
+		if(IS_OK(wiped1) != IS_OK(wiped3)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
+		       << endl << " propagator: " ;
+		  if(IS_OK(wiped1)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope1[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail" ;
+
+		  std::cout << std::endl << " generic BC: "; 
+		  if(IS_OK(wiped3)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope3[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail"  ;
+		  std::cout << endl;
+		  exit(1);
+		}
+	      }
+
+	      //std::cout << std::endl;
+	      if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
+		for(int i=0; i<arity; ++i) {
+		  int vnxt1 = scope1[i].get_var().get_min();
+		  int vnxt2 = scope2[i].get_var().get_min();
+		  int vnxt3 = scope3[i].get_var().get_min();
+		  int val1 = vnxt1-1;
+		  int val2 = vnxt2-1;
+		  int val3 = vnxt3-1;
+	      
+		  BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
+		  BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
+		  BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
+
+
+		  //std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
+		  while(val1<vnxt1) {
+		    val1 = vnxt1;
+		    vnxt1 = scope1[i].get_var().next(val1);
+		    d1.add(val1);
+		  }
+
+		  if(AC) {
+		    while(val2<vnxt2) {
+		      val2 = vnxt2;
+		      vnxt2 = scope2[i].get_var().next(val2);
+		      d2.add(val2);
+		    }
+		  }
+
+		  if(BC) {
+		    //std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
+		    while(val3<vnxt3) {
+		      val3 = vnxt3;
+		      vnxt3 = scope3[i].get_var().next(val3);
+		      //std::cout << " " << val3;
+		      d3.add(val3);
+		    }
+		    //std::cout << std::endl << d3 << std::endl;
+
+		  }
+
+		  if( AC && BC ) {
+		    if(!d1.includes(d2)) {
+		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
+			   << endl << " propagator: " ;
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		      std::cout << std::endl << " generic AC: ";		  
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << std::endl;
+		      exit(1);
+		    }
+		    if(!d3.includes(d1)) {
+		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
+			   << endl << " propagator: " ;
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		      std::cout << std::endl << " generic BC: ";		  
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << std::endl;
+		      exit(1);
+		    }
+		  } else if(AC) {
+		    if(d1 != d2) {
+		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning AC =/= propag)" 
+			   << endl << " propagator: " ;
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		      std::cout << std::endl << " generic AC: ";		  
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << std::endl;
+		      exit(1);		  
+		    }
+		  } else if(BC) {
+		    if(d1 != d3) {
+		      //cout << d1 << " - " << d3 << std::endl;
+		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC =/= propag)" 
+			   << endl << " propagator: " ;
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  
+		      std::cout << std::endl << " generic BC: ";		  
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << std::endl;
+		      exit(1);
+		    }
+		  } 
+		}
+	      } 	  
+	    } else {
+	      finished = true;
+	      break;
 	    }
-	  } 	  
-	} else {
-	  finished = true;
-	  break;
-	}
+	  }
 	}
       }
-    }
     
-    //std::cout << " restore " << std::endl << std::endl ;
+      //std::cout << " restore " << std::endl << std::endl ;
     
-    s1.restore(0);
-    if(AC) {
-      s2.restore(0);
-    }
-    if(BC) {
-      s3.restore(0);
-    }
-    //std::cout << n_reductions << " " ;
+      // if(scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
+      // 	std::cout << 44 << std::endl;
+      // }
+
+
+      s1.restore(0);
+      if(AC) {
+	s2.restore(0);
+      }
+      if(BC) {
+	s3.restore(0);
+      }
+
+
+      // if(BC && !AC && scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
+      // 	std::cout << 55 << std::endl;
+      // }
+
+
+
+      //std::cout << n_reductions << " " ;
     }
     
     //std::cout << std::endl;
@@ -913,84 +980,98 @@ public:
     if(Verbosity) cout << "Run Checker test: "; 
 
 
-    /*
-
     ConChecker< PredicateLess > cc1a("<=", false,true,12345,3,20,1);
+    cc1a.init();
     cc1a.run(100);
 
     ConChecker< PredicateLess > cc1b("<=", false,true,12345,3,20,1);
     cc1b.con1->offset = 3;
     cc1b.con2->offset = 3;
     cc1b.con3->offset = 3;
+    cc1b.init();
     cc1b.run(100);
 
     ConChecker< PredicateLess > cc1c("<=", false,true,12345,3,20,1);
     cc1c.con1->offset = -3;
     cc1c.con2->offset = -3;
-    cc1c.con3->offset = -3;
+    cc1c.con3->offset = -3;   
+    cc1c.init();
     cc1c.run(100);
 
     ConChecker< PredicateEqual > cc2a("==", true,false,12345,3,20,1);
+    cc2a.init();
     cc2a.run(100);
 
     ConChecker< PredicateEqual > cc2b("!=", true,false,12345,3,20,1);
     cc2b.con1->spin = 0;
     cc2b.con2->spin = 0;
     cc2b.con3->spin = 0;
+    cc2b.init();
     cc2b.run(100);
-
 
     ConChecker< PredicateLowerBound > cc3a(">=-3", false,true,12345,2,20,1);
     cc3a.con1->bound = -3;
     cc3a.con2->bound = -3;
     cc3a.con3->bound = -3;
+    cc3a.init();
     cc3a.run(100);
-
 
     ConChecker< PredicateLowerBound > cc3b(">=3", false,true,12345,2,20,1);
     cc3b.con1->bound = 3;
     cc3b.con2->bound = 3;
     cc3b.con3->bound = 3;
+    cc3b.init();
     cc3b.run(100);
-
 
     ConChecker< PredicateUpperBound > cc4a("<=-3", false,true,12345,2,20,1);
     cc4a.con1->bound = -3;
     cc4a.con2->bound = -3;
     cc4a.con3->bound = -3;
+    cc4a.init();
     cc4a.run(100);
 
     ConChecker< PredicateUpperBound > cc4b("<=3", false,true,12345,2,20,1);
     cc4b.con1->bound = 3;
     cc4b.con2->bound = 3;
     cc4b.con3->bound = 3;
+    cc4b.init();
     cc4b.run(100);
 
-
     ConChecker< PredicateConstantEqual > cc5a("==0", true,false,12345,2,20,1);
+    cc5a.init();
     cc5a.run(100);
 
     ConChecker< PredicateConstantEqual > cc5b("!=0", true,false,12345,2,20,1);
     cc5b.con1->spin = 0;
     cc5b.con2->spin = 0;
     cc5b.con3->spin = 0;
+    cc5b.init();
     cc5b.run(100);
 
-
     ConChecker< PredicateAnd > cc6a("and", true,false,12345,3,1,3);
+    cc6a.init();
     cc6a.run(100);
 
     ConChecker< PredicateOr > cc7a("or", true,false,12345,3,1,3);
+    cc7a.init();
     cc7a.run(100);
 
-
     ConChecker< PredicateAdd > cc8a("+", false,true,12345,3,20,0);
+    cc8a.init();
     cc8a.run(100);
 
     // ConChecker< PredicateSub > cc8a("-", false,true,12345,3,20,0);
     // cc8a.run(100);
 
+
     ConChecker< PredicateWeightedSum > cc9a("sum(1)", false,true,12345,5,10,0);
+    cc9a.con1->lower_bound = 10;
+    cc9a.con1->upper_bound = 10;
+    cc9a.con2->lower_bound = 10;
+    cc9a.con2->upper_bound = 10;
+    cc9a.con3->lower_bound = 10;
+    cc9a.con3->upper_bound = 10;
+    cc9a.init();
     cc9a.run(20);
 
     ConChecker< PredicateWeightedSum > cc9b("sum(+)", false,true,12345,5,10,0);
@@ -998,19 +1079,24 @@ public:
       cc9b.con1->weight[i] = randint(4)+2;
       cc9b.con2->weight[i] = cc9b.con1->weight[i];
       cc9b.con3->weight[i] = cc9b.con1->weight[i];
-      if(!(cc9b.con1->weight[i]%2)) {
-	cc9b.con1->unknown_parity.reversible_remove(i);
-	cc9b.con2->unknown_parity.reversible_remove(i);
-	cc9b.con3->unknown_parity.reversible_remove(i);
-      }
+      // if(!(cc9b.con1->weight[i]%2)) {
+      // 	cc9b.con1->unknown_parity.reversible_remove(i);
+      // 	cc9b.con2->unknown_parity.reversible_remove(i);
+      // 	cc9b.con3->unknown_parity.reversible_remove(i);
+      // }
     }
+    cc9b.con1->lower_bound = 15;
+    cc9b.con1->upper_bound = 15;
+    cc9b.con2->lower_bound = 15;
+    cc9b.con2->upper_bound = 15;
+    cc9b.con3->lower_bound = 15;
+    cc9b.con3->upper_bound = 15;
     cc9b.con1->wpos = 2;
     cc9b.con2->wpos = 2;
     cc9b.con3->wpos = 2;
-
     ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
     //std::cout << cc9b.con2 << std::endl;
-
+    cc9b.init();
     cc9b.run(20);
 
     ConChecker< PredicateWeightedSum > cc9c("sum(-)", false,true,12345,5,10,0);
@@ -1018,11 +1104,11 @@ public:
       cc9c.con1->weight[i] = -(randint(4)+1);
       cc9c.con2->weight[i] = cc9c.con1->weight[i];
       cc9c.con3->weight[i] = cc9c.con1->weight[i];
-      if(!(cc9c.con1->weight[i]%2)) {
-	cc9c.con1->unknown_parity.reversible_remove(i);
-	cc9c.con2->unknown_parity.reversible_remove(i);
-	cc9c.con3->unknown_parity.reversible_remove(i);
-      }
+      // if(!(cc9c.con1->weight[i]%2)) {
+      // 	cc9c.con1->unknown_parity.reversible_remove(i);
+      // 	cc9c.con2->unknown_parity.reversible_remove(i);
+      // 	cc9c.con3->unknown_parity.reversible_remove(i);
+      // }
     }
     cc9c.con1->wpos = 3;
     cc9c.con2->wpos = 3;
@@ -1030,6 +1116,13 @@ public:
     cc9c.con1->wneg = 3;
     cc9c.con2->wneg = 3;
     cc9c.con3->wneg = 3;
+    cc9c.con1->lower_bound = -10;
+    cc9c.con1->upper_bound = -10;
+    cc9c.con2->lower_bound = -10;
+    cc9c.con2->upper_bound = -10;
+    cc9c.con3->lower_bound = -10;
+    cc9c.con3->upper_bound = -10;
+    cc9c.init();
     cc9c.run(20);
 
     ConChecker< PredicateWeightedSum > cc9d("sum(+/-)", false,true,12345,5,10,0);
@@ -1037,21 +1130,21 @@ public:
       cc9d.con1->weight[i] = randint(4)+2;
       cc9d.con2->weight[i] = cc9d.con1->weight[i];
       cc9d.con3->weight[i] = cc9d.con1->weight[i];
-      if(!(cc9d.con1->weight[i]%2)) {
-	cc9d.con1->unknown_parity.reversible_remove(i);
-	cc9d.con2->unknown_parity.reversible_remove(i);
-	cc9d.con3->unknown_parity.reversible_remove(i);
-      }
+      // if(!(cc9d.con1->weight[i]%2)) {
+      // 	cc9d.con1->unknown_parity.reversible_remove(i);
+      // 	cc9d.con2->unknown_parity.reversible_remove(i);
+      // 	cc9d.con3->unknown_parity.reversible_remove(i);
+      // }
     }
     for(int i=3; i<5; ++i) {
       cc9d.con1->weight[i] = -(randint(4)+1);
       cc9d.con2->weight[i] = cc9d.con1->weight[i];
       cc9d.con3->weight[i] = cc9d.con1->weight[i];
-      if(!(cc9d.con1->weight[i]%2)) {
-	cc9d.con1->unknown_parity.reversible_remove(i);
-	cc9d.con2->unknown_parity.reversible_remove(i);
-	cc9d.con3->unknown_parity.reversible_remove(i);
-      }
+      // if(!(cc9d.con1->weight[i]%2)) {
+      // 	cc9d.con1->unknown_parity.reversible_remove(i);
+      // 	cc9d.con2->unknown_parity.reversible_remove(i);
+      // 	cc9d.con3->unknown_parity.reversible_remove(i);
+      // }
     }
     cc9d.con1->wpos = 1;
     cc9d.con2->wpos = 1;
@@ -1059,17 +1152,175 @@ public:
     cc9d.con1->wneg = 3;
     cc9d.con2->wneg = 3;
     cc9d.con3->wneg = 3;
+    cc9d.init();
     cc9d.run(20);
 
+    ConChecker< PredicateWeightedSum > cc9e("sum(1)", false,true,12345,5,10,0);
+    cc9e.con1->lower_bound = 5;
+    cc9e.con1->upper_bound = 10;
+    cc9e.con2->lower_bound = 5;
+    cc9e.con2->upper_bound = 10;
+    cc9e.con3->lower_bound = 5;
+    cc9e.con3->upper_bound = 10;
+    cc9e.init();
+    cc9e.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9f("sum(+)", false,true,12345,5,10,0);
+    for(int i=2; i<5; ++i) {
+      cc9f.con1->weight[i] = randint(4)+2;
+      cc9f.con2->weight[i] = cc9f.con1->weight[i];
+      cc9f.con3->weight[i] = cc9f.con1->weight[i];
+      // if(!(cc9f.con1->weight[i]%2)) {
+      // 	cc9f.con1->unknown_parity.reversible_remove(i);
+      // 	cc9f.con2->unknown_parity.reversible_remove(i);
+      // 	cc9f.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    cc9f.con1->lower_bound = 10;
+    cc9f.con1->upper_bound = 15;
+    cc9f.con2->lower_bound = 10;
+    cc9f.con2->upper_bound = 15;
+    cc9f.con3->lower_bound = 10;
+    cc9f.con3->upper_bound = 15;
+    cc9f.con1->wpos = 2;
+    cc9f.con2->wpos = 2;
+    cc9f.con3->wpos = 2;
+    ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
+    //std::cout << cc9b.con2 << std::endl;
+    cc9f.init();
+    cc9f.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9g("sum(-)", false,true,12345,5,10,0);
+    for(int i=3; i<5; ++i) {
+      cc9g.con1->weight[i] = -(randint(4)+1);
+      cc9g.con2->weight[i] = cc9g.con1->weight[i];
+      cc9g.con3->weight[i] = cc9g.con1->weight[i];
+      // if(!(cc9g.con1->weight[i]%2)) {
+      // 	cc9g.con1->unknown_parity.reversible_remove(i);
+      // 	cc9g.con2->unknown_parity.reversible_remove(i);
+      // 	cc9g.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    cc9g.con1->wpos = 3;
+    cc9g.con2->wpos = 3;
+    cc9g.con3->wpos = 3;
+    cc9g.con1->wneg = 3;
+    cc9g.con2->wneg = 3;
+    cc9g.con3->wneg = 3;
+    cc9g.con1->lower_bound = -9;
+    cc9g.con1->upper_bound = -9;
+    cc9g.con2->lower_bound = -9;
+    cc9g.con2->upper_bound = -9;
+    cc9g.con3->lower_bound = -9;
+    cc9g.con3->upper_bound = -9;
+    cc9g.init();
+    cc9g.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9h("sum(-)", false,true,12345,5,10,0);
+    for(int i=3; i<5; ++i) {
+      cc9h.con1->weight[i] = -(randint(4)+1);
+      cc9h.con2->weight[i] = cc9h.con1->weight[i];
+      cc9h.con3->weight[i] = cc9h.con1->weight[i];
+      // if(!(cc9h.con1->weight[i]%2)) {
+      // 	cc9h.con1->unknown_parity.reversible_remove(i);
+      // 	cc9h.con2->unknown_parity.reversible_remove(i);
+      // 	cc9h.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    cc9h.con1->wpos = 3;
+    cc9h.con2->wpos = 3;
+    cc9h.con3->wpos = 3;
+    cc9h.con1->wneg = 3;
+    cc9h.con2->wneg = 3;
+    cc9h.con3->wneg = 3;
+    cc9h.con1->lower_bound = -9;
+    cc9h.con1->upper_bound = -3;
+    cc9h.con2->lower_bound = -9;
+    cc9h.con2->upper_bound = -3;
+    cc9h.con3->lower_bound = -9;
+    cc9h.con3->upper_bound = -3;
+    cc9h.init();
+    cc9h.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9j("sum(+/-)", false,true,12345,5,10,0);
+    for(int i=1; i<3; ++i) {
+      cc9j.con1->weight[i] = randint(4)+2;
+      cc9j.con2->weight[i] = cc9j.con1->weight[i];
+      cc9j.con3->weight[i] = cc9j.con1->weight[i];
+      // if(!(cc9j.con1->weight[i]%2)) {
+      // 	cc9j.con1->unknown_parity.reversible_remove(i);
+      // 	cc9j.con2->unknown_parity.reversible_remove(i);
+      // 	cc9j.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    for(int i=3; i<5; ++i) {
+      cc9j.con1->weight[i] = -(randint(4)+1);
+      cc9j.con2->weight[i] = cc9j.con1->weight[i];
+      cc9j.con3->weight[i] = cc9j.con1->weight[i];
+      // if(!(cc9j.con1->weight[i]%2)) {
+      // 	cc9j.con1->unknown_parity.reversible_remove(i);
+      // 	cc9j.con2->unknown_parity.reversible_remove(i);
+      // 	cc9j.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    cc9j.con1->wpos = 1;
+    cc9j.con2->wpos = 1;
+    cc9j.con3->wpos = 1;
+    cc9j.con1->wneg = 3;
+    cc9j.con2->wneg = 3;
+    cc9j.con3->wneg = 3;
+    cc9j.con1->lower_bound = -1;
+    cc9j.con1->upper_bound = -1;
+    cc9j.con2->lower_bound = -1;
+    cc9j.con2->upper_bound = -1;
+    cc9j.con3->lower_bound = -1;
+    cc9j.con3->upper_bound = -1;
+    cc9j.init();
+    cc9j.run(20);
+
+    ConChecker< PredicateWeightedSum > cc9k("sum(+/-)", false,true,12345,5,10,0);
+    for(int i=1; i<3; ++i) {
+      cc9k.con1->weight[i] = randint(4)+2;
+      cc9k.con2->weight[i] = cc9k.con1->weight[i];
+      cc9k.con3->weight[i] = cc9k.con1->weight[i];
+      // if(!(cc9k.con1->weight[i]%2)) {
+      // 	cc9k.con1->unknown_parity.reversible_remove(i);
+      // 	cc9k.con2->unknown_parity.reversible_remove(i);
+      // 	cc9k.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    for(int i=3; i<5; ++i) {
+      cc9k.con1->weight[i] = -(randint(4)+1);
+      cc9k.con2->weight[i] = cc9k.con1->weight[i];
+      cc9k.con3->weight[i] = cc9k.con1->weight[i];
+      // if(!(cc9k.con1->weight[i]%2)) {
+      // 	cc9k.con1->unknown_parity.reversible_remove(i);
+      // 	cc9k.con2->unknown_parity.reversible_remove(i);
+      // 	cc9k.con3->unknown_parity.reversible_remove(i);
+      // }
+    }
+    cc9k.con1->wpos = 1;
+    cc9k.con2->wpos = 1;
+    cc9k.con3->wpos = 1;
+    cc9k.con1->wneg = 3;
+    cc9k.con2->wneg = 3;
+    cc9k.con3->wneg = 3;
+    cc9k.con1->lower_bound = -1;
+    cc9k.con1->upper_bound = 3;
+    cc9k.con2->lower_bound = -1;
+    cc9k.con2->upper_bound = 3;
+    cc9k.con3->lower_bound = -1;
+    cc9k.con3->upper_bound = 3;
+    cc9k.init();
+    cc9k.run(20);
 
     ConChecker< PredicateElement > cc10a("[]", true,false,12345,6,10,0);
+    cc10a.init();
     cc10a.run(100);
 
-
     ConChecker< PredicateMul > cc11a("+", true,true,12345,3,20,0);
+    cc11a.init();
     cc11a.run(100);
-
-    */
 
     ConChecker< PredicateIntervalMember > cc12a("member[]", true,false,12345,2,20,1);
     cc12a.con1->spin = 1;
@@ -1081,23 +1332,62 @@ public:
     cc12a.con3->spin = 1;
     cc12a.con3->lower_bound = -5;
     cc12a.con3->upper_bound =  5;
+    cc12a.init();
     cc12a.run(1000);
 
-
-    ConChecker< PredicateIntervalMember > cc12b("member[]", true,false,12345,2,20,1);
-    cc12b.con1->spin = 1;
+    ConChecker< PredicateIntervalMember > cc12b("notmember[]", true,false,12345,2,20,1);
+    cc12b.con1->spin = 0;
     cc12b.con1->lower_bound = -5;
     cc12b.con1->upper_bound =  5;
-    cc12b.con2->spin = 1;
+    cc12b.con2->spin = 0;
     cc12b.con2->lower_bound = -5;
     cc12b.con2->upper_bound =  5;
-    cc12b.con3->spin = 1;
+    cc12b.con3->spin = 0;
     cc12b.con3->lower_bound = -5;
     cc12b.con3->upper_bound =  5;
+    cc12b.init();
     cc12b.run(1000);
 
 
+    BitSet vals(-10,10,BitSet::empt);
+    vals.add(-10);
+    vals.add(-5);
+    vals.add(-1);
+    vals.add(0);
+    vals.add(3);
+    vals.add(7);
+    vals.add(8);
+    vals.add(9);
+    ConChecker< PredicateSetMember > cc13a("member[]", true,false,12345,2,20,1);
+    cc13a.con1->spin = 1;
+    cc13a.con1->values = vals;
+    cc13a.con2->spin = 1;
+    cc13a.con2->values = vals;
+    cc13a.con3->spin = 1;
+    cc13a.con3->values = vals;
+    cc13a.init();
+    cc13a.run(1000);
 
+
+    ConChecker< PredicateSetMember > cc13b("notmember[]", true,false,12345,2,20,1);
+    cc13b.con1->spin = 0;
+    cc13b.con1->values = vals;
+    cc13b.con2->spin = 0;
+    cc13b.con2->values = vals;
+    cc13b.con3->spin = 0;
+    cc13b.con3->values = vals;
+    cc13b.init();
+    cc13b.run(1000);
+
+
+   ConChecker< PredicateMin > cc14("min", true,true,12345,5,10,0);
+   cc14.init();
+   cc14.run(20);
+
+
+   ConChecker< PredicateMax > cc15("max", true,true,12345,5,10,0);
+   cc15.init();
+   cc15.run(200);
 
 
     std::cout << " ";
@@ -1247,9 +1537,14 @@ int main(int argc, char *argv[])
   
   //tests.push_back(new ModelTest());
 
-  tests.push_back(new CheckerTest());
+
+  tests.push_back(new LexTest());
 
   /*
+  tests.push_back(new IntersectionTest());
+  tests.push_back(new CheckerTest());
+  tests.push_back(new CardTest());
+  tests.push_back(new MinMaxTest());
   tests.push_back(new WeightedSumTest());
   tests.push_back(new ElementTest());
   tests.push_back(new SubsetTest());
@@ -1273,6 +1568,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomRevNumAffectations<int>());
   */
 
+
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
@@ -1283,9 +1579,9 @@ int main(int argc, char *argv[])
 
     //t->Verbosity = EXTREME;
     
-    double TIME = getRunTime();
+    double TIME = get_run_time();
     t->run();
-    cout << (getRunTime() - TIME) << endl ;
+    cout << (get_run_time() - TIME) << endl ;
     
     delete t;
     tests.pop_back();
@@ -2495,6 +2791,7 @@ void BoolPigeons::run() {
 		     << (var_type == BITSET_VAR ? "bitset" : "boolean")
 		     << ") of order " << size << ": "; 
 
+
   VarArray X(size*(size-1), 0, 1, var_type);
   VarArray domain;
   Solver s;
@@ -2513,9 +2810,7 @@ void BoolPigeons::run() {
 
   //cout << s << endl;
   
-  
-
-  s.consolidate();
+    s.consolidate();
   
   // std::cout << s << std::endl;
 
@@ -2847,13 +3142,20 @@ void SubsetTest::run2() {
 
 
 
-
 MemberTest::MemberTest() : UnitTest() {}
 MemberTest::~MemberTest() {}
 
 void MemberTest::run() {
-
   if(Verbosity) cout << "Run Member test: "; 
+  run1();
+  cout << "1 ";
+  run2();
+  cout << "2 ";
+}
+
+void MemberTest::run1() {
+
+  //if(Verbosity) cout << "Run Member test: "; 
 
   Solver s;
 
@@ -2896,6 +3198,227 @@ void MemberTest::run() {
     //exit(1);
   }
 }
+
+
+void MemberTest::run2() {
+
+  //if(Verbosity) cout << "Run Member test: "; 
+
+  Solver s;
+
+  Variable X = Variable(0,10);
+  Variable Y = SetVariable(1,9,0,4);
+  Variable b(0,1);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Member(X,Y) == b );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    // cout << X.get_solution_str_value() << " member of " << Y.get_solution_str_value() 
+    // 	 << (b.get_solution_int_value() ? " (true)" : " (false)") << endl;
+  }
+
+  if(s.statistics.num_backtracks != 2906) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 2816) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+CardTest::CardTest() : UnitTest() {}
+CardTest::~CardTest() {}
+
+void CardTest::run() {
+
+  if(Verbosity) cout << "Run Card test: "; 
+
+  Solver s;
+
+  Variable X = Variable(1,8);
+  Variable Y = SetVariable(1,9,0,9);
+
+
+  s.add( Card(Y) == X );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " == |" << Y.get_solution_str_value() << "|" << endl;
+  }
+
+  if(s.statistics.num_backtracks != 509) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 510) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+
+IntersectionTest::IntersectionTest() : UnitTest() {}
+IntersectionTest::~IntersectionTest() {}
+
+void IntersectionTest::run() {
+
+  if(Verbosity) cout << "Run Intersection test: "; 
+
+  Solver s;
+
+  Variable Z = SetVariable(1,9,2,3);
+  Variable Y = SetVariable(1,9,1,5);
+  Variable X = SetVariable(1,9,1,5);
+
+
+  s.add( Intersection(X,Y) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+  //cout << s.variables << endl;
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+
+  //cout << s.sequence << std::endl;
+
+  //exit(1);
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+
+    // //cout << s.last_solution_lb << endl;
+    // cout << Z.get_solution_str_value() << " == " 
+    // 	 << X.get_solution_str_value() << " inter " 
+    // 	 << Y.get_solution_str_value() << endl;
+
+  }
+
+  if(s.statistics.num_backtracks != 75215) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 75216) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+
+LexTest::LexTest() : UnitTest() {}
+LexTest::~LexTest() {}
+
+void LexTest::run() {
+
+  if(Verbosity) cout << "Run Lex test: "; 
+
+  Solver s;
+
+  VarArray X(5,1,3);
+  VarArray Y(5,1,3);
+
+  s.add( X < Y );
+
+  std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  cout << "Consolidate\n" << s << endl;  
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+
+    for(unsigned int i=0; i<X.size; ++i)
+      cout << " " << X[i].get_solution_str_value();
+    cout << " < " << endl;
+    for(unsigned int i=0; i<X.size; ++i)
+      cout << " " << Y[i].get_solution_str_value();
+    cout << endl << endl;
+
+    // //cout << s.last_solution_lb << endl;
+    // cout << Z.get_solution_str_value() << " == " 
+    // 	 << X.get_solution_str_value() << " inter " 
+    // 	 << Y.get_solution_str_value() << endl;
+
+  }
+
+  if(s.statistics.num_backtracks != 75215) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 75216) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
 
 
 WeightedSumTest::WeightedSumTest() : UnitTest() {}
@@ -3409,6 +3932,163 @@ void ElementTest::run() {
   // cout << " 4";
 
   //cout << " ";
+}
+
+
+MinMaxTest::MinMaxTest() : UnitTest() {}
+MinMaxTest::~MinMaxTest() {}
+
+void MinMaxTest::run1() {
+
+  Solver s;
+
+  VarArray X;
+
+  Variable x1(-10,10);
+  X.add(x1);
+
+  Variable x2(0,20);
+  X.add(x2);
+
+  Variable x3(-10,0);
+  X.add(x3);
+
+  Vector< int > vals;
+  vals.add(-250);
+  vals.add(-12);
+  vals.add(-2);
+  vals.add(2);
+  vals.add(250);
+  Variable x4(vals);
+  X.add(x4);
+
+  Variable x5(0,3);
+  X.add(x5);
+
+  Variable Z(-250,250);
+
+
+  s.add( Min(X) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(X, //s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+
+    // cout << "min(" << X[0].get_solution_str_value();
+    // for(unsigned int i=1; i<X.size; ++i)
+    //   cout << ", " << X[i].get_solution_str_value();
+    // cout << ") = " << Z.get_solution_str_value() << endl;
+
+  }
+
+  if(s.statistics.num_backtracks != 97019) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 97020) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void MinMaxTest::run2() {
+
+  Solver s;
+
+  VarArray X;
+
+  Variable x1(-10,10);
+  X.add(x1);
+
+  Variable x2(0,20);
+  X.add(x2);
+
+  Variable x3(-10,0);
+  X.add(x3);
+
+  Vector< int > vals;
+  vals.add(-250);
+  vals.add(-12);
+  vals.add(-2);
+  vals.add(2);
+  vals.add(250);
+  Variable x4(vals);
+  X.add(x4);
+
+  Variable x5(0,3);
+  X.add(x5);
+
+  Variable Z(-250,250);
+
+
+  s.add( Max(X) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(X, //s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+
+    // cout << "max(" << X[0].get_solution_str_value();
+    // for(unsigned int i=1; i<X.size; ++i)
+    //   cout << ", " << X[i].get_solution_str_value();
+    // cout << ") = " << Z.get_solution_str_value() << endl;
+
+  }
+
+  if(s.statistics.num_backtracks != 97019) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 97020) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+void MinMaxTest::run() {
+  if(Verbosity) cout << "Run Min/Max test: "; 
+  run1();
+  cout << "1 ";
+  run2();
+  cout << "2 ";
+
+  //  cout << " ";
 }
 
 

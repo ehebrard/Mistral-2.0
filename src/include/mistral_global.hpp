@@ -71,8 +71,8 @@ namespace Mistral {
 #define BITSET_VAR  8
 #define LIST_VAR    16
 #define VIRTUAL_VAR 0
-#define DYN_VAR     27
-  //#define DYN_VAR     31
+  //#define DYN_VAR     27
+#define DYN_VAR     31
 #define REMOVED_VAR 512
 #define EXPRESSION  3
   
@@ -123,12 +123,12 @@ namespace Mistral {
    * Timing Memory and Command line utilities 
    *********************************************/
 
-  double getRunTime();
-  unsigned long int getMemory();
-  void getCommandLine(const char**,int*,int,const char**,const char**,int,char**,int);
+  double get_run_time();
+  unsigned long int get_memory();
+  void get_command_line(const char**,int*,int,const char**,const char**,int,char**,int);
 
   template <class WORD_TYPE>
-  void printBitset(WORD_TYPE n, const int idx, std::ostream& os) {
+  void print_bitset(WORD_TYPE n, const int idx, std::ostream& os) {
     int offset = 8*sizeof(WORD_TYPE)*idx;
     WORD_TYPE mask=1;
     int last, cur, serie=0, k=0;

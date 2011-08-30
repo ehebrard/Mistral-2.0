@@ -198,7 +198,7 @@ std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
      << std::right << std::setw(11) << num_filterings << " |" 
      << std::right << std::setw(13) << num_propagations << " |" 
      << std::right << std::setw(9) << std::setprecision(5) 
-     << (getRunTime() - start_time) << " |" ;
+     << (get_run_time() - start_time) << " |" ;
   return os;
 }
 std::ostream& Mistral::SolverStatistics::display(std::ostream& os) const {
@@ -760,7 +760,7 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
   }
 
   statistics.outcome = satisfiability;
-  statistics.end_time = getRunTime();
+  statistics.end_time = get_run_time();
 
   if(parameters.verbosity)  {
     // switch(satisfiability) {
@@ -806,6 +806,7 @@ Mistral::Outcome Mistral::Solver::get_next_solution()
 }
 
 void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
+
   if(size.back() < 1024) {
     x->bool_domain = slots.back()+size.back();
     ++size.back();
@@ -816,6 +817,9 @@ void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
     slots.add(nslot);
     x->bool_domain = nslot;
   }
+
+
+  //std::cout << "zzz " << *x << ": " << x->domain_type << std::endl;
 }
 
 
@@ -831,7 +835,7 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   active_solver = this;
   signal(SIGINT,Mistral_SIGINT_handler);
 
-  if(statistics.start_time == 0.0) statistics.start_time = getRunTime();
+  if(statistics.start_time == 0.0) statistics.start_time = get_run_time();
 
   sequence.clear();
   decisions.clear();
@@ -917,7 +921,7 @@ Mistral::Solver::~Solver() {
 void Mistral::Solver::trigger_event(const int var, 
 				    const Mistral::Event evt) {
 
-
+  
 #ifdef _DEBUG_QUEUE
   std::cout << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
 	    << " event on " << variables[var] 
@@ -1126,13 +1130,22 @@ void Mistral::Solver::consolidate()
        && !variables[initialised_vars].is_ground() 
        && variables[initialised_vars].get_degree()>0) {
 
-      Variable X(variables[initialised_vars].get_min(), 
-		 variables[initialised_vars].get_max(), 
+      int minval = variables[initialised_vars].get_min();
+      int maxval = variables[initialised_vars].get_max();
+      Variable X(minval, 
+		 maxval,
 		 domain_types[initialised_vars]);
 
       X.variable->solver = this;
       X.variable->id = initialised_vars;
       variables[initialised_vars] = X;
+
+      if(X.domain_type > DYN_VAR) {
+	booleans.add(variables.stack_+initialised_vars);
+      // if(minval==0 && maxval==1) {
+      // 	variables+
+      // }
+      }
     }
   }
 //   if(!is_initialised()) {
@@ -1174,8 +1187,11 @@ void Mistral::Solver::consolidate()
 void Mistral::Solver::make_non_convex(const int idx) 
 {
 
-  // std::cout << std::endl << std::endl << idx << std::endl;
-  std::cout << "turn " << variables[idx] << " in " << variables[idx].get_domain() << " into a bitset variable" << std::endl; 
+  // if(idx == 426) {
+  //    std::cout << std::endl << std::endl << idx << std::endl;
+  //    std::cout << "turn " << variables[idx] << " in " ;
+  //   std::cout<< variables[idx].get_domain() << " into a bitset variable" << std::endl; 
+  // }
 
   if(variables[idx].domain_type == RANGE_VAR) {
     ConstraintNode nd;
@@ -1186,8 +1202,11 @@ void Mistral::Solver::make_non_convex(const int idx)
 	       , true);
     variables[idx] = X;
 
-    // std::cout << " => " << X << " in " << X.get_domain() << std::endl; 
-
+    // if(idx == 426) {
+    //   std::cout << " => " << X << " in " << X.get_domain() << std::endl; 
+    //   std::cout << X.bool_domain << std::endl;
+    //   exit(1);
+    // }
 
     
     // std::cout << sequence << std::endl;
@@ -1493,10 +1512,23 @@ bool Mistral::Solver::propagate()
 
   if(IS_OK(wiped_idx)) {
     notify_success();
+
+#ifdef _DEBUG_PRUNING
+    for(unsigned int k=0; k<variables.size; ++k) {
+      std::cout << variables[k].get_domain() << " ";
+    }
+    std::cout << std::endl;
+#endif
+
     return true;
   } else {
     ++statistics.num_failures;
     notify_failure();
+
+#ifdef _DEBUG_PRUNING
+    std::cout << "{}" << std::endl;
+#endif
+
     return false;
   }
   //return !wiped_out;
@@ -1887,6 +1919,7 @@ void Mistral::Solver::backjump() {
 }
 
 void Mistral::Solver::branch_left() {
+
   save();
   Mistral::Decision decision = heuristic->branch();
 
@@ -1894,6 +1927,10 @@ void Mistral::Solver::branch_left() {
   
   //if(decision.var.is_ground()) exit(1);
 
+
+  // if(decisions.size && (decisions.back() == decision)) {
+  //   exit(1);
+  // }
 
   reason[decision.var.id()] = NULL;
   decisions.add(decision);
@@ -2022,7 +2059,7 @@ void Mistral::Solver::branch_left() {
  bool Mistral::Solver::limits_expired() {
   
   return (parameters.limit && 
-	  ((parameters.time_limit > 0.0 && (getRunTime() - statistics.start_time) > parameters.time_limit) ||
+	  ((parameters.time_limit > 0.0 && (get_run_time() - statistics.start_time) > parameters.time_limit) ||
 	   (parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit)) ||
 	   (parameters.fail_limit > 0 && (statistics.num_failures > parameters.fail_limit)) ||
 	   (parameters.restart_limit > 0 && (statistics.num_failures > parameters.restart_limit)) ||

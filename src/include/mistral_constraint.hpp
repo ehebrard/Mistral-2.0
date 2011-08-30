@@ -38,6 +38,11 @@
 #ifndef __CONSTRAINT_HPP
 #define __CONSTRAINT_HPP
 
+#define FILTER( var, method )				    \
+  event_type[(var)] = scope[(var)].method ;		    \
+  if(event_type[(var)] == FAIL_EVENT) wiped = FAILURE(var); \
+  else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var);
+
 
 namespace Mistral {
 
@@ -197,14 +202,16 @@ namespace Mistral {
       //   std::cout << " " << active << " -> "; 
       
       Constraint *r = NULL;
-      if(trail_.back() != level) {
-     	trail_.add(active.size);
-     	trail_.add(level);
-     	r = this;
+
+      if(active.contain(var)) {
+	if(trail_.back() != level) {
+	  trail_.add(active.size);
+	  trail_.add(level);
+	  r = this;
+	}
+      
+	active.remove(var);
       }
-      
-      active.remove(var);
-      
       //   std::cout << active << std::endl;
       
       return r;
@@ -212,7 +219,15 @@ namespace Mistral {
 
     void post(Solver *s);
     void relax();
-    
+    void relax_from(const int var);   
+
+
+
+    // void monitor(const int k, PropagationOutcome& wiped) {
+    //   if(event_type[k] == FAIL_EVENT) wiped = FAILURE(k);
+    // }
+
+
     //inline
     void restore();//  {
 
@@ -245,6 +260,7 @@ namespace Mistral {
       return Constraint::propagate(); 
     }
     PropagationOutcome bound_propagate();
+    PropagationOutcome bound_wordy_propagate();
     virtual PropagationOutcome propagate(); // { return NULL; }
     virtual PropagationOutcome rewrite();
     virtual void consolidate();
@@ -1031,6 +1047,88 @@ namespace Mistral {
 
 
   /**********************************************
+   * Lex Constraint
+   **********************************************/
+  /*! \class ConstraintLex
+    \brief  Basic bloc of a lex lt/leq constraint
+
+    let x0 and x1 being two cells with same rank on two rows/columns 
+    and b0, b1 be two Boolean variables.
+    This constraint ensures that 
+       - x0 =/= x1 => b1
+       - b0 < b1 => x0 < x1
+       - b0 <= b1 
+  */
+  class ConstraintLex : public Constraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    ConstraintLex() : Constraint() {}
+    ConstraintLex(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    ConstraintLex(std::vector< Variable >& scp) 
+      : Constraint(scp) {}
+    virtual Constraint *clone() { return new ConstraintLex(scope); }
+    virtual void initialise();
+    virtual ~ConstraintLex() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return( ((!sol[2] && !sol[3]) > (sol[0] == sol[1])
+	       || (sol[2] < sol[3]) > (sol[0] <  sol[1])
+	       || sol[2] > sol[3])
+	      ); 
+    }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "lex"; }
+    //@}
+  };
+
+  // /* leading constraint in the decomposition */
+  // class ConstraintLexf : public Constraint
+  // {
+
+  // public:
+  //   /**@name Constructors*/
+  //   //@{
+  //   ConstraintLexf() : Constraint() {}
+  //   ConstraintLexf(Vector< Variable >& scp) 
+  //     : Constraint(scp) {}
+  //   ConstraintLexf(std::vector< Variable >& scp) 
+  //     : Constraint(scp) {}
+  //   virtual Constraint *clone() { return new ConstraintLex(scope); }
+  //   virtual void initialise();
+  //   virtual ~ConstraintLexf() {}
+  //   //@}
+
+  //   /**@name Solving*/
+  //   //@{
+  //   virtual int check( const int* sol ) const { 
+  //     return( (sol[0]>sol[1]) || (sol[2]!=(sol[0]<sol[1])) );
+
+  //   }
+  //   virtual PropagationOutcome propagate();
+  //   //virtual PropagationOutcome rewrite();
+  //   //@}
+
+  //   /**@name Miscellaneous*/
+  //   //@{  
+  //   virtual std::ostream& display(std::ostream&) const ;
+  //   virtual std::string name() const { return "lexf"; }
+  //   //@}
+  // };
+
+  /**********************************************
    * Addition Predicate
    **********************************************/
   /*! \class PredicateAdd
@@ -1570,6 +1668,78 @@ namespace Mistral {
   };
 
 
+  /**********************************************
+   * Min Predicate
+   **********************************************/
+  /*! \class PredicateMin
+    \brief  Predicate on the mininum of a set of variables z = (x1 , ... , xn)
+  */
+  class PredicateMin : public Constraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int last_min;
+    ReversibleIntStack candidates;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateMin(Vector< Variable >& scp);
+    virtual ~PredicateMin();
+    virtual Constraint *clone() { return new PredicateMin(scope); }
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "min"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Max Predicate
+   **********************************************/
+  /*! \class PredicateMax
+    \brief  Predicate on the maxinum of a set of variables z = (x1 , ... , xn)
+  */
+  class PredicateMax : public Constraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int last_max;
+    ReversibleIntStack candidates;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateMax(Vector< Variable >& scp);
+    virtual ~PredicateMax();
+    virtual Constraint *clone() { return new PredicateMax(scope); }
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "max"; }
+    //@}
+  };
 
 
   /***********************************************
@@ -1593,7 +1763,7 @@ namespace Mistral {
   private:
     /**@name Parameters*/
     //@{  
-    int *level;
+    //int *level;
     int lastLevel;
     int *t;		// tree links
     int *d;		// diffs between critical capacities

@@ -89,7 +89,7 @@ SatSolver::~SatSolver()
 int SatSolver::solve()
 {
   usrand(params.seed);
-  stats.start_time = getRunTime();
+  stats.start_time = get_run_time();
   if(!restart_policy)
     set_policy( params.restart_policy );
   if(params.verbosity>1)
@@ -109,7 +109,7 @@ int SatSolver::solve()
     if(params.verbosity>1)
       cout << "c  | " << setw(10) << stats.num_failures
 	   << " | " << setw(10) << stats.num_nodes
-	   << " " << setw(9) << (getRunTime() - stats.start_time)
+	   << " " << setw(9) << (get_run_time() - stats.start_time)
 	   << " | " << setw(6) << (state.size - stats.literals - 1)
 	   << " " << setw(8) << base.size
 	   << " " << setw(5) << setprecision(3) << stats.base_avg_size     
@@ -132,7 +132,7 @@ int SatSolver::solve()
     cout << "c  |                                     UNSATISFIABLE!                                        |" << endl;
   else if( result == UNKNOWN ) 
     cout << "c  |                                       UNKNOWN!                                            |" << endl;
-  double cputime = (getRunTime() - stats.start_time);
+  double cputime = (get_run_time() - stats.start_time);
   if( cputime < 0.001 ) cputime = 0.001;
   cout << "c  =============================================================================================" << endl ;
   if(params.verbosity>0)    

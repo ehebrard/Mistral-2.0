@@ -477,7 +477,7 @@ inline bool SatSolver::rlimit_expired()
 
 inline bool SatSolver::limit_expired()
 {
-  return( params.time_limit>0 && ((getRunTime() - stats.start_time) > params.time_limit) );
+  return( params.time_limit>0 && ((get_run_time() - stats.start_time) > params.time_limit) );
 }
 
 inline int SatSolver::iterative_search()

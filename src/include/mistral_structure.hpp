@@ -94,8 +94,11 @@ namespace Mistral {
     {
       capacity = n;
       size = n;
-      if( capacity )
+      if( capacity ) {
 	stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+	int f = sizeof(DATA_TYPE)/sizeof(int);
+	std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      }
       else stack_ = NULL;
     }
     //@}
@@ -105,6 +108,7 @@ namespace Mistral {
     virtual ~Vector()
     {
       free( stack_ );
+      //delete [] stack_;
     }
     //@}
 
@@ -116,8 +120,11 @@ namespace Mistral {
       capacity = c;
       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
 
-      DATA_TYPE x(0);
-      std::fill(stack_, stack_+capacity, x);
+      int f = sizeof(DATA_TYPE)/sizeof(int);
+      std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+
+      //DATA_TYPE x(0);
+      //std::fill(stack_, stack_+capacity, x);
     }
 
     void initialise(const unsigned int s, const unsigned int c)
@@ -126,8 +133,10 @@ namespace Mistral {
       capacity = c;
       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
 
-      DATA_TYPE x(0);
-      std::fill(stack_, stack_+capacity, x);
+      int f = sizeof(DATA_TYPE)/sizeof(int);
+      std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      //DATA_TYPE x(0);
+      //std::fill(stack_, stack_+capacity, x);
     }
 
     //     void extendStack()
@@ -149,8 +158,10 @@ namespace Mistral {
       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
       stack_ = new_stack;
 
-      DATA_TYPE x(0);
-      std::fill(stack_+capacity-increment, stack_+capacity, x);
+      int f = sizeof(DATA_TYPE)/sizeof(int);
+      std::fill((int*)stack_+(capacity-increment)*f, (int*)stack_+(capacity*f), 0);
+      //DATA_TYPE x(0);
+      //std::fill(stack_+capacity-increment, stack_+capacity, x);
     }
 
     void resize( const unsigned int l )
@@ -280,6 +291,259 @@ namespace Mistral {
       if(size) os << stack_[0] ;
       for(unsigned int i=1; i<size; ++i)
 	os << " " << stack_[i];
+      os << "]";
+      return os;
+    }
+    //@}
+
+  };
+
+
+
+
+
+  /**********************************************
+   * Vector2
+   **********************************************/
+  /*! \class Vector2
+    \brief Simple vector class     
+  */
+  
+  template <class DATA_TYPE>
+  class Vector2 {
+  public:
+
+    /*!@name Parameters*/
+    //@{
+    DATA_TYPE* stack_;
+    unsigned int capacity;
+    unsigned int size;
+    //@}
+
+    /*!@name Constructor*/
+    //@{
+    Vector2()
+    {
+      capacity = 0;
+      size = 0;
+      stack_ = NULL;
+    }
+
+    Vector2(const Vector2<DATA_TYPE>& s)
+    {
+      capacity = s.size;
+      stack_ = new DATA_TYPE[capacity];
+      //(DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      for(size = 0; size<capacity; ++size)
+  	stack_[size] = s[size];
+    }
+
+    Vector2(const int n)
+    {
+      capacity = n;
+      size = n;
+      if( capacity )
+  	//stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+  	stack_ = new DATA_TYPE[capacity]; //(DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      else stack_ = NULL;
+    }
+    //@}
+
+    /*!@name Destructor*/
+    //@{  
+    virtual ~Vector2()
+    {
+      delete [] stack_;
+      //free( stack_ );
+    }
+    //@}
+
+    /*!@name Initialisation*/
+    //@{
+    void initialise(const unsigned int c)
+    {
+      size = 0;
+      capacity = c;
+      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      stack_ = new DATA_TYPE[capacity];
+
+      DATA_TYPE x(0);
+      std::fill(stack_, stack_+capacity, x);
+    }
+
+    void initialise(const unsigned int s, const unsigned int c)
+    {
+      size = s;
+      capacity = c;
+      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      stack_ = new DATA_TYPE[capacity];
+
+      DATA_TYPE x(0);
+      std::fill(stack_, stack_+capacity, x);
+    }
+
+    //     void extendStack()
+    //     {
+    //       unsigned int new_capacity = ((capacity+1) << 1);
+    //       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, new_capacity*sizeof(DATA_TYPE));
+    //       stack_ = new_stack;
+
+    //       DATA_TYPE x;
+    //       std::fill(stack_+capacity, stack_+new_capacity, x);
+      
+    //       capacity = new_capacity;
+    //     }
+
+    void extendStack( const unsigned int l=0 )
+    {
+      unsigned int increment = (l ? l : (capacity+1) << 1);
+      capacity += increment;
+      //DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+      DATA_TYPE* new_stack_ = new DATA_TYPE[capacity];
+      memcpy(new_stack_, stack_, capacity-increment);
+      delete [] stack_;
+      stack_ = new_stack_;
+
+      DATA_TYPE x(0);
+      std::fill(stack_+capacity-increment, stack_+capacity, x);
+    }
+
+    void resize( const unsigned int l )
+    {
+      if( capacity < l ) {
+	int old_capacity = capacity;
+  	capacity = l;
+  	// DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+  	// stack_ = new_stack;
+
+	DATA_TYPE* new_stack_ = new DATA_TYPE[capacity];
+	memcpy(new_stack_, stack_, old_capacity);
+	delete [] stack_;
+	stack_ = new_stack_;
+	
+	DATA_TYPE x(0);
+	std::fill(stack_+old_capacity, stack_+capacity, x);
+      }
+      size = l;
+    }
+    //@}
+
+    /*!@name Accessors*/
+    //@{
+    inline int empty() const
+    {
+      return !size;
+    }
+  
+    inline void add(DATA_TYPE x)
+    {
+      if( capacity == size ) 
+  	extendStack();
+      stack_[size++] = x;
+    }
+
+    inline void secure(const DATA_TYPE x) 
+    {
+      if( capacity == size ) 
+  	extendStack();
+    }
+
+    inline void fast_add(DATA_TYPE x)
+    {
+      stack_[size++] = x;
+    }
+
+    inline void push_back(DATA_TYPE x)
+    {
+      if( capacity == size ) 
+  	extendStack();
+      stack_[size++] = x;
+    }
+
+    inline DATA_TYPE pop_until(const unsigned int level)
+    {
+      size = level;
+      return stack_[size];
+    }
+
+    inline DATA_TYPE pop()
+    {
+      return stack_[--size];
+    }
+
+    inline void pop(DATA_TYPE& x)
+    {
+      x = stack_[--size];
+    }
+
+    inline void clear()
+    {
+      size = 0;
+    }
+
+    inline void remove(const unsigned int i)
+    {  
+      stack_[i] = stack_[--size];
+    }
+
+    inline void remove_elt(DATA_TYPE& elt)
+    {
+      unsigned int j=size;
+      while(j && stack_[--j] != elt);
+      stack_[j] = stack_[--size];
+    }
+
+    inline void setBack(const DATA_TYPE& x, const int k=1)
+    {
+      stack_[size-k] = x;
+    }
+
+    inline DATA_TYPE& front(const int k=0)
+    {
+      return stack_[k];
+    }
+
+    inline const DATA_TYPE front(const int k=0) const
+    {
+      return stack_[k];
+    }
+
+    inline DATA_TYPE& back(const int k=1)
+    {
+      return stack_[size-k];
+    }
+
+    inline const DATA_TYPE back(const int k=1) const
+    {
+      return stack_[size-k];
+    }
+
+    inline DATA_TYPE& operator[](const int i)
+    {
+      return stack_[i];
+    }
+
+    inline const DATA_TYPE operator[](const int i) const
+    {
+      return stack_[i];
+    }
+
+    inline Vector2< DATA_TYPE >& operator=(const Vector2< DATA_TYPE >& x)
+    {
+      initialise(0, x.capacity);
+      for(unsigned int i=0; i<x.size; ++i)
+  	add(x[i]);
+      return *this;
+    }
+    //@}
+
+    /*!@name Printing*/
+    //@{
+    std::ostream& display(std::ostream& os) const {
+      os << "[";
+      if(size) os << stack_[0] ;
+      for(unsigned int i=1; i<size; ++i)
+  	os << " " << stack_[i];
       os << "]";
       return os;
     }
@@ -1357,7 +1621,7 @@ namespace Mistral {
     }
 
     inline int index(const int elt_idx) {
-      if(elt_idx>(capacity-offset)) return -1;
+      if(elt_idx>((int)capacity-offset)) return -1;
       return index_[elt_idx];
     }
 
@@ -2245,7 +2509,10 @@ namespace Mistral {
     {
       //table += neg_words;
       //delete [] table; 
-      clone(q);
+      if(!table)
+	clone(q);
+      else
+	copy(q);
       return *this;
     }
 
@@ -2352,12 +2619,17 @@ namespace Mistral {
     }
 
     Bitset(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
+    {      
+      initialise();
       clone( s );
     }
 
     void clone(const Bitset<WORD_TYPE,FLOAT_TYPE>& s)
     {
+      if(table) {
+	table += neg_words;
+	delete [] table;
+      }
       neg_words = s.neg_words;
       pos_words = s.pos_words;
       table = new WORD_TYPE[pos_words-neg_words];

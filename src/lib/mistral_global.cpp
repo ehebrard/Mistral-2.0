@@ -110,7 +110,7 @@ double Mistral::randreal()
  *********************************************/
 
 /// Return the ellapsed cpu time
-double Mistral::getRunTime() {
+double Mistral::get_run_time() {
   double df = 0;
 
 #ifdef _UNIX
@@ -123,7 +123,7 @@ double Mistral::getRunTime() {
   return df;
 }
 
-unsigned long int Mistral::getMemory() {
+unsigned long int Mistral::get_memory() {
   unsigned long int mem = 0;
 //   struct rusage usage;
 //   getrusage(RUSAGE_CHILDREN, &usage);
@@ -161,7 +161,7 @@ unsigned long int Mistral::getMemory() {
  * Command line parsing
  *********************************************/
 
-void Mistral::getCommandLine(const char** int_ident, 
+void Mistral::get_command_line(const char** int_ident, 
 			     int*         int_param,
 			     int          int_nb,
 			     const char** str_ident,

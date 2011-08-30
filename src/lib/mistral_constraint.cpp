@@ -388,6 +388,28 @@ void Mistral::Constraint::relax() {
 
 }
 
+
+void Mistral::Constraint::relax_from(const int var) {
+  if(is_posted && active.contain(var)) {
+
+    int level = solver->level;
+
+    if(trail_.back() != level) {
+      trail_.add(active.size);
+      trail_.add(level);
+    }
+      
+    active.remove(var);
+    int k = scope[var].id();
+    solver->constraint_graph[k]->reversible_remove(self[var], trigger[var]);
+    
+    if(active.empty()) {
+      solver->notify_relax(this);
+      is_posted = false;
+    }
+  }
+}
+
 // Mistral::Constraint* Mistral::Constraint::notify_assignment(const int var, const int level) {
 //   // std::cout << "remove " << scope[var] << " from " << this //<< std::endl;
 //   // 	    << " " << active << " -> "; 
@@ -416,6 +438,88 @@ void Mistral::Constraint::relax() {
 //   active.remove(var);
 //   return r;
 // }
+
+
+//#define _DEBUG_GENPROPAG true
+
+Mistral::PropagationOutcome Mistral::Constraint::bound_wordy_propagate() {
+
+  PropagationOutcome wiped = CONSISTENT;
+
+
+    
+  unsigned int i, j;
+
+
+  Variable tmp;
+    std::cout << "bound propagate " << std::endl;
+  for(j=0; j<scope.size; ++j) {
+    tmp = scope[j];
+    std::cout << tmp << " in " << tmp.get_domain() << " " ;//<< " |" << tmp.get_size() << "| + ";
+    if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
+  }
+  std::cout << std::endl;
+
+
+  int vali, valmax;//, vnext;
+  bool supported;
+  while(!changes.empty()) {
+    j = changes.pop();
+    for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
+      if( i != j ) { 
+	supported = false;
+	vali = scope[i].get_min();
+	valmax = scope[i].get_max();
+	while(!supported && IS_OK(wiped) && vali<=valmax) {
+
+	  std::cout << "find support for " << scope[i] << " in " << scope[i].get_domain() << " = " << vali << std::endl;
+
+	  if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+
+	    std::cout << "  no support" << std::endl;
+
+	    if(IS_FAIL(scope[i].remove(vali))) {
+	      wiped = FAILURE(i);
+	    } else if(changes.list_ == events.list_) {
+	      if(!changes.contain(i)) changes.add(i);
+	    }
+	  } else supported = true;
+
+	  std::cout << "  => " << scope[i].get_domain() << std::endl;
+
+	  ++vali;
+	}
+
+	if(supported && vali<=valmax) {
+	  supported = false;
+	  vali = valmax;
+	  while(!supported && IS_OK(wiped)) {
+
+	    std::cout << "find support for " << scope[i] << " in " << scope[i].get_domain() << " = " << vali << std::endl;
+
+	    if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+
+	      std::cout << "  no support" << std::endl;
+
+	      if(IS_FAIL(scope[i].remove(vali))) {
+		wiped = FAILURE(i);
+	      }  else if(changes.list_ == events.list_) {
+		if(!changes.contain(i)) changes.add(i);
+	      }
+	    } else supported = true;
+
+	    std::cout << "  => " << scope[i].get_domain() << std::endl;
+
+	    --vali;
+	  }
+	}
+      }	
+    }
+  }
+  
+  return wiped;
+}
+
 
 Mistral::PropagationOutcome Mistral::Constraint::bound_propagate() {
   // PropagationOutcome wiped = CONSISTENT;
@@ -551,9 +655,11 @@ Mistral::PropagationOutcome Mistral::Constraint::propagate() {
 	  vali = vnext;
 	  vnext = scope[i].next(vali);
 
+#ifdef _DEBUG_GENPROPAG
 	  // if(solver->parameters.verbosity) {
-	  //   std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
+	  std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
 	  // }
+#endif
 
 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
 	    if(IS_FAIL(scope[i].remove(vali))) {
@@ -597,20 +703,24 @@ bool Mistral::Constraint::find_support(const int vri, const int vli)
   // or to the first value in its domain
   while(i >= 0) {
 
+#ifdef _DEBUG_GENPROPAG
     // if(solver->parameters.verbosity) {
-    //   std::cout << "\t<" << solution[0] ;
-    //   for(unsigned int k=1; k<scope.size; ++k) {
-    // 	std::cout << " " << solution[k];
-    //   }
-    //   std::cout << "> ";
+      std::cout << "\t<" << solution[0] ;
+      for(unsigned int k=1; k<scope.size; ++k) {
+    	std::cout << " " << solution[k];
+      }
+      std::cout << "> ";
     // }
+#endif
 
     // check this assignment
     if( !check( solution ) ) {
 
+#ifdef _DEBUG_GENPROPAG
       // if(solver->parameters.verbosity) {
-      // 	std::cout << "OK!" << std::endl;
+      std::cout << "OK!" << std::endl;
       // }
+#endif
 
       found=true;
       if( supports ) {
@@ -620,9 +730,13 @@ bool Mistral::Constraint::find_support(const int vri, const int vli)
       }
       break;
     } 
-// else if(solver->parameters.verbosity) {
-//       std::cout << "NO" << std::endl;
-//     }
+
+#ifdef _DEBUG_GENPROPAG
+    else 
+      //if(solver->parameters.verbosity) {
+      std::cout << "NO" << std::endl;
+    //     }
+#endif
  
     // try to assign more things
     // find the last var whose domain we have not exhausted
@@ -1273,6 +1387,9 @@ Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate() {
       else if( IS_FAIL(scope[0].set_max(upper_bound)) ) wiped = FAILURE(0);
     }
   } else {
+
+    //std::cout << scope[0].get_domain() << " <> [" << lower_bound << ".." << upper_bound << "]" << std::endl; 
+
     if( !(scope[0].intersect(lower_bound, upper_bound)) ) {
       if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].included(lower_bound, upper_bound) ) {
@@ -1280,6 +1397,8 @@ Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate() {
     }
   }
   
+  //exit(1);
+
   return wiped;
 }
 
@@ -1441,6 +1560,12 @@ void Mistral::PredicateAnd::initialise() {
 Mistral::PropagationOutcome Mistral::PredicateAnd::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
+  // std::cout << std::endl << "PROPAGATE " << this << std::endl;
+  // std::cout << scope[0].get_domain() << " & " 
+  // 	    << scope[1].get_domain() << " <-> "
+  // 	    << scope[2].get_domain() << std::endl; 
+
+
   if( scope[2].is_ground() ) {
     if( scope[2].get_min() ) {
       if( IS_FAIL(scope[0].remove(0)) ) 
@@ -1461,6 +1586,10 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate() {
       if( IS_FAIL(scope[2].set_domain(0)) ) return FAILURE(2);
     }
   }
+
+ // std::cout << scope[0].get_domain() << " & " 
+ // 	    << scope[1].get_domain() << " <-> "
+ // 	   << scope[2].get_domain() << std::endl << wiped << std::endl; 
   
   return wiped;
 }
@@ -1570,6 +1699,282 @@ std::ostream& Mistral::ConstraintOr::display(std::ostream& os) const {
   return os;
 }
 
+
+void Mistral::ConstraintLex::initialise() {
+  Constraint::initialise();
+  for(int i=0; i<4; ++i)
+    trigger_on(_RANGE_, i);
+  set_idempotent(true);
+}
+
+
+//#define _DEBUG_LEX true
+
+Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+  Event evt;
+
+  /*
+    rules:
+    
+    1: IF b1=0 THEN x0 = x1     ACTIVATION: change on b1 or state&1 and change on x0 or x1
+    2: IF x0 =/= x1 THEN b1=1   ACTIVATION: change on x0 or x1
+
+    4: IF b0<b1 THEN x0<x1      ACTIVATION: change on b0 or b1 or state&4 and change on x0 or x1
+    8: IF x0>=x1 THEN b0=b1     ACTIVATION: change on x0 or x1 or state&8 and change on b0 or b1
+
+    16: IF b0=1 THEN b1=1       ACTIVATION: change on b0 or b1
+    32: IF b1=0 THEN b0=0       ACTIVATION: change on b0 or b1
+   */
+
+
+  int state = (!scope[3].get_max() + 
+	       4*(scope[2].get_max() < scope[3].get_min()) + 
+	       8*(scope[0].get_min()>=scope[1].get_max()));
+
+
+
+  // while(!changes.empty()) {
+  //   evt = changes.pop();
+    
+  //   if(evt < 2) {
+  //     if(state&1) {
+  // 	// state&1 and change on x0 or x1 => R1
+  // 	FILTER( 1-evt, set_domain(scope[evt]) );
+  // 	// event_type[1-evt] = scope[1-evt].set_domain(scope[evt]);
+  // 	// if(event_type[1-evt] == FAIL_EVENT) wiped = FAILURE(1-evt);
+  // 	// else if(event_type[1-evt] != NO_EVENT) {
+  // 	//   if(!changes.contain(1-evt)) changes.add(1-evt);
+  // 	// }
+  //     }
+  //     if(IS_OK(wiped) && state&4) {
+  // 	// state&4 and change on x0 or x1 => R3
+
+  // 	FILTER( 0, set_max(scope[1].get_max()-1) );
+  // 	FILTER( 1, set_min(scope[0].get_min()+1) );
+
+  // 	// event_type[0] = scope[0].set_max(scope[1].get_max()-1);
+  // 	// if(event_type[0] == FAIL_EVENT) wiped = FAILURE(0);
+  // 	// else if(event_type[0] != NO_EVENT) {
+  // 	//   if(!changes.contain(0)) changes.add(0);
+  // 	// }
+  // 	// event_type[1] = scope[1].set_min(scope[0].get_min()+1);
+  // 	// if(event_type[1] == FAIL_EVENT) wiped = FAILURE(1);
+  // 	// else if(event_type[1] != NO_EVENT) {
+  // 	//   if(!changes.contain(1)) changes.add(1);
+  // 	// }
+  //     }
+
+  //     // change on x0 or x1 => R2
+  //     if(IS_OK(wiped) &&  !(state&1) && !scope[0].intersect(scope[1])) {
+
+  // 	FILTER( 3, set_domain(1) );
+
+  // 	//if(scope[3].set_domain(1) == FAIL_EVENT) wiped = FAILURE(3);
+  //     }
+
+  //     // change on x0 or x1 => R4
+  //     if(IS_OK(wiped) &&  scope[0].get_min() >= scope[1].get_max()) {
+
+  // 	FILTER( 3, set_domain(scope[2]) );
+  // 	FILTER( 2, set_domain(scope[3]) );
+	
+  // 	// if(scope[3].set_domain(scope[2]) == FAIL_EVENT) wiped = FAILURE(3);
+  // 	// if(scope[2].set_domain(scope[3]) == FAIL_EVENT) wiped = FAILURE(2);
+  //     }
+  //   }
+  // }
+
+#ifdef _DEBUG_LEX
+  std::cout << std::endl;
+#endif
+
+
+  while(IS_OK(wiped) && !changes.empty()) {
+    evt = changes.pop();
+    
+#ifdef _DEBUG_LEX
+    std::cout << " change on " << scope[evt] << " in " << scope[evt].get_domain() 
+	      << " state: ( " ;
+    if(state&1) std::cout << scope[3] << "=1 ";
+    if(state&4) std::cout << scope[2] << "<" << scope[3] << " ";
+    if(state&8) std::cout << scope[0] << ">=" << scope[1] << " ";
+    std::cout << ")"<< std::endl;  
+#endif
+    
+    if(evt < 2) {
+      if(state&1) {
+
+#ifdef _DEBUG_LEX
+	std::cout << "Rule1: " << scope[0] << " = " << scope[1] << std::endl;
+#endif
+
+	// state&1 and change on x0 or x1 => R1
+	FILTER( 1-evt, set_domain(scope[evt]) );
+      }
+      if(IS_OK(wiped) && state&4) {
+
+#ifdef _DEBUG_LEX
+	std::cout << "Rule3: " << scope[0] << " < " << scope[1] << std::endl;
+#endif
+
+	// state&4 and change on x0 or x1 => R3
+	FILTER( 0, set_max(scope[1].get_max()-1) );
+	FILTER( 1, set_min(scope[0].get_min()+1) );
+      }
+
+      // change on x0 or x1 => R2
+      if(IS_OK(wiped) &&  !(state&1) && !scope[0].intersect(scope[1])) {
+
+#ifdef _DEBUG_LEX
+	std::cout << "Rule2: " << scope[3] << " = 1" << std::endl;
+#endif
+
+	FILTER( 3, set_domain(1) );
+	//state |= 1;
+	if(!scope[2].get_max()) state |= 4;
+      }
+
+      // change on x0 or x1 => R4
+      if(IS_OK(wiped) &&  scope[0].get_min() >= scope[1].get_max()) {
+
+#ifdef _DEBUG_LEX
+	std::cout << "Rule4: " << scope[2] << " = " << scope[3] << std::endl;
+#endif
+
+	FILTER( 3, set_domain(scope[2]) );
+	FILTER( 2, set_domain(scope[3]) );
+	state |= 8;
+	if(!scope[3].get_max()) state |= 1;
+      }
+
+    } else {
+      
+      if(evt == 3) {
+	if(!scope[3].get_max()) {
+
+#ifdef _DEBUG_LEX
+	  std::cout << "Rule1: " << scope[0] << " = " << scope[1] << std::endl;
+#endif
+	  
+	  state |= 1;
+	  // change on b1 => R1
+	  FILTER( 0, set_domain(scope[1]) );
+	  FILTER( 1, set_domain(scope[0]) );
+
+
+#ifdef _DEBUG_LEX
+	  std::cout << "Rule6: " << scope[2] << " = 0 " << std::endl;
+#endif
+
+	  FILTER( 2, set_domain(0) );
+
+	}
+      } else {
+	if( scope[2].get_min() ) {
+	  
+#ifdef _DEBUG_LEX
+	  std::cout << "Rule5: " << scope[1] << " = 1 " << std::endl;
+#endif
+
+	  FILTER( 3, set_domain(1) );
+
+	}
+      }
+
+      // state&8 and change on b0 or b1 => R4
+      if(state&8) {
+
+#ifdef _DEBUG_LEX
+	std::cout << "Rule4: " << scope[2] << " = " << scope[3] << std::endl;
+#endif
+
+	FILTER( 5-evt, set_domain(scope[evt].get_min()) );
+
+	if(!scope[3].get_max()) state |= 1;
+      }
+
+      // change on b0 or b1 => R3
+      if(scope[2].get_max() < scope[3].get_min()) {
+
+#ifdef _DEBUG_LEX
+	std::cout << "Rule3: " << scope[0] << " < " << scope[1] << std::endl;
+#endif
+
+
+	FILTER( 0, set_max(scope[1].get_max()-1) );
+	FILTER( 1, set_min(scope[0].get_min()+1) );
+      }
+    }    
+  }
+
+
+  // if( IS_FAIL(scope[0].remove(0)) ) 
+  //   wiped = FAILURE(0);
+  // else if( IS_FAIL(scope[1].remove(0)) ) 
+  //   wiped = FAILURE(1);
+
+#ifdef _DEBUG_LEX
+  if(!IS_OK(wiped))
+    std::cout << "wipe out of x" << wiped << std::endl; 
+#endif
+  
+  return wiped;
+}
+
+std::ostream& Mistral::ConstraintLex::display(std::ostream& os) const {
+  os << "(" << scope[0] << " lex " << scope[1] << " - " << scope[2] << "." << scope[3] << ")";
+  return os;
+}
+
+
+// void Mistral::ConstraintLexf::initialise() {
+//   Constraint::initialise();
+//   for(int i=0; i<3; ++i)
+//     trigger_on(_RANGE_, i);
+//   set_idempotent(true);
+// }
+
+// Mistral::PropagationOutcome Mistral::ConstraintLexf::propagate() {      
+//   Mistral::PropagationOutcome wiped = CONSISTENT;
+//   Event evt;
+
+//   while(!changes.empty()) {
+//     evt = changes.pop();
+
+//     if(evt==2) {
+//       if(scope[2].get_min()) {
+// 	// => x0 < x1
+// 	FILTER( 0, set_max(scope[1].get_max()-1) );
+// 	FILTER( 1, set_min(scope[0].get_min()+1) );
+//       } else {
+// 	// => x0 = x1
+// 	FILTER( 0, set_domain(scope[1]) );
+// 	FILTER( 1, set_domain(scope[0]) );
+//       }
+//     } else {
+//       if(scope[2].get_min()) {
+// 	if(evt) FILTER( 0, set_max(scope[1].get_max()-1) );
+// 	else FILTER( 1, set_min(scope[0].get_min()+1) );
+//       } else if(!scope[2].get_max()) {
+// 	FILTER( 1-evt, set_domain(scope[evt]) );
+//       } else {
+// 	// in anycase x0 <= x1
+// 	FILTER( 0, set_max(scope[1].get_max()) );
+// 	FILTER( 1, set_min(scope[0].get_min()) );
+//       }
+//     }
+//   }  
+  
+//   return wiped;
+// }
+
+// std::ostream& Mistral::ConstraintLexf::display(std::ostream& os) const {
+//   os << "(" << scope[0] << " lex " << scope[1] << ")";
+//   return os;
+// }
+
+
 void Mistral::PredicateAdd::initialise() {
   Constraint::initialise();
   trigger_on(_RANGE_, 0);
@@ -1673,7 +2078,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
 }
 
 std::ostream& Mistral::PredicateAdd::display(std::ostream& os) const {
-  os << scope[2] << " === (" << scope[0] << " + " << scope[1] << ")";
+  os << scope[2] << " == (" << scope[0] << " + " << scope[1] << ")";
   return os;
 }
 
@@ -3897,9 +4302,14 @@ void Mistral::PredicateWeightedSum::initialise() {
 
   // exit(1);
 
+
   unknown_parity.initialise(0,scope.size-1,true,scope[0].get_solver());
   parity.Reversible::initialise(scope[0].get_solver());
-  parity.initialise(lower_bound%2);
+  parity.initialise(((lower_bound%2)!=0));
+
+
+  //std::cout << "--parity-- " << parity << std::endl;
+
 
   for(int i=0; i<wpos; ++i) {
     if( scope[i].is_ground() ) {
@@ -3938,9 +4348,12 @@ Mistral::PredicateWeightedSum::~PredicateWeightedSum()
   delete [] span;
 }
 
+
+//#define _DEBUG_WEIGHTEDSUM true
+
+
 Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate() 
 {
-
 
   int i, j;
   // compute the max and th min
@@ -3951,12 +4364,17 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
   PropagationOutcome wiped = CONSISTENT;
 
   // //if(lower_bound == 72) {
-  //   std::cout << std::endl << "propagate ";
-  //   for(i=0; i<arity; ++i) {
-  //     std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
-  //   }
-  //   std::cout << std::endl << changes << std::endl;
-  //   //}
+
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << std::endl << "propagate " << lower_bound << " <= " ;
+    for(i=0; i<arity; ++i) {
+      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+    }
+    std::cout << " <= " << upper_bound << std::endl << changes << std::endl;
+  }
+#endif
 
   //unknown_parity.fill();
 
@@ -3980,10 +4398,15 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
     // }
     // }
 
-     // if(i)
-     //   std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
-     // else
-     //   std::cout << "[" << smin << "," << smax << "] ";
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+     if(i)
+       std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
+     else
+       std::cout << "[" << smin << "," << smax << "] ";
+  }
+#endif
+
   }
   for(i=wpos; i<wneg; ++i) {
     smax += weight[i] * (up_bound[i] = scope[i].get_max());
@@ -4004,8 +4427,15 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
     //   }
     // }
 
-    // std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
-    // std::cout << "[" << smin << "," << smax << "] ";
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+if(i)
+    std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
+else
+    std::cout << "[" << smin << "," << smax << "] ";
+  }
+#endif
+
   }
   for(i=wneg; i<arity; ++i) {
     smax += weight[i] * (lo_bound[i] = scope[i].get_min());
@@ -4026,8 +4456,16 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
     //   }
     // }
 
-    // std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
-    // std::cout << "[" << smin << "," << smax << "] ";
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+if(i)
+    std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
+else
+    std::cout << "[" << smin << "," << smax << "] ";
+  }
+#endif
+
   }
 
 
@@ -4059,24 +4497,41 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
       }
 
      
-      // display(std::cout);
-      // std::cout << std::endl << unknown_parity << ": " << (parity ? "odd" : "even") << std::endl;
-      
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    display(std::cout);
+    std::cout << std::endl << unknown_parity << ": " << (parity ? "odd" : "even") << std::endl;
+  }
+#endif   
       
       
       if(unknown_parity.size == 0) {
-	//std::cout << "parity failure " << std::endl;
-	
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << "parity failure " << std::endl;
+  }
+#endif
+
 	if(parity != 0) wiped = FAILURE(arity-1);
       } else if(unknown_parity.size == 1) { // it needs to be of parity "parity"
 	i = unknown_parity[0];
 	
-	//std::cout << "parity pruning: " << (lo_bound[i]%2) << " " << parity << std::endl ;
-	
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << "parity pruning: " << (lo_bound[i]%2) << " " << parity << std::endl ;
+  }
+#endif
+
 	while(IS_OK(wiped) && (lo_bound[i]%2==0) != (parity==0)) {
 	  
-	  //std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
-	  
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
+  }
+#endif
+
 	  tmin = lo_bound[i];
 	  if( IS_FAIL(scope[i].set_min(++lo_bound[i])) ) wiped = FAILURE(i);
 	  else {
@@ -4084,7 +4539,12 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	    if(i<wneg) smin += ((lo_bound[i] - tmin)*weight[i]);
 	    else smax += ((lo_bound[i] - tmin)*weight[i]);
 	  }
-	  //std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+  }
+#endif
 	  
 	}
 
@@ -4095,7 +4555,11 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 
 	while(IS_OK(wiped) && (up_bound[i]%2==0) != (parity==0)) {
 
-	  //std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
+  }
+#endif
 
 	  tmin = up_bound[i];
 	  if( IS_FAIL(scope[i].set_max(--up_bound[i])) ) wiped = FAILURE(i);
@@ -4105,7 +4569,12 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	    else smin -= ((tmin - up_bound[i])*weight[i]);
 	  }
 
-	  //std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+  }
+#endif
+
 	}
       }
     }
@@ -4119,7 +4588,12 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
       events.clear();
 
       // //if(lower_bound == 72) {
-      // 	std::cout << " [" << smin << "," << smax << "]" << std::endl;
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << " [" << smin << "," << smax << "]" << std::endl;
+  }
+#endif
       // 	//}
 
       if( smax < lower_bound || smin > upper_bound ) wiped = FAILURE(arity-1);
@@ -4302,7 +4776,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	i = events[j];
 	
 	// // if(lower_bound == 72) {
-	// std::cout << " even on " << scope[i] << " in " <<  scope[i].get_domain() 
+	// std::cout << " event on " << scope[i] << " in " <<  scope[i].get_domain() 
 	// //     //   // 		<< " " << event_type[i] << " " << LB_EVENT << "/" << UB_EVENT 
 	// //     //   // 		<< " " << (event_type[i]&LB_EVENT) 
 	// //     //   // 		<< (event_type[i]&UB_EVENT)  
@@ -4349,11 +4823,16 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
   }
   
   // //if(lower_bound == 72) {
-  //   std::cout << "result: ";
-  //   for(i=0; i<arity; ++i) {
-  //     std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
-  //   }
-  //   std::cout << std::endl;
+
+#ifdef _DEBUG_WEIGHTEDSUM
+  if(_DEBUG_WEIGHTEDSUM) {
+    std::cout << "result: ";
+    for(i=0; i<arity; ++i) {
+      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+    }
+    std::cout << std::endl;
+  }
+#endif
   //   // }
 
   return wiped;
@@ -4469,24 +4948,28 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	// scope[n] may change if scope[n+1] changes, or any X changes
 	if( !scope[n+1].intersect(scope[evt]) ) {
 	  
-	  event_type[n] = scope[n].remove(evt+offset);
-	  if( IS_FAIL(event_type[n]) ) {
-	    wiped = FAILURE(n);
+// 	  event_type[n] = scope[n].remove(evt+offset);
+// 	  if( IS_FAIL(event_type[n]) ) {
+// 	    wiped = FAILURE(n);
 	    
-#ifdef _DEBUG_ELEMENT 
-	    if(_DEBUG_ELEMENT) {
-	      std::cout << "  => FAIL" << std::endl;
-	    } 
-#endif	
-	  } else if(!changes.contain(n)) {
-	    changes.add(n);
+// #ifdef _DEBUG_ELEMENT 
+// 	    if(_DEBUG_ELEMENT) {
+// 	      std::cout << "  => FAIL" << std::endl;
+// 	    } 
+// #endif	
+// 	  } else if(!changes.contain(n)) {
+// 	    changes.add(n);
 
-#ifdef _DEBUG_ELEMENT 
-	    if(_DEBUG_ELEMENT) {
-	      std::cout << "  => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
-	    } 
-#endif
-	  }
+// #ifdef _DEBUG_ELEMENT 
+// 	    if(_DEBUG_ELEMENT) {
+// 	      std::cout << "  => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+// 	    } 
+// #endif
+// 	  }
+
+	  FILTER( n, remove(evt+offset) );
+
+
 	}
       } else if(evt == n) {
 	update_V = true;
@@ -4518,22 +5001,25 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	      } 
 #endif
 	    }
-	    event_type[n+1] = scope[n+1].set_domain(scope[i]);
-	    if( IS_FAIL(event_type[n+1]) ) {
-#ifdef _DEBUG_ELEMENT 
-	      if(_DEBUG_ELEMENT) {
-		std::cout << "  => FAIL" << std::endl;
-	      } 
-#endif
-	      wiped = FAILURE(n+1);
-	    } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
-	      changes.add(n+1);
-#ifdef _DEBUG_ELEMENT 
-	      if(_DEBUG_ELEMENT) {
-		std::cout << "  => " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
-	      } 
-#endif
-	    }
+// 	    event_type[n+1] = scope[n+1].set_domain(scope[i]);
+// 	    if( IS_FAIL(event_type[n+1]) ) {
+// #ifdef _DEBUG_ELEMENT 
+// 	      if(_DEBUG_ELEMENT) {
+// 		std::cout << "  => FAIL" << std::endl;
+// 	      } 
+// #endif
+// 	      wiped = FAILURE(n+1);
+// 	    } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
+// 	      changes.add(n+1);
+// #ifdef _DEBUG_ELEMENT 
+// 	      if(_DEBUG_ELEMENT) {
+// 		std::cout << "  => " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
+// 	      } 
+// #endif
+// 	    }
+
+	    FILTER( n+1 , set_domain(scope[i]) );
+
 	  }
 	}
       } else if(evt == n+1) {
@@ -4552,24 +5038,27 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 #endif
 	  
 	  i = scope[n].get_min()-offset;
-	  event_type[i] = scope[i].set_domain(scope[n+1]);
-	  if( IS_FAIL(event_type[i]) ) { 
-#ifdef _DEBUG_ELEMENT 
-	    if(_DEBUG_ELEMENT) {
-	      std::cout << "  => FAIL" << std::endl;
-	    } 
-#endif
-	    wiped = FAILURE(i);
-	  } else {
-	    if( event_type[i] != NO_EVENT && !changes.contain(i) ) {
-	      changes.add(i);
-#ifdef _DEBUG_ELEMENT 
-	      if(_DEBUG_ELEMENT) {
-		std::cout << "  => " << scope[i] << " in " << scope[i].get_domain() << std::endl;
-	      } 
-#endif
-	    }
-	  }
+// 	  event_type[i] = scope[i].set_domain(scope[n+1]);
+// 	  if( IS_FAIL(event_type[i]) ) { 
+// #ifdef _DEBUG_ELEMENT 
+// 	    if(_DEBUG_ELEMENT) {
+// 	      std::cout << "  => FAIL" << std::endl;
+// 	    } 
+// #endif
+// 	    wiped = FAILURE(i);
+// 	  } else {
+// 	    if( event_type[i] != NO_EVENT && !changes.contain(i) ) {
+// 	      changes.add(i);
+// #ifdef _DEBUG_ELEMENT 
+// 	      if(_DEBUG_ELEMENT) {
+// 		std::cout << "  => " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+// 	      } 
+// #endif
+// 	    }
+// 	  }
+
+	  FILTER( i, set_domain(scope[n+1]) );
+
 	}
 
 	// nxt = N.get_min();
@@ -4603,22 +5092,25 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 
 	    //std::cout << n << " " << N << " " << N.get_domain() << " " << i << std::endl;
 
-	    event_type[n] = scope[n].remove(i);
-	    if( IS_FAIL(event_type[n]) ) {
-#ifdef _DEBUG_ELEMENT 
-	      if(_DEBUG_ELEMENT) {
-		std::cout << "  => FAIL" << std::endl;
-	      } 
-#endif
-	      wiped = FAILURE(n);
-	    } else if( event_type[n] != NO_EVENT && !changes.contain(n) ) {
-	      changes.add(n);
-#ifdef _DEBUG_ELEMENT 
-	      if(_DEBUG_ELEMENT) {
-		std::cout << "  => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
-	      } 
-#endif
-	    } 
+// 	    event_type[n] = scope[n].remove(i);
+// 	    if( IS_FAIL(event_type[n]) ) {
+// #ifdef _DEBUG_ELEMENT 
+// 	      if(_DEBUG_ELEMENT) {
+// 		std::cout << "  => FAIL" << std::endl;
+// 	      } 
+// #endif
+// 	      wiped = FAILURE(n);
+// 	    } else if( event_type[n] != NO_EVENT && !changes.contain(n) ) {
+// 	      changes.add(n);
+// #ifdef _DEBUG_ELEMENT 
+// 	      if(_DEBUG_ELEMENT) {
+// 		std::cout << "  => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+// 	      } 
+// #endif
+// 	    }
+
+	    FILTER( n, remove(i) );
+	    
 #ifdef _DEBUG_ELEMENT 
 	    if(_DEBUG_ELEMENT) {
 	      if(event_type[n] == NO_EVENT) {
@@ -4646,6 +5138,11 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
       aux_dom.clear();
       //lb=INFTY; ub=-INFTY;
       
+      // std::cout << "N " << n << ": " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+      // if(scope[n].domain_type == BITSET_VAR) {
+      // 	scope[n].bitset_domain->debug_print();
+      // }
+
       nxt = scope[n].get_min();
       do {
 	i = nxt;
@@ -4655,6 +5152,14 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	//   val = scope[i-offset].get_max();
 	//   if(ub<val) ub = val;
 	// } else {
+
+	
+
+	// std::cout << i << "-" << offset << " = " << (i-offset) << std::endl;
+
+	// std::cout << scope << std::endl;
+
+
 	scope[i-offset].union_to(aux_dom);
 	//}
 	nxt = scope[n].next(i);
@@ -4667,23 +5172,25 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
       // if(lb<=ub) aux_dom.fill(lb,ub);
       // std::cout << aux_dom << std::endl;
       
-      event_type[n+1] = scope[n+1].set_domain(aux_dom);
-      
-      if( IS_FAIL(event_type[n+1]) ) { 
-#ifdef _DEBUG_ELEMENT 
-	if(_DEBUG_ELEMENT) {
-	  std::cout << "  => FAIL" << std::endl;
-	} 
-#endif
-	wiped = FAILURE(n+1);
-      } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
-	changes.add(n+1);
-#ifdef _DEBUG_ELEMENT 
-	if(_DEBUG_ELEMENT) {
-	  std::cout << "  => " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
-	} 
-#endif
-      }
+//       event_type[n+1] = scope[n+1].set_domain(aux_dom);
+//       if( IS_FAIL(event_type[n+1]) ) { 
+// #ifdef _DEBUG_ELEMENT 
+// 	if(_DEBUG_ELEMENT) {
+// 	  std::cout << "  => FAIL" << std::endl;
+// 	} 
+// #endif
+// 	wiped = FAILURE(n+1);
+//       } else if( event_type[n+1] != NO_EVENT && !changes.contain(n+1) ) {
+// 	changes.add(n+1);
+// #ifdef _DEBUG_ELEMENT 
+// 	if(_DEBUG_ELEMENT) {
+// 	  std::cout << "  => " << scope[n+1] << " in " << scope[n+1].get_domain() << std::endl;
+// 	} 
+// #endif
+//       }
+
+      FILTER( n+1, set_domain(aux_dom) );
+
     }
   }
 
@@ -4817,6 +5324,10 @@ void Mistral::ConstraintAllDiff::initialise() {
 }
 
 void Mistral::ConstraintAllDiff::mark_domain() {
+
+  std::cout << (void*)(solver) << std::endl;
+  exit(1);
+
   for(unsigned int i=0; i<scope.size; ++i) {
     solver->mark_non_convex(scope[i].id());
   }
@@ -4826,7 +5337,7 @@ void Mistral::ConstraintAllDiff::mark_domain() {
 void Mistral::ConstraintAllDiff::init() 
 {
   unsigned int i;
-  level = &(scope[0].get_solver()->level);
+  //level = &(scope[0].get_solver()->level);
   lastLevel = -2;
   nb = 0;
 
@@ -5026,7 +5537,7 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
    b = scope.size;
 
   //if( lastLevel != ((solver->level) - 1) ) {
-  if( lastLevel != ((*level) - 1) ) {
+  if( lastLevel != ((solver->level) - 1) ) {
     // not incremental
     status_lower = CHANGES;
     status_upper = CHANGES;
@@ -5095,8 +5606,8 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
 //     //    std::cout << std::endl << std::endl;
 //   }
 
-  lastLevel = *level;//(solver->level);
-  //lastLevel = (solver->level);
+  //lastLevel = *level;//(solver->level);
+  lastLevel = (solver->level);
 
   if( status_lower == NO_CHANGES && status_upper == NO_CHANGES ) 
     return CONSISTENT;
@@ -5139,6 +5650,513 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
   for(unsigned int i=1; i<scope.size; ++i) 
     os << " ," << scope[i];
   os << ")" ;
+  return os;
+}
+
+
+//#define _DEBUG_MIN true
+//#define _DEBUG_MIN ((id==23))
+
+Mistral::PredicateMin::PredicateMin(Vector< Variable >& scp) : Constraint(scp) {}
+
+Mistral::PredicateMin::~PredicateMin() {}
+
+void Mistral::PredicateMin::initialise() {
+  Constraint::initialise();
+  last_min = 0;
+  for(unsigned int i=0; i<scope.size; ++i) {
+    trigger_on(_RANGE_, i);
+    if(scope[i].get_min() < scope[last_min].get_min())
+      last_min = i;
+  }
+
+
+  candidates.initialise(0,scope.size-2,true,scope[0].get_solver());
+  int n = scope.size-1;
+  for(unsigned int i=0; i<n; ++i) {
+    if(scope[i].get_min() > scope[n].get_max()) {
+      candidates.reversible_remove(i);
+      relax_from(i);
+    }
+  }
+
+  set_idempotent(true);
+}
+
+int Mistral::PredicateMin::check( const int* sol ) const {
+  int i=scope.size-1, the_min=sol[0], smin = sol[i];
+  while( --i > 0 ) {
+    if(sol[i] < the_min) the_min = sol[i];
+    if(the_min < smin) break;
+  }
+  return the_min != smin;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
+  PropagationOutcome wiped = CONSISTENT;
+  unsigned int i, n = scope.size-1, evt;
+  int val, aux, var; 
+
+
+#ifdef _DEBUG_MIN
+  std::cout << std::endl << active << std::endl << candidates << std::endl;
+#endif
+
+  while(IS_OK(wiped) && !changes.empty()) {
+    if(changes.contain(n)) { 
+
+#ifdef _DEBUG_MIN
+      std::cout << " " << scope[n] << " has changed " << std::endl;
+#endif
+     
+      changes.remove(n);
+      // the "self" variable has changed.
+	
+      // if the lower bound has been changed, we need to update the lb of every active variable
+      if(LB_CHANGED(event_type[n])) {
+	val = scope[n].get_min();
+	for(i=0; IS_OK(wiped) && i<candidates.size; ++i) {
+	  var = candidates[i];
+
+#ifdef _DEBUG_MIN
+	  std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " >= " << val << std::endl;
+#endif
+
+	  event_type[var] = scope[var].set_min(val);
+	  if(event_type[var] == FAIL_EVENT) wiped = FAILURE(var);
+	  else if(!changes.contain(var)) {
+	    
+#ifdef _DEBUG_MIN
+	  std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+#endif
+
+	    changes.add(var);
+	  }
+	}
+      }
+      
+      // if the upper bound has been changed, some active variables may become unactive
+      // The min(maximum) might also change because variables became unactive
+      if(IS_OK(wiped) && UB_CHANGED(event_type[n])) {
+	aux = val = scope[n].get_max();
+	
+#ifdef _DEBUG_MIN
+	std::cout << " relax the constraint from vars greater than " << val << std::endl;
+#endif
+	
+	for(i=candidates.size; IS_OK(wiped) && i;) {
+	  --i;
+	  var = candidates[i];
+
+	  //std::cout << i << ": " << 
+
+	  if(scope[var].get_min() > val) {
+	    
+#ifdef _DEBUG_MIN
+	    std::cout << "    relax1 " << this << " from " << scope[var] << std::endl;
+#endif 
+
+	    //relax_from(var);
+	    if(candidates.contain(var)) candidates.reversible_remove(var);
+	    //std::cout << candidates << std::endl;
+
+	  } else if(aux > scope[var].get_max()) aux = scope[var].get_max();
+	}
+
+#ifdef _DEBUG_MIN
+	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() << " <= " << aux << std::endl;
+#endif
+
+	if(scope[n].set_max(aux) == FAIL_EVENT) wiped = FAILURE(n);	
+      }
+    } 
+
+    if(IS_OK(wiped)) {
+
+      // store the min min of the changed vars in aux, and the min max in val
+      aux = INFTY;
+      val = INFTY;
+      while(!changes.empty()) {
+	evt = changes.pop();
+	
+#ifdef _DEBUG_MIN
+	std::cout << "-event on " << scope[evt] 
+		  << (LB_CHANGED(event_type[evt]) ? " (lb) " : " ")
+		  << (UB_CHANGED(event_type[evt]) ? "(ub) " : " ")
+		  << std::endl;
+#endif
+	
+	if(LB_CHANGED(event_type[evt]) 
+	   && scope[evt].get_min()<aux
+	   ) {
+	  aux = scope[evt].get_min();
+	  if(aux > scope[n].get_max()) {
+
+#ifdef _DEBUG_MIN
+	    std::cout << "    relax2 " << this << " from " << scope[evt] << std::endl;
+#endif 
+
+	    //relax_from(evt);
+	    if(candidates.contain(evt)) candidates.reversible_remove(evt);
+	    //std::cout << candidates << std::endl;
+	  }
+	}
+	if(UB_CHANGED(event_type[evt]) && scope[evt].get_max()<val)
+	  val = scope[evt].get_max();
+	//if(ASSIGNED(event_type[evt]))
+	//candidates.reversible_remove(evt);
+      }
+      
+#ifdef _DEBUG_MIN
+      if(val < INFTY) 
+	std::cout << " New min maximum: " << val << std::endl;
+      if(aux < INFTY) 
+	std::cout << " New min minimum: " << aux << std::endl;
+#endif
+      
+      
+      if(val < INFTY) {
+	
+#ifdef _DEBUG_MIN
+	std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
+		  << " <= " << val << std::endl;
+#endif
+	
+	event_type[n] = scope[n].set_max(val);
+	if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
+	else {
+	  changes.add(n);
+	}
+      }
+      
+      if(aux < INFTY) {
+	val = scope[n].get_min();
+	
+#ifdef _DEBUG_MIN
+	std::cout << " previous min minimum witness: " << scope[last_min] 
+		  << " in " << scope[last_min].get_domain() << std::endl;
+#endif
+      
+	if(aux > val && scope[last_min].get_min() >  val) {
+	  
+	  // std::cout << candidates << std::endl;
+	  // for(i=0; i<scope.size; ++i) {
+	  //   std::cout << " " << scope[i].get_domain();
+	  // }
+	  // std::cout << std::endl;
+
+	  // look for a new witness for the min
+	  i = candidates.size;
+	  while( i > 0 ) {
+	    --i;
+
+	    // std::cout << i << std::endl;
+	    
+	    // std::cout << candidates[i] << std::endl;
+
+	    var = scope[candidates[i]].get_min();
+	    if(aux > var) aux = var;
+	    if(var <= val) {
+	      last_min = candidates[i];
+	      break;
+	    } 
+	  }
+	  
+	  if(aux > val) {
+#ifdef _DEBUG_MIN
+	    std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
+		      << " >= " << aux << std::endl;
+#endif
+	    event_type[n] = scope[n].set_min(aux);
+	    if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
+	    else {
+	      if(!changes.contain(n)) changes.add(n);
+	    }
+	  }
+	} else {
+	  
+#ifdef _DEBUG_MIN
+	  std::cout << " no need to update " << scope[n] << "'s min" << std::endl;
+#endif
+	  
+	}
+      }
+
+      if(candidates.size == 1) {
+
+#ifdef _DEBUG_MIN
+	std::cout << scope[candidates[0]] << " is the last min var " << std::endl;
+#endif
+
+	if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
+	if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
+      }
+    }
+  }  
+
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateMin::display(std::ostream& os) const {
+  os << scope.back() << " == min(" << scope[0];
+  for(unsigned int i=1; i<scope.size-1; ++i) {
+    os << ", " << scope[i] ;
+  }
+  os << ")";
+  return os;
+}
+
+
+
+//#define _DEBUG_MAX true
+//#define _DEBUG_MAX ((id==23))
+
+Mistral::PredicateMax::PredicateMax(Vector< Variable >& scp) : Constraint(scp) {}
+
+Mistral::PredicateMax::~PredicateMax() {}
+
+void Mistral::PredicateMax::initialise() {
+  Constraint::initialise();
+  last_max = 0;
+  for(unsigned int i=0; i<scope.size; ++i) {
+    trigger_on(_RANGE_, i);
+    if(scope[i].get_max() > scope[last_max].get_max())
+      last_max = i;
+  }
+
+
+  candidates.initialise(0,scope.size-2,true,scope[0].get_solver());
+  int n = scope.size-1;
+  for(unsigned int i=0; i<n; ++i) {
+    if(scope[i].get_max() < scope[n].get_min()) {
+      candidates.reversible_remove(i);
+      //relax_from(i);
+    }
+  }
+
+  set_idempotent(true);
+}
+
+int Mistral::PredicateMax::check( const int* sol ) const {
+  int i=scope.size-1, the_max=sol[0], smax = sol[i];
+  while( --i > 0 ) {
+    if(sol[i] > the_max) the_max = sol[i];
+    if(the_max > smax) break;
+  }
+  return the_max != smax;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
+  PropagationOutcome wiped = CONSISTENT;
+  unsigned int i, n = scope.size-1, evt;
+  int val, aux, var; 
+
+
+#ifdef _DEBUG_MAX
+  std::cout << std::endl << active << std::endl << candidates << std::endl;
+#endif
+
+  while(IS_OK(wiped) && !changes.empty()) {
+    if(changes.contain(n)) { 
+
+#ifdef _DEBUG_MAX
+      std::cout << " " << scope[n] << " has changed " << std::endl;
+#endif
+     
+      changes.remove(n);
+      // the "self" variable has changed.
+	
+      // if the upper bound has been changed, we need to update the ub of every active variable
+      if(UB_CHANGED(event_type[n])) {
+	val = scope[n].get_max();
+	for(i=0; IS_OK(wiped) && i<candidates.size; ++i) {
+	  var = candidates[i];
+
+#ifdef _DEBUG_MAX
+	  std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " <= " << val << std::endl;
+#endif
+
+	  event_type[var] = scope[var].set_max(val);
+	  if(event_type[var] == FAIL_EVENT) wiped = FAILURE(var);
+	  else if(!changes.contain(var)) {
+	    
+#ifdef _DEBUG_MAX
+	  std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+#endif
+
+	    changes.add(var);
+	  }
+	}
+      }
+      
+      // if the lower bound has been changed, some active variables may become unactive
+      // The max(maximum) might also change because variables became unactive
+      if(IS_OK(wiped) && LB_CHANGED(event_type[n])) {
+	aux = val = scope[n].get_min();
+	
+#ifdef _DEBUG_MAX
+	std::cout << " relax the constraint from vars lower than " << val << std::endl;
+#endif
+	
+	for(i=candidates.size; IS_OK(wiped) && i;) {
+	  --i;
+	  var = candidates[i];
+
+	  //std::cout << i << ": " << 
+
+	  if(scope[var].get_max() < val) {
+	    
+#ifdef _DEBUG_MAX
+	    std::cout << "    relax1 " << this << " from " << scope[var] << std::endl;
+#endif 
+
+	    //relax_from(var);
+	    if(candidates.contain(var)) candidates.reversible_remove(var);
+	    //std::cout << candidates << std::endl;
+
+	  } else if(aux < scope[var].get_min()) aux = scope[var].get_min();
+	}
+
+#ifdef _DEBUG_MAX
+	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() << " <= " << aux << std::endl;
+#endif
+
+	if(scope[n].set_min(aux) == FAIL_EVENT) wiped = FAILURE(n);	
+      }
+    } 
+
+    if(IS_OK(wiped)) {
+
+      // store the max max of the changed vars in aux, and the max max in val
+      aux = -INFTY;
+      val = -INFTY;
+      while(!changes.empty()) {
+	evt = changes.pop();
+	
+#ifdef _DEBUG_MAX
+	std::cout << "-event on " << scope[evt] 
+		  << (LB_CHANGED(event_type[evt]) ? " (lb) " : " ")
+		  << (UB_CHANGED(event_type[evt]) ? "(ub) " : " ")
+		  << std::endl;
+#endif
+	
+	if(UB_CHANGED(event_type[evt]) 
+	   && scope[evt].get_max()>aux
+	   ) {
+	  aux = scope[evt].get_max();
+	  if(aux < scope[n].get_min()) {
+
+#ifdef _DEBUG_MAX
+	    std::cout << "    relax2 " << this << " from " << scope[evt] << std::endl;
+#endif 
+
+	    //relax_from(evt);
+	    if(candidates.contain(evt)) candidates.reversible_remove(evt);
+	    //std::cout << candidates << std::endl;
+	  }
+	}
+	if(LB_CHANGED(event_type[evt]) && scope[evt].get_min()>val)
+	  val = scope[evt].get_min();
+	//if(ASSIGNED(event_type[evt]))
+	//candidates.reversible_remove(evt);
+      }
+      
+#ifdef _DEBUG_MAX
+      if(val > -INFTY) 
+	std::cout << " New min maximum: " << val << std::endl;
+      if(aux > -INFTY) 
+	std::cout << " New max maximum: " << aux << std::endl;
+#endif
+      
+      
+      if(val > -INFTY) {
+	
+#ifdef _DEBUG_MAX
+	std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
+		  << " >= " << val << std::endl;
+#endif
+	
+	event_type[n] = scope[n].set_min(val);
+	if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
+	else {
+	  changes.add(n);
+	}
+      }
+      
+      if(aux > -INFTY) {
+	val = scope[n].get_max();
+	
+#ifdef _DEBUG_MAX
+	std::cout << " previous max minimum witness: " << scope[last_max] 
+		  << " in " << scope[last_max].get_domain() << std::endl;
+#endif
+      
+	if(aux < val && scope[last_max].get_max() < val) {
+	  
+	  // std::cout << candidates << std::endl;
+	  // for(i=0; i<scope.size; ++i) {
+	  //   std::cout << " " << scope[i].get_domain();
+	  // }
+	  // std::cout << std::endl;
+
+	  // look for a new witness for the max
+	  i = candidates.size;
+	  while( i > 0 ) {
+	    --i;
+
+	    // std::cout << i << std::endl;
+	    
+	    // std::cout << candidates[i] << std::endl;
+
+	    var = scope[candidates[i]].get_max();
+	    if(aux < var) aux = var;
+	    if(var >= val) {
+	      last_max = candidates[i];
+	      break;
+	    } 
+	  }
+	  
+	  if(aux < val) {
+#ifdef _DEBUG_MAX
+	    std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
+		      << " <= " << aux << std::endl;
+#endif
+	    event_type[n] = scope[n].set_max(aux);
+	    if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
+	    else {
+	      if(!changes.contain(n)) changes.add(n);
+	    }
+	  }
+	} else {
+	  
+#ifdef _DEBUG_MAX
+	  std::cout << " no need to update " << scope[n] << "'s max" << std::endl;
+#endif
+	  
+	}
+      }
+
+      if(candidates.size == 1) {
+
+#ifdef _DEBUG_MAX
+	std::cout << scope[candidates[0]] << " is the last max var " << std::endl;
+#endif
+
+	if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
+	if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
+      }
+    }
+  }  
+
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateMax::display(std::ostream& os) const {
+  os << scope.back() << " == max(" << scope[0];
+  for(unsigned int i=1; i<scope.size-1; ++i) {
+    os << ", " << scope[i] ;
+  }
+  os << ")";
   return os;
 }
 

@@ -99,7 +99,7 @@ namespace Mistral {
       if(min == max-1) {
 	os << "{" << min << "," << max << "}";
       } else if(values.table) {
-	os << values ;//<< " [" << min << ".." << max << "] (" << size << ")";
+	os << values ; //<< " [" << min << ".." << max << "] (" << size << ")";
       } else {
 	os << "[" << min << ".." << max << "]";
       }
@@ -245,44 +245,95 @@ namespace Mistral {
 
     void set_bound_history(const int lb, const int ub, const int level) {
 
-      
-
       // first find out which words have changed
       int prev_lb = domain.min; //trail_.back(-4);
       int prev_ub = domain.max; //trail_.back(-3);
-      int i, j;
+      int i, j, k, l;
       WORD_TYPE w;
 
-      //std::cout << std::endl << "[" << prev_lb << ".." << prev_ub << "] set bound history [" << lb << ".." << ub << "] at level " << level << std::endl;
+      //      std::cout << std::endl << id << ": [" << prev_lb << ".." << prev_ub << "] set bound history [" << lb << ".." << ub << "] at level " << level << std::endl;
 
 
-      if(prev_lb > lb) {
-	i = (lb >> BitSet::EXP);
+      if(prev_lb < lb || prev_ub > ub) {
 	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
-	w = (BitSet::full << (lb & BitSet::CACHE));
-	domain.values.table[i] = w;
-	*(++delta_[i]) = w;
-	*(++level_[i]) = level;
-	while( i --> j ) {
-	  *(++delta_[i]) = BitSet::empt;
-	  domain.values.table[i] = BitSet::empt;
-	  *(++level_[i]) = level;
-	}
-      }
+	i = (lb >> BitSet::EXP);
+	l = (ub >> BitSet::EXP);
+	k = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
 
-      if(prev_ub < ub) {
-	i = (ub >> BitSet::EXP);
-	j = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
-	w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
-	domain.values.table[i] = w;
-	*(++delta_[i]) = w;
-	*(++level_[i]) = level;
-	while( j --> i ) {
+	//	std::cout << j << "->" << i << ".." << l << "<-" << k << std::endl;
+	
+	while( j ++< i ) {
 	  *(++delta_[j]) = BitSet::empt;
 	  domain.values.table[j] = BitSet::empt;
 	  *(++level_[j]) = level;
 	}
+	
+	while( k --> l ) {
+	  *(++delta_[k]) = BitSet::empt;
+	  domain.values.table[k] = BitSet::empt;
+	  *(++level_[k]) = level;
+	}
+
+	//	std::cout << i << ".." << l << std::endl;
+
+	if(i == l) {
+	  w = (BitSet::full << (lb & BitSet::CACHE)) & (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+	  domain.values.table[i] = w;
+	  *(++delta_[i]) = w;
+	  *(++level_[i]) = level;
+	} else {
+	  if(prev_lb < lb) {
+	    w = (BitSet::full << (lb & BitSet::CACHE));
+	    domain.values.table[i] = w;
+	    *(++delta_[i]) = w;
+	    *(++level_[i]) = level;
+	  }
+	  if(prev_ub > ub) {
+	    w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+	    domain.values.table[l] = w;
+	    *(++delta_[l]) = w;
+	    *(++level_[l]) = level;
+	  }
+	}
       }
+
+
+
+      // if(prev_lb < lb) {
+
+      // 	std::cout << "lb has changed" << std::endl;
+
+      // 	i = (lb >> BitSet::EXP);
+      // 	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
+      // 	w = (BitSet::full << (lb & BitSet::CACHE));
+      // 	if((ub >> BitSet::EXP) == i) {
+      // 	  w &= (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+      // 	}
+      // 	domain.values.table[i] = w;
+      // 	*(++delta_[i]) = w;
+      // 	*(++level_[i]) = level;
+      // 	while( i --> j ) {
+      // 	  *(++delta_[i]) = BitSet::empt;
+      // 	  domain.values.table[i] = BitSet::empt;
+      // 	  *(++level_[i]) = level;
+      // 	}
+      // }
+
+      // if(prev_ub > ub) {
+      // 	i = (ub >> BitSet::EXP);
+      // 	j = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
+      // 	if(prev_lb >= lb || (lb >> BitSet::EXP) != i) { 
+      // 	  w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+      // 	  domain.values.table[i] = w;
+      // 	  *(++delta_[i]) = w;
+      // 	  *(++level_[i]) = level;
+      // 	}
+      // 	while( j --> i ) {
+      // 	  *(++delta_[j]) = BitSet::empt;
+      // 	  domain.values.table[j] = BitSet::empt;
+      // 	  *(++level_[j]) = level;
+      // 	}
+      // }
 
       domain.min = lb;
       domain.max = ub;
@@ -292,6 +343,11 @@ namespace Mistral {
       trail_.add(ub);
       trail_.add(ub-lb+1);
       trail_.add(level);
+
+
+      // debug_print();
+      // std::cout << std::endl << std::endl;
+
     }
 
     /*!@name Static Accessors and Iterators*/
@@ -721,7 +777,7 @@ namespace Mistral {
      	//for(WORD_TYPE* it = delta_abs[i]; it <= delta_[i]; ++it) {
 	for(int j=0; j<=(delta_[i]-delta_abs[i]); ++j) {
 	  std::cout << level_abs[i][j] << ":";
-     	  printBitset(delta_abs[i][j], i, std::cout);
+     	  print_bitset(delta_abs[i][j], i, std::cout);
      	}
      	std::cout << std::endl;
       }
@@ -1473,6 +1529,10 @@ namespace Mistral {
       return os;
     }
 
+    bool operator==(const Decision& d) {
+      return(var.id() == d.var.id() && _data_ == d._data_);
+    }
+
   };
 
   std::ostream& operator<< (std::ostream& os, const Decision& x);
@@ -1547,6 +1607,7 @@ namespace Mistral {
     Expression(Vector< int >& values);
     virtual ~Expression();
     
+    void add(Variable X) { children.add(X); }
 
     virtual void extract_constraint(Solver*) {}
     virtual void extract_predicate(Solver*) {}
@@ -1819,6 +1880,27 @@ namespace Mistral {
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 
 
+  class LexExpression : public Expression {
+
+  public:
+
+    int strict;
+    //int row_size;
+
+    LexExpression(Vector< Variable >& r1, Vector< Variable >& r2, const int st_);
+    virtual ~LexExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable LexLess(VarArray& r1, VarArray& r2);
+  Variable LexLeq(VarArray& r1, VarArray& r2);
+
+
   class BoolSumExpression : public Expression {
 
   public:
@@ -1898,6 +1980,47 @@ namespace Mistral {
   Variable Element(VarArray& X, Variable selector, int offset=0);
 
 
+  class MinExpression : public Expression {
+
+  public:
+
+    MinExpression() : Expression() {};
+    MinExpression(Vector< Variable >& args);
+    virtual ~MinExpression();
+    //void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Min(Vector<Variable>& X);
+  Variable Min(VarArray& X);
+  Variable Min(Variable X, Variable Y);
+
+  class MaxExpression : public Expression {
+
+  public:
+
+    MaxExpression() : Expression() {};
+    MaxExpression(Vector< Variable >& args);
+    virtual ~MaxExpression();
+    //void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Max(Vector<Variable>& X);
+  Variable Max(VarArray& X);
+  Variable Max(Variable X, Variable Y);
+
+
   class SetExpression : public BoolSumExpression {
     
   public:
@@ -1966,6 +2089,26 @@ namespace Mistral {
   Variable ElementSet(VarArray& X, Variable selector, int offset=0);
 
 
+
+  class IntersectionExpression : public SetExpression {
+
+  public:
+
+    IntersectionExpression(Variable X, Variable Y);
+    virtual ~IntersectionExpression();
+    void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    //virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Intersection(Variable X, Variable Y);
+
+
+
   class SubsetExpression : public Expression {
 
   public:
@@ -2030,6 +2173,11 @@ namespace Mistral {
     virtual ~VarArray() {}
     Variable operator[](Variable X);
     Variable operator[](const int X);
+
+    Variable operator<(VarArray& X);
+    Variable operator<=(VarArray& X);
+    Variable operator>(VarArray& X);
+    Variable operator>=(VarArray& X);
   };
 
 
