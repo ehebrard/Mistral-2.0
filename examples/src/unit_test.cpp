@@ -1538,11 +1538,9 @@ int main(int argc, char *argv[])
   //tests.push_back(new ModelTest());
 
 
-  tests.push_back(new LexTest());
-
-  /*
-  tests.push_back(new IntersectionTest());
   tests.push_back(new CheckerTest());
+  tests.push_back(new LexTest());
+  tests.push_back(new IntersectionTest());
   tests.push_back(new CardTest());
   tests.push_back(new MinMaxTest());
   tests.push_back(new WeightedSumTest());
@@ -1566,7 +1564,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
-  */
+
 
 
   //tests[0]->Verbosity = HIGH;
@@ -3375,15 +3373,15 @@ void LexTest::run() {
 
   s.add( X < Y );
 
-  std::cout << s << std::endl;
+  //std::cout << s << std::endl;
 
   s.rewrite();
   
-  cout << "Rewrite\n" << s << endl;
+  //  cout << "Rewrite\n" << s << endl;
 
   s.consolidate();
   
-  cout << "Consolidate\n" << s << endl;  
+  //  cout << "Consolidate\n" << s << endl;  
 
   s.initialise_search(s.variables,
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -3393,26 +3391,26 @@ void LexTest::run() {
   while(s.get_next_solution() == SAT) {
     ++num_solutions;
 
-    for(unsigned int i=0; i<X.size; ++i)
-      cout << " " << X[i].get_solution_str_value();
-    cout << " < " << endl;
-    for(unsigned int i=0; i<X.size; ++i)
-      cout << " " << Y[i].get_solution_str_value();
-    cout << endl << endl;
+    // for(unsigned int i=0; i<X.size; ++i)
+    //   cout << " " << X[i].get_solution_str_value();
+    // cout << " < " << endl;
+    // for(unsigned int i=0; i<X.size; ++i)
+    //   cout << " " << Y[i].get_solution_str_value();
+    // cout << endl << endl;
 
-    // //cout << s.last_solution_lb << endl;
-    // cout << Z.get_solution_str_value() << " == " 
-    // 	 << X.get_solution_str_value() << " inter " 
-    // 	 << Y.get_solution_str_value() << endl;
+    // // //cout << s.last_solution_lb << endl;
+    // // cout << Z.get_solution_str_value() << " == " 
+    // // 	 << X.get_solution_str_value() << " inter " 
+    // // 	 << Y.get_solution_str_value() << endl;
 
   }
 
-  if(s.statistics.num_backtracks != 75215) {
+  if(s.statistics.num_backtracks != 29402) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
     //exit(1);
   }
-  if(num_solutions != 75216) {
+  if(num_solutions != 29403) {
     cout << "Error: wrong number of solutions! (" 
 	 << (num_solutions) << ")" << endl;
     //exit(1);

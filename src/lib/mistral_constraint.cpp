@@ -5324,10 +5324,6 @@ void Mistral::ConstraintAllDiff::initialise() {
 }
 
 void Mistral::ConstraintAllDiff::mark_domain() {
-
-  std::cout << (void*)(solver) << std::endl;
-  exit(1);
-
   for(unsigned int i=0; i<scope.size; ++i) {
     solver->mark_non_convex(scope[i].id());
   }

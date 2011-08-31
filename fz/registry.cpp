@@ -378,26 +378,29 @@ namespace FlatZinc {
         if (ce1->isIntVar()) {
           s.add( Precedence( getIntVar(s, m, ce0), -c, getIntVar(s, m, ce1) ) );
 
+
+#ifdef _DEBUG_FLATZINC
           Variable x = getIntVar(s, m, ce0);
           Variable y = getIntVar(s, m, ce1);          
           std::cout << x << " in " << x.get_domain() << " + " << (-c) << " <= " << y << std::endl; 
+#endif
 
         } else {
           s.add( getIntVar(s, m, ce0) <= ce1->getInt()+c );
 
+#ifdef _DEBUG_FLATZINC
           Variable x = getIntVar(s, m, ce0);
           std::cout << x << " in " << x.get_domain() << " <= " << (ce1->getInt()+c) << std::endl; 
-
+#endif
 
         }
       } else {
         s.add( getIntVar(s, m, ce1) >= ce0->getInt()-c );
 
-
+#ifdef _DEBUG_FLATZINC
          Variable x = getIntVar(s, m, ce1);
           std::cout << x << " in " << x.get_domain() << " >= " << (ce0->getInt()-c) << std::endl; 
-
-
+#endif
 
       }
     }
@@ -809,38 +812,18 @@ namespace FlatZinc {
       
       if (ce[0]->isIntVar()) {
 
-        std::cout << "int var" << std::endl;
-
         Variable x = getIntVar(s, m, ce[0]);
-        cout << x << " in " << x.get_domain() << " -- ";
-        // set<int> d = arg2intset(s,ce[1]);
-        // cout << "{ " ;
-        // for(set<int>::iterator i = d.begin(); i != d.end(); ++i)
-        //   cout << *i << " ";
-        // cout << "}" << endl;
-
-        //std::cout << "\nsarg2intargs\n"; 
-
         Vector< int > d = arg2intvec(s,ce[1]); // arg2intargs(ce[1]);
-
-        //std::cout << "\nfarg2intargs\n"; 
-
-
-        cout << d << endl;
        
         BitSet sd(d[0], d.back(), BitSet::empt);
         for(int i=0; i<d.size; ++i) {
           sd.add(d[i]);
         }
 
-        cout << sd << endl;
- 
         x.set_domain(sd);
         s.add(x);
 
-
         Variable y = getIntVar(s, m, ce[0]);
-        cout << y << " in " << y.get_domain() << std::endl;
       } // else if (ce[0]->isSetVar()) {
 
       // } else if (ce[0]->isSetVar()) {
@@ -887,8 +870,6 @@ namespace FlatZinc {
 
        Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
        Variable r = getBoolVar(s, m, ce[1]);
-
-       std::cout << bv << std::endl;
 
        s.add((BoolSum(bv) == bv.size) == r);
 

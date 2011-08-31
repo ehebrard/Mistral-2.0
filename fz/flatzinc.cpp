@@ -81,47 +81,26 @@ namespace FlatZinc {
   Variable vs2var(IntVarSpec* vs) {
     Variable x;
     if (vs->assigned) {
-
-      std::cout << "constant " << vs->i << std::endl;
-
       Variable y(vs->i);
       x = y;
-
     } else if (vs->domain()) {
-
-      std::cout << "domain " << std::endl;
-
       AST::SetLit* sl = vs->domain.some();
       if (sl->interval) {
-        
-        std::cout << "interval " << sl->min << ".." << sl->max << std::endl;
-
         Variable y(sl->min, sl->max);
         x = y;
-        
       } else {
-
-
-
         Vector<int> values;
         for (int i=sl->s.size(); i-->0;)
           values.add(sl->s[i]);
-
-
-        std::cout << "domain " << values << std::endl;     
-        
         Variable y(values);
         x = y;
       }
     } else {
-      
-      cout << "something else" << endl;
-
       Variable y(-INFTY/1024, +INFTY/1024);
       x = y;
     }
 
-    std::cout << x << " in " << x.get_domain() << std::endl;
+    //std::cout << x << " in " << x.get_domain() << std::endl;
 
     return x;
   }
@@ -207,39 +186,18 @@ namespace FlatZinc {
 
   void
   FlatZincModel::newIntVar(IntVarSpec* vs) {
-
-    cout << "create a new integer variable: " << endl;
-
     if (vs->alias) {
-
-      cout << "alias" << endl;
-
       iv[intVarCount++] = iv[vs->i];
     } else {
       Variable x = vs2var(vs);
-
-      // set<int> domain = vs2is(vs);
-      // Vector<int> values;
-      // for(set<int>::const_iterator i = domain.begin(), end = domain.end(); i != end; ++i) {
-      //   values.add(*i);
-      // }
-
-      // cout << values << " ";
-
-      // Variable x(values);
       iv[intVarCount++] = x;
     }
     iv_introduced[intVarCount-1] = vs->introduced;
     iv_boolalias[intVarCount-1] = -1;
-
-    cout << (intVarCount-1) << ": " << iv[intVarCount-1] << " in " << iv[intVarCount-1].get_domain() << endl;
   }
 
   void
   FlatZincModel::newSetVar(SetVarSpec* vs) {
-
-    cout << "create a new set variable: " << endl;
-
     if (vs->alias) {
       sv[intVarCount++] = sv[vs->i];
     } else if( vs->assigned) {
@@ -292,8 +250,6 @@ namespace FlatZinc {
       sv[setVarCount++] = x;
     }
     sv_introduced[setVarCount-1] = vs->introduced;
-
-    cout << sv[setVarCount-1] << endl;
   }
 
   void
@@ -307,24 +263,16 @@ namespace FlatZinc {
 
   void
   FlatZincModel::newBoolVar(BoolVarSpec* vs) {
-
-    cout << "create a new bool variable: " << endl;
-
     if (vs->alias) {
       bv[boolVarCount++] = bv[vs->i];
     } else {
       bv[boolVarCount++] = Variable(vs2bsl(vs), vs2bsh(vs));
     }
     bv_introduced[boolVarCount-1] = vs->introduced;
-
-    cout << bv[boolVarCount-1] << endl;
   }
 
   void
   FlatZincModel::postConstraint(const ConExpr& ce, AST::Node* ann) {
-
-    cout << "post a new constraint " << ce.id << endl;
-
     try {
       registry().post(solver, *this, ce, ann);
     } catch (AST::TypeError& e) {
@@ -408,60 +356,66 @@ namespace FlatZinc {
     delete _solveAnnotations;
   }
 
+
+  //#define _DEBUG_FLATZINC true
+
   void
   FlatZincModel::run(std::ostream& out, const Printer& p) {
     using std::setw;
     using std::setfill;
 
+
+#ifdef _DEBUG_FLATZINC
     std::cout << "run!" << std::endl;
-
-
     std::cout << "first " << solver << std::endl;
+#endif
 
-exit(1);
+    solver.rewrite() ;
 
-
-    std::cout << solver.rewrite() << std::endl;
-
+#ifdef _DEBUG_FLATZINC
     std::cout << "rewrite " << solver << std::endl;
+#endif
 
     solver.consolidate();
-
-    std::cout << "consolidate " << solver << std::endl;
-
-    //exit(1);
-
-    //std::cout <<  solver.propagate() << std::endl;
     
-    exit(1);
+#ifdef _DEBUG_FLATZINC
+    std::cout << "consolidate " << solver << std::endl;
+#endif
 
     Outcome result = UNKNOWN;
 
-    solver.parameters.verbosity = 2;
+    solver.parameters.verbosity = 0;
 
     switch (_method) {
     case MINIMIZATION: {
 
+#ifdef _DEBUG_FLATZINC
       std::cout << "Minimize " << iv[_optVar].get_var() << std::endl;
+#endif
 
       result = solver.minimize(iv[_optVar]);
       break;
     } 
     case MAXIMIZATION: {
 
-      std::cout << "Maximize " << iv[_optVar] << std::endl;
+#ifdef _DEBUG_FLATZINC
+      std::cout << "Maximize " << iv[_optVar].get_var() << std::endl;
+#endif
 
       result = solver.maximize(iv[_optVar]);
       break;
     }
     case SATISFACTION: {
 
+#ifdef _DEBUG_FLATZINC
       std::cout << "Solve " << std::endl;
+#endif
 
       result = solver.solve();
       break;
     }
     }
+
 
     switch(result) {
     case UNKNOWN: {
@@ -470,7 +424,7 @@ exit(1);
       break;
     }
     case SAT: {
- print(out, p);
+      print(out, p);
       out << setw(5) << setfill('=') << '='
           << "SAT" << setw(5) << '=' << "\n";
       break;
@@ -539,8 +493,8 @@ exit(1);
       else
         out << lb << ".." << ub;
     } else if (ai->isBoolVar()) {
-      int lb = iv[ai->getIntVar()].get_solution_min();
-      int ub = iv[ai->getIntVar()].get_solution_max();
+      int lb = bv[ai->getBoolVar()].get_solution_min();
+      int ub = bv[ai->getBoolVar()].get_solution_max();
       if (lb == 1) {
         out << "true";
       } else if (ub == 0) {
