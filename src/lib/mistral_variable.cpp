@@ -25,6 +25,8 @@
 #include <mistral_variable.hpp>
 #include <mistral_solver.hpp>
 
+#include <math.h>
+
 
 
 Mistral::Variable::Variable() {
@@ -1102,8 +1104,10 @@ void Mistral::MulExpression::extract_variable(Solver *s) {
 
 
 
-  while(i-->2) { std::cout << i-2 << std::endl; b[i] = children[i-2].get_min(); }
-  do { std::cout << i << std::endl; b[i] = children[i].get_max(); } while(i--);
+  while(i-->2) { // std::cout << i-2 << std::endl;
+    b[i] = children[i-2].get_min(); }
+  do { // std::cout << i << std::endl;
+    b[i] = children[i].get_max(); } while(i--);
 
   //0.1
   //0.3
@@ -1155,6 +1159,117 @@ void Mistral::MulExpression::extract_predicate(Solver *s) {
 }
 
 
+Mistral::DivExpression::DivExpression(Variable X, Variable Y) 
+  : Expression(X,Y) {
+}
+Mistral::DivExpression::~DivExpression() {}
+
+void Mistral::DivExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Div predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::DivExpression::extract_variable(Solver *s) {
+  // z = x/y
+
+  int max_pos_x = children[0].get_max();
+  int min_neg_x = children[0].get_min();
+
+  int min_pos_x = children[0].get_min_pos();
+  int max_neg_x = children[0].get_max_neg();
+
+  int max_pos_y = children[1].get_max();
+  int min_neg_y = children[1].get_min();
+
+  int min_pos_y = children[1].get_min_pos();
+  int max_neg_y = children[1].get_max_neg();
+
+  // positive part of z's domain
+  int nlb1, nlb2, nub1, nub2;
+
+  nlb1 = nlb2 = INFTY; //lb_neg;
+  nub1 = nub2 = 0; //ub_neg;
+	
+  // it can either be the positive parts of X and Y:
+  if(max_pos_x>0 && max_pos_y>0) {
+    // compute the bounds
+    //std::cout << "\t   lb = " << min_pos_x << "/" << max_pos_y << std::endl;
+    //std::cout << "\t   ub = " << max_pos_x << "/" << min_pos_y << std::endl;
+    nlb1 = (int)(ceil((double)(min_pos_x)/(double)(max_pos_y)));
+    nub1 = (int)(floor((double)(max_pos_x)/(double)(min_pos_y)));
+  }
+
+  // or the negative parts of X and Y:
+  if(min_neg_x<0 && min_neg_y<0) {
+    // compute the bounds
+    nlb2 = (int)(ceil((double)(max_neg_x)/(double)(min_neg_y)));
+    nub2 = (int)(floor((double)(min_neg_x)/(double)(max_neg_y)));
+  }
+  if(nlb1>nlb2) nlb1 = nlb2;
+  if(nub1<nub2) nub1 = nub2;
+  
+  int lb_pos = nlb1;
+  int ub_pos = nub1;
+
+  
+  nlb1 = nlb2 = 0; //lb_pos;
+  nub1 = nub2 = -INFTY; //ub_pos;
+  
+  // it can either be the negitive part of X and the positive part of Y:
+  if(min_neg_x<0 && max_pos_y>0) {
+    // compute the bounds  
+    nlb1 = (int)(ceil((double)(min_neg_x)/(double)(min_pos_y)));
+    nub1 = (int)(floor((double)(max_neg_x)/(double)(max_pos_y)));
+  }
+  // or the negitive part of Y and the positive part of X:
+  if(max_pos_x>0 && min_neg_y<0) {
+    // compute the bounds
+    nlb2 = (int)(ceil((double)(max_pos_x)/(double)(max_neg_y)));
+    nub2 = (int)(floor((double)(min_pos_x)/(double)(min_neg_y)));
+  }
+  
+  if(nlb1>nlb2) nlb1 = nlb2;
+  if(nub1<nub2) nub1 = nub2;
+
+  int lb_neg = nlb1;
+  int ub_neg = nub1;
+
+  std::cout << "[" << lb_neg <<".." << ub_neg << "] u [" << lb_pos << ".." << ub_pos << "]" << std::endl;
+
+  if(lb_neg>ub_neg)
+    lb_neg = lb_pos;
+  else if(lb_pos>ub_pos)
+    ub_pos = ub_neg;
+
+  if(children[0].contain(0)) {
+    if(lb_neg > 0) lb_neg = 0;
+    if(ub_pos < 0) ub_pos = 0;
+  }
+
+
+  Variable aux(lb_neg, ub_pos, DYN_VAR);
+  self = aux;
+
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+}
+
+const char* Mistral::DivExpression::get_name() const {
+  return "div";
+}
+
+void Mistral::DivExpression::extract_predicate(Solver *s) {
+  VarArray scope;
+  scope.add(children[1]);
+  scope.add(children[2]);
+  scope.add(children[0]);
+
+  s->add(new PredicateMul(children));
+  children[1].remove(0);
+}
+
+
 Mistral::FactorExpression::FactorExpression(Variable X, const int fct) 
   : Expression(X) { 
   factor=fct; 
@@ -1196,6 +1311,17 @@ Mistral::Variable Mistral::Variable::operator*(int k) {
   Variable exp(new FactorExpression(*this,k));
   return exp;
 }
+
+
+Mistral::Variable Mistral::Variable::operator/(Variable x) {
+  Variable exp(new DivExpression(*this,x));
+  return exp;
+}
+
+// Mistral::Variable Mistral::Variable::operator/(int k) {
+//   Variable exp(new QuotientExpression(*this,k));
+//   return exp;
+// }
 
 
   Mistral::SubExpression::SubExpression(Variable X, Variable Y) 
@@ -2058,9 +2184,9 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
   // check if we can use an 'Add' or 'Sub' predicate
   int post_add = false;
   if(children.size == 3 && 
-     std::abs(weight[0]) == 1 &&
-     std::abs(weight[1]) == 1 &&
-     std::abs(weight[2]) == 1
+     abs(weight[0]) == 1 &&
+     abs(weight[1]) == 1 &&
+     abs(weight[2]) == 1
      ) {
     int i=0;
     for(; i<3; ++i)

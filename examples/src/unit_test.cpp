@@ -1460,83 +1460,20 @@ public:
 int main(int argc, char *argv[])
 {  
 
-  // BitSet s(0,1,BitSet::empt);
+  Solver s;
+  Variable X(atoi(argv[1]), atoi(argv[2]));
+  Variable Y(atoi(argv[3]), atoi(argv[4]));
+  Variable Z(-1000, 1000);
 
-  // cout << s << endl;
-
-  // s.add_interval(0,1);
-
-
-  // cout << s << endl;
-
-  // //std::cout << (-5%2) <<std::endl;
-
-  //   exit(1);
-
-
-  //std::cout << 
+  s.add( X/Y == Z );
 
 
   usrand(12345);
 
-  // int Ari = 3;
-  // int Ngd = 10;
-  // int Con = 15;
-  // int Dom = 5;
-  // int Var = 10;
-  
-  // URCSPGenerator gen(11041979, Var, Dom, Con, Ari, Ngd);
-  
-  // while( gen.erateConstraint() ) {
-  //   for(int i=0; i<Ari; ++i) 
-  //     std::cout << " x" << gen.vars[i+1];
-  //   std::cout << std::endl << " ";
-  //   while( gen.erateNogood() ) {
-  //     std::cout << " " << gen.vals[0] ;
-  //     for(int i=1; i<Ari; ++i)  
-  // 	std::cout << "|" << gen.vals[i] ;
-  //   }
-  //    std::cout << std::endl;
-  // }
-
-  // exit(1);
-
-
-
-//   showUint((unsigned int)-2, std::cout);
-//   std::cout << std::endl;
-//   showUint(3, std::cout);
-//   std::cout << std::endl;
-//   exit(1);
-
   std::vector<UnitTest*> tests;
-
-  //tests.push_back(new Reset());
-  /*
-
-    tests.push_back(new CostasNotEqual2Solutions(atoi(argv[1]))); 
-    tests.push_back(new CostasAllDiff2Solutions(atoi(argv[1])));
-    tests.push_back(new CostasNotEqualSolutions(atoi(argv[1]))); 
-
-  */
-  //tests.push_back(new CostasAllDiffAllSolutions(8));
-  //tests.push_back(new CostasAllDiffAllSolutions(atoi(argv[1])));
-  //tests.push_back(new CostasNotEqualAllSolutions(atoi(argv[1]))); 
-
-  //tests.push_back(new VarStackDynamicTest());
 
   int N = 8; //atoi(argv[1]);
   if(argc>1) N=atoi(argv[1]);
-  //
-
-  //tests.push_back(new CostasAllDiffAllSolutions(N, BOUND_CONSISTENCY));
-  
-  //  tests.push_back(new Pigeons(5)); 
-  //tests.push_back(new BoolPigeons(5));
-
-  
-  //tests.push_back(new ModelTest());
-
 
   tests.push_back(new CheckerTest());
   tests.push_back(new LexTest());
