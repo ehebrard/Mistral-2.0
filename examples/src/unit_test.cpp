@@ -1318,7 +1318,7 @@ public:
     cc10a.init();
     cc10a.run(100);
 
-    ConChecker< PredicateMul > cc11a("+", true,true,12345,3,20,0);
+    ConChecker< PredicateMul > cc11a("*", true,true,12345,3,20,0);
     cc11a.init();
     cc11a.run(100);
 
@@ -1390,6 +1390,14 @@ public:
    cc15.run(200);
 
 
+   /*
+
+    ConChecker< PredicateDiv > cc16a("/", true,true,12345,3,20,0);
+    cc16a.init();
+    cc16a.run(100);
+
+   */
+
     std::cout << " ";
 
   }
@@ -1460,20 +1468,13 @@ public:
 int main(int argc, char *argv[])
 {  
 
-  Solver s;
-  Variable X(atoi(argv[1]), atoi(argv[2]));
-  Variable Y(atoi(argv[3]), atoi(argv[4]));
-  Variable Z(-1000, 1000);
-
-  s.add( X/Y == Z );
-
-
   usrand(12345);
 
   std::vector<UnitTest*> tests;
 
   int N = 8; //atoi(argv[1]);
   if(argc>1) N=atoi(argv[1]);
+
 
   tests.push_back(new CheckerTest());
   tests.push_back(new LexTest());
@@ -1501,7 +1502,6 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
-
 
 
   //tests[0]->Verbosity = HIGH;

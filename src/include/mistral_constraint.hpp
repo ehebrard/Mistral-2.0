@@ -1254,6 +1254,87 @@ namespace Mistral {
     //@}
   };
 
+
+
+  /**********************************************
+   * Division Predicate
+   **********************************************/
+  /*! \class PredicateDiv
+    \brief  Binary division predicate (x0 + x1 = y)
+  */
+  class PredicateDiv : public Constraint
+  {
+    
+  public:
+
+    int 
+    min_pos[3],
+      max_pos[3],
+      min_neg[3],
+      max_neg[3],
+      zero[3];
+    
+    /**@name Constructors*/
+    //@{
+    PredicateDiv() : Constraint() {}
+    PredicateDiv(Vector< Variable >& scp) 
+      : Constraint(scp) {}
+    PredicateDiv(std::vector< Variable >& scp) 
+      : Constraint(scp) {}
+    virtual Constraint *clone() { return new PredicateDiv(scope); }
+    virtual void initialise();
+    virtual ~PredicateDiv() {}
+    //@}
+    
+    /**@name Solving*/
+    //@{
+    // 10 / 6 = 1
+
+    // [8..10] / [2..2] = 4?  || x/z = y
+    // 8/3 = 2 -> 3           || x/y = z
+
+
+    //(x-1)/z < x/(z+1)
+    //zx > (x-1)*(z+1)
+
+
+    // lb(x)/(ub(z)+1) <= y :: 8/(2+1) = 2 -> y >= 2
+    // (lb(x)-1)/(ub(z)) <= y :: (8-1)/2 = 3 -> y >= 3
+    // 
+
+    // ub(x)/(lb(z)-1) >= y :: 10/1 = 10 -> y <= 10
+    // (ub(x)+1)/lb(z) >= y :: 11/2 = 5 -> y <= 5
+    
+
+    // [9..10] / [1..2] = 4?  || x/z = y
+    // 9/3 = 3 -> 4           || x/y = z
+    // 9/(2+1) = 3 -> z >= 4
+
+
+
+    // rev: 10 / 1 = 6  [6..10]
+    PropagationOutcome revise_reverse_division(const int X, const int Y, const int Z);
+    PropagationOutcome revise_integer_division(const int X, const int Y, const int Z);
+    PropagationOutcome revise_multiplication(const int X, const int Y, const int Z);
+    PropagationOutcome prune(const int lb_neg, 
+			     const int ub_neg, 
+			     const int lb_pos, 
+			     const int ub_pos,
+			     const bool pzero,
+			     const int Z);
+
+    virtual int check( const int* sol ) const { return (sol[1] == 0 || sol[2] != (sol[0]/sol[1])); }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome rewrite();
+    //@}
+    
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "plus"; }
+    //@}
+  };
+
   #define NE 0
   #define EQ 1
   #define GT 2

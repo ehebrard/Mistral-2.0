@@ -1195,15 +1195,19 @@ void Mistral::DivExpression::extract_variable(Solver *s) {
     // compute the bounds
     //std::cout << "\t   lb = " << min_pos_x << "/" << max_pos_y << std::endl;
     //std::cout << "\t   ub = " << max_pos_x << "/" << min_pos_y << std::endl;
-    nlb1 = (int)(ceil((double)(min_pos_x)/(double)(max_pos_y)));
-    nub1 = (int)(floor((double)(max_pos_x)/(double)(min_pos_y)));
+    // nlb1 = (int)(ceil((double)(min_pos_x)/(double)(max_pos_y)));
+    // nub1 = (int)(floor((double)(max_pos_x)/(double)(min_pos_y)));
+    nlb1 = min_pos_x/max_pos_y;
+    nub1 = max_pos_x/min_pos_y;
   }
 
   // or the negative parts of X and Y:
   if(min_neg_x<0 && min_neg_y<0) {
     // compute the bounds
-    nlb2 = (int)(ceil((double)(max_neg_x)/(double)(min_neg_y)));
-    nub2 = (int)(floor((double)(min_neg_x)/(double)(max_neg_y)));
+    // nlb2 = (int)(ceil((double)(max_neg_x)/(double)(min_neg_y)));
+    // nub2 = (int)(floor((double)(min_neg_x)/(double)(max_neg_y)));
+    nlb2 = max_neg_x/min_neg_y;
+    nub2 = min_neg_x/max_neg_y;
   }
   if(nlb1>nlb2) nlb1 = nlb2;
   if(nub1<nub2) nub1 = nub2;
@@ -1215,17 +1219,21 @@ void Mistral::DivExpression::extract_variable(Solver *s) {
   nlb1 = nlb2 = 0; //lb_pos;
   nub1 = nub2 = -INFTY; //ub_pos;
   
-  // it can either be the negitive part of X and the positive part of Y:
+  // it can either be the negative part of X and the positive part of Y:
   if(min_neg_x<0 && max_pos_y>0) {
     // compute the bounds  
-    nlb1 = (int)(ceil((double)(min_neg_x)/(double)(min_pos_y)));
-    nub1 = (int)(floor((double)(max_neg_x)/(double)(max_pos_y)));
+    // nlb1 = (int)(ceil((double)(min_neg_x)/(double)(min_pos_y)));
+    // nub1 = (int)(floor((double)(max_neg_x)/(double)(max_pos_y)));
+    nlb1 = min_neg_x/min_pos_y;
+    nub1 = max_neg_x/max_pos_y;
   }
-  // or the negitive part of Y and the positive part of X:
+  // or the negative part of Y and the positive part of X:
   if(max_pos_x>0 && min_neg_y<0) {
     // compute the bounds
-    nlb2 = (int)(ceil((double)(max_pos_x)/(double)(max_neg_y)));
-    nub2 = (int)(floor((double)(min_pos_x)/(double)(min_neg_y)));
+    // nlb2 = (int)(ceil((double)(max_pos_x)/(double)(max_neg_y)));
+    // nub2 = (int)(floor((double)(min_pos_x)/(double)(min_neg_y)));
+    nlb2 = max_pos_x/max_neg_y;
+    nub2 = min_pos_x/min_neg_y;
   }
   
   if(nlb1>nlb2) nlb1 = nlb2;
@@ -1234,7 +1242,7 @@ void Mistral::DivExpression::extract_variable(Solver *s) {
   int lb_neg = nlb1;
   int ub_neg = nub1;
 
-  std::cout << "[" << lb_neg <<".." << ub_neg << "] u [" << lb_pos << ".." << ub_pos << "]" << std::endl;
+  //std::cout << "[" << lb_neg <<".." << ub_neg << "] u [" << lb_pos << ".." << ub_pos << "]" << std::endl;
 
   if(lb_neg>ub_neg)
     lb_neg = lb_pos;

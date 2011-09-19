@@ -70,7 +70,7 @@ int main(int argc, char **argv)
 {
 
   str_param[0] = "";
-  getCommandLine(int_ident, int_param, nia,
+  get_command_line(int_ident, int_param, nia,
 		 str_ident, str_param, nsa,
 		 &(argv[1]), argc-1);
   

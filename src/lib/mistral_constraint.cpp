@@ -1112,27 +1112,14 @@ std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
 Mistral::ConstraintDisjunctive::ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
   processing_time[0] = p0; 
   processing_time[1] = p1;
-  
-  // precedence[0] = new ConstraintLess(scope, processing_time[0]);
-  // precedence[1] = new ConstraintLess(processing_time[1]);
-  // precedence[1]->add(scope[1]);
-  // precedence[1]->add(scope[0]);
 }
 
 Mistral::ConstraintDisjunctive::ConstraintDisjunctive(std::vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
   processing_time[0] = p0; 
   processing_time[1] = p1;
-  
-  // precedence[0] = new ConstraintLess(scope, processing_time[0]);
-  // precedence[1] = new ConstraintLess(processing_time[1]);
-  // precedence[1]->add(scope[1]);
-  // precedence[1]->add(scope[0]);
 }
 
 void Mistral::ConstraintDisjunctive::initialise() {
-
-  //processing_time[0] = p0; 
-  //processing_time[1] = p1;
   
   precedence[0] = new ConstraintLess(scope, processing_time[0]);
   precedence[1] = new ConstraintLess(processing_time[1]);
@@ -1147,65 +1134,28 @@ void Mistral::ConstraintDisjunctive::initialise() {
 }
 
 void Mistral::ConstraintDisjunctive::decide(const int choice) {
-
-  //std::cout << "decide " << this << " => " ;
-
-
   relax();
-  
 
   if(choice==1) {
     solver->add(precedence[1]);
-    //std::cout << "add " << precedence[1] << std::endl;
   } else {
     solver->add(precedence[0]);
-    //std::cout << "add " << precedence[0] << std::endl;
   }
-
-  //std::cout << std::endl;
-
-//   std::cout << solver->active_constraints << std::endl;
 
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintDisjunctive::propagate() {
-  //(x0 + p0 <= x1 || x1 + p1 <= x0).
   int hold = 3;
 
- //  if(scope[0].id() == 6 && scope[1].id() == 9) {
-//     std::cout << "DISJUNCTIVE " << this << std::endl;
-    
-//  for(unsigned int i=0; i<scope.size; ++i)
-//    std::cout << " " << scope[i] << " in " << scope[i].get_domain();
-//   std::cout << std::endl;
-
-//     std::cout << scope[1].get_min() << " + " << processing_time[1] 
-// 	      << " ?> " << scope[0].get_max() ;
-//   }
-
-  // check is prec[1] is violated (x1 + p1 > x0).
+  // check if prec[1] is violated (x1 + p1 > x0).
   if(scope[1].get_min()+processing_time[1] > scope[0].get_max()) {
     hold &= 2;
+  }
 
-//     if(scope[0].id() == 6 && scope[1].id() == 9) {
-//       std::cout << " YES" << std::endl;
-//     }
-  } // else   if(scope[0].id() == 6 && scope[1].id() == 9) {    std::cout << " NO" << std::endl;
-//   }
-
-//   if(scope[0].id() == 6 && scope[1].id() == 9) {
-//     std::cout << scope[0].get_min() << " + " << processing_time[0] 
-// 	      << " ?> " << scope[1].get_max() ;
-//   }
-
-  // check is prec[1] is violated (x0 + p0 > x1).
+  // check if prec[1] is violated (x0 + p0 > x1).
   if(scope[0].get_min()+processing_time[0] > scope[1].get_max()) {
     hold &= 1;
-//     if(scope[0].id() == 6 && scope[1].id() == 9) {
-//       std::cout << " YES" << std::endl;
-//     }
-  } //  else  if(scope[0].id() == 6 && scope[1].id() == 9) {     std::cout << " NO" << std::endl;
-//   }
+  }
 
   if(!hold) return FAILURE(0);
   if(hold<3) {
@@ -4000,6 +3950,762 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
   os << scope[2] << " == (" << scope[0] << " * " << scope[1] << ")";
   return os;
 }
+
+
+
+void Mistral::PredicateDiv::initialise() {
+  Constraint::initialise();
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
+  trigger_on(_RANGE_, 2);
+  set_idempotent(true);
+}
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::rewrite() {
+  Mistral::PropagationOutcome wiped = propagate();
+
+  VarArray tmp;
+  if(active.size == 2) {
+    int i=0;
+    for(; i<2; ++i)
+      if(scope[i].is_ground()) {
+	relax();
+	tmp.add(scope[1-i]);
+	tmp.add(scope[2]);
+	if(scope[i].get_min() == 1) {
+	  solver->add(new ConstraintEqual(tmp));
+	} else if(scope[i].get_min() != 0) {
+	  solver->add(new PredicateFactor(tmp, scope[i].get_min()));
+	}
+      }
+  }
+  return wiped;
+}
+
+
+#define _DEBUG_DIV true
+
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::revise_integer_division(const int X, const int Y, const int Z) {
+  // revise the domain of Z = X/Y (Z is the integer part of X/Y)
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+
+#ifdef _DEBUG_DIV
+  std::cout << "revise bounds of " << scope[Z].get_domain() << " = " 
+	    << scope[X].get_domain() << "/" << scope[Y].get_domain() 
+	    << " = [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
+	    << (zero[Z] ? "{0}" : "_") << "|" 
+	    << min_pos[Z] << ".." << max_pos[Z] << "]" 
+	    << std::endl; 
+#endif
+
+  
+  //int lb_pos=1, ub_pos=+INFTY, lb_neg=-INFTY, ub_neg=-1, lb_aux, ub_aux;
+  
+  // we start with all bounds at their previous values, and update them if necessary
+  // (in which case we set up the pruning flag)
+  int lb_pos=min_pos[Z], ub_pos=max_pos[Z], lb_neg=min_neg[Z], ub_neg=max_neg[Z], 
+    nlb1, nlb2, nub1, nub2;
+    //lb_aux, ub_aux;
+  bool pruning_flag = false, pzero = false, ppos = max_pos[Z]<=0, pneg = min_neg[Z]>=0;
+  
+  // // first rule: if X can be 0, and Y can be 0, then Z can be anything
+  // if(!zero[X]) { // if X cannot be 0, then neither can Y nor Z
+  //   if(zero[Z]) {
+  //     //zero[Z] = 0;
+  //     pzero = true;
+  //     pruning_flag = true;
+  //   }
+  // } else { 
+  //   if(!min_neg[X] && !max_pos[X] && !zero[Y]) {
+  //     // if X must be 0 and Y cannot be 0, then Z must be 0.
+  //     if(lb_neg<0 || ub_pos>0) {
+  // 	lb_neg = 0;
+  // 	ub_pos = 0;
+  // 	pruning_flag = true;
+  //     }
+  //   } 
+  // }
+
+  //	std::cout << pruning_flag << std::endl;
+
+  if(lb_neg != ub_pos && (!zero[X] || !zero[Y])) { // if X and Y can both be 0, we cannot deduce anything
+    if(IS_OK(wiped)) {
+      if(max_pos[Z]>0) {
+	// revise the positive part of Z's domain (if it has one)
+	nlb1 = nlb2 = INFTY; //lb_neg;
+	nub1 = nub2 = 0; //ub_neg;
+	
+	// it can either be the positive parts of X and Y:
+	if(max_pos[X]>0 && max_pos[Y]>0) {
+	  // compute the bounds
+	  //std::cout << "\t   lb = " << min_pos[X] << "/" << max_pos[Y] << std::endl;
+	  //std::cout << "\t   ub = " << max_pos[X] << "/" << min_pos[Y] << std::endl;
+	  nlb1 = min_pos[X]/max_pos[Y];
+	  nub1 = max_pos[X]/min_pos[Y];
+	}
+
+	// or the negative parts of X and Y:
+	if(min_neg[X]<0 && min_neg[Y]<0) {
+	  // compute the bounds
+	  nlb2 = max_neg[X]/min_neg[Y];
+	  nub2 = min_neg[X]/max_neg[Y];
+	}
+	if(nlb1>nlb2) nlb1 = nlb2;
+	if(nub1<nub2) nub1 = nub2;
+	
+	//std::cout << "positive bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
+
+	if(lb_pos<nlb1) {
+	  lb_pos = nlb1;
+	  pruning_flag = true;
+	}
+	if(ub_pos>nub1) {
+	  ub_pos = nub1;
+	  pruning_flag = true;
+	}
+
+	if(lb_pos > max_pos[Z] || ub_pos < min_pos[Z]) ppos = true;
+
+      } // else if(pzero || !zero[Z]) // if(lb_pos || ub_pos)
+      // 	{
+      // 	  lb_pos = min_neg[Z];
+      // 	  ub_pos = max_neg[Z];
+      // 	} else {
+      // 	lb_pos = ub_pos = 0; 
+      // }
+
+     if(min_neg[Z]<0) {
+       // revise the negative part of Z's domain (if it has one)
+       nlb1 = nlb2 = 0; //lb_pos;
+       nub1 = nub2 = -INFTY; //ub_pos;
+	
+	// it can either be the negitive part of X and the positive part of Y:
+	if(min_neg[X]<0 && max_pos[Y]>0) {
+	  // compute the bounds
+
+	  nlb1 = min_neg[X]/min_pos[Y];
+	  nub1 = max_neg[X]/max_pos[Y];
+	}
+	// or the negitive part of Y and the positive part of X:
+	if(max_pos[X]>0 && min_neg[Y]<0) {
+	  // compute the bounds
+	  nlb2 = max_pos[X]/max_neg[Y];
+	  nub2 = min_pos[X]/min_neg[Y];
+	}
+
+	if(nlb1>nlb2) nlb1 = nlb2;
+	if(nub1<nub2) nub1 = nub2;
+
+	//std::cout << "negative bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
+	
+	if(lb_neg<nlb1) {
+	  lb_neg = nlb1;
+	  pruning_flag = true;
+	}
+	if(ub_neg>nub1) {
+	  ub_neg = nub1;
+	  pruning_flag = true;
+	}
+
+	if(lb_neg > max_neg[Z] || ub_neg < min_neg[Z]) pneg = true;
+
+     } // else if(pzero || !zero[Z])// if(lb_neg || ub_neg)
+     //   {
+     // 	 lb_neg = min_pos[Z];
+     // 	 ub_neg = max_pos[Z];
+     //   } else {
+     //   lb_neg = ub_neg = 0;
+     // }
+    }
+  }
+  
+  //std::cout << pneg <<  (pzero || !zero[Z]) <<  ppos << std::endl;
+
+  if(pneg && (pzero || !zero[Z]) && ppos) {
+    wiped = FAILURE(Z);
+  } else if(pruning_flag) {
+    
+#ifdef _DEBUG_DIV
+    std::cout << "set bounds to " // << scope[Z].get_domain() << " = " 
+	      // << scope[X].get_domain() << "/" << scope[Y].get_domain() 
+	      << "[" << lb_neg << ".." << ub_neg << "|" 
+	      << (!pzero&&zero[Z] ? "{0}" : "_") << "|" 
+	      << lb_pos << ".." << ub_pos << "]" << std::endl; 
+#endif
+    
+    wiped = prune(lb_neg, ub_neg, lb_pos, ub_pos, pzero, Z);
+  }
+
+  return wiped;
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::revise_reverse_division(const int X, const int Y, const int Z) {
+  // revise the domain of Z = X/Y (Z is the integer part of X/Y)
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+
+#ifdef _DEBUG_DIV
+  std::cout << "revise bounds of " << scope[Z].get_domain() << " = " 
+	    << scope[X].get_domain() << "/" << scope[Y].get_domain() 
+	    << " = [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
+	    << (zero[Z] ? "{0}" : "_") << "|" 
+	    << min_pos[Z] << ".." << max_pos[Z] << "]" 
+	    << std::endl; 
+#endif
+
+  
+  //int lb_pos=1, ub_pos=+INFTY, lb_neg=-INFTY, ub_neg=-1, lb_aux, ub_aux;
+  
+  // we start with all bounds at their previous values, and update them if necessary
+  // (in which case we set up the pruning flag)
+  int lb_pos=min_pos[Z], ub_pos=max_pos[Z], lb_neg=min_neg[Z], ub_neg=max_neg[Z], 
+    nlb1, nlb2, nub1, nub2;
+    //lb_aux, ub_aux;
+  bool pruning_flag = false, pzero = false, ppos = max_pos[Z]<=0, pneg = min_neg[Z]>=0;
+  
+  // // first rule: if X can be 0, and Y can be 0, then Z can be anything
+  // if(!zero[X]) { // if X cannot be 0, then neither can Y nor Z
+  //   if(zero[Z]) {
+  //     //zero[Z] = 0;
+  //     pzero = true;
+  //     pruning_flag = true;
+  //   }
+  // } else { 
+  //   if(!min_neg[X] && !max_pos[X] && !zero[Y]) {
+  //     // if X must be 0 and Y cannot be 0, then Z must be 0.
+  //     if(lb_neg<0 || ub_pos>0) {
+  // 	lb_neg = 0;
+  // 	ub_pos = 0;
+  // 	pruning_flag = true;
+  //     }
+  //   } 
+  // }
+
+  //	std::cout << pruning_flag << std::endl;
+
+  if(lb_neg != ub_pos && (!zero[X] || !zero[Y])) { // if X and Y can both be 0, we cannot deduce anything
+    if(IS_OK(wiped)) {
+      if(max_pos[Z]>0) {
+	// revise the positive part of Z's domain (if it has one)
+	nlb1 = nlb2 = INFTY; //lb_neg;
+	nub1 = nub2 = 0; //ub_neg;
+	
+	// it can either be the positive parts of X and Y:
+	if(max_pos[X]>0 && max_pos[Y]>0) {
+	  // compute the bounds
+	  //std::cout << "\t   lb = " << min_pos[X] << "/" << max_pos[Y] << std::endl;
+	  //std::cout << "\t   ub = " << max_pos[X] << "/" << min_pos[Y] << std::endl;
+	  nlb1 = (min_pos[X]/(max_pos[Y]+1))+1;
+	  nub1 = (max_pos[X]/(min_pos[Y]-1))-1;
+	}
+
+	// or the negative parts of X and Y:
+	if(min_neg[X]<0 && min_neg[Y]<0) {
+	  // compute the bounds
+	  nlb2 = max_neg[X]/min_neg[Y];
+	  nub2 = min_neg[X]/max_neg[Y];
+	}
+	if(nlb1>nlb2) nlb1 = nlb2;
+	if(nub1<nub2) nub1 = nub2;
+	
+	//std::cout << "positive bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
+
+	if(lb_pos<nlb1) {
+	  lb_pos = nlb1;
+	  pruning_flag = true;
+	}
+	if(ub_pos>nub1) {
+	  ub_pos = nub1;
+	  pruning_flag = true;
+	}
+
+	if(lb_pos > max_pos[Z] || ub_pos < min_pos[Z]) ppos = true;
+
+      } // else if(pzero || !zero[Z]) // if(lb_pos || ub_pos)
+      // 	{
+      // 	  lb_pos = min_neg[Z];
+      // 	  ub_pos = max_neg[Z];
+      // 	} else {
+      // 	lb_pos = ub_pos = 0; 
+      // }
+
+     if(min_neg[Z]<0) {
+       // revise the negative part of Z's domain (if it has one)
+       nlb1 = nlb2 = 0; //lb_pos;
+       nub1 = nub2 = -INFTY; //ub_pos;
+	
+	// it can either be the negitive part of X and the positive part of Y:
+	if(min_neg[X]<0 && max_pos[Y]>0) {
+	  // compute the bounds
+
+	  nlb1 = min_neg[X]/min_pos[Y];
+	  nub1 = max_neg[X]/max_pos[Y];
+	}
+	// or the negitive part of Y and the positive part of X:
+	if(max_pos[X]>0 && min_neg[Y]<0) {
+	  // compute the bounds
+	  nlb2 = max_pos[X]/max_neg[Y];
+	  nub2 = min_pos[X]/min_neg[Y];
+	}
+
+	if(nlb1>nlb2) nlb1 = nlb2;
+	if(nub1<nub2) nub1 = nub2;
+
+	//std::cout << "negative bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
+	
+	if(lb_neg<nlb1) {
+	  lb_neg = nlb1;
+	  pruning_flag = true;
+	}
+	if(ub_neg>nub1) {
+	  ub_neg = nub1;
+	  pruning_flag = true;
+	}
+
+	if(lb_neg > max_neg[Z] || ub_neg < min_neg[Z]) pneg = true;
+
+     } // else if(pzero || !zero[Z])// if(lb_neg || ub_neg)
+     //   {
+     // 	 lb_neg = min_pos[Z];
+     // 	 ub_neg = max_pos[Z];
+     //   } else {
+     //   lb_neg = ub_neg = 0;
+     // }
+    }
+  }
+  
+  //std::cout << pneg <<  (pzero || !zero[Z]) <<  ppos << std::endl;
+
+  if(pneg && (pzero || !zero[Z]) && ppos) {
+    wiped = FAILURE(Z);
+  } else if(pruning_flag) {
+    
+#ifdef _DEBUG_DIV
+    std::cout << "set bounds to " // << scope[Z].get_domain() << " = " 
+	      // << scope[X].get_domain() << "/" << scope[Y].get_domain() 
+	      << "[" << lb_neg << ".." << ub_neg << "|" 
+	      << (!pzero&&zero[Z] ? "{0}" : "_") << "|" 
+	      << lb_pos << ".." << ub_pos << "]" << std::endl; 
+#endif
+    
+    wiped = prune(lb_neg, ub_neg, lb_pos, ub_pos, pzero, Z);
+  }
+
+  return wiped;
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::revise_multiplication(const int X, const int Y, const int Z) {
+  // revise the domain of Z = X*Y 
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+
+#ifdef _DEBUG_DIV
+  std::cout << "revise bounds of " << scope[Z].get_domain() << " = " 
+	    << scope[X].get_domain() << "*" << scope[Y].get_domain() 
+	    // << " = [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
+	    // << (zero[Z] ? "{0}" : "_") << "|" 
+	    // << min_pos[Z] << ".." << max_pos[Z] << "]" 
+	    << std::endl; 
+#endif
+
+  
+  //int lb_pos=1, ub_pos=+INFTY, lb_neg=-INFTY, ub_neg=-1, lb_aux, ub_aux;
+  int lb_pos=min_pos[Z], ub_pos=max_pos[Z], lb_neg=min_neg[Z], ub_neg=max_neg[Z], 
+    nlb1, nlb2, nub1, nub2;
+  
+  bool pruning_flag = false, pzero = false;
+  
+
+  // std::cout << min_neg[X] << " " << max_pos[X] << " || " 
+  // 	    <<  min_neg[Y]  << " " << max_pos[Y] << std::endl;
+
+  // if X = 0 or Y = 0, then Z = 0
+  if( zero[Z] &&
+      !zero[X] && !zero[Y]) {
+    //zero[Z] = 0;
+    pzero = true;
+    pruning_flag = true;
+  }
+  else if((!min_neg[X] && !max_pos[X]) || (!min_neg[Y] && !max_pos[Y])) { 
+    lb_neg = 0;
+    ub_pos = 0;
+    pruning_flag = true;
+  }
+
+  // std::cout << lb_neg << "\\" << ub_pos << std::endl;
+
+  if(lb_neg != ub_pos) { 
+    if(IS_OK(wiped)) {
+      if(max_pos[Z]>0) {
+	// revise the positive part of Z's domain (if it has one)
+	//ub_pos = 0;
+	//lb_pos = 1;
+	//lb_aux = 1;
+	nlb1 = nlb2 = INFTY; //lb_neg;
+	nub1 = nub2 = 0; //ub_neg;
+
+	// it can either be the positive parts of X and Y:
+	if(max_pos[X]>0 && max_pos[Y]>0) {
+	  // compute the bounds
+	  // ub_pos = max_pos[X] * max_pos[Y];
+	  // lb_pos = min_pos[X] * min_pos[Y];
+	  nub1 = max_pos[X] * max_pos[Y];
+	  nlb1 = min_pos[X] * min_pos[Y];
+	}
+	// or the negative parts of X and Y:
+	if(min_neg[X]<0 && min_neg[Y]<0) {
+	  // compute the bounds
+	  // ub_aux = min_neg[X] * min_neg[Y];
+	  // lb_aux = max_neg[X] * max_neg[Y];
+	  nub2 = min_neg[X] * min_neg[Y];
+	  nlb2 = max_neg[X] * max_neg[Y];
+	}
+	// if(lb_pos>lb_aux) lb_pos = lb_aux;
+	// if(ub_pos<ub_aux) ub_pos = ub_aux;
+	if(nlb1>nlb2) nlb1 = nlb2;
+	if(nub1<nub2) nub1 = nub2;
+	
+	//std::cout << "positive bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
+
+	if(lb_pos<nlb1) {
+	  lb_pos = nlb1;
+	  pruning_flag = true;
+	}
+	if(ub_pos>nub1) {
+	  ub_pos = nub1;
+	  pruning_flag = true;
+	}
+      } else if(pzero || !zero[Z]) {
+	lb_pos = min_neg[Z];
+	ub_pos = max_neg[Z];
+      } else {
+	lb_pos = ub_pos = 0;
+      }
+
+     if(min_neg[Z]<0) {
+       // revise the negative part of Z's domain (if it has one)
+       //ub_neg = -1;
+       //lb_neg = 0;
+       //ub_aux = -1;
+       nlb1 = nlb2 = 0; //lb_pos;
+       nub1 = nub2 = -INFTY; //ub_pos;
+	
+	// it can either be the negitive part of X and the positive part of Y:
+	if(min_neg[X]<0 && max_pos[Y]>0) {
+	  // compute the bounds
+	  // ub_neg = max_neg[X] * min_pos[Y];
+	  // lb_neg = min_neg[X] * max_pos[Y];
+	  nub1 = max_neg[X] * min_pos[Y];
+	  nlb1 = min_neg[X] * max_pos[Y];
+
+	  // std::cout << "\t  1 ub = " << max_neg[X] << "*" << min_pos[Y] << std::endl;
+	  // std::cout << "\t  1 lb = " << min_neg[X] << "*" << max_pos[Y] << std::endl;
+
+	}
+	// or the negitive part of Y and the positive part of X:
+	if(max_pos[X]>0 && min_neg[Y]<0) {
+	  // compute the bounds
+	  // ub_aux = max_neg[Y] * min_pos[X];
+	  // lb_aux = min_neg[Y] * max_pos[X];
+	  nub2 = max_neg[Y] * min_pos[X];
+	  nlb2 = min_neg[Y] * max_pos[X];
+
+	  // std::cout << "\t  2 ub = " << max_neg[Y] << "*" << min_pos[X] << std::endl;
+	  // std::cout << "\t  2 lb = " << min_neg[Y] << "*" << max_pos[X] << std::endl;
+	}
+	// if(lb_neg>lb_aux) lb_neg = lb_aux;
+	// if(ub_neg<ub_aux) ub_neg = ub_aux;
+
+	if(nlb1>nlb2) nlb1 = nlb2;
+	if(nub1<nub2) nub1 = nub2;
+
+
+	  // std::cout << "change:" << std::endl;
+	  // std::cout << "\t lbn = " << nlb1 << std::endl;
+	  // std::cout << "\t ubn = " << nub1 << std::endl;
+
+
+	//std::cout << "negative bounds: [" << nlb1 << ".." << nub1 << "]" << std::endl;
+	
+	if(lb_neg<nlb1) {
+	  lb_neg = nlb1;
+	  pruning_flag = true;
+	}
+	if(ub_neg>nub1) {
+	  ub_neg = nub1;
+	  pruning_flag = true;
+	}
+     }  else if(pzero || !zero[Z]) {
+       lb_neg = min_pos[Z];
+       ub_neg = max_pos[Z];
+     } else {
+       lb_neg = ub_neg = 0;
+     }
+    }
+  }
+
+  if(pruning_flag) {
+#ifdef _DEBUG_DIV
+  std::cout << "set bounds to " // << scope[Z].get_domain() << " = " 
+	    // << scope[X].get_domain() << "*" << scope[Y].get_domain() 
+	    << "[" << lb_neg << ".." << ub_neg << "|" 
+	    << (zero[Z] ? "{0}" : "_") << "|" 
+	    << lb_pos << ".." << ub_pos << "]" << std::endl; 
+#endif
+  
+    wiped = prune(lb_neg, ub_neg, lb_pos, ub_pos, pzero, Z);
+  }
+  
+  return wiped;
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::prune(const int lb_neg, 
+							 const int ub_neg, 
+							 const int lb_pos, 
+							 const int ub_pos,
+							 const bool pzero,
+							 const int Z) {
+
+
+// std::cout << changes << std::endl;
+  Event evt;
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+  
+  // int lb = lb_neg;
+  // if(lb>=0) lb = lb_pos;
+  // int ub = ub_pos;
+  // if(ub>=0) lb = lb_pos;
+
+  if(ub_pos < lb_neg) wiped = FAILURE(Z);
+  else {
+    if(lb_neg>min_neg[Z]) {
+
+      // std::cout  << lb_neg << ">" << min_neg[Z] 
+      // 		 << " -> update lb" << std::endl;
+
+      evt = scope[Z].set_min( lb_neg );
+      if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+      else {
+	if(changes.contain(Z)) {
+	  event_type[Z] |= evt;
+	} else {
+	  event_type[Z] = evt;
+	  changes.add(Z);
+	}
+	min_neg[Z] = scope[Z].get_min();
+      }
+    }
+    if(IS_OK(wiped) && ub_pos<max_pos[Z]) {
+      
+      // std::cout  << ub_pos << ">" << max_pos[Z] 
+      // 		 << " -> update ub" << std::endl;
+
+      evt = scope[Z].set_max( ub_pos );
+      if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+      else {
+	if(changes.contain(Z)) {
+	  event_type[Z] |= evt;
+	} else {
+	  event_type[Z] = evt;
+	  changes.add(Z);
+	}
+	max_pos[Z] = scope[Z].get_max();
+      }
+    }
+    if(IS_OK(wiped) && (lb_pos>=min_neg[Z] || ub_neg<=max_pos[Z])) { 
+      
+      // std::cout << lb_pos << ">=" << min_neg[Z] 
+      // 		<< " or " << ub_neg << "<=" << max_pos[Z]
+      // 		<< " -> may update inbounds" << std::endl;
+      
+      if(lb_pos-1>ub_neg && (pzero || (!zero[Z] && (min_pos[Z]<lb_pos || max_neg[Z]>ub_neg)))) {
+	  
+	// std::cout  << lb_pos << ">" << min_pos[Z] 
+	//  	   << " or " << ub_neg << "<" << max_neg[Z]
+	// 	   << " -> update inbounds" << std::endl;
+	
+	evt = scope[Z].remove_interval(ub_neg+1, lb_pos-1);
+	if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+	else {
+	  if(changes.contain(Z)) {
+	    event_type[Z] |= evt;
+	  } else {
+	    event_type[Z] = evt;
+	    changes.add(Z);
+	  }
+	  zero[Z] = 0;
+	  min_pos[Z] = scope[Z].get_min_pos();
+	  max_neg[Z] = scope[Z].get_max_neg();
+	}
+      } else {
+	if(lb_pos>1 && min_pos[Z]<lb_pos) {
+
+
+	  // std::cout << lb_pos << ">" << min_pos[Z] 
+	  // 	    << " -> update negative ub" << std::endl;
+
+	  evt = scope[Z].remove_interval(1, lb_pos-1);
+	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+	  else {
+	    //min_pos[Z] = lb_pos;
+	    //max_neg[Z] = ub_neg;
+	    if(changes.contain(Z)) {
+	      event_type[Z] |= evt;
+	    } else {
+	      event_type[Z] = evt;
+	      changes.add(Z);
+	    }
+	    min_pos[Z] = scope[Z].get_min_pos();
+	  }
+	}
+	if(ub_neg<-1 && max_neg[Z]>ub_neg) {
+
+	  // std::cout 
+	  //   << ub_neg << "<" << max_neg[Z]
+	  //   << " -> update positive lb" << std::endl;
+
+	  evt = scope[Z].remove_interval(ub_neg+1, -1);
+	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+	  else {
+	    //min_pos[Z] = lb_pos;
+	    //max_neg[Z] = ub_neg;
+	    if(changes.contain(Z)) {
+	      event_type[Z] |= evt;
+	    } else {
+	      event_type[Z] = evt;
+	      changes.add(Z);
+	    }
+	    max_neg[Z] = scope[Z].get_max_neg();
+	  }
+	}
+      }
+    }
+  }
+
+  if((min_neg[Z]>0 && min_neg[Z]<min_pos[Z]) ||
+     (!min_neg[Z] && !zero[Z]))
+    min_neg[Z] = min_pos[Z];
+
+  if((max_pos[Z]<0 && max_pos[Z]>max_neg[Z]) ||
+     (!max_pos[Z] && !zero[Z]))
+    max_pos[Z] = max_neg[Z];
+
+
+
+
+  //std::cout << changes << std::endl;
+#ifdef _DEBUG_DIV
+	if(IS_OK(wiped)) {
+	  std::cout << scope[0].get_domain() 
+		    << " * " << scope[1].get_domain() 
+		    << " = " << scope[2].get_domain() << std::endl;
+	} else std::cout << "FAIL!" << std::endl ;
+
+	std::cout
+	  << " now in [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
+	  << (zero[Z] ? "{0}" : "_") << "|" 
+	  << min_pos[Z] << ".." << max_pos[Z] << "]" << std::endl;
+
+  std::cout << std::endl; 
+#endif
+
+
+  return wiped;
+}
+
+
+
+
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::propagate() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+  
+
+#ifdef _DEBUG_DIV
+  std::cout << std::endl << std::endl << "propagate " // << this 
+	    << std::endl;
+#endif
+
+  for(int i=0; i<3; ++i) {
+    max_pos[i] = scope[i].get_max();
+    min_neg[i] = scope[i].get_min();
+
+    zero[i] = scope[i].contain(0);
+
+    if(min_neg[i]<0)
+      max_neg[i] = scope[i].get_max_neg();
+    else
+      max_neg[i] = min_neg[i];
+
+    if(max_pos[i]>0)
+      min_pos[i] = scope[i].get_min_pos();
+    else
+      min_pos[i] = max_pos[i];
+
+  }
+
+ 
+  
+#ifdef _DEBUG_DIV
+  std::cout << scope[0].get_var() << " in " << scope[0].get_domain() 
+	    << " / " << scope[1].get_var() << " in " << scope[1].get_domain() 
+    	    << " = " << scope[2].get_var() << " in " << scope[2].get_domain() << std::endl;
+#endif
+
+  //int i, j, lb, ub, evt_idx, rev_idx, aux_idx;
+  int evt_idx;
+  //Event evt;
+
+  if(zero[1] && scope[1].remove(0) == FAIL_EVENT) {
+    wiped = FAILURE(1);
+  }
+
+
+  while(IS_OK(wiped) && !changes.empty()) {
+
+    evt_idx = changes.pop();
+
+#ifdef _DEBUG_DIV
+    std::cout << "react to " << scope[evt_idx].get_var() << " in " 
+	      << scope[evt_idx].get_domain() 
+	      << (LB_CHANGED(event_type[evt_idx]) ? " (change on LB) " : "")
+	      << (UB_CHANGED(event_type[evt_idx]) ? " (change on UB) " : "")
+	      << std::endl;
+#endif
+
+    // x0 / x1 = x2 
+    if(evt_idx < 2) {
+      // we update x2 = x0/x1
+      wiped = revise_integer_division(0, 1, 2);
+      // revise x(1-evt)
+      if(IS_OK(wiped)) {
+	if(evt_idx) // revise x0
+	  wiped = revise_multiplication(1, 2, 0);
+	else // revise x1 (x2 = x0/x1) -> x1 = x0/x2
+	  wiped = revise_integer_division(0, 2, 1);
+      }
+    } else {
+      // update x0 = x1*x2 
+      wiped = revise_multiplication(1, 2, 0);
+      // update x1 = x0/x2
+      if(IS_OK(wiped)) wiped = revise_integer_division(0, 2, 1);
+    }
+  }
+    
+  return wiped;
+}
+  
+std::ostream& Mistral::PredicateDiv::display(std::ostream& os) const {
+  os << scope[2] << " == (" << scope[0] << " / " << scope[1] << ")";
+  return os;
+}
+
+
 
 
 Mistral::ConstraintBoolSumEqual::ConstraintBoolSumEqual(Vector< Variable >& scp, const int t)
