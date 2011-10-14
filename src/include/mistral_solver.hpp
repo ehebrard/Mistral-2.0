@@ -36,7 +36,9 @@
 #include <mistral_constraint.hpp>
 
 
+
 namespace Mistral {
+
 
   class Solution {
     
@@ -80,6 +82,8 @@ namespace Mistral {
     unsigned int backtrack_limit;
     /// Limit on the number of failures
     unsigned int fail_limit;
+    /// Limit on the number of failures
+    unsigned int propagation_limit;
     /// fail limit used for restarts
     unsigned int restart_limit;
     /// flag to know if there is a limit
@@ -136,6 +140,46 @@ namespace Mistral {
     void copy(const SolverStatistics&);
     void update(const SolverStatistics&);
 
+    // static const char* VARNAME[NUM_VARTYPES];
+    // static const char* METHOD_NAME[NUM_METHODS];
+    
+
+  //   static const char* VARNAME[NUM_VARTYPES] = {"virtual", "constant", "boolean", "range", "bitset", "list"};
+  //   static const char* METHOD_NAME[NUM_METHODS] = {
+  //   "get_size"         ,
+  //   "get_degree"       ,
+  //   "get_min"          ,
+  //   "get_max"          ,
+  //   "get_initial_min"  ,
+  //   "get_initial_max"  ,
+  //   "get_min_pos"      ,
+  //   "get_max_neg"      ,
+  //   "next"             ,
+  //   "prev"             ,
+  //   "is_range"         ,
+  //   "is_ground"        ,
+  //   "equal"            ,
+  //   "contain"          ,
+  //   "intersect_range"  ,
+  //   "included_range"   ,
+  //   "includes_range"   ,
+  //   "intersect_set"    ,
+  //   "included_set"     ,
+  //   "includes_set"     ,
+  //   "intersect_to"     ,
+  //   "union_to"         ,
+  //   "remove"           ,
+  //   "set_domain"       ,
+  //   "set_min"          ,
+  //   "set_max"          ,
+  //   "set_domain_bitset",
+  //   "remove_set"       ,
+  //   "remove_interval"  ,
+  //   "restore"          
+  // };
+
+
+
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_nodes; 
     /// Number of backtracks, that is unsuccesful recursive calls 
@@ -170,6 +214,32 @@ namespace Mistral {
     unsigned int      small;
     double            base_avg_size;
     double            learnt_avg_size;
+
+
+#ifdef _PROFILING
+
+    void init_prof();
+
+    double total_propag_time;
+    //std::vector< double > constraint_propag_time;
+    
+    double total_branching_time;
+
+    double total_restore_time;
+
+    //int vartype_index[17];
+
+#ifdef _PROFILING_PRIMITIVE
+
+    double prof_time[NUM_METHODS][NUM_VARTYPES];
+    unsigned long long int prof_num[NUM_METHODS][NUM_VARTYPES];
+    virtual std::ostream& print_profile(std::ostream&) const ;
+
+#endif
+
+#endif
+
+
 
     //virtual std::string getString() const;
     virtual std::ostream& display(std::ostream&) const ;
@@ -252,7 +322,7 @@ namespace Mistral {
   };
 
 
-  /**********************************************
+   /**********************************************
    * Solver
    **********************************************/
 
@@ -304,6 +374,13 @@ namespace Mistral {
     Vector< Variable >   variables;
     Vector< int >     domain_types;
     Vector< int > assignment_level;
+
+#ifdef _DEBUG_PRUNING
+    Vector< Variable > monitored_variables;
+    void monitor(VarArray& X);
+    void monitor(Variable X);
+#endif
+
 
     /// The set of constraints, with special accessors for triggers
     Vector< Constraint* >         constraints;
@@ -418,12 +495,21 @@ namespace Mistral {
     void add(Constraint* x); 
     void add(Vector< Lit >& clause); 
     //void add(ConstraintW x); 
+    //void add(BranchingHeuristic* h);
     void add(RestartListener* l);
     void add(SuccessListener* l);
     void add(FailureListener* l);
     void add(DecisionListener* l);
     void add(VariableListener* l);
     void add(ConstraintListener* l);
+
+   void remove(RestartListener* l);
+    void remove(SuccessListener* l);
+    void remove(FailureListener* l);
+    void remove(DecisionListener* l);
+    void remove(VariableListener* l);
+    void remove(ConstraintListener* l);
+
     void mark_non_convex(const int i) { 
       domain_types[i] &= (~RANGE_VAR); 
     }
@@ -457,6 +543,7 @@ namespace Mistral {
     void notify_restart();
     void notify_relax(Constraint *c);
     void notify_post(Constraint *c);
+    void notify_add(Constraint *c);
     void notify_change_variable(const int idx);
     void notify_add_variable();
     /// called when the var'th variable of constraint cons changes (with event type evt)
@@ -511,6 +598,8 @@ namespace Mistral {
 			       RestartPolicy *pol=NULL,
 			       Goal *goal=NULL);
 
+    Outcome search();
+
     /*!
       Black box search.
     */
@@ -531,6 +620,7 @@ namespace Mistral {
     //@}
 
 
+    double *get_literal_activity();
 
 
     /*!@name Search accesors*/

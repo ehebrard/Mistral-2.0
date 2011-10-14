@@ -57,10 +57,14 @@ namespace Mistral {
   
 
 #define SIGN(l) ((l)&1)
-#define NEG(l) ((l)^1)
+#define NOT(l) ((l)^1)
 #define UNSIGNED(l) ((l)/2)
 #define ATOM(l) (state[(l)/2])
 #define LEVEL(a) ((a)/2)
+
+#define NEG(a) ((2*a))
+#define POS(a) ((2*a+1))
+
 
 #define V_TRUE    1
 #define V_FALSE   0
@@ -273,7 +277,7 @@ namespace Mistral {
     
     void add( Variable x );
     void add( Vector < Lit >& clause, double init_activity=0.0 );
-    void learn( Vector < Lit >& clause );
+    void learn( Vector < Lit >& clause, double init_activity=0.0 );
     void remove( const int cidx );
     void forget( double forgetfulness );
     //@}
@@ -668,7 +672,7 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
   } while( --pathC );
   // p is the last decision, since all atoms above it in the
   // assumption stack have been skipped or expended.
-  learnt_clause[0] = NEG(p);    
+  learnt_clause[0] = NOT(p);    
 
 #ifdef _DEBUG_SEARCH
   std::cout << " (";
@@ -684,7 +688,7 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
     reason[UNSIGNED(p)] = learnt.back();
   }
   visited.clear();
-  lit = NEG(p); 
+  lit = NOT(p); 
 
   // get the backtrack level from the index
   lvl = decisions.size-1;
@@ -760,7 +764,7 @@ inline Lit SatSolver::choice()
 	y = 2*assumptions[i];
 	
 	cur = activity[y];
-	cur += activity[NEG(y)]; 
+	cur += activity[NOT(y)]; 
 	
 	//std::cout << "activity of b" << UNSIGNED(y) << " = " << cur << std::endl;
 	
@@ -787,9 +791,9 @@ inline Lit SatSolver::choice()
 
   // switch( params.value_selection ) 
   //   {
-  //   case TRUE_FIRST  : p = NEG(x[j]); break;
-  //   case LEAST_ACTIVE: p = (activity[NEG(x[j])] > activity[x[j]] ? NEG(x[j]) : x[j]); break;
-  //   case MOST_ACTIVE : p = (activity[NEG(x[j])] > activity[x[j]] ? x[j] : NEG(x[j])); break;
+  //   case TRUE_FIRST  : p = NOT(x[j]); break;
+  //   case LEAST_ACTIVE: p = (activity[NOT(x[j])] > activity[x[j]] ? NOT(x[j]) : x[j]); break;
+  //   case MOST_ACTIVE : p = (activity[NOT(x[j])] > activity[x[j]] ? x[j] : NOT(x[j])); break;
   //   case RANDOM      : p = (x[j] | (randint(2))); break;
   //   case PERSISTENT  : p = (x[j] | SIGN(state[UNSIGNED(x[j])])); break;
   //   }
@@ -797,9 +801,9 @@ inline Lit SatSolver::choice()
 
   switch( params.value_selection ) 
     {
-    case TRUE_FIRST  : p = NEG(p); break;
-    case LEAST_ACTIVE: p = (activity[NEG(p)] > activity[p] ? NEG(p) : p); break;
-    case MOST_ACTIVE : p = (activity[NEG(p)] > activity[p] ? p : NEG(p)); break;
+    case TRUE_FIRST  : p = NOT(p); break;
+    case LEAST_ACTIVE: p = (activity[NOT(p)] > activity[p] ? NOT(p) : p); break;
+    case MOST_ACTIVE : p = (activity[NOT(p)] > activity[p] ? p : NOT(p)); break;
     case RANDOM      : p |= (randint(2)); break;
     case PERSISTENT  : p |= SIGN(state[UNSIGNED(p)]); break;
     default: ; //{std::cout << "default choice" << std::endl;} ;
@@ -856,12 +860,12 @@ inline Clause* SatSolver::unit_propagate()
   while( next_deduction < (int)(assumptions.size) ) {
     ++stats.num_propagations;
     a = assumptions[next_deduction];
-    p = (2*a)|NEG((SIGN(state[a])));
+    p = (2*a)|NOT((SIGN(state[a])));
 
 #ifdef _DEBUG_UNITPROP
     for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
     std::cout << "propagate " ;
-    print_literal(std::cout, NEG(p));
+    print_literal(std::cout, NOT(p));
     std::cout << " " << is_watched_by[p].size << std::endl;
 #endif
 

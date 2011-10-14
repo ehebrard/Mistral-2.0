@@ -26,6 +26,7 @@
 #include <mistral_variable.hpp>
 
 
+//Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s, void *a) 
 Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
   : solver(s) {
   lit_activity = s->base->lit_activity.stack_;
@@ -35,19 +36,13 @@ Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s)
   solver->add((DecisionListener*)this);
 }
 
-Mistral::LiteralActivityManager::~LiteralActivityManager() {}
-    
+Mistral::LiteralActivityManager::~LiteralActivityManager() {
+  solver->remove((DecisionListener*)this);
+}
+
 double *Mistral::LiteralActivityManager::get_weight() { return var_activity; }     
 
 void Mistral::LiteralActivityManager::notify_decision() {
-  // int i=solver->sequence.size, a;
-  // Variable *seq = solver->sequence.list_;
-  // while(i--) {
-  //   a = seq[i].id();
-  //   var_activity[a] *= decay;
-  //   lit_activity[2*a] *= decay;
-  //   lit_activity[2*a+1] *= decay;
-  // }
   int i=n_vars;
   while(i--) var_activity[i] *= decay;    
   i=n_vars;
@@ -91,6 +86,13 @@ Mistral::Variable Mistral::NoOrder::select() {
   return solver->sequence.back();
 }
 
+// Mistral::Lexicographic::Lexicographic(Solver *s) 
+//   : solver(s) {
+//   index.initialise(s->variables.size);
+//   solver->add(this);
+//   last.initialise(0,s);
+// }
+
 Mistral::Lexicographic::Lexicographic(Solver *s) 
   : solver(s) {
   index.initialise(s->variables.size);
@@ -107,6 +109,7 @@ void Mistral::Lexicographic::initialise(VarStack< Variable >& seq) {
   }
 }
 
+//void Mistral::Lexicographic::initialise(Solver *s, void *a) {
 void Mistral::Lexicographic::initialise(Solver *s) {
   solver = s;
   index.initialise(s->variables.size);
@@ -131,6 +134,53 @@ void Mistral::Lexicographic::notify_change(const int idx) {
 }
 
 
+std::ostream& operator<<(std::ostream& os, Mistral::DecisionListener& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RestartListener& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::SuccessListener& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::FailureListener& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::ConstraintListener& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::VariableListener& x) {
+  return x.display(os);
+}
+
+// std::ostream& operator<<(std::ostream& os, Mistral::DecisionListener* x) {
+//   return x->display(os);
+// }
+
+// std::ostream& operator<<(std::ostream& os, Mistral::RestartListener* x) {
+//   return x->display(os);
+// }
+
+// std::ostream& operator<<(std::ostream& os, Mistral::SuccessListener* x) {
+//   return x->display(os);
+// }
+
+// std::ostream& operator<<(std::ostream& os, Mistral::FailureListener* x) {
+//   return x->display(os);
+// }
+
+// std::ostream& operator<<(std::ostream& os, Mistral::ConstraintListener* x) {
+//   return x->display(os);
+// }
+
+// std::ostream& operator<<(std::ostream& os, Mistral::VariableListener* x) {
+//   return x->display(os);
+// }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomain& x) {
   return x.display(os);

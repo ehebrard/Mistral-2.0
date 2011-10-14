@@ -75,6 +75,80 @@ namespace Mistral {
 #define DYN_VAR     31
 #define REMOVED_VAR 512
 #define EXPRESSION  3
+
+#define NUM_METHODS 30
+#define NUM_VARTYPES 6
+
+#ifdef _PROFILING
+
+  static const int VARTYPE[17] = {0,1,2,-1,3,-1,-1,-1,4,-1,-1,-1,-1,-1,-1,-1,5};
+ 
+    #define _m_get_size_          0
+    #define _m_get_degree_        1
+    #define _m_get_min_           2
+    #define _m_get_max_           3
+    #define _m_get_initial_min_   4
+    #define _m_get_initial_max_   5
+    #define _m_get_min_pos_       6
+    #define _m_get_max_neg_       7
+    #define _m_next_              8
+    #define _m_prev_              9
+    #define _m_is_range_          10
+    #define _m_is_ground_         11
+    #define _m_equal_             12
+    #define _m_contain_           13
+    #define _m_intersect_range_   14
+    #define _m_included_range_    15
+    #define _m_includes_range_    16
+    #define _m_intersect_set_     17
+    #define _m_included_set_      18
+    #define _m_includes_set_      19
+    #define _m_intersect_to_      20
+    #define _m_union_to_          21
+    #define _m_remove_            22
+    #define _m_set_domain_value_  23
+    #define _m_set_min_           24
+    #define _m_set_max_           25
+    #define _m_set_domain_set_    26
+    #define _m_remove_set_        27
+    #define _m_remove_interval_   28
+    #define _m_restore_           29
+
+  static const char* VAR_NAME[NUM_VARTYPES] = {"virtual", "constant", "boolean", "range", "bitset", "list"};
+  static const char* METHOD_NAME[NUM_METHODS] = {
+    "get_size"         ,
+    "get_degree"       ,
+    "get_min"          ,
+    "get_max"          ,
+    "get_initial_min"  ,
+    "get_initial_max"  ,
+    "get_min_pos"      ,
+    "get_max_neg"      ,
+    "next"             ,
+    "prev"             ,
+    "is_range"         ,
+    "is_ground"        ,
+    "equal"            ,
+    "contain"          ,
+    "intersect_range"  ,
+    "included_range"   ,
+    "includes_range"   ,
+    "intersect_set"    ,
+    "included_set"     ,
+    "includes_set"     ,
+    "intersect_to"     ,
+    "union_to"         ,
+    "remove"           ,
+    "set_domain" ,
+    "set_min"          ,
+    "set_max"          ,
+    "set_domain_set",
+    "remove_set"       ,
+    "remove_interval"  ,
+    "restore"          
+  };
+
+#endif
   
 #define DOMAIN_C     1
 #define RANGE_C      2
@@ -100,6 +174,30 @@ namespace Mistral {
 #define UB_CHANGED(e)     (bool)((e)&UB_C)
 #define ASSIGNED(e)       (bool)((e)&VALUE_C)
 
+
+  std::string event2str(Event e); //  {
+  //   std::string str_evt;
+  //   if(ASSIGNED(e)) {
+  //     str_evt = "value";
+  //     if(e != VALUE_C) {
+  // 	str_evt += "("; 
+  // 	if(LB_CHANGED(e)) str_evt += "+lb";
+  // 	if(UB_CHANGED(e)) str_evt += "+ub";
+  // 	str_evt += ")";
+  //     } 
+  //   } else if(LB_CHANGED(e)) {
+  //     str_evt = "lb";
+  //     if(UB_CHANGED(e)) str_evt += "/ub";
+  //   } else if(UB_CHANGED(e)) {
+  //     str_evt = "ub";
+  //   } else {
+  //     str_evt = "domain";
+  //   }
+  //   return str_evt;
+  // }
+
+
+
 #define IS_FAIL(e) ((e)&FAIL_EVENT)
 
 #define SAT      1
@@ -118,6 +216,23 @@ namespace Mistral {
 
 #define EVENT_TYPE(e) (2-(RANGE_CHANGED(e))-(ASSIGNED(e)))
 
+
+
+
+  std::string outcome2str(Outcome e);//  {
+  //   std::string str_out;
+  //   switch(e) {
+  //   case SAT: str_out = "SAT"; break;
+  //   case OPT: str_out = "OPT"; break;
+  //   case UNSAT: str_out = "UNSAT"; break;
+  //   case UNKNOWN: str_out = "UNKNOWN"; break;
+  //   case LIMITOUT: str_out = "LIMITOUT"; break;
+  //   }
+  //   return str_out;
+  // }
+
+
+  std::string domain2str(int d);
 
   /**********************************************
    * Timing Memory and Command line utilities 

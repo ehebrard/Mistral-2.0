@@ -388,6 +388,10 @@ public:
   OpshopTest();
   ~OpshopTest();
 
+  void run1();
+  void run2();
+  void run3();
+
   virtual void run();
 };
 
@@ -476,16 +480,16 @@ public:
 
      s1.add( con1 );
      s1.rewrite();
-    s1.consolidate();
+     s1.consolidate();
 
 
-    s2.add( con2 );
-    s2.rewrite();
-    s2.consolidate();
-
-    s3.add( con3 );
-    s3.rewrite();
-    s3.consolidate();
+     s2.add( con2 );
+     s2.rewrite();
+     s2.consolidate();
+     
+     s3.add( con3 );
+     s3.rewrite();
+     s3.consolidate();
 
   }
 
@@ -2758,7 +2762,7 @@ void BoolPigeons::run() {
   if((int)s.statistics.num_backtracks != num_bts[size] /*40319*/ /*362879*/) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
-    exit(1);
+    //exit(1);
   }
 
 }
@@ -4129,9 +4133,7 @@ OpshopTest::OpshopTest() : UnitTest() {}
 OpshopTest::~OpshopTest() {}
 
 
-void OpshopTest::run() {
-
-  if(Verbosity) cout << "Run open-shop (GP03-01): "; 
+void OpshopTest::run1() {
 
   // read file
   int nJobs, nMachines;
@@ -4229,9 +4231,16 @@ void OpshopTest::run() {
     for(int j=0; j<nMachines; ++j) 
       s.add( task[i*nMachines+j] <= makespan-jobs[i][j] );
 
+
+  s.consolidate();
+
   //std::cout << s << std::endl;
   //s.specialise();
   //std::cout << s << std::endl;
+
+#ifdef _DEBUG_PRUNING
+  s.monitor(task);
+#endif
 
   s.initialise_search(task, 
 		      new GenericHeuristic< GenericDVO < MinDomain >, HalfSplit >(&s), 
@@ -4256,6 +4265,318 @@ void OpshopTest::run() {
 
 }
 
+
+void OpshopTest::run2() {
+
+  // read file
+  int nJobs, nMachines;
+  int i=0, j, k, dur=0, lb, opt, bufsize=1000;
+  char buf[bufsize];
+  std::ifstream infile( "./examples/data/GP03-01.txt", std::ios_base::in );
+	
+  do {
+    infile.getline( buf, bufsize, '\n' );
+  } while( buf[0] == '#' );
+	
+  while( buf[i] != ' ' ) ++i;
+  buf[i] = '\0';
+  lb = atoi( buf );
+	
+  while( buf[i] == '\0' || buf[i] == ' ' || buf[i] == '*' ) ++i;
+  j = i;
+  while( buf[i] != ' ' && buf[i] != '\n' && buf[i] != '\0' ) ++i;
+  buf[i] = '\0';
+  opt = atoi( &(buf[j]) );
+	
+  do {
+    infile.get( buf[0] );
+    if( buf[0] != '#' ) break;
+    infile.getline( buf, bufsize, '\n' );
+  } while( true );
+  infile.unget();
+	
+  infile >> nJobs;
+  infile >> nMachines;
+
+  int *jobs[nJobs];
+  for(i=0; i<nMachines; ++i)
+    jobs[i] = new int[nMachines];
+
+  infile.getline( buf, bufsize, '\n' );
+	
+  do {
+    infile.get( buf[0] );
+    if( buf[0] != '#' ) break;
+    infile.getline( buf, bufsize, '\n' );
+  } while( true );
+  infile.unget();
+	
+  k = 0;
+  for(i=0; i<nJobs; ++i) {
+    for(j=0; j<nMachines; ++j) {
+      infile >> jobs[i][j];
+      dur += jobs[i][j];
+    }
+  }
+
+  VarArray task;
+  VarArray disjuncts;
+
+  int makespan = (int)((double)opt*1.2);
+
+  for(i=0; i<nJobs; ++i) {
+    for(j=0; j<nMachines; ++j) {
+      Variable t(0, makespan-jobs[i][j]);
+      task.add(t);
+    }
+  }
+
+  Solver s;
+
+  s.add(task);
+  
+  for(int i=0; i<nJobs; ++i) 
+    {
+      for(int j=0; j<nMachines-1; ++j)
+	for(int k=j+1; k<nMachines; ++k) {
+	  disjuncts.add(ReifiedDisjunctive(task[i*nMachines+j], 
+					   task[i*nMachines+k], 
+					   jobs[i][j],
+					   jobs[i][k]
+					   ));
+	}
+    }
+
+  for(int j=0; j<nMachines; ++j)
+    for(int i=0; i<nJobs-1; ++i) 
+      {
+	for(int k=i+1; k<nJobs; ++k) {
+	  disjuncts.add(ReifiedDisjunctive(task[i*nMachines+j], 
+					   task[k*nMachines+j], 
+					   jobs[i][j],
+					   jobs[k][j]
+					   ));
+	}
+      }
+
+  for(unsigned int i=0; i<disjuncts.size; ++i)
+    s.add(Free(disjuncts[i]));
+
+
+  s.consolidate();
+  makespan = (int)((double)opt*1.0001);
+  for(int i=0; i<nJobs; ++i)
+    for(int j=0; j<nMachines; ++j) 
+      s.add( task[i*nMachines+j] <= makespan-jobs[i][j] );
+
+  //std::cout << s << std::endl;
+
+  //exit(1);
+
+#ifdef _DEBUG_PRUNING
+  s.monitor(task);
+#endif
+
+  s.initialise_search(disjuncts, 
+		      new GenericHeuristic< GenericDVO < MinDomain >, HalfSplit >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+  }
+
+
+  if(s.statistics.num_backtracks != 9) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 4) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+
+}
+
+
+void OpshopTest::run3() {
+
+  // read file
+  int nJobs, nMachines;
+  int i=0, j, k, dur=0, lb, opt, bufsize=1000;
+  char buf[bufsize];
+  std::ifstream infile( "./examples/data/GP03-01.txt", std::ios_base::in );
+	
+  do {
+    infile.getline( buf, bufsize, '\n' );
+  } while( buf[0] == '#' );
+	
+  while( buf[i] != ' ' ) ++i;
+  buf[i] = '\0';
+  lb = atoi( buf );
+	
+  while( buf[i] == '\0' || buf[i] == ' ' || buf[i] == '*' ) ++i;
+  j = i;
+  while( buf[i] != ' ' && buf[i] != '\n' && buf[i] != '\0' ) ++i;
+  buf[i] = '\0';
+  opt = atoi( &(buf[j]) );
+	
+  do {
+    infile.get( buf[0] );
+    if( buf[0] != '#' ) break;
+    infile.getline( buf, bufsize, '\n' );
+  } while( true );
+  infile.unget();
+	
+  infile >> nJobs;
+  infile >> nMachines;
+
+  int *jobs[nJobs];
+  for(i=0; i<nMachines; ++i)
+    jobs[i] = new int[nMachines];
+
+  infile.getline( buf, bufsize, '\n' );
+	
+  do {
+    infile.get( buf[0] );
+    if( buf[0] != '#' ) break;
+    infile.getline( buf, bufsize, '\n' );
+  } while( true );
+  infile.unget();
+	
+  k = 0;
+  for(i=0; i<nJobs; ++i) {
+    for(j=0; j<nMachines; ++j) {
+      infile >> jobs[i][j];
+      dur += jobs[i][j];
+    }
+  }
+
+  VarArray task;
+  VarArray disjuncts;
+
+  int makespan = (int)((double)opt*1.2);
+
+  for(i=0; i<nJobs; ++i) {
+    for(j=0; j<nMachines; ++j) {
+      Variable t(0, makespan-jobs[i][j]);
+      task.add(t);
+    }
+  }
+
+  Solver s;
+
+  s.add(task);
+  
+  for(int i=0; i<nJobs; ++i) 
+    {
+      for(int j=0; j<nMachines-1; ++j)
+	for(int k=j+1; k<nMachines; ++k) {
+	  disjuncts.add(ReifiedDisjunctive(task[i*nMachines+j], 
+					   task[i*nMachines+k], 
+					   jobs[i][j],
+					   jobs[i][k]
+					   ));
+	}
+    }
+
+  for(int j=0; j<nMachines; ++j)
+    for(int i=0; i<nJobs-1; ++i) 
+      {
+	for(int k=i+1; k<nJobs; ++k) {
+	  disjuncts.add(ReifiedDisjunctive(task[i*nMachines+j], 
+					   task[k*nMachines+j], 
+					   jobs[i][j],
+					   jobs[k][j]
+					   ));
+	}
+      }
+
+  for(unsigned int i=0; i<disjuncts.size; ++i)
+    s.add(Free(disjuncts[i]));
+
+
+  s.consolidate();
+  makespan = (int)((double)opt*1.0001);
+  for(int i=0; i<nJobs; ++i)
+    for(int j=0; j<nMachines; ++j) 
+      s.add( task[i*nMachines+j] <= makespan-jobs[i][j] );
+
+  //std::cout << s << std::endl;
+
+  //exit(1);
+
+#ifdef _DEBUG_PRUNING
+  s.monitor(task);
+#endif
+
+  s.initialise_search(task, 
+		      new GenericHeuristic< GenericDVO < MinDomain >, HalfSplit >(&s), 
+		      new NoRestart());
+
+  //int last_sol[disjuncts.size], new_sol[disjuncts.size];
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    
+
+    // bool diff = false;
+    // for(unsigned int i=0; i<disjuncts.size; ++i) {
+    //   new_sol[i] = disjuncts[i].get_solution_int_value();
+    //   if(!num_solutions || new_sol[i] != last_sol[i]) diff = true;
+    // }
+
+
+    // if(diff) {
+    //   for(unsigned int i=0; i<disjuncts.size; ++i) {
+    // 	last_sol[i] = new_sol[i] ;
+    // 	std::cout << last_sol[i] ;
+    //   }
+    //   std::cout << std::endl;
+    // }
+
+    ++num_solutions;
+  }
+
+
+  if(s.statistics.num_backtracks != 774518) { //775654) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 771316) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+
+}
+
+
+void OpshopTest::run() {
+  if(Verbosity) cout << "Run open-shop (GP03-01): "; 
+
+  //double TIME = get_run_time();
+  cout << "1 ";
+  cout.flush();
+  run1();
+  //cout << (get_run_time() - TIME) << endl ;
+  
+  //TIME = get_run_time();
+  cout << "2 ";
+  cout.flush();
+  run2();
+  //cout << (get_run_time() - TIME) << endl ;
+    
+  //TIME = get_run_time();
+  cout << "3 ";
+  cout.flush();
+  run3();
+  //cout << (get_run_time() - TIME) << endl ;
+
+}
 
 
 RewriteTest1::RewriteTest1() : UnitTest() {}

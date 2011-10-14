@@ -38,13 +38,13 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet& x)
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack* x) {
-  return x->display(os);
+  return (x ? x->display(os) : os);
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue* x) {
-  return x->display(os);
+  return (x ? x->display(os) : os);
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet* x) {
-  return x->display(os);
+  return (x ? x->display(os) : os);
 }

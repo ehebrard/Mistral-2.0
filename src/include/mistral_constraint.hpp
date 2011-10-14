@@ -38,11 +38,20 @@
 #ifndef __CONSTRAINT_HPP
 #define __CONSTRAINT_HPP
 
-#define FILTER( var, method )				    \
-  event_type[(var)] = scope[(var)].method ;		    \
-  if(event_type[(var)] == FAIL_EVENT) wiped = FAILURE(var); \
+
+#define FILTER1( var, method )				    \
+  event_type[(var)] = scope[(var)].method ;		     \
+  if(event_type[(var)] == FAIL_EVENT) wiped = FAILURE(var);		\
   else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var);
 
+
+#define FILTER2( evt, var, method )		\
+  evt = scope[(var)].method ; \
+  if(evt == FAIL_EVENT) wiped = FAILURE(var); \
+  else if(evt != NO_EVENT && !changes.contain(var)) { \
+  changes.add(var); \
+  event_type[(var)] |= evt; \
+  }
 
 namespace Mistral {
 
@@ -457,6 +466,103 @@ namespace Mistral {
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "disjunctive"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * TernaryDisjunctive Constraint (implemented with two precedence constraints)
+   **********************************************/ 
+  /*! \class ConstraintTernaryDisjunctive
+    \brief  Binary TernaryDisjunctive Constraint (x0 + p0 <= x1 || x1 + p1 <= x0).
+  */
+  class ConstraintTernaryDisjunctive : public Constraint {
+
+  public: 
+    /**@name Parameters*/
+    //@{
+    int processing_time[2];
+    Constraint *precedence[2];
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintTernaryDisjunctive() : Constraint() {}
+    ConstraintTernaryDisjunctive(Vector< Variable >& scp, const int p0, const int p1); 
+    ConstraintTernaryDisjunctive(std::vector< Variable >& scp, const int p0, const int p1); 
+
+    virtual Constraint *clone() { return new ConstraintTernaryDisjunctive(scope, processing_time[0], processing_time[1]); }
+    virtual void initialise();
+    virtual ~ConstraintTernaryDisjunctive() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    PropagationOutcome decide(const int choice);
+    void decide();
+    virtual int check( const int* sol ) const { 
+      return ( (sol[2] && (sol[1] + processing_time[1] > sol[0])) 
+	       ||
+	       (!sol[2] && (sol[0] + processing_time[0] > sol[1])) );
+    }
+    virtual PropagationOutcome propagate();
+    virtual void consolidate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "tdisjunctive"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * ReifiedDisjunctive Constraint (implemented with two precedence constraints)
+   **********************************************/ 
+  /*! \class ConstraintReifiedDisjunctive
+    \brief  Binary ReifiedDisjunctive Constraint (x0 + p0 <= x1 || x1 + p1 <= x0).
+  */
+  class ConstraintReifiedDisjunctive : public Constraint {
+
+  public: 
+    /**@name Parameters*/
+    //@{
+    int processing_time[2];
+    int *min_t0_ptr;
+    int *max_t0_ptr;
+    int *min_t1_ptr;
+    int *max_t1_ptr;
+    int *state;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintReifiedDisjunctive() : Constraint() {}
+    ConstraintReifiedDisjunctive(Vector< Variable >& scp, const int p0, const int p1); 
+    ConstraintReifiedDisjunctive(std::vector< Variable >& scp, const int p0, const int p1); 
+
+    virtual Constraint *clone() { return new ConstraintReifiedDisjunctive(scope, processing_time[0], processing_time[1]); }
+    virtual void initialise();
+    virtual ~ConstraintReifiedDisjunctive() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return ( (!sol[2] && (sol[1] + processing_time[1] > sol[0])) 
+	       ||
+	       (sol[2] && (sol[0] + processing_time[0] > sol[1])) );
+    }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //virtual void consolidate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "r-disjunctive"; }
     //@}
   };
 

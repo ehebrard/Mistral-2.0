@@ -38,6 +38,54 @@
 #include <cstring>
 
 
+std::string Mistral::event2str(Mistral::Event e) {
+    std::string str_evt;
+    if(ASSIGNED(e)) {
+      str_evt = "value";
+      if(e != VALUE_C) {
+	str_evt += "("; 
+	if(LB_CHANGED(e)) str_evt += "+lb";
+	if(UB_CHANGED(e)) str_evt += "+ub";
+	str_evt += ")";
+      } 
+    } else if(LB_CHANGED(e)) {
+      str_evt = "lb";
+      if(UB_CHANGED(e)) str_evt += "/ub";
+    } else if(UB_CHANGED(e)) {
+      str_evt = "ub";
+    } else {
+      str_evt = "domain";
+    }
+    return str_evt;
+  }
+
+std::string Mistral::outcome2str(Mistral::Outcome e) {
+    std::string str_out;
+    switch(e) {
+    case SAT: str_out = "SAT"; break;
+    case OPT: str_out = "OPT"; break;
+    case UNSAT: str_out = "UNSAT"; break;
+    case UNKNOWN: str_out = "UNKNOWN"; break;
+    case LIMITOUT: str_out = "LIMITOUT"; break;
+    }
+    return str_out;
+  }
+
+std::string Mistral::domain2str(int d) {
+  std::string str_out;
+  switch(d) {
+  case CONST_VAR: str_out = "constant"; break;
+  case BOOL_VAR: str_out = "bool(-)"; break;
+  case RANGE_VAR: str_out = "range"; break;
+  case BITSET_VAR: str_out = "bitset"; break;
+  case LIST_VAR: str_out = "list"; break;
+  case VIRTUAL_VAR: str_out = "virtual"; break;
+  case EXPRESSION: str_out = "expression"; break;
+  default: str_out = "bool";
+  }
+  return str_out;
+}
+
 static unsigned mistral_rand_x[56], mistral_rand_y[256], mistral_rand_z;
 static int mistral_rand_j, mistral_rand_k;
 

@@ -146,15 +146,7 @@ namespace Mistral {
     };
 
     virtual void initialise(const int lb, const int ub) {
- 
-      //std::cout << "init superclass " << lb << " " << ub << std::endl;
-
       domain.initialise(lb, ub);
-      // trail_.initialise(0,8);
-      // trail_.add(domain.min);
-      // trail_.add(domain.max);
-      // trail_.add(domain.size);
-      // trail_.add(-1);
       initialise_trail();
     }
 
@@ -171,8 +163,6 @@ namespace Mistral {
 
     void initialise_trail() {
       int i, k;
-
-      //std::cout << "build " << domain.values.neg_words << " <? " << domain.values.pos_words << std::endl;
 
       trail_.initialise(0,8);
       trail_.add(domain.min);
@@ -201,9 +191,6 @@ namespace Mistral {
 
     virtual ~VariableBitset() {
 
-      //std::cout << VariableImplementation::id << " delete superclass" << std::endl;
-      //std::cout << "delete " << domain.values.neg_words << " <? " << domain.values.pos_words << std::endl;
-
       for(int i=domain.values.neg_words; i<domain.values.pos_words; ++i) {
 	delete [] delta_abs[i];
 	delete [] level_abs[i];
@@ -222,8 +209,6 @@ namespace Mistral {
       delete [] level_;
       level_ = NULL;
 
-      //std::cout << "delete " << domain.values.table << std::endl;
-
       if(domain.values.table) {
 	domain.values.table += domain.values.neg_words;
 	delete [] domain.values.table;
@@ -233,16 +218,6 @@ namespace Mistral {
       //}
     }
 
-    // // set the history of X to match self
-    // void set_history(Variable X) {
-    //   for(unsigned int i = 4; i<trail_.size; i+=4) {
-    // 	X.set_bound_history(trail_[i], trail_[i+1], trail_[i+3]);
-    // 	if((trail_[i+1] - trail_[i] + 1) > trail_[i+2]) {
-    // 	  std::cout << "c Warning cannot take into account the history" << std::endl;
-    // 	}
-    //   }
-    // }
-
     void set_bound_history(const int lb, const int ub, const int level) {
 
       // first find out which words have changed
@@ -251,16 +226,11 @@ namespace Mistral {
       int i, j, k, l;
       WORD_TYPE w;
 
-      //      std::cout << std::endl << id << ": [" << prev_lb << ".." << prev_ub << "] set bound history [" << lb << ".." << ub << "] at level " << level << std::endl;
-
-
       if(prev_lb < lb || prev_ub > ub) {
 	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
 	i = (lb >> BitSet::EXP);
 	l = (ub >> BitSet::EXP);
 	k = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
-
-	//	std::cout << j << "->" << i << ".." << l << "<-" << k << std::endl;
 	
 	while( j ++< i ) {
 	  *(++delta_[j]) = BitSet::empt;
@@ -273,8 +243,6 @@ namespace Mistral {
 	  domain.values.table[k] = BitSet::empt;
 	  *(++level_[k]) = level;
 	}
-
-	//	std::cout << i << ".." << l << std::endl;
 
 	if(i == l) {
 	  w = (BitSet::full << (lb & BitSet::CACHE)) & (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
@@ -298,55 +266,13 @@ namespace Mistral {
       }
 
 
-
-      // if(prev_lb < lb) {
-
-      // 	std::cout << "lb has changed" << std::endl;
-
-      // 	i = (lb >> BitSet::EXP);
-      // 	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
-      // 	w = (BitSet::full << (lb & BitSet::CACHE));
-      // 	if((ub >> BitSet::EXP) == i) {
-      // 	  w &= (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
-      // 	}
-      // 	domain.values.table[i] = w;
-      // 	*(++delta_[i]) = w;
-      // 	*(++level_[i]) = level;
-      // 	while( i --> j ) {
-      // 	  *(++delta_[i]) = BitSet::empt;
-      // 	  domain.values.table[i] = BitSet::empt;
-      // 	  *(++level_[i]) = level;
-      // 	}
-      // }
-
-      // if(prev_ub > ub) {
-      // 	i = (ub >> BitSet::EXP);
-      // 	j = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
-      // 	if(prev_lb >= lb || (lb >> BitSet::EXP) != i) { 
-      // 	  w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
-      // 	  domain.values.table[i] = w;
-      // 	  *(++delta_[i]) = w;
-      // 	  *(++level_[i]) = level;
-      // 	}
-      // 	while( j --> i ) {
-      // 	  *(++delta_[j]) = BitSet::empt;
-      // 	  domain.values.table[j] = BitSet::empt;
-      // 	  *(++level_[j]) = level;
-      // 	}
-      // }
-
       domain.min = lb;
       domain.max = ub;
-      // domain.size = ub-lb+1;
 
       trail_.add(lb);
       trail_.add(ub);
       trail_.add(ub-lb+1);
       trail_.add(level);
-
-
-      // debug_print();
-      // std::cout << std::endl << std::endl;
 
     }
 
@@ -1873,6 +1799,43 @@ namespace Mistral {
   };
 
   Variable Disjunctive(Variable X, Variable Y, const int px, const int py);
+  
+
+  class ReifiedDisjunctiveExpression : public Expression {
+
+  public:
+
+    int processing_time[2];
+
+    ReifiedDisjunctiveExpression(Variable X, 
+				 Variable Y,
+				 const int p0=1, 
+				 const int p1=1);
+    
+    virtual ~ReifiedDisjunctiveExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable ReifiedDisjunctive(Variable X, Variable Y, const int px, const int py);
+  
+
+  class FreeExpression : public Expression {
+
+  public:
+    FreeExpression(Variable X);
+    
+    virtual ~FreeExpression();
+
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Free(Variable X);
   
 
   class AllDiffExpression : public Expression {

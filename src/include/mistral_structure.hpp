@@ -86,6 +86,7 @@ namespace Mistral {
     {
       capacity = s.size;
       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      //stack_ = new DATA_TYPE[capacity];
       for(size = 0; size<capacity; ++size)
 	stack_[size] = s[size];
     }
@@ -96,6 +97,7 @@ namespace Mistral {
       size = n;
       if( capacity ) {
 	stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+	//stack_ = new DATA_TYPE[capacity];
 	int f = sizeof(DATA_TYPE)/sizeof(int);
 	std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
       }
@@ -118,8 +120,13 @@ namespace Mistral {
     {
       size = 0;
       capacity = c;
-      stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
 
+      //std::cout << "init(c): " << capacity << std::endl;
+
+      stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      
+      // stack_ = new DATA_TYPE[capacity];
+      
       int f = sizeof(DATA_TYPE)/sizeof(int);
       std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
 
@@ -133,33 +140,53 @@ namespace Mistral {
       capacity = c;
       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
 
+      //std::cout << "init(s,c): " << capacity << std::endl;
+
+      // stack_ = new DATA_TYPE[capacity];
+      
       int f = sizeof(DATA_TYPE)/sizeof(int);
       std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      
       //DATA_TYPE x(0);
       //std::fill(stack_, stack_+capacity, x);
     }
 
-    //     void extendStack()
-    //     {
-    //       unsigned int new_capacity = ((capacity+1) << 1);
-    //       DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, new_capacity*sizeof(DATA_TYPE));
-    //       stack_ = new_stack;
-
-    //       DATA_TYPE x;
-    //       std::fill(stack_+capacity, stack_+new_capacity, x);
-      
-    //       capacity = new_capacity;
-    //     }
-
     void extendStack( const unsigned int l=0 )
     {
+
+      //std::cout << "extend stack!! " << this << std::endl;
+
       unsigned int increment = (l ? l : (capacity+1) << 1);
       capacity += increment;
-      DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+
+      // DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+      // std::cout << (int*)new_stack << " " << (int*)stack_ << std::endl;
+      // stack_ = new_stack;
+
+
+      DATA_TYPE* new_stack = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      // for(int i=0; i<capacity-increment; ++i)
+      // 	new_stack[i] = stack_[i];
+
+      memcpy(new_stack, stack_, (capacity-increment)*sizeof(DATA_TYPE));
+
+      //memcpy((int*)new_stack, (int*)stack_, (capacity-increment)*f);
+      free(stack_); 
       stack_ = new_stack;
 
+      // std::cout << "extend: " << capacity << std::endl;
+     
+      // DATA_TYPE* new_stack_ = new DATA_TYPE[capacity];
+      // memcpy(new_stack_, stack_, capacity-increment);
+      // delete [] stack_; 
+      // stack_ = new_stack_;
+      
       int f = sizeof(DATA_TYPE)/sizeof(int);
       std::fill((int*)stack_+(capacity-increment)*f, (int*)stack_+(capacity*f), 0);
+
+
+      //std::cout << " ==> " << this << std::endl;
+
       //DATA_TYPE x(0);
       //std::fill(stack_+capacity-increment, stack_+capacity, x);
     }
@@ -170,6 +197,15 @@ namespace Mistral {
 	capacity = l;
 	DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
 	stack_ = new_stack;
+
+	// std::cout << "resize: " << l << std::endl;
+	
+	// DATA_TYPE* new_stack_ = new DATA_TYPE[l];
+	// memcpy(new_stack_, stack_, capacity);
+	// delete [] stack_;
+	// stack_ = new_stack_;
+
+	// capacity = l;
       }
       size = l;
     }
@@ -576,6 +612,8 @@ namespace Mistral {
       for (unsigned int i=0; i<ps.size; ++i) 
 	data[i] = ps[i];
     }
+
+    virtual ~Array() {}
 
     static Array<DATA_TYPE>* Array_new(const Vector<DATA_TYPE>& ps)
     {
@@ -4083,7 +4121,7 @@ namespace Mistral {
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const BinaryMinHeap< DATA_TYPE >& x) {
-    return x.display(os);
+    return  x.display(os);
   }
 
   template < class DATA_TYPE > 
@@ -4140,27 +4178,27 @@ namespace Mistral {
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const BinaryMinHeap< DATA_TYPE >* x) {
-    return x->display(os);
+    return (x ? x->display(os) : os);
   }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >* x) {
-    return x->display(os);
+    return (x ? x->display(os) : os);
   }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Stack< DATA_TYPE >* x) {
-    return x->display(os);
+    return (x ? x->display(os) : os);
   }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Array< DATA_TYPE >* x) {
-    return x->display(os);
+    return (x ? x->display(os) : os);
   }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Node< DATA_TYPE >* x) {
-    return x->display(os);
+    return (x ? x->display(os) : os);
   }
 
   //   template < class DATA_TYPE, int NUM_HEAD > 
@@ -4170,7 +4208,7 @@ namespace Mistral {
 
   template< class WORD_TYPE, class FLOAT_TYPE >
   std::ostream& operator<< (std::ostream& os, const Bitset< WORD_TYPE, FLOAT_TYPE >* x) {
-    return x->display(os);
+    return (x ? x->display(os) : os);
   }
 
   //   template < class DATA_TYPE, int NUM_HEAD >

@@ -84,12 +84,15 @@ int& Mistral::Solution::operator[](Variable x) {
 }
 
 
-Mistral::SolverParameters::SolverParameters() {initialise();}
+Mistral::SolverParameters::SolverParameters() {
+  initialise(); 
+}
 Mistral::SolverParameters::~SolverParameters() {}
 void Mistral::SolverParameters::initialise() {
   find_all = 0;
   node_limit = 0;
   backtrack_limit = 0;
+  propagation_limit = 0;
   fail_limit = 0;
   //restart_limit = 0;
   limit = 0;
@@ -128,9 +131,56 @@ void Mistral::SolverParameters::copy(const SolverParameters& sp) {
   time_limit = sp.time_limit;
 }
 
-Mistral::SolverStatistics::SolverStatistics() { initialise(); }
+Mistral::SolverStatistics::SolverStatistics() { 
+
+  // VARNAME = {"virtual", "constant", "boolean", "range", "bitset", "list"};
+  // METHOD_NAME = {
+  //   "get_size"         ,
+  //   "get_degree"       ,
+  //   "get_min"          ,
+  //   "get_max"          ,
+  //   "get_initial_min"  ,
+  //   "get_initial_max"  ,
+  //   "get_min_pos"      ,
+  //   "get_max_neg"      ,
+  //   "next"             ,
+  //   "prev"             ,
+  //   "is_range"         ,
+  //   "is_ground"        ,
+  //   "equal"            ,
+  //   "contain"          ,
+  //   "intersect_range"  ,
+  //   "included_range"   ,
+  //   "includes_range"   ,
+  //   "intersect_set"    ,
+  //   "included_set"     ,
+  //   "includes_set"     ,
+  //   "intersect_to"     ,
+  //   "union_to"         ,
+  //   "remove"           ,
+  //   "set_domain"       ,
+  //   "set_min"          ,
+  //   "set_max"          ,
+  //   "set_domain_bitset",
+  //   "remove_set"       ,
+  //   "remove_interval"  ,
+  //   "restore"          
+  // };
+
+initialise(); 
+
+
+#ifdef _PROFILING
+  init_prof();
+#endif
+
+
+}
 Mistral::SolverStatistics::~SolverStatistics() {}
 void Mistral::SolverStatistics::initialise() {
+  num_variables = 0; 
+  num_values = 0; 
+  num_constraints = 0; 
   num_nodes = -1; 
   num_restarts = 0; 
   num_backtracks = 0;
@@ -138,15 +188,137 @@ void Mistral::SolverStatistics::initialise() {
   num_propagations = 0;
   num_solutions = 0;
   num_filterings = 0;
-  start_time = 0.0;
+  //start_time = 0.0;
+  start_time = get_run_time();
   end_time = -1.0;
+
+  outcome = UNKNOWN;
 
   base_avg_size = 0;
   learnt_avg_size = 0;
   literals = 0;
   small = 0;
-
 }
+
+#ifdef _PROFILING
+
+void Mistral::SolverStatistics::init_prof() {
+     total_propag_time = 0;
+     total_branching_time = 0;
+     total_restore_time = 0;
+
+#ifdef _PROFILING_PRIMITIVE
+
+     for(int i=0; i<NUM_METHODS; ++i) {
+       for(int j=0; j<NUM_VARTYPES; ++j) {
+	 prof_num[i][j] = 0;
+     	 prof_time[i][j] = 0;
+       }
+     }
+
+#endif
+ 
+}
+
+
+int **comparison_array;
+int compar_prof(const void *a, const void *b)
+{
+  int xa = (*(int*)a)/NUM_VARTYPES;
+  int ya = (*(int*)a)%NUM_VARTYPES;
+
+  int xb = (*(int*)b)/NUM_VARTYPES;
+  int yb = (*(int*)b)%NUM_VARTYPES;
+
+  if (comparison_array[xa][ya]==comparison_array[xb][yb])
+    return 0;
+  else
+    if (comparison_array[xa][ya] < comparison_array[xb][yb])
+      return 1;
+    else
+      return -1;
+}
+
+#ifdef _PROFILING_PRIMITIVE
+
+std::ostream& Mistral::SolverStatistics::print_profile(std::ostream& os) const {
+  int N = NUM_METHODS*NUM_VARTYPES;
+  int order[N];
+  unsigned long long int total_calls = 0;
+  double total_time = 0.0;
+
+  int method;
+  int vartype;
+
+  //os << "\n" << N << std::endl;
+
+  for(int i=0; i<N; ++i) {
+
+    // method = i/NUM_VARTYPES;
+    // vartype = i%NUM_VARTYPES;
+
+    // os << method << " " << vartype << std::endl;
+
+    // os << VAR_NAME[vartype] << "." << METHOD_NAME[method] << "(): " 
+    //    << prof_num[method][vartype] << " calls ("
+    //    << (double)(prof_num[method][vartype]*100) / (double)total_calls << "%), "
+    //    << prof_time[method][vartype] << "s (" 
+    //    << prof_time[method][vartype]*100 / (double)total_time << "%)" << std::endl;
+
+
+    total_calls += prof_num[i/NUM_VARTYPES][i%NUM_VARTYPES];
+    total_time += prof_time[i/NUM_VARTYPES][i%NUM_VARTYPES];
+    order[i] = i;
+  }
+
+  comparison_array = new int*[NUM_METHODS];
+  for(int i=0; i<NUM_METHODS; ++i) {
+    comparison_array[i] = new int[NUM_VARTYPES];
+    for(int j=0; j<NUM_VARTYPES; ++j)
+      comparison_array[i][j] = prof_num[i][j];
+  }
+
+  //comparison_array = &((&(prof_time[0]))[0])
+
+    //comparison_array = &((&prof_time[0])[0]);
+  qsort(order, N, sizeof(int), compar_prof);
+
+  for(int i=0; i<N; ++i) {
+    method = order[i]/NUM_VARTYPES;
+    vartype = order[i]%NUM_VARTYPES;
+
+    if(prof_num[method][vartype] == 0) break;
+
+    std::string vname = std::string(VAR_NAME[vartype]);
+    std::string mname = std::string(METHOD_NAME[method]);
+
+    
+
+    //+"."+METHOD_NAME[method]+"()";
+
+    os //<< VAR_NAME[vartype] << "." << METHOD_NAME[method] << "(): " 
+      << std::left << std::setw(24) << vname+"."+mname+"()"
+      << std::right << std::setw(10) << prof_num[method][vartype] << " calls ("
+      << std::setprecision(6) << std::right << std::setw(7) 
+      << (double)(prof_num[method][vartype]*100) / (double)total_calls << "%), "
+      << std::right << std::setw(6) << prof_time[method][vartype] << "s (" 
+      << std::setprecision(6) << std::right << std::setw(7) 
+      << prof_time[method][vartype]*100 / (double)total_time << "%)" << std::endl;
+
+  }
+
+  for(int i=0; i<NUM_METHODS; ++i) {
+    delete [] comparison_array[i];
+  }
+  delete [] comparison_array;
+
+  return os;
+}
+
+#endif
+
+#endif
+
 std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
   os << " c +" << std::setw(78) << std::setfill('=')
     //"=============================================================================
@@ -190,15 +362,15 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
   return os;
 }
 std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
-  os << " c |"
-     << std::right << std::setw(7) << num_variables << " |"
-     << std::right << std::setw(8) << num_values << " |"
-     << std::right << std::setw(7) << num_constraints << " |"
-     << std::right << std::setw(9) << num_nodes << " |" 
-     << std::right << std::setw(11) << num_filterings << " |" 
-     << std::right << std::setw(13) << num_propagations << " |" 
-     << std::right << std::setw(9) << std::setprecision(5) 
-     << (get_run_time() - start_time) << " |" ;
+  os << " c |";
+  os   << std::right << std::setw(7) << num_variables << " |";
+  os   << std::right << std::setw(8) << num_values << " |";
+  os    << std::right << std::setw(7) << num_constraints << " |";
+  os    << std::right << std::setw(9) << num_nodes << " |" ;
+  os    << std::right << std::setw(11) << num_filterings << " |" ;
+  os   << std::right << std::setw(13) << num_propagations << " |" ;
+  os    << std::right << std::setw(9) << std::setprecision(5) ;
+  os << (get_run_time() - start_time) << " |" ;
   return os;
 }
 std::ostream& Mistral::SolverStatistics::display(std::ostream& os) const {
@@ -210,6 +382,9 @@ Mistral::SolverStatistics::SolverStatistics(const SolverStatistics& sp) {
   copy(sp);
 }
 void Mistral::SolverStatistics::copy(const SolverStatistics& sp) {
+  num_variables = sp.num_variables;
+  num_constraints = sp.num_constraints; 
+  num_values = sp.num_values; 
   num_nodes = sp.num_nodes; 
   num_restarts = sp.num_restarts; 
   num_backtracks = sp.num_backtracks;
@@ -660,6 +835,13 @@ void Mistral::Solver::add(Constraint* c) {
     //
     active_constraints.declare(c, this);
 
+    notify_add(c);
+
+
+// #ifdef _PROFILING
+//     constraint_propag_time.push_back(0);
+// #endif
+
   }
 
   // then post it on the constraint graph
@@ -729,37 +911,64 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
 						     RestartPolicy *pol,
 						     Goal *goal) 
 {
+  //std::cout << "\nINIT LEVEL = " << level << std::endl;
   initialise_search(seq, heu, pol, goal);
+  return search();
+}
+ 
+Mistral::Outcome Mistral::Solver::search() {
+
+  int initial_level = level; 
 
   Outcome satisfiability = UNKNOWN;
   while(satisfiability == UNKNOWN) {
-
+    
     statistics.num_variables = sequence.size;
     statistics.num_values = 0;
     for(unsigned int i=0; i<sequence.size; ++i)
       statistics.num_values += sequence[i].get_size();
-
+    
     if(parameters.verbosity) {
       statistics.print_short(std::cout);
       //if(base) std::cout << " " << base->learnt.size ;
       std::cout << std::endl;
     }
 
+    //std::cout << "before restart: " << decisions << std::endl;
+
     ++statistics.num_restarts;
+
+    //policy->reset(parameters.restart_limit);
+
+    //std::cout << "current fails: " << statistics.num_failures << " / limit fails: " << parameters.restart_limit << std::endl;
+
     satisfiability = chronological_dfs(); 
     //conflict_directed_backjump(); //
 
     if(satisfiability == LIMITOUT) {
       policy->reset(parameters.restart_limit);    
-      if(!limits_expired()) satisfiability = UNKNOWN;
+      if(!limits_expired()) {
+
+	// std::cout << "LIMIT EXPIRED" << std::endl;
+
+	satisfiability = UNKNOWN;
+      }
       forget();
     }
 
-    restore(0);
+    restore(initial_level);
+    //restore(0);
+
+    //std::cout << "after restart "<< decisions << std::endl;
+
     decisions.clear();
   }
 
   statistics.outcome = satisfiability;
+
+  //std::cout << outcome2str(statistics.outcome) << std::endl;
+
+
   statistics.end_time = get_run_time();
 
   if(parameters.verbosity)  {
@@ -835,22 +1044,32 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   active_solver = this;
   signal(SIGINT,Mistral_SIGINT_handler);
 
-  if(statistics.start_time == 0.0) statistics.start_time = get_run_time();
+  //if(statistics.start_time == 0.0) statistics.start_time = get_run_time();
+
+
+  // std::cout << seq << std::endl;
+
 
   sequence.clear();
   decisions.clear();
   for(unsigned int i=seq.size; i;) {
+
+    // std::cout << (i-1) << std::endl;
+    // std::cout << seq[i-1] << std::endl;
+
     Variable x = seq[--i].get_var();
     if(!x.is_ground() && !sequence.contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) sequence.add(x);
   }
   num_search_variables = sequence.size;
 
-
+  
   // for(int i=0; i<sequence.size; ++i) {
   //   std::cout << sequence[i] << " in " << sequence[i].get_domain() << std::endl;
   // }
   // std::cout << std::endl;
-  // //exit(1);
+  // // //exit(1);
+
+
 
   if(heu) { delete heuristic; heuristic = heu; }
   else if(!heuristic) heuristic = new GenericHeuristic< Lexicographic, MinValue >(this);
@@ -1046,6 +1265,15 @@ void Mistral::Solver::restore(const int lvl) {
   while(lvl < level) restore();
 }
 
+// void Mistral::Solver::add(BranchingHeuristic* h) {
+//   if(heuristic) {
+//     heuristic->close();
+//     delete heuristic;
+//   }
+//   heuristic = h;
+//   heuristic->initialise();
+// }
+
 void Mistral::Solver::add(Mistral::RestartListener* l) {
   l->rid = restart_triggers.size;
   restart_triggers.add(l);
@@ -1069,6 +1297,44 @@ void Mistral::Solver::add(Mistral::VariableListener* l) {
 void Mistral::Solver::add(Mistral::ConstraintListener* l) {
   l->cid = constraint_triggers.size;
   constraint_triggers.add(l);
+}
+
+
+void Mistral::Solver::remove(Mistral::RestartListener* l) {
+  unsigned int idx = l->rid;
+  restart_triggers.remove(idx);
+  if(restart_triggers.size>idx) 
+    restart_triggers[idx]->rid = idx;
+}
+void Mistral::Solver::remove(Mistral::SuccessListener* l) {
+  unsigned int idx = l->sid;
+  success_triggers.remove(idx);
+  if(success_triggers.size>idx) 
+    success_triggers[idx]->sid = idx;
+}
+void Mistral::Solver::remove(Mistral::FailureListener* l) {
+  unsigned int idx = l->fid;
+  failure_triggers.remove(idx);
+  if(failure_triggers.size>idx) 
+    failure_triggers[idx]->fid = idx;
+}
+void Mistral::Solver::remove(Mistral::DecisionListener* l) {
+  unsigned int idx = l->did;
+  decision_triggers.remove(idx);
+  if(decision_triggers.size>idx) 
+    decision_triggers[idx]->did = idx;
+}
+void Mistral::Solver::remove(Mistral::VariableListener* l) {
+  unsigned int idx = l->vid;
+  variable_triggers.remove(idx);
+  if(variable_triggers.size>idx) 
+    variable_triggers[idx]->vid = idx;
+}
+void Mistral::Solver::remove(Mistral::ConstraintListener* l) {
+  unsigned int idx = l->cid;
+  constraint_triggers.remove(idx);
+  if(constraint_triggers.size>idx) 
+    constraint_triggers[idx]->cid = idx;
 }
 
 
@@ -1098,7 +1364,18 @@ void Mistral::Solver::notify_restart() {
 
 void Mistral::Solver::notify_relax(Constraint *c) { 
   for(unsigned int i=0; i<constraint_triggers.size; ++i) {
+
+    // std::cout << i << std::endl;
+    // std::cout << constraint_triggers[i] << std::endl;
+    
+
     constraint_triggers[i]->notify_relax(c);
+  }
+} 
+
+void Mistral::Solver::notify_add(Constraint *c) { 
+  for(unsigned int i=0; i<constraint_triggers.size; ++i) {
+    constraint_triggers[i]->notify_add(c);
   }
 } 
 
@@ -1432,11 +1709,6 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint *cons) {
 bool Mistral::Solver::propagate() 
 {
 
-#ifdef _DEBUG_QUEUE
-  std::cout << "start propagation loop: " << (statistics.num_filterings) 
-	    << std::endl << active_constraints << std::endl;
-#endif
-
   wiped_idx = -1;
   culprit = NULL;
 
@@ -1445,6 +1717,15 @@ bool Mistral::Solver::propagate()
 
   ++statistics.num_filterings;
   while( IS_OK(wiped_idx) && !active_constraints.empty() ) {
+
+#ifdef _DEBUG_QUEUE
+  std::cout << " propagation loop: " << (statistics.num_filterings) 
+	    << std::endl << active_constraints << std::endl;
+#endif
+
+
+
+
     culprit = active_constraints.select(constraints);
  
 #ifdef _DEBUG_PROPAG
@@ -1463,7 +1744,19 @@ bool Mistral::Solver::propagate()
 
     ++statistics.num_propagations;
 
+
+#ifdef _PROFILING
+    double t_tag = get_run_time();
+#endif
+
     wiped_idx = culprit->propagate();
+
+#ifdef _PROFILING
+    t_tag = get_run_time()-t_tag;
+    //constraint_propag_time[culprit->type_id] += t_tag;
+    statistics.total_propag_time += t_tag;
+#endif
+
 
     culprit->defrost();
 
@@ -1514,8 +1807,8 @@ bool Mistral::Solver::propagate()
     notify_success();
 
 #ifdef _DEBUG_PRUNING
-    for(unsigned int k=0; k<variables.size; ++k) {
-      std::cout << variables[k].get_domain() << " ";
+    for(unsigned int k=0; k<monitored_variables.size; ++k) {
+      std::cout << monitored_variables[k].get_domain() << " ";
     }
     std::cout << std::endl;
 #endif
@@ -1533,6 +1826,17 @@ bool Mistral::Solver::propagate()
   }
   //return !wiped_out;
 }
+
+
+#ifdef _DEBUG_PRUNING
+void Mistral::Solver::monitor(VarArray& X) {
+  for(unsigned int i=0; i<X.size; ++i)
+    monitored_variables.add(X[i]);
+}
+void Mistral::Solver::monitor(Variable X) {
+  monitored_variables.add(X);
+}
+#endif
 
 
 void Mistral::Solver::full_print() {
@@ -1810,7 +2114,7 @@ void Mistral::Solver::learn_nogood() {
   } while( --pathC );
   // p is the last decision, since all atoms above it in the
   // assumption stack have been skipped or expended.
-  learnt_clause[0] = NEG(p);    
+  learnt_clause[0] = NOT(p);    
 
 #ifdef _DEBUG_SEARCH
   std::cout << " (";
@@ -1827,7 +2131,7 @@ void Mistral::Solver::learn_nogood() {
 
 
   if( learnt_clause.size != 1 ) {
-    base->learn(learnt_clause);
+    base->learn(learnt_clause, (parameters.init_activity ? parameters.activity_increment : 0.0));
     //add_clause( learnt, learnt_clause, stats.learnt_avg_size );
     reason[UNSIGNED(p)] = base->learnt.back();
   }
@@ -1871,7 +2175,7 @@ void Mistral::Solver::branch_right() {
   if(parameters.backjump) {
     decisions.size += (backtrack_level-level);
     Lit p = learnt_clause[0];
-    deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NEG(SIGN(p)));
+    deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NOT(SIGN(p)));
   } else {
     backtrack_level = level-1;
     deduction = decisions.pop();
@@ -2063,7 +2367,8 @@ void Mistral::Solver::branch_left() {
 	   (parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit)) ||
 	   (parameters.fail_limit > 0 && (statistics.num_failures > parameters.fail_limit)) ||
 	   (parameters.restart_limit > 0 && (statistics.num_failures > parameters.restart_limit)) ||
-	   (parameters.backtrack_limit > 0 && (statistics.num_backtracks > parameters.backtrack_limit))
+	   (parameters.propagation_limit > 0 && (statistics.num_propagations > parameters.propagation_limit)) // ||
+	   // (parameters.backtrack_limit > 0 && (statistics.num_backtracks > parameters.backtrack_limit))
 	   ));
 }
 
@@ -2116,6 +2421,10 @@ Mistral::Outcome Mistral::Solver::conflict_directed_backjump()
   }
 
   return status;
+}
+
+double *Mistral::Solver::get_literal_activity() {
+  return base->lit_activity.stack_;
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, Mistral::Solution& x) {

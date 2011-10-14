@@ -430,10 +430,10 @@ void Mistral::ConstraintClauseBase::initialise() {
 
 Mistral::ConstraintClauseBase::~ConstraintClauseBase() {
   for(unsigned int i=0; i<clauses.size; ++i) {
-    delete clauses[i];
+    free(clauses[i]);
   }
   for(unsigned int i=0; i<learnt.size; ++i) {
-    delete learnt[i];
+    free(learnt[i]);
   }
 }
 
@@ -477,6 +477,9 @@ void Mistral::ConstraintClauseBase::add( Vector < Lit >& clause, double activity
    is_watched_by[clause[0]].add(cl);
    is_watched_by[clause[1]].add(cl);
 
+   // should we split the increment?
+   activity_increment /= clause.size;
+
    if(activity_increment > 0.0) {
      int i=clause.size;
      while(i--) {
@@ -484,15 +487,28 @@ void Mistral::ConstraintClauseBase::add( Vector < Lit >& clause, double activity
        var_activity[UNSIGNED(clause[i])] += activity_increment;
      }
    }
+
  } else {
    scope[UNSIGNED(clause[0])].set_domain(SIGN(clause[0]));
  }
 }
 
-void Mistral::ConstraintClauseBase::learn( Vector < Lit >& clause ) {
+void Mistral::ConstraintClauseBase::learn( Vector < Lit >& clause, double activity_increment ) {
  if(clause.size > 1) {
    Clause *cl = Clause::Array_new(clause);
    learnt.add( cl );
+
+   // // should we split the increment?
+   // activity_increment /= clause.size;
+
+   // if(activity_increment > 0.0) {
+   //   int i=clause.size;
+   //   while(i--) {
+   //     lit_activity[clause[i]] += activity_increment;
+   //     var_activity[UNSIGNED(clause[i])] += activity_increment;
+   //   }
+   // }
+
    is_watched_by[clause[0]].add(cl);
    is_watched_by[clause[1]].add(cl);
  } else {
@@ -523,6 +539,8 @@ int Mistral::ConstraintClauseBase::check( const int* sol ) const {
   return falsified;
 }
 
+//#define _DEBUG_UNITPROP true
+
 Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 //   conflict=NULL;
 //   PropagationOutcome wiped = CONSISTENT;
@@ -533,12 +551,12 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 //   while( !conflict && !changes.empty() ) {
 //     x = changes.pop();
 //     v = scope[x].get_min();
-//     p = NEG(2*x+v);
+//     p = NOT(2*x+v);
 
 // #ifdef _DEBUG_UNITPROP
 //     for(unsigned int i=0; i<solver->level; ++i) std::cout << " " ;
 //     std::cout << "propagate " ;
-//     print_literal(std::cout, NEG(p));
+//     print_literal(std::cout, NOT(p));
 //     std::cout << " " << is_watched_by[p].size << std::endl;
 // #endif
 
@@ -552,24 +570,24 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 
   conflict=NULL;
   Variable *assumptions = solver->sequence.list_;
-  unsigned int i=0, n=changes.size, index = solver->sequence.size;
+  int i=0, n=changes.size, index = solver->sequence.size;
   PropagationOutcome wiped = CONSISTENT;
 
   int x, v, cw;
   Lit p;
 
-
+  //std::cout << solver->sequence << std::endl;
   //std::cout << "+++++++++++++++++" << std::endl;
 
   while( !conflict && i<n ) {
     x = changes[i];
     v = scope[x].get_min();
-    p = NEG(2*x+v);
+    p = NOT(2*x+v);
 
 #ifdef _DEBUG_UNITPROP
     for(int j=0; j<solver->level; ++j) std::cout << " " ;
     std::cout << "propagate " ;
-    print_literal(std::cout, NEG(p));
+    print_literal(std::cout, NOT(p));
     std::cout << " " << is_watched_by[p].size << std::endl;
 #endif
 
@@ -584,16 +602,22 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 
   //std::cout << "::::::::::::::::+" << std::endl;
 
+  //std::cout << solver->sequence << std::endl;
+
+
   //n = solver->sequence.size;
-  while( !conflict && --index>=solver->sequence.size ) {
+  while( !conflict && --index>=(int)(solver->sequence.size) ) {
+
+    //std::cout << index << std::endl;
+
     x = assumptions[index].id();
     v = assumptions[index].get_min();
-    p = NEG(2*x+v);
+    p = NOT(2*x+v);
 
 #ifdef _DEBUG_UNITPROP
     for(int j=0; j<solver->level; ++j) std::cout << " " ;
     std::cout << "propagate " ;
-    print_literal(std::cout, NEG(p));
+    print_literal(std::cout, NOT(p));
     std::cout << " " << is_watched_by[p].size << std::endl;
 #endif
 
@@ -747,10 +771,15 @@ void Mistral::ConstraintClauseBase::forget(double forgetfulness)
 	sa[i] = 0.0;
 	Clause& clause = *(learnt[i]);
 	j=clause.size;
-	while(j--)
-	  sa[i] += lit_activity[clause[j]];
+	while(j--) // THE ACTIVITY OF A LITERAL IS A MEASURE OF HOW MUCH IT IS "WANTED" BY THE FORMULA - SHORT CLAUSE WITH UNWANTED LITERALS ARE THEREFORE GOOD
+	  //sa[i] += var_activity[UNSIGNED(clause[j])];
+	  //sa[i] += lit_activity[clause[j]];
+	  sa[i] += lit_activity[NOT(clause[j])];
 	sa[i] /= (clause.size * clause.size);
+
+	//std::cout << sa[i] << " ";
       }
+    //std::cout << std::endl;
     qsort(order, nlearnt, sizeof(int), compar);
     for(i=0; i<nlearnt; ++i)
       tmp[i] = learnt[order[i]]; 

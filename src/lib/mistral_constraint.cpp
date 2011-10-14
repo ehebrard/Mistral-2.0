@@ -1178,6 +1178,488 @@ std::ostream& Mistral::ConstraintDisjunctive::display(std::ostream& os) const {
   return os;
 }
 
+
+
+Mistral::ConstraintTernaryDisjunctive::ConstraintTernaryDisjunctive(Vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
+  processing_time[0] = p0; 
+  processing_time[1] = p1;
+}
+
+Mistral::ConstraintTernaryDisjunctive::ConstraintTernaryDisjunctive(std::vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
+  processing_time[0] = p0; 
+  processing_time[1] = p1;
+}
+
+void Mistral::ConstraintTernaryDisjunctive::initialise() {
+  
+  precedence[0] = new ConstraintLess(scope, processing_time[0]);
+  precedence[1] = new ConstraintLess(processing_time[1]);
+  precedence[1]->add(scope[1]);
+  precedence[1]->add(scope[0]);
+
+  Constraint::initialise();
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
+  trigger_on(_VALUE_, 2);
+  set_idempotent(true);
+  stress = 0;
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintTernaryDisjunctive::decide(const int choice) {
+  PropagationOutcome wiped = CONSISTENT;
+
+  if(choice==1) {
+    if(scope[2].set_domain(1) == FAIL_EVENT) wiped = FAILURE(2);
+    else {
+      relax();
+      solver->add(precedence[1]);
+    }
+  } else {
+    if(scope[2].set_domain(0) == FAIL_EVENT) wiped = FAILURE(2);
+    else {
+      relax();
+      solver->add(precedence[0]);
+    }
+  }
+
+  return wiped;
+}
+
+void Mistral::ConstraintTernaryDisjunctive::decide() {
+  relax();
+
+  if(scope[2].get_min()) {
+    solver->add(precedence[1]);
+  } else {
+    solver->add(precedence[0]);
+  }
+
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintTernaryDisjunctive::propagate() {
+  PropagationOutcome wiped = CONSISTENT;
+  int hold = 3;
+
+  if(events.contain(2)) {
+    
+    decide();
+ 
+  } else {
+    
+    // check if prec[1] is violated (x1 + p1 > x0).
+    if(scope[1].get_min()+processing_time[1] > scope[0].get_max()) {
+      hold &= 2;
+    }
+    
+    // check if prec[1] is violated (x0 + p0 > x1).
+    if(scope[0].get_min()+processing_time[0] > scope[1].get_max()) {
+      hold &= 1;
+    }
+    
+    if(!hold) return FAILURE(0);
+    if(hold<3) {
+      wiped = decide(hold);
+    }
+
+  }
+
+  return wiped;
+}
+
+void Mistral::ConstraintTernaryDisjunctive::consolidate() {
+  for(unsigned int i=0; i<2; ++i) {
+    scope[i] = scope[i].get_var();
+    precedence[0]->scope[i] = scope[i];
+    precedence[1]->scope[1-i] = scope[i];
+  }
+  scope[2] = scope[2].get_var();
+}
+
+std::ostream& Mistral::ConstraintTernaryDisjunctive::display(std::ostream& os) const {
+  os << precedence[0] << " or " 
+     << precedence[1] ;
+  return os;
+}
+
+
+
+Mistral::ConstraintReifiedDisjunctive::ConstraintReifiedDisjunctive(Vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
+  processing_time[0] = p0; 
+  processing_time[1] = p1;
+}
+
+Mistral::ConstraintReifiedDisjunctive::ConstraintReifiedDisjunctive(std::vector< Variable >& scp, const int p0, const int p1) : Constraint(scp) { 
+  processing_time[0] = p0; 
+  processing_time[1] = p1;
+
+}
+
+void Mistral::ConstraintReifiedDisjunctive::initialise() {
+  Constraint::initialise();
+  trigger_on(_RANGE_, 0);
+  trigger_on(_RANGE_, 1);
+  trigger_on(_VALUE_, 2);
+  set_idempotent(true);
+  stress = 0;
+
+  state = scope[2].get_var().bool_domain;
+
+  if(scope[0].domain_type == RANGE_VAR) {
+    min_t0_ptr = &(scope[0].range_domain->min);
+    max_t0_ptr = &(scope[0].range_domain->max);
+  } else if(scope[0].domain_type == BITSET_VAR) {
+    min_t0_ptr = &(scope[0].bitset_domain->domain.min);
+    max_t0_ptr = &(scope[0].bitset_domain->domain.max);
+  } else {
+    min_t0_ptr = &(scope[0].get_var().range_domain->min);
+    max_t0_ptr = &(scope[0].get_var().range_domain->max);
+    //std::cerr << "TODO " << scope[0].domain_type << std::endl;
+    //exit(1);
+  }
+
+  if(scope[1].domain_type == RANGE_VAR) {
+    min_t1_ptr = &(scope[1].range_domain->min);
+    max_t1_ptr = &(scope[1].range_domain->max);
+  } else if(scope[1].domain_type == BITSET_VAR) {
+    min_t1_ptr = &(scope[1].bitset_domain->domain.min);
+    max_t1_ptr = &(scope[1].bitset_domain->domain.max);
+  } else {
+    min_t1_ptr = &(scope[1].get_var().range_domain->min);
+    max_t1_ptr = &(scope[1].get_var().range_domain->max);
+    //std::cerr << "TODO " << scope[1].domain_type << std::endl;
+    //exit(1);
+  }
+
+}
+
+//#define _DEBUG_RDISJUNCTIVE true
+
+// Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
+//   PropagationOutcome wiped = CONSISTENT;
+//   Event evt, aux;
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//   std::cout << std::endl << "propagate [" << id << "] " << this << " " << changes << std::endl;
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     std::cout << scope[i].get_domain() << " ";
+//   }
+//   std::cout << std::endl;
+// #endif
+
+//   while(IS_OK(wiped) && !changes.empty()) {
+//     evt = changes.pop();
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//     std::cout << "change on " << scope[evt] << " in " << scope[evt].get_domain() 
+// 	      << " of type " << event_type[evt] << std::endl;
+// #endif
+
+//     if(evt == 2) {
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//       std::cout << "  -> now it's a precedence" << std::endl;
+// #endif
+
+//       // now it is a precedence
+//       if(scope[2].get_min()) {
+// 	//scope[0].set_max( scope[1].get_max()-processing_time[0] );
+// 	//scope[1].set_min( scope[0].get_min()+processing_time[0] );
+// 	FILTER2(aux, 0, set_max( scope[1].get_max()-processing_time[0] ));
+// 	FILTER2(aux, 1, set_min( scope[0].get_min()+processing_time[0] ));
+//       } else {
+// 	// scope[0].set_min( scope[1].get_min()+processing_time[1] );
+// 	// scope[1].set_max( scope[0].get_max()-processing_time[0] );
+// 	FILTER2(aux, 0, set_min( scope[1].get_min()+processing_time[1] ));
+// 	FILTER2(aux, 1, set_max( scope[0].get_max()-processing_time[1] ));
+//       }
+//     } else if(scope[2].is_ground()) {
+//       if(scope[2].get_min()) {
+// 	if(evt == 1) {
+// 	  if(UB_CHANGED(event_type[1])) {
+// 	    //scope[0].set_max( scope[1].get_max()-processing_time[0] );
+// 	    FILTER2(aux, 0, set_max( scope[1].get_max()-processing_time[0] ));
+// 	  }
+// 	} else {
+// 	  if(LB_CHANGED(event_type[0])) {
+// 	    //scope[1].set_min( scope[0].get_min()+processing_time[0] );
+// 	    FILTER2(aux, 1, set_min( scope[0].get_min()+processing_time[0] ));
+// 	  }
+// 	}
+//       } else {
+// 	if(evt == 0) {
+// 	  if(UB_CHANGED(event_type[0])) {
+// 	    //scope[1].set_max( scope[0].get_max()-processing_time[1] );
+// 	    FILTER2(aux, 1, set_max( scope[0].get_max()-processing_time[1] ));
+// 	  }
+// 	} else {
+// 	  if(LB_CHANGED(event_type[1])) {
+// 	    FILTER2(aux, 0, set_min( scope[1].get_min()+processing_time[1] ));
+// 	  }
+// 	}
+//       } 
+//     } else {
+//       if( scope[0].get_min() + processing_time[0] > scope[1].get_max() ) {
+// 	//scope[2].set_domain(0);
+// 	FILTER2(aux, 2, set_domain(0));
+//       } else 	if( scope[1].get_min() + processing_time[1] > scope[0].get_max() ) {
+// 	//scope[2].set_domain(1);
+// 	FILTER2(aux, 2, set_domain(1));
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     std::cout << scope[i].get_domain() << " ";
+//   }
+//   std::cout << std::endl;
+//   std::cout << "+-> " << (IS_OK(wiped) ? "OK" : "inconsistency!") << std::endl;
+// #endif
+  
+//   changes.clear();
+
+//   return wiped;
+// }
+
+
+// Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
+//   PropagationOutcome wiped = CONSISTENT;
+//   Event evt;
+//   bool event_precedence = false;
+//   bool x0_changed = false, x1_changed = false;
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//   std::cout << std::endl << "propagate [" << id << "] " << this << " " << changes << std::endl;
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     std::cout << scope[i].get_domain() << " ";
+//   }
+//   std::cout << std::endl;
+// #endif
+
+
+//   for(int i=events.size;i;) {
+//     evt = events[--i];
+//     if(evt == 0) {
+//       x0_changed = true;
+//     } else if(evt == 1) {
+//       x1_changed = true;
+//     } else {
+//       event_precedence = true;
+//     }
+//     // event_precedence |= (evt == 2);
+//     // x0_changed = (evt)
+//   }
+
+
+//   if(event_precedence) {
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//     std::cout << "  -> now it's a precedence" << std::endl;
+// #endif
+    
+//     // it becomes a precedence, we must enforce both rules no matter what and there cannot be further changes.
+    
+//     if(scope[2].get_min()) {
+//       if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+//       else if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+//       //FILTER2(aux, 0, set_max( scope[1].get_max()-processing_time[0] ));
+//       //FILTER2(aux, 1, set_min( scope[0].get_min()+processing_time[0] ));
+//     } else {
+//       if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+//       else if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+//       //FILTER2(aux, 0, set_min( scope[1].get_min()+processing_time[1] ));
+//       //FILTER2(aux, 1, set_max( scope[0].get_max()-processing_time[1] ));
+//     }
+//   } else if(scope[2].is_ground()) {
+    
+//     // it was already a precedence, we enforce the changes
+
+//     if(scope[2].get_min()) {
+//       if(// events.contain(1) 
+// 	 x1_changed
+// 	 && UB_CHANGED(event_type[1])) {
+// 	if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+// 	//FILTER2(aux, 0, set_max( scope[1].get_max()-processing_time[0] ));
+//       }
+//       if(IS_OK(wiped) && // events.contain(0)
+// 	 x0_changed
+// 	 && LB_CHANGED(event_type[0])) {
+// 	//FILTER2(aux, 1, set_min( scope[0].get_min()+processing_time[0] ));
+// 	if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+//       }
+//     } else {
+//       if(// events.contain(0)
+// 	 x0_changed
+// 	 && UB_CHANGED(event_type[0])) {
+// 	if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+// 	//FILTER2(aux, 1, set_max( scope[0].get_max()-processing_time[1] ));
+//       }
+//       if(IS_OK(wiped) && // events.contain(1)
+// 	 x1_changed
+// 	 && LB_CHANGED(event_type[1])) {
+// 	if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+// 	//FILTER2(aux, 0, set_min( scope[1].get_min()+processing_time[1] ));
+//       }
+//     } 
+//   } else {
+    
+//     // the disjunction is not yet decided, we check if it should
+
+//     if( scope[0].get_min() + processing_time[0] > scope[1].get_max() ) {
+//       if( scope[2].set_domain(0) == FAIL_EVENT) wiped = FAILURE(2);
+//       // x[1]+p[1] <= x[0] because x[0]'s min is too high or x[1]'s max is too low
+
+//       else if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+//       else if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+
+//       //FILTER2(aux, 2, set_domain(0));
+//     } else if( scope[1].get_min() + processing_time[1] > scope[0].get_max() ) {
+//       if( scope[2].set_domain(1) == FAIL_EVENT) wiped = FAILURE(2);
+      
+//       else if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+//       else if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+
+//       //FILTER2(aux, 2, set_domain(1));
+//     }
+//   }
+
+// #ifdef _DEBUG_RDISJUNCTIVE
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     std::cout << scope[i].get_domain() << " ";
+//   }
+//   std::cout << std::endl;
+//   std::cout << "+-> " << (IS_OK(wiped) ? "OK" : "inconsistency!") << std::endl;
+// #endif
+  
+//   //changes.clear();
+
+//   return wiped;
+// }
+
+//#define _DEBUG_RDISJUNCTIVE true
+
+Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
+  PropagationOutcome wiped = CONSISTENT;
+  Event evt;
+  bool event_precedence = false;
+  bool x0_changed = false, x1_changed = false;
+
+
+#ifdef _DEBUG_RDISJUNCTIVE
+  std::cout << std::endl << "propagate [" << id << "] " << this << " " << changes << std::endl;
+  for(unsigned int i=0; i<scope.size; ++i) {
+    std::cout << scope[i].get_domain() << " ";
+  }
+  std::cout << std::endl;
+#endif
+
+
+  for(int i=events.size;i;) {
+    evt = events[--i];
+    if(evt == 0) {
+      x0_changed = true;
+    } else if(evt == 1) {
+      x1_changed = true;
+    } else {
+      event_precedence = true;
+    }
+    // event_precedence |= (evt == 2);
+    // x0_changed = (evt)
+  }
+
+
+  if(event_precedence) {
+
+#ifdef _DEBUG_RDISJUNCTIVE
+    std::cout << "  -> now it's a precedence" << std::endl;
+#endif
+    
+    // it becomes a precedence, we must enforce both rules no matter what and there cannot be further changes.
+    
+    if(*state==2) {
+      if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+      //FILTER2(aux, 0, set_max( scope[1].get_max()-processing_time[0] ));
+      //FILTER2(aux, 1, set_min( scope[0].get_min()+processing_time[0] ));
+    } else {
+      if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+      //FILTER2(aux, 0, set_min( scope[1].get_min()+processing_time[1] ));
+      //FILTER2(aux, 1, set_max( scope[0].get_max()-processing_time[1] ));
+    }
+  } else if(*state!=3) {
+    
+    // it was already a precedence, we enforce the changes
+
+    if(*state==2) {
+      if(// events.contain(1) 
+	 x1_changed
+	 && UB_CHANGED(event_type[1])) {
+	if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+	//FILTER2(aux, 0, set_max( scope[1].get_max()-processing_time[0] ));
+      }
+      if(IS_OK(wiped) && // events.contain(0)
+	 x0_changed
+	 && LB_CHANGED(event_type[0])) {
+	//FILTER2(aux, 1, set_min( scope[0].get_min()+processing_time[0] ));
+	if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+      }
+    } else {
+      if(// events.contain(0)
+	 x0_changed
+	 && UB_CHANGED(event_type[0])) {
+	if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+	//FILTER2(aux, 1, set_max( scope[0].get_max()-processing_time[1] ));
+      }
+      if(IS_OK(wiped) && // events.contain(1)
+	 x1_changed
+	 && LB_CHANGED(event_type[1])) {
+	if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+	//FILTER2(aux, 0, set_min( scope[1].get_min()+processing_time[1] ));
+      }
+    } 
+  } else {
+    
+    // the disjunction is not yet decided, we check if it should
+
+    if( *min_t0_ptr + processing_time[0] > *max_t1_ptr ) {
+      if( scope[2].set_domain(0) == FAIL_EVENT) wiped = FAILURE(2);
+      // x[1]+p[1] <= x[0] because x[0]'s min is too high or x[1]'s max is too low
+
+      else if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+
+      //FILTER2(aux, 2, set_domain(0));
+    } else if( *min_t1_ptr + processing_time[1] > *max_t0_ptr ) {
+      if( scope[2].set_domain(1) == FAIL_EVENT) wiped = FAILURE(2);
+      
+      else if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+
+      //FILTER2(aux, 2, set_domain(1));
+    }
+  }
+
+#ifdef _DEBUG_RDISJUNCTIVE
+  for(unsigned int i=0; i<scope.size; ++i) {
+    std::cout << scope[i].get_domain() << " ";
+  }
+  std::cout << std::endl;
+  std::cout << "+-> " << (IS_OK(wiped) ? "OK" : "inconsistency!") << std::endl;
+#endif
+  
+  //changes.clear();
+
+  return wiped;
+}
+
+std::ostream& Mistral::ConstraintReifiedDisjunctive::display(std::ostream& os) const {
+  os << scope[0] << " + " << processing_time[0] << " <= " << scope[1] << " or " 
+     << scope[1] << " + " << processing_time[1] << " <= " << scope[0] ;
+  return os;
+}
+
+
 void Mistral::PredicateEqual::initialise() {
   Constraint::initialise();
   trigger_on(_DOMAIN_, 0);
@@ -1662,7 +2144,7 @@ void Mistral::ConstraintLex::initialise() {
 
 Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
-  Event evt;
+  Event evt, aux;
 
   /*
     rules:
@@ -1760,7 +2242,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 #endif
 
 	// state&1 and change on x0 or x1 => R1
-	FILTER( 1-evt, set_domain(scope[evt]) );
+	FILTER2(aux,  1-evt, set_domain(scope[evt]) );
       }
       if(IS_OK(wiped) && state&4) {
 
@@ -1769,8 +2251,8 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 #endif
 
 	// state&4 and change on x0 or x1 => R3
-	FILTER( 0, set_max(scope[1].get_max()-1) );
-	FILTER( 1, set_min(scope[0].get_min()+1) );
+	FILTER2(aux,  0, set_max(scope[1].get_max()-1) );
+	FILTER2(aux,  1, set_min(scope[0].get_min()+1) );
       }
 
       // change on x0 or x1 => R2
@@ -1780,7 +2262,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 	std::cout << "Rule2: " << scope[3] << " = 1" << std::endl;
 #endif
 
-	FILTER( 3, set_domain(1) );
+	FILTER2(aux,  3, set_domain(1) );
 	//state |= 1;
 	if(!scope[2].get_max()) state |= 4;
       }
@@ -1792,8 +2274,8 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 	std::cout << "Rule4: " << scope[2] << " = " << scope[3] << std::endl;
 #endif
 
-	FILTER( 3, set_domain(scope[2]) );
-	FILTER( 2, set_domain(scope[3]) );
+	FILTER2(aux,  3, set_domain(scope[2]) );
+	FILTER2(aux,  2, set_domain(scope[3]) );
 	state |= 8;
 	if(!scope[3].get_max()) state |= 1;
       }
@@ -1809,15 +2291,15 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 	  
 	  state |= 1;
 	  // change on b1 => R1
-	  FILTER( 0, set_domain(scope[1]) );
-	  FILTER( 1, set_domain(scope[0]) );
+	  FILTER2(aux,  0, set_domain(scope[1]) );
+	  FILTER2(aux,  1, set_domain(scope[0]) );
 
 
 #ifdef _DEBUG_LEX
 	  std::cout << "Rule6: " << scope[2] << " = 0 " << std::endl;
 #endif
 
-	  FILTER( 2, set_domain(0) );
+	  FILTER2(aux,  2, set_domain(0) );
 
 	}
       } else {
@@ -1827,7 +2309,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 	  std::cout << "Rule5: " << scope[1] << " = 1 " << std::endl;
 #endif
 
-	  FILTER( 3, set_domain(1) );
+	  FILTER2(aux,  3, set_domain(1) );
 
 	}
       }
@@ -1839,7 +2321,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 	std::cout << "Rule4: " << scope[2] << " = " << scope[3] << std::endl;
 #endif
 
-	FILTER( 5-evt, set_domain(scope[evt].get_min()) );
+	FILTER2(aux,  5-evt, set_domain(scope[evt].get_min()) );
 
 	if(!scope[3].get_max()) state |= 1;
       }
@@ -1852,8 +2334,8 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 #endif
 
 
-	FILTER( 0, set_max(scope[1].get_max()-1) );
-	FILTER( 1, set_min(scope[0].get_min()+1) );
+	FILTER2(aux,  0, set_max(scope[1].get_max()-1) );
+	FILTER2(aux,  1, set_min(scope[0].get_min()+1) );
       }
     }    
   }
@@ -4162,7 +4644,7 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::revise_reverse_division(const
   // we start with all bounds at their previous values, and update them if necessary
   // (in which case we set up the pruning flag)
   int lb_pos=min_pos[Z], ub_pos=max_pos[Z], lb_neg=min_neg[Z], ub_neg=max_neg[Z], 
-    nlb1, nlb2, nub1, nub2;
+    nlb1, nlb2, nub1, nub2, aux;
     //lb_aux, ub_aux;
   bool pruning_flag = false, pzero = false, ppos = max_pos[Z]<=0, pneg = min_neg[Z]>=0;
   
@@ -4198,16 +4680,38 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::revise_reverse_division(const
 	  // compute the bounds
 	  //std::cout << "\t   lb = " << min_pos[X] << "/" << max_pos[Y] << std::endl;
 	  //std::cout << "\t   ub = " << max_pos[X] << "/" << min_pos[Y] << std::endl;
-	  nlb1 = (min_pos[X]/(max_pos[Y]+1))+1;
-	  nub1 = (max_pos[X]/(min_pos[Y]-1))-1;
+	  //if(max_pos[Y] == 1) nlb1 = min_pos[X];
+	  //else {
+	  nlb1 = (min_pos[X]/(max_pos[Y]+1));
+	  aux = ((min_pos[X]-1)/max_pos[Y]);
+	  if(aux>nlb1) nlb1=aux;
+	  //}
+	  
+	  if(min_pos[Y] == 1) {
+	    nub1 = max_pos[X];
+	  } else {
+	    nub1 = (max_pos[X]/(min_pos[Y]-1));
+	    aux = ((max_pos[X]+1)/min_pos[Y]);
+	    if(aux<nub1) nub1=aux;
+	  }
 	}
 
 	// or the negative parts of X and Y:
 	if(min_neg[X]<0 && min_neg[Y]<0) {
 	  // compute the bounds
-	  nlb2 = max_neg[X]/min_neg[Y];
-	  nub2 = min_neg[X]/max_neg[Y];
+	  nlb2 = max_neg[X]/(min_neg[Y]-1);
+	  aux = (max_neg[X]+1)/min_neg[Y];
+	  if(aux>nlb2) nlb2=aux;
+
+	  if(max_neg[Y] == -1) {
+	    nub2 = -min_neg[X];
+	  } else {
+	    nub2 = min_neg[X]/(max_neg[Y]+1);
+	    aux = (min_neg[X]-1)/max_neg[Y];
+	    if(aux<nub2) nub2=aux;
+	  }
 	}
+
 	if(nlb1>nlb2) nlb1 = nlb2;
 	if(nub1<nub2) nub1 = nub2;
 	
@@ -4221,7 +4725,7 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::revise_reverse_division(const
 	  ub_pos = nub1;
 	  pruning_flag = true;
 	}
-
+	
 	if(lb_pos > max_pos[Z] || ub_pos < min_pos[Z]) ppos = true;
 
       } // else if(pzero || !zero[Z]) // if(lb_pos || ub_pos)
@@ -4240,6 +4744,7 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::revise_reverse_division(const
 	// it can either be the negitive part of X and the positive part of Y:
 	if(min_neg[X]<0 && max_pos[Y]>0) {
 	  // compute the bounds
+
 
 	  nlb1 = min_neg[X]/min_pos[Y];
 	  nub1 = max_neg[X]/max_pos[Y];
@@ -5673,7 +6178,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 // #endif
 // 	  }
 
-	  FILTER( n, remove(evt+offset) );
+	  FILTER1( n, remove(evt+offset) );
 
 
 	}
@@ -5724,7 +6229,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 // #endif
 // 	    }
 
-	    FILTER( n+1 , set_domain(scope[i]) );
+	    FILTER1( n+1 , set_domain(scope[i]) );
 
 	  }
 	}
@@ -5763,7 +6268,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 // 	    }
 // 	  }
 
-	  FILTER( i, set_domain(scope[n+1]) );
+	  FILTER1( i, set_domain(scope[n+1]) );
 
 	}
 
@@ -5815,7 +6320,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 // #endif
 // 	    }
 
-	    FILTER( n, remove(i) );
+	    FILTER1( n, remove(i) );
 	    
 #ifdef _DEBUG_ELEMENT 
 	    if(_DEBUG_ELEMENT) {
@@ -5895,7 +6400,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 // #endif
 //       }
 
-      FILTER( n+1, set_domain(aux_dom) );
+      FILTER1(n+1, set_domain(aux_dom) );
 
     }
   }
@@ -6375,7 +6880,7 @@ void Mistral::PredicateMin::initialise() {
 
   candidates.initialise(0,scope.size-2,true,scope[0].get_solver());
   int n = scope.size-1;
-  for(unsigned int i=0; i<n; ++i) {
+  for(int i=0; i<n; ++i) {
     if(scope[i].get_min() > scope[n].get_max()) {
       candidates.reversible_remove(i);
       relax_from(i);
@@ -6629,7 +7134,7 @@ void Mistral::PredicateMax::initialise() {
 
   candidates.initialise(0,scope.size-2,true,scope[0].get_solver());
   int n = scope.size-1;
-  for(unsigned int i=0; i<n; ++i) {
+  for(int i=0; i<n; ++i) {
     if(scope[i].get_max() < scope[n].get_min()) {
       candidates.reversible_remove(i);
       //relax_from(i);
