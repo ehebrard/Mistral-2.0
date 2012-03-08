@@ -393,24 +393,25 @@ int SatSolver::check_solution()
 
 
 Mistral::ConstraintClauseBase::ConstraintClauseBase(Vector< Variable >& scp) 
-  : Constraint(scp) { 
+  : GlobalConstraint(scp) { 
   conflict = NULL;
 }
 
 void Mistral::ConstraintClauseBase::mark_domain() {
   for(unsigned int i=0; i<scope.size; ++i) {
-    solver->mark_non_convex(scope[i].id());
+    ((Solver*)solver)->mark_non_convex(scope[i].id());
   }
 }
 
 void Mistral::ConstraintClauseBase::initialise() {
-  Constraint::initialise();
   //solver->base = this;
 
   for(unsigned int i=0; i<scope.size; ++i) {
     trigger_on(_VALUE_, i);
   }
-  set_idempotent(true);
+  //set_idempotent(true);
+
+  GlobalConstraint::initialise();
 
   is_watched_by.initialise(0,2*scope.size);
   lit_activity.initialise(0,2*scope.size);
@@ -569,8 +570,8 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 //   return wiped;
 
   conflict=NULL;
-  Variable *assumptions = solver->sequence.list_;
-  int i=0, n=changes.size, index = solver->sequence.size;
+  Variable *assumptions = ((Solver*)solver)->sequence.list_;
+  int i=0, n=changes.size, index = ((Solver*)solver)->sequence.size;
   PropagationOutcome wiped = CONSISTENT;
 
   int x, v, cw;
@@ -606,7 +607,7 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
 
 
   //n = solver->sequence.size;
-  while( !conflict && --index>=(int)(solver->sequence.size) ) {
+  while( !conflict && --index>=(int)(((Solver*)solver)->sequence.size) ) {
 
     //std::cout << index << std::endl;
 

@@ -57,7 +57,7 @@ namespace Mistral {
 #define LUBY 2
 
 #define LARGE_VALUE NOVAL/16384
-#define INFTY  NOVAL/2
+  //#define INFTY  NOVAL/2
 #define MAXINT NOVAL
 #define MININT -NOVAL
 #define MIN_CAPACITY 16
@@ -79,10 +79,33 @@ namespace Mistral {
 #define NUM_METHODS 30
 #define NUM_VARTYPES 6
 
+
+
+  // binary, must be propagated on event
+#define BINARY     0x80000000
+  // ternary, must be propagated on event
+#define TERNARY    0x40000000
+  // all other constraints
+#define GLOBAL     0x00000000
+  // whether it should not be propagated on event
+#define POSTPONED  0x20000000
+  // whether it should be pushed on the constraint stack
+#define PUSHED     0x10000000
+  // whether it should be awakwen on its own changes
+#define IDEMPOTENT 0x08000000
+#define ACTIVITY   0x04000000
+  //#define CTYPE      0x07ffffff
+#define CTYPE      0x03ffffff
+#define ITYPE      0xf8000000
+
+  static const int size_byte[8] = {0,1,1,2,1,2,2,3};
+
 #ifdef _PROFILING
 
   static const int VARTYPE[17] = {0,1,2,-1,3,-1,-1,-1,4,-1,-1,-1,-1,-1,-1,-1,5};
- 
+
+
+
     #define _m_get_size_          0
     #define _m_get_degree_        1
     #define _m_get_min_           2
@@ -216,8 +239,16 @@ namespace Mistral {
 
 #define EVENT_TYPE(e) (2-(RANGE_CHANGED(e))-(ASSIGNED(e)))
 
+  /*
+0.....1..2...........3
+0.....1..2..........3.
+.0....1..2..........3.
+..0....1.2..........3.
+..0....1..2..........3 XX
+   */
 
 
+  //std::string event2str(Event e);//  {
 
   std::string outcome2str(Outcome e);//  {
   //   std::string str_out;

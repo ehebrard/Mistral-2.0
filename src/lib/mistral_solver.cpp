@@ -26,6 +26,7 @@
 #include <assert.h>
 
 #include <mistral_sat.hpp>
+//#include <mistral_search.hpp>
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
@@ -41,6 +42,10 @@ static void Mistral_SIGINT_handler(int signum) {
 	    << std::endl;
   exit(1);
 }
+
+
+
+
 
 #ifdef _DEBUG_PROPAG 
 std::ostringstream *o_propag = NULL;
@@ -181,7 +186,7 @@ void Mistral::SolverStatistics::initialise() {
   num_variables = 0; 
   num_values = 0; 
   num_constraints = 0; 
-  num_nodes = -1; 
+  num_nodes = 0; 
   num_restarts = 0; 
   num_backtracks = 0;
   num_failures = 0; 
@@ -412,22 +417,47 @@ Mistral::ConstraintQueue::ConstraintQueue()
   cardinality = -1;
   higher_priority  = -1;
   triggers = NULL;
-  taboo_constraint = NULL;
+  //taboo_constraint = NULL;
   _set_.initialise();
 }
 
-void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
 
-  // std::cout << "declare " << c << "(" << c->priority << ") to the constraint queue" << std::endl;
-  //  std::cout << "was: [" << min_priority << ","
-  // 	    << min_priority+cardinality-1 << "]" << std::endl;
 
-  int cons_idx = c->id;
-  int cons_priority = c->priority;
+void Mistral::ConstraintQueue::reset_higher_priority() {
+  while(--higher_priority>=min_priority && triggers[higher_priority].empty());
+}
 
+Constraint Mistral::ConstraintQueue::select(Mistral::Vector<Constraint>& constraints) {
+  int cons_id = triggers[higher_priority].pop();
+  Constraint cons = constraints[cons_id];
+  _set_.fast_remove(cons_id);
+  if(triggers[higher_priority].empty()) reset_higher_priority();
+  //taboo_constraint = cons.freeze();
+  return cons;
+}
+// inline void select(Constraint cons) {
+//   //_set_.remove(cons->id);
+//   taboo_constraint = cons.freeze();
+// }
+
+void Mistral::ConstraintQueue::clear() {
+  while(higher_priority>=min_priority) triggers[higher_priority--].clear();
+  _set_.clear();
+  //taboo_constraint = NULL;
+}
+
+void Mistral::ConstraintQueue::declare(Constraint c, Solver *s) {
+  
+  // std::cout << "declare " << c << "(" << c.priority() << ") to the constraint queue" << std::endl;
+  // std::cout << "was: [" << min_priority << ","
+  //  	    << min_priority+cardinality-1 << "]" << std::endl;
+  
+  int cons_idx = c.id();
+  int cons_priority = c.priority();
+  
   int new_min_p = min_priority;
   int new_max_p = min_priority+cardinality-1;
-
+  
   if(cons_idx == 0) solver = s;
   if(cons_priority < new_min_p || cons_priority > new_max_p) {
     if(cardinality > 0) {
@@ -438,8 +468,8 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
       new_max_p = cons_priority;
     }
 
-//     std::cout << "now: [" << new_min_p << ","
-// 	    << new_max_p << "]" << std::endl;
+    // std::cout << "now: [" << new_min_p << ","
+    // 	    << new_max_p << "]" << std::endl;
 
 
     int new_cardinality = (new_max_p-new_min_p+1);
@@ -465,13 +495,14 @@ void Mistral::ConstraintQueue::declare(Constraint *c, Solver *s) {
 
   } else {
     
-     // std::cout << "no need to create a new trigger list" << std::endl;
-     // std::cout << "extend " << triggers[cons_priority] << " with " << cons_idx << std::endl;
-     if(!triggers[cons_priority].is_initialised()) {
-       triggers[cons_priority].initialise(cons_idx, cons_idx+7);
-     } else {
-       triggers[cons_priority].extend(cons_idx);
-     }
+    // std::cout << "no need to create a new trigger list" << std::endl;
+    // std::cout << "extend " << triggers[cons_priority] << " with " << cons_idx << std::endl;
+     
+    if(!triggers[cons_priority].is_initialised()) {
+      triggers[cons_priority].initialise(cons_idx, cons_idx+7);
+    } else {
+      triggers[cons_priority].extend(cons_idx);
+    }
   }
   
   if(_set_.table)
@@ -489,8 +520,8 @@ void Mistral::ConstraintQueue::initialise(Solver *s)
   int min_p = INFTY;
   int max_p = -INFTY;
   for(unsigned int i=0; i<s->constraints.size; ++i) {
-    if(s->constraints[i]->priority < min_p) min_p = s->constraints[i]->priority;
-    if(s->constraints[i]->priority > max_p) max_p = s->constraints[i]->priority;
+    if(s->constraints[i].priority() < min_p) min_p = s->constraints[i].priority();
+    if(s->constraints[i].priority() > max_p) max_p = s->constraints[i].priority();
   }
   initialise(min_p, max_p, s->constraints.size);
 }
@@ -513,86 +544,88 @@ Mistral::ConstraintQueue::~ConstraintQueue() {
   delete [] triggers;
 }
 
-void Mistral::ConstraintQueue::trigger(Constraint* cons)//;
+void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
 {
-#ifdef _DEBUG_AC
-  std::cout << " initial trigger for " << cons << "(" << (cons->id) << ")" << std::endl;
-#endif
+// #ifdef _DEBUG_AC
+//   std::cout << " initial trigger for " << c << "(" << (cons->id) << ")" << std::endl;
+// #endif
 
   int priority = cons->priority, cons_id = cons->id, triggered=false;
   Event evt;
+  Variable x;
+
   
-  if(!_set_.fast_contain(cons_id)) {
-    cons->events.clear();
-    for(unsigned int i=0; i<cons->scope.size; ++i) {
-      evt = (// cons->scope[i].domain_type != BOOL_VAR &&
-	     cons->scope[i].is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
-
-      //std::cout << EVENT_TYPE(evt) << " <=? " << cons->trigger[i] << std::endl;
-
-      if(EVENT_TYPE(evt) <= cons->trigger[i]) {
-	cons->events.add(i);
-	cons->event_type[i] = evt;
-	triggered=true;
-      }
-    }
-    if(triggered) {
-
-      //std::cout << "TRIGGER!" << std::endl;
-
-      _set_.fast_add(cons_id);
-      if(priority > higher_priority) higher_priority = priority;
-      triggers[priority].add(cons_id);
-    }  
-  } else {
-
-
-    //std::cout << "ALREADY IN!" << std::endl;
-
-    for(unsigned int var=0; var<cons->scope.size; ++var) {
-      evt = (// cons->scope[i].domain_type != BOOL_VAR &&
-	     cons->scope[var].is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
-      if(cons->events.contain(var)) {
-	cons->event_type[var] |= evt;
-      } else {
-	cons->events.add(var);
-	cons->event_type[var] = evt;
-      }
-    }
+  for(unsigned int i=0; i<cons->scope.size; ++i) {
+    x = cons->_scope[i];
+    
+    evt = (// cons->scope[i].domain_type != BOOL_VAR &&
+	   x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
+    
+    if(cons->is_triggered_on(i, EVENT_TYPE(evt))) trigger(cons, i, evt);
   }
-
-  //std::cout << "EVENTS: " << cons->events << std::endl;
-
-  //std::cout << _set_ << std::endl;
 }
 
-void Mistral::ConstraintQueue::trigger(Constraint* cons, const int var, const Event evt)//;
+
+
+
+void Mistral::ConstraintQueue::trigger(BinaryConstraint *cons)//;
+{
+  int cons_id = cons->id;
+  if(!_set_.fast_contain(cons_id)) {
+    _set_.fast_add(cons_id);
+    triggers[2].add(cons_id);
+    if(2 > higher_priority) higher_priority = 2;
+  }
+}
+
+void Mistral::ConstraintQueue::trigger(TernaryConstraint *cons)//;
+{
+  int cons_id = cons->id;
+  if(!_set_.fast_contain(cons_id)) {
+    _set_.fast_add(cons_id);
+    triggers[2].add(cons_id);
+    if(2 > higher_priority) higher_priority = 2;
+  }
+}
+
+void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, const Event evt)//;
 {
 
-#ifdef _DEBUG_AC
-  std::cout << "  triggers " << cons << " after a " 
-	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
-	    << " event on "
-	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
-	    << std::endl;
-#endif
+  //int var = c.index();
+  //GlobalConstraint *cons = (GlobalConstraint*)c.propagator;
 
+// #ifdef _DEBUG_AC
+//   std::cout << "  triggers " << cons << " after a " 
+// 	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
+// 	    << " event on "
+// 	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
+// 	    << std::endl;
+// #endif
 
-  if(cons != taboo_constraint) {
+  if(cons != solver->taboo_constraint) {
     int priority = cons->priority, cons_id = cons->id;
     if(_set_.fast_contain(cons_id)) {
-      if(cons->events.contain(var)) {
-	cons->event_type[var] |= evt;
-      } else {
-	cons->events.add(var);
-	cons->event_type[var] = evt;
-      }
+      cons->notify_other_event(var, evt);
+      // if(cons->events.contain(var)) {
+      // 	cons->event_type[var] |= evt;
+      // } else {
+      // 	cons->events.add(var);
+      // 	cons->event_type[var] = evt;
+      // }
     } else {
+
+      //std::cout << "\nadd " << cons_id << " to " << _set_  << " " << _set_.table << std::endl;
+
       _set_.fast_add(cons_id);
+
+
+      //std::cout << "here " << _set_ << " " << priority << std::endl;
+
       if(priority > higher_priority) higher_priority = priority;
       triggers[priority].add(cons_id);
-      cons->events.set_to(var);
-      cons->event_type[var] = evt;
+      cons->notify_first_event(var, evt);
+      // cons->events.set_to(var);
+      // cons->event_type[var] = evt;
     }
   } 
 
@@ -625,9 +658,9 @@ std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
       end = triggers[i+min_priority]._head;
       os << "P" << (i+min_priority) << ": " 
 	//<< solver->constraints[elt];
-	 << "["<< solver->constraints[elt]->id << "]";
+	 << "["<< solver->constraints[elt].id() << "]";
 
-      if(!_set_.contain(solver->constraints[elt]->id)) {
+      if(!_set_.contain(solver->constraints[elt].id())) {
 	std::cout << "inconsistent constraint queue" <<std::endl;
 	exit(1);
       }
@@ -635,9 +668,9 @@ std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
       while(triggers[i+min_priority].next[elt] != end) {
 	elt = triggers[i+min_priority].next[elt];
 	os << ", " //<< solver->constraints[elt];
-	   << " [" << solver->constraints[elt]->id << "]";
+	   << " [" << solver->constraints[elt].id() << "]";
 
-	if(!_set_.contain(solver->constraints[elt]->id)) {
+	if(!_set_.contain(solver->constraints[elt].id())) {
 	  std::cout << "inconsistent constraint queue" <<std::endl;
 	  exit(1);
 	}
@@ -664,8 +697,9 @@ Mistral::Solver::Solver() {
   visited.initialise(0,1023);
   reason.initialise(0,128);
   constraints.initialise(0,256);
-  //constraints.initialise(256);
+  //constraint_graph.initialise(128);
   posted_constraints.initialise(0,256,false);
+  sequence.initialise(this);
   sequence.initialise(128);
   initialised_vars = 0;
   initialised_cons = 0;
@@ -674,14 +708,15 @@ Mistral::Solver::Solver() {
 
   // trail stuff
   level = -1;
-  saved_objs.initialise(0,4096); 
+  //saved_objs.initialise(0,4096); 
   saved_vars.initialise(0,4096); 
-  saved_cons.initialise(0,4096); 
   trail_.initialise    (0,4096);
   decisions.initialise (0,4096);
-  con_trail_.initialise(0,512);
-  con_trail_.add(0);
-  con_trail_.add(-1);
+  // con_trail_.initialise(0,512);
+  // con_trail_.add(0);
+  // con_trail_.add(-1);
+
+  active_variables.initialise(4096);
 
   // params
   parameters.initialise();
@@ -762,13 +797,13 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
 
 
 void Mistral::Solver::add(Vector< Lit >& clause) {
-  if(!base) {
-    base = new ConstraintClauseBase(variables);
-    add(base);
-    base->reason = reason.stack_;
-  }
-  base->add( clause, (parameters.init_activity ? parameters.activity_increment : 0.0) );
-}
+ //  if(!base) {
+//     base = new ConstraintClauseBase(variables);
+//     add(base);
+//     base->reason = reason.stack_;
+//   }
+//   base->add( clause, (parameters.init_activity ? parameters.activity_increment : 0.0) );
+ }
 
 void Mistral::Solver::set_parameters(SolverParameters& p) {
   parameters = p;
@@ -790,6 +825,8 @@ int Mistral::Solver::declare(Variable x) {
   if(x.domain_type > DYN_VAR) booleans.add(&x);
 
   // add the variables to the set of vars
+  active_variables.declare(variables.size);
+
   x.variable->id = variables.size;
   x.variable->solver = this;
   visited.extend(variables.size);
@@ -801,9 +838,21 @@ int Mistral::Solver::declare(Variable x) {
   last_solution_lb.add(-INFTY);
   last_solution_ub.add( INFTY);
   
-  // create a new empty list of constraints
-  ConstraintList *l = new ConstraintList(this);
-  constraint_graph.add(l);
+  ConstraintTriggerArray array;
+  bool extend_struct = (constraint_graph.capacity == constraint_graph.size);
+  constraint_graph.add(array);
+  if(extend_struct) {
+    constraint_graph.add(array);
+    for(int i = constraint_graph.size-1; i>=0; --i) {
+      for(int j = 0; j<3; ++j) {
+	for(int k = constraint_graph[i].on[j].size-1; k>=0; --k) {
+	  constraint_graph[i].on[j][k].re_link_to(&constraint_graph[i].on[j]);
+	}
+      }
+    }
+  }
+  constraint_graph.back().initialise(4);
+
 
   notify_add_variable();
 
@@ -815,55 +864,61 @@ int Mistral::Solver::declare(Variable x) {
 //   for()
 // }
 
-void Mistral::Solver::add(Constraint* c) { 
-  if(c->id < 0) {
-    // //if(parameters.verbosity>0) {
-    // //std::cout << "c add a constraint: " << c << std::endl; 
-    //   //}
+void Mistral::Solver::add(Constraint c) { 
 
-    for(unsigned int i=0; i<c->scope.size; ++i) {
-      c->scope[i].initialise(this, false);
-    }
+  //std::cout << "add " << c << std::endl;
 
-    c->initialise();
+  if(c.id() < 0) {
+
+    c.initialise(this);
+
+    // for(unsigned int i=0; i<c->scope.size; ++i) {
+    //   c->scope[i].initialise(this, false);
+    // }
+
+    // c->initialise();
 
     // get a name for the constraint and add it to the list
-    c->id = constraints.size; 
+    c.set_id(constraints.size); 
     //constraints.declare(c);
-    constraints.add(c); 
+    constraints.add(c);
 
-    //
     active_constraints.declare(c, this);
 
-    notify_add(c);
+    //std::cout << "NOTIFY CONSTRAINT " << c << std::endl;
+    notify_add_constraint(c);
 
+    //std::cout << "initial post" << std::endl;
+    c.post(this);
 
-// #ifdef _PROFILING
-//     constraint_propag_time.push_back(0);
-// #endif
+  } else {
 
+    //std::cout << "awaken" << std::endl;
+    c.awaken();
+    
   }
-
-  // then post it on the constraint graph
-  c->post(this);
-  active_constraints.trigger(c);
-
-  // if(!active_constraints._set_.contain(c->id)) {
-
-  //   std::cout << "problem when triggering " << c << std::endl;
-  //   //exit(1);
-  // }
   
 
-  if(con_trail_.back() != level) {
-    con_trail_.add(posted_constraints.size);
-    con_trail_.add(level);
-  }
+  // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
 
-  if(!posted_constraints.safe_contain(c->id)) {
-    posted_constraints.extend(c->id);
-    posted_constraints.add(c->id);
-  }
+  c.trigger();
+  //active_constraints.trigger(c);
+
+  // if(con_trail_.back() != level) {
+  //   con_trail_.add(posted_constraints.size);
+  //   con_trail_.add(level);
+  // }
+  
+  // if(!posted_constraints.safe_contain(c->id)) {
+  //   posted_constraints.extend(c->id);
+  //   posted_constraints.add(c->id);
+  // }
+
+
+  // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
+
+  if(level <= 0) 
+    posted_constraints.safe_add(c.id());
 }
 
 Mistral::Outcome Mistral::Solver::solve() {
@@ -1107,7 +1162,7 @@ Mistral::Solver::~Solver() {
 
     //std::cout << "  delete " << constraints[i] << std::endl;
 
-    delete constraints[i];
+    delete constraints[i].propagator;
   }
 
   //std::cout << "delete expressions" << std::endl;
@@ -1131,148 +1186,115 @@ Mistral::Solver::~Solver() {
     else if(domain_type == VIRTUAL_VAR) delete variables[i].virtual_domain;
     else if(domain_type ==  EXPRESSION) delete variables[i].expression;
     else if(domain_type !=   CONST_VAR) delete variables[i].variable;
-    delete constraint_graph[i];
+
+// #ifdef _CONSTRAINT_LIST
+//     delete constraint_graph[i].propagator;
+// #endif
+
   }
 
 }
 
 
-void Mistral::Solver::trigger_event(const int var, 
-				    const Mistral::Event evt) {
 
+
+
+// void Mistral::Solver::trigger_event(const int var, 
+// 				    const Mistral::Event evt) {
   
-#ifdef _DEBUG_QUEUE
-  std::cout << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
-	    << " event on " << variables[var] 
-	    << " in " << variables[var].get_domain() << std::endl;
-  // if(var==1287)
-  //   std::cout << sequence << std::endl;
-#endif
-
-  Constraint *c;
-  ConstraintNode nd;
-
-  nd = constraint_graph[var]->first(EVENT_TYPE(evt));
-  if(ASSIGNED(evt)) {
-
-    //std::cout << variables[var] << " is assigned " << std::endl;
-
-    while(constraint_graph[var]->next(nd)) {
-
-      //std::cout << "\t" << nd.elt.constraint << std::endl;
-
-#ifdef _DEBUG_CGRAPH
-      std::cout << "value event on " << variables[var] << ", notify " << nd.elt.constraint 
-		<< " " << nd.elt.constraint->active ;
-#endif
-
-      active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-      c = nd.elt.constraint->notify_assignment(nd.elt.index, level);
-
-#ifdef _DEBUG_CGRAPH
-      std::cout << " -> " << nd.elt.constraint->active << std::endl;
-#endif
-
-      if(c) saved_cons.add(c);
-
-    }
-    if(sequence.contain(variables[var])) {
-      sequence.remove(variables[var]);
-      assignment_level[var] = level;
-    }
-  } else while(constraint_graph[var]->next(nd)) {
-      active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-    }
-
-  wiper_idx = var;
-
-  // if(var==1287)
-  // std::cout << sequence << std::endl;
-  
-}
-
-
-// void Mistral::Solver::save(Variable x) { 
-//   saved_vars.add(x); 
+//   active_variables.add(var, evt);
+   
 // }
 
-// void Mistral::Solver::save(VariableImplementation *impl, int dtype) { 
-//   Variable x(impl, dtype);
-//   saved_vars.add(x); 
+// void Mistral::Solver::save(const int idx) {
+//   saved_vars.add(idx);
 // }
-
-void Mistral::Solver::save(const int idx) {
-
-    // if(idx == 17) {
-    //   for(int i=0; i<level; ++i)
-    // 	std::cout << " ";
-    //   std::cout << "save " << variables[idx] 
-    // 		<< " in " << variables[idx].get_domain() 
-    // 		<< " "
-    // 		<< ((VariableBitmap*)(variables[idx].variable))->trail_
-    // 		<< std::endl;
-    // }
-
- 
-  //saved_vars.add(variables[idx]);
-  saved_vars.add(idx);
-}
 
 void Mistral::Solver::restore() {
+
   unsigned int previous_level;
+  //Constraint c;
 
   previous_level = trail_.pop();
-  while( saved_vars.size > previous_level ) {
-    // if(saved_vars.back() == 4) {
-    //   std::cout << level << " RESTORE X4: " << variables[4] << " in " << variables[4].get_domain() 
-    // 		<< " " << (variables[4].domain_type == RANGE_VAR ? 
-    // 			   ((VariableRange*)(variables[4].variable))->trail_ :
-    // 			   ((VariableBitmap*)(variables[4].variable))->trail_)
-    // 		<< std::endl;
-    // }
-
-    variables[saved_vars.pop()].restore();
-
-    // if(saved_vars.back(0) == 4) {
-    //   std::cout << level << " ======> X4: " << variables[4] << " in " << variables[4].get_domain() 
-    // 		<< " " << (variables[4].domain_type == RANGE_VAR ? 
-    // 			   ((VariableRange*)(variables[4].variable))->trail_ :
-    // 			   ((VariableBitmap*)(variables[4].variable))->trail_)
-    // 		<< std::endl << std::endl;
-    // }
-  }
+  while( saved_ints.size > previous_level ) 
+    saved_ints.pop()->restore();
+  
+  previous_level = trail_.pop();
+  while( saved_lists.size > previous_level ) 
+    saved_lists.pop()->restore();
+  
+  previous_level = trail_.pop();
+  while( saved_bools.size > previous_level ) 
+    *(saved_bools.pop()) = 3;
+  
   previous_level = trail_.pop();
   while( saved_cons.size > previous_level ) 
-    saved_cons.pop()->restore();
+    saved_cons.pop().restore();
 
   previous_level = trail_.pop();
-  while( saved_objs.size > previous_level )
-    saved_objs.pop()->restore();
+  while( saved_vars.size > previous_level ) 
+    variables[saved_vars.pop()].restore();
 
-  if(con_trail_.back() == level) {
-    con_trail_.pop();
-    posted_constraints.size = con_trail_.pop();
-  }
-
-  //  decisions.pop(); 
-  sequence.size = trail_.pop();
-
-  ++statistics.num_backtracks;
   --level;
+  ++statistics.num_backtracks;
+
+
+  // unsigned int previous_level;
+
+
+  // previous_level = trail_.pop();
+  // //std::cout << saved_relax.size << " -> " <<  previous_level << std::endl;
+
+  // while( saved_relax.size > previous_level ) 
+  //   saved_relax.pop()->post_on_array();  
+
+  // previous_level = trail_.pop();
+  // //std::cout << saved_post.size << " -> " <<  previous_level << std::endl;
+
+  // while( saved_post.size > previous_level ) 
+  //   saved_post.pop()->relax_from_array();  
+
+  // previous_level = trail_.pop();
+  // while( saved_vars.size > previous_level ) {
+  //   // if(saved_vars.back() == 4) {
+  //   //   std::cout << level << " RESTORE X4: " << variables[4] << " in " << variables[4].get_domain() 
+  //   // 		<< " " << (variables[4].domain_type == RANGE_VAR ? 
+  //   // 			   ((VariableRange*)(variables[4].variable))->trail_ :
+  //   // 			   ((VariableBitmap*)(variables[4].variable))->trail_)
+  //   // 		<< std::endl;
+  //   // }
+
+  //   variables[saved_vars.pop()].restore();
+
+  //   // if(saved_vars.back(0) == 4) {
+  //   //   std::cout << level << " ======> X4: " << variables[4] << " in " << variables[4].get_domain() 
+  //   // 		<< " " << (variables[4].domain_type == RANGE_VAR ? 
+  //   // 			   ((VariableRange*)(variables[4].variable))->trail_ :
+  //   // 			   ((VariableBitmap*)(variables[4].variable))->trail_)
+  //   // 		<< std::endl << std::endl;
+  //   // }
+  // }
+
+  // previous_level = trail_.pop();
+  // while( saved_objs.size > previous_level )
+  //   saved_objs.pop()->restore();
+
+  // if(con_trail_.back() == level) {
+  //   con_trail_.pop();
+  //   posted_constraints.size = con_trail_.pop();
+  // }
+
+  // //  decisions.pop(); 
+  // sequence.size = trail_.pop();
+
+  // ++statistics.num_backtracks;
+  // --level;
 }
 
 void Mistral::Solver::restore(const int lvl) {
   while(lvl < level) restore();
 }
 
-// void Mistral::Solver::add(BranchingHeuristic* h) {
-//   if(heuristic) {
-//     heuristic->close();
-//     delete heuristic;
-//   }
-//   heuristic = h;
-//   heuristic->initialise();
-// }
 
 void Mistral::Solver::add(Mistral::RestartListener* l) {
   l->rid = restart_triggers.size;
@@ -1362,24 +1384,19 @@ void Mistral::Solver::notify_restart() {
   }
 } 
 
-void Mistral::Solver::notify_relax(Constraint *c) { 
+void Mistral::Solver::notify_relax(Constraint c) { 
   for(unsigned int i=0; i<constraint_triggers.size; ++i) {
-
-    // std::cout << i << std::endl;
-    // std::cout << constraint_triggers[i] << std::endl;
-    
-
     constraint_triggers[i]->notify_relax(c);
   }
 } 
 
-void Mistral::Solver::notify_add(Constraint *c) { 
+void Mistral::Solver::notify_add_constraint(Constraint c) { 
   for(unsigned int i=0; i<constraint_triggers.size; ++i) {
-    constraint_triggers[i]->notify_add(c);
+    constraint_triggers[i]->notify_add_con(c);
   }
 } 
 
-void Mistral::Solver::notify_post(Constraint *c) { 
+void Mistral::Solver::notify_post(Constraint c) { 
   for(unsigned int i=0; i<constraint_triggers.size; ++i) {
     constraint_triggers[i]->notify_post(c);
   }
@@ -1393,12 +1410,26 @@ void Mistral::Solver::notify_change_variable(const int idx) {
 
 void Mistral::Solver::notify_add_variable() { 
   for(unsigned int i=0; i<variable_triggers.size; ++i) {
-    variable_triggers[i]->notify_add();
+    variable_triggers[i]->notify_add_var();
   }
 } 
 
 void Mistral::Solver::consolidate() 
 {
+  if(!initialised_vars) {
+    // std::cout << "CREATE CONSListener" << std::endl;
+    
+    // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
+    
+    ConsolidateListener *cl = new ConsolidateListener(this);
+    add((VariableListener*)cl);
+    add((ConstraintListener*)cl);
+    
+    // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
+    
+    
+    // std::cout << "cl->constraints" << std::endl << cl->constraints << std::endl;
+  }
 
   for(; initialised_vars<variables.size; ++initialised_vars) {
     variables[initialised_vars] = variables[initialised_vars].get_var();
@@ -1406,6 +1437,8 @@ void Mistral::Solver::consolidate()
        && variables[initialised_vars].domain_type == RANGE_VAR
        && !variables[initialised_vars].is_ground() 
        && variables[initialised_vars].get_degree()>0) {
+
+      //std::cout << "change " << domain_types[initialised_vars] << std::endl;
 
       int minval = variables[initialised_vars].get_min();
       int maxval = variables[initialised_vars].get_max();
@@ -1419,381 +1452,425 @@ void Mistral::Solver::consolidate()
 
       if(X.domain_type > DYN_VAR) {
 	booleans.add(variables.stack_+initialised_vars);
-      // if(minval==0 && maxval==1) {
-      // 	variables+
-      // }
       }
     }
   }
-//   if(!is_initialised()) {
-//     Vector< int > bool_vars;
-//     while(initialised_vars < variables.size) {
-//       if(variables[initialised_vars].domain_type == BOOL_VAR)
-// 	bool_vars.add(initialised_vars);
-//       ++initialised_vars;
-//     }
-//     //booleans.add(bool_vars);
-//     //void Mistral::Solver::BooleanMemoryManager::add(Vector< int >& bool_vars) {
-//     int *pool = new int[bool_vars.size];
-//     std::fill(pool, pool+bool_vars.size, 3);
-//     booleans.slots.add(pool);
-//     for(unsigned int i=0; i<bool_vars.size; ++i) {
-//       variables[bool_vars[i]].bool_domain = pool+i;
-//     }
-    
-//     //     for(int i=0; i<non_convex.size; ++i) {
-//     //       non_convex->initialise_bitset_domain();
-//     //     }
-//     //     boolean_pool.add(new int[booleans.size]);
-//     //     for(int i=0; i<booleans.size; ++i) {
-//     //       booleans->initialise_boolean_domain(boolean_pool.back()+i);
-//     //     }
+
   while(initialised_cons < constraints.size)
-    constraints[initialised_cons++]->consolidate();
-//   for(unsigned int i; i<constraints.size; ++i) 
-//     constraints[i]->consolidate();
-//     {
-//     for(unsigned int j=0; j<constraints[i]->scope.size; ++j) {
-//       constraints[i]->scope[j] = constraints[i]->scope[j].get_var();
-//     }
-//}
-//   }
+    constraints[initialised_cons++].consolidate();
+
 }
 
 
 void Mistral::Solver::make_non_convex(const int idx) 
 {
-
-  // if(idx == 426) {
-  //    std::cout << std::endl << std::endl << idx << std::endl;
-  //    std::cout << "turn " << variables[idx] << " in " ;
-  //   std::cout<< variables[idx].get_domain() << " into a bitset variable" << std::endl; 
-  // }
-
   if(variables[idx].domain_type == RANGE_VAR) {
-    ConstraintNode nd;
-
-    // std::cout << "SWAP" << std::endl;
-
-    Variable X(variables[idx]// , DYN_VAR&(~RANGE_VAR)
-	       , true);
+    Variable X(variables[idx], true);
     variables[idx] = X;
 
-    // if(idx == 426) {
-    //   std::cout << " => " << X << " in " << X.get_domain() << std::endl; 
-    //   std::cout << X.bool_domain << std::endl;
-    //   exit(1);
+
+    // int ids = sequence.index(idx);
+
+    // if(ids>=0) sequence.list_[ids] = X;
+
+    // for(int i=0; i<3; ++i) {
+    //   for(int j=constraint_graph[idx].on[i].size-1; j>=0; --j)
+    // 	constraint_graph[idx].on[i][j].consolidate();
     // }
 
-    
-    // std::cout << sequence << std::endl;
-    // std::cout << sequence.capacity << std::endl;
-    // std::cout << sequence.size << std::endl;
-    // std::cout << sequence.offset << std::endl;
-    // std::cout << sequence.index_ << std::endl;
-    // std::cout << sequence.index_[idx] << std::endl;
-    // std::cout << (int*)(sequence.list_) << std::endl;
-    
-
-    int ids = sequence.index(idx);
-
-    //std::cout << "ids: " << ids << std::endl;
-
-    if(ids>=0) sequence.list_[ids] = X;
-
-     //std::cout << 11 << std::endl;
-
-    
-    nd = constraint_graph[idx]->first(_VALUE_);
-    while(constraint_graph[idx]->next(nd)) {
-      nd.elt.constraint->consolidate();
-    }
+    //std::cout << "MAKE " << variables[idx] << " NON CONVEX: NOTIFY CHANGE" << std::endl; 
 
     notify_change_variable(idx);
 
-    //std::cout << 22 << std::endl;
+
+    // std::cout << "c" << std::endl;
+    // unsigned int k=0;
+    // // for(; k<monitored_variables.size; ++k) {
+    // //   monitored_variables[k] = monitored_variables[k].get_var();
+    // // }
+    // // k = 0;
+    // for(unsigned int q=0; q<monitored_index.size; ++q) {
+    //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+    //   for(; k<monitored_index[q]; ++k) {
+    // 	std::cout << "|" << variables[monitored[k]] ;
+    // 	std::cout.flush();
+    // 	std::cout << variables[monitored[k]].get_domain();
+    // 	std::cout.flush();
+    // 	std::cout << variables[monitored[k]].get_history() << " ";
+    //   }
+    //   std::cout << std::endl;
+    // }
+
+
   }
 }
 
-// void Mistral::Solver::specialise() 
+
+// bool Mistral::Solver::rewrite() 
 // {
-//   ConstraintNode nd;
-//   unsigned int i;
-//   for(i=0; i<variables.size; ++i) {
-//     if((domain_types[i]&RANGE_VAR) && variables[i].domain_type != RANGE_VAR) {
+  
+// #ifdef _DEBUG_REWRITE
+//   std::cout << "start rewrite loop: " << (statistics.num_filterings) 
+// 	    << std::endl << active_constraints << std::endl;
+// #endif
 
-//       //std::cout << "spec " << variables[i] << " => ";
+//   Constraint transformed; // = NULL;
 
-//       Variable R(variables[i].get_min(), variables[i].get_max(), RANGE_VAR);
-//       R.variable->solver = this;
-//       R.variable->id = i;
-//       variables[i] = R;
+//   wiped_idx = -1;
+//   culprit.clear();
 
-//       //std::cout << variables[i] << std::endl;
-
-//       nd = constraint_graph[i]->first(_VALUE_);
-//       while(constraint_graph[i]->next(nd)) {
-	
-// 	nd.elt.constraint->consolidate();
-
-// // 	std::cout << "\t" << nd.elt.constraint << " (" 
-// // 		  << nd.elt.constraint->scope[nd.elt.index] 
-// // 		  << ") => ";
-
-// // 	nd.elt.constraint->scope[nd.elt.index] = variables[i];
-
-// // 	std::cout << "(" 
-// // 		  << nd.elt.constraint->scope[nd.elt.index] 
-// // 		  << ")" << nd.elt.constraint << std::endl;
-//       }
+//   ++statistics.num_filterings;
+//   while( IS_OK(wiped_idx) && !active_constraints.empty() ) {
+//     do {
+//       culprit = active_constraints.select(constraints);
+//     } while (!culprit->is_posted);
+    
+// #ifdef _DEBUG_REWRITE
+//     int size_before = 0;
+//     delete o_propag;
+//     o_propag = new std::ostringstream();
+//     (*o_propag) << "rewrite " << (culprit) << " b/c" ;
+//     for(unsigned int i=0; i<culprit->changes.size; ++i) 
+//       (*o_propag) << " " << culprit->scope[culprit->changes[i]];
+//     (*o_propag) << std::endl;
+//     for(unsigned int i=0; i<culprit->scope.size; ++i) {
+//       size_before += culprit->scope[i].get_size();
+//       (*o_propag) << culprit->scope[i] << ": " << (culprit->scope[i].get_domain()) << " ";
 //     }
+// #endif
+
+//     ++statistics.num_propagations;
+
+    
+//     transformed = NULL;
+
+//     //  std::cout << "rewrite **" << culprit->id << "** " << culprit 
+//     // // 	      // << " " << active_constraints._set_
+//     //  	      << std::endl;
+
+//     wiped_idx = culprit->rewrite();
+
+//     //std::cout << "DONE\n\n";
+
+//     // std::cout << "rewrite **" << culprit->id << "** " << culprit  
+//     // 	      << " " << active_constraints._set_ << std::endl;
+
+// //     if(IS_OK(wiped_idx) && transformed) 
+// //       discarded_constraints.add(culprit);
+    
+
+
+// //     std::cout << "events of " << culprit << " after defrost: " 
+// // 	      << culprit->events << std::endl;
+// //     std::cout << "changes of " << culprits << " after defrost: " 
+// // 	      << culprit->changes << std::endl;
+   
+// #ifdef _DEBUG_REWRITE
+//     if(!IS_OK(wiped_idx)) {
+//       std::cout << (o_propag->str()) << std::endl << culprit->scope[wiped_idx] 
+// 		<< " was wiped out" << std::endl;
+//     } else {
+//       for(unsigned int i=0; i<culprit->scope.size; ++i)
+// 	size_before -= culprit->scope[i].get_size();
+//       if(size_before) {
+// 	std::cout << (o_propag->str()) << std::endl;
+// 	for(unsigned int i=0; i<culprit->scope.size; ++i)
+// 	  std::cout << culprit->scope[i] << ": " 
+// 		    << (culprit->scope[i].get_domain()) << " ";
+// 	std::cout << std::endl << std::endl;
+//       } 
+// //       else {
+// // 	std::cout << (o_propag.str()) << std::endl;
+// // 	std::cout << "no pruning" << std::endl;
+// //       }
+//     }
+//     if(active_constraints.empty()) 
+//       std::cout << "Get out of the AC loop because the closure is achieved" << std::endl;
+//     //else
+//     //std::cout << active_constraints << std::endl;
+
+// #endif 
+
+//     //std::cout << "END LOOP" << std::endl;
+
 //   }
+
+//   //  taboo_constraint = NULL;
+//   active_constraints.clear();
+
+// #ifdef VARNCONQUEUE
+//   active_variables.clear();
+// #endif
+
+// #ifdef _DEBUG_AC
+//   if(!IS_OK(wiped_idx)) {
+//     std::cout << "inconsistency found!" << std::endl;
+//   } else {
+//     std::cout << "done" << std::endl;
+//   }
+// #endif 
+
+//   // std::cout << statistics.num_variables << " x " << statistics.num_constraints << std::endl;
+
+//   if(IS_OK(wiped_idx)) {
+//     statistics.num_constraints = 0;
+//     for(unsigned int i=0; i<constraints.size; ++i)
+//       if(constraints[i]->is_posted) ++statistics.num_constraints;
+
+//     statistics.num_variables = 0;
+//     for(unsigned int i=0; i<variables.size; ++i)
+//       if(variables[i].get_degree() && !variables[i].is_ground()) ++statistics.num_variables;
+
+//     // std::cout << statistics.num_variables << " x " << statistics.num_constraints << std::endl;
+
+//     return true;
+//   } else {
+
+//     std::cout << "FAIL DURING PREPROCESSING" << std::endl; 
+
+//     ++statistics.num_failures;
+//     notify_failure();
+//     return false;
+//   }
+//   //return !wiped_out;
+
+
+//   return true;
+
 // }
 
-bool Mistral::Solver::rewrite() 
-{
-  
-#ifdef _DEBUG_REWRITE
-  std::cout << "start rewrite loop: " << (statistics.num_filterings) 
-	    << std::endl << active_constraints << std::endl;
-#endif
+// Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint *cons) {
+//   culprit = cons;
+//   //active_constraints.taboo_constraint = culprit->freeze();
+//   active_constraints.select(culprit);
+//   wiped_idx = culprit->propagate();
+//   culprit->defrost();
+//   if(IS_OK(wiped_idx)) culprit = NULL;
+//   return wiped_idx;
+// }
 
-  Constraint *transformed = NULL;
-
-  wiped_idx = -1;
-  culprit = NULL;
-
-  ++statistics.num_filterings;
-  while( IS_OK(wiped_idx) && !active_constraints.empty() ) {
-
-    // std::cout << "rewrite loop: " << (statistics.num_filterings) 
-    //  	      << std::endl << active_constraints << std::endl;
-
-    // std::cout << constraints[35] << std::endl;
-
-    do {
-      culprit = active_constraints.select(constraints);
-    } while (!culprit->is_posted);
-
-    // std::cout << 11 << std::endl;
-
-    // std::cout << (int*)culprit << std::endl;
-
-
-    // std::cout << culprit->id << std::endl;
-
-    // std::cout << culprit->scope << std::endl;
-
-    
-#ifdef _DEBUG_REWRITE
-    int size_before = 0;
-    delete o_propag;
-    o_propag = new std::ostringstream();
-    (*o_propag) << "rewrite " << (culprit) << " b/c" ;
-    for(unsigned int i=0; i<culprit->changes.size; ++i) 
-      (*o_propag) << " " << culprit->scope[culprit->changes[i]];
-    (*o_propag) << std::endl;
-    for(unsigned int i=0; i<culprit->scope.size; ++i) {
-      size_before += culprit->scope[i].get_size();
-      (*o_propag) << culprit->scope[i] << ": " << (culprit->scope[i].get_domain()) << " ";
-    }
-#endif
-
-    ++statistics.num_propagations;
-
-    
-    transformed = NULL;
-
-    //  std::cout << "rewrite **" << culprit->id << "** " << culprit 
-    // // 	      // << " " << active_constraints._set_
-    //  	      << std::endl;
-
-    wiped_idx = culprit->rewrite();
-
-    //std::cout << "DONE\n\n";
-
-    // std::cout << "rewrite **" << culprit->id << "** " << culprit  
-    // 	      << " " << active_constraints._set_ << std::endl;
-
-//     if(IS_OK(wiped_idx) && transformed) 
-//       discarded_constraints.add(culprit);
-    
-
-
-//     std::cout << "events of " << culprit << " after defrost: " 
-// 	      << culprit->events << std::endl;
-//     std::cout << "changes of " << culprits << " after defrost: " 
-// 	      << culprit->changes << std::endl;
-   
-#ifdef _DEBUG_REWRITE
-    if(!IS_OK(wiped_idx)) {
-      std::cout << (o_propag->str()) << std::endl << culprit->scope[wiped_idx] 
-		<< " was wiped out" << std::endl;
-    } else {
-      for(unsigned int i=0; i<culprit->scope.size; ++i)
-	size_before -= culprit->scope[i].get_size();
-      if(size_before) {
-	std::cout << (o_propag->str()) << std::endl;
-	for(unsigned int i=0; i<culprit->scope.size; ++i)
-	  std::cout << culprit->scope[i] << ": " 
-		    << (culprit->scope[i].get_domain()) << " ";
-	std::cout << std::endl << std::endl;
-      } 
-//       else {
-// 	std::cout << (o_propag.str()) << std::endl;
-// 	std::cout << "no pruning" << std::endl;
-//       }
-    }
-    if(active_constraints.empty()) 
-      std::cout << "Get out of the AC loop because the closure is achieved" << std::endl;
-    //else
-    //std::cout << active_constraints << std::endl;
-
-#endif 
-
-    //std::cout << "END LOOP" << std::endl;
-
-  }
-
-  //  taboo_constraint = NULL;
-  active_constraints.clear();
-
-
-#ifdef _DEBUG_AC
-  if(!IS_OK(wiped_idx)) {
-    std::cout << "inconsistency found!" << std::endl;
-  } else {
-    std::cout << "done" << std::endl;
-  }
-#endif 
-
-  // std::cout << statistics.num_variables << " x " << statistics.num_constraints << std::endl;
-
-  if(IS_OK(wiped_idx)) {
-    statistics.num_constraints = 0;
-    for(unsigned int i=0; i<constraints.size; ++i)
-      if(constraints[i]->is_posted) ++statistics.num_constraints;
-
-    statistics.num_variables = 0;
-    for(unsigned int i=0; i<variables.size; ++i)
-      if(variables[i].get_degree() && !variables[i].is_ground()) ++statistics.num_variables;
-
-    // std::cout << statistics.num_variables << " x " << statistics.num_constraints << std::endl;
-
-    return true;
-  } else {
-
-    std::cout << "FAIL DURING PREPROCESSING" << std::endl; 
-
-    ++statistics.num_failures;
-    notify_failure();
-    return false;
-  }
-  //return !wiped_out;
-
-
-  return true;
-
-}
-
-Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint *cons) {
-  culprit = cons;
-  //active_constraints.taboo_constraint = culprit->freeze();
-  active_constraints.select(culprit);
-  wiped_idx = culprit->propagate();
-  culprit->defrost();
-  if(IS_OK(wiped_idx)) culprit = NULL;
-  return wiped_idx;
-}
 
 bool Mistral::Solver::propagate() 
 {
 
+#ifdef _DEBUG_PROPAGATE
+  std::cout << "Propagate:" << std::endl;
+#endif
+
+  bool fix_point =  (active_variables.empty() && active_constraints.empty());
+  int var, trig, cons, chg;
+  Triplet < int, Event, ConstraintImplementation* > var_evt;
+  //Event evt;
+
   wiped_idx = -1;
-  culprit = NULL;
+  culprit.clear();
 
-  if(objective && objective->enforce())
-    wiped_idx = objective->objective.id();
+  ++statistics.num_filterings;  
+  
+  while(IS_OK(wiped_idx) && !fix_point) {
+    
+    // empty the var stack first
+    while( IS_OK(wiped_idx) && 
+	   !active_variables.empty() ) {
+      
 
-  ++statistics.num_filterings;
-  while( IS_OK(wiped_idx) && !active_constraints.empty() ) {
-
-#ifdef _DEBUG_QUEUE
-  std::cout << " propagation loop: " << (statistics.num_filterings) 
-	    << std::endl << active_constraints << std::endl;
+#ifdef _DEBUG_PROPAGATE
+      //std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+      std::cout << "propagate variable events: " ;
+      std::cout << active_variables << std::endl
+		<< active_constraints << std::endl;
 #endif
 
-
-
-
-    culprit = active_constraints.select(constraints);
- 
-#ifdef _DEBUG_PROPAG
-    int size_before = 0;
-    delete o_propag;
-    o_propag = new std::ostringstream();
-    (*o_propag) << "propagate " << (culprit) << " b/c" ;
-    for(unsigned int i=0; i<culprit->changes.size; ++i) 
-      (*o_propag) << " " << culprit->scope[culprit->changes[i]];
-    (*o_propag) << std::endl;
-    for(unsigned int i=0; i<culprit->scope.size; ++i) {
-      size_before += culprit->scope[i].get_size();
-      (*o_propag) << culprit->scope[i] << ": " << (culprit->scope[i].get_domain()) << " ";
-    }
+#ifdef _DEBUG_AC
+      std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+      std::cout << active_variables << std::endl
+		// << active_constraints << std::endl
+	;
 #endif
 
-    ++statistics.num_propagations;
-
-
-#ifdef _PROFILING
-    double t_tag = get_run_time();
+      // get the variable event
+      var_evt = active_variables.pop_front();
+      
+#ifdef _DEBUG_PROPAGATE 
+      std::cout << " -" 
+	//<< var_evt.second
+		<< event2str(var_evt.second) << " on " 
+		<< variables[var_evt.first] ;
+      if(var_evt.third)
+	std::cout << " because of " << var_evt.third ;
+      std::cout << " triggers: " << std::endl;
 #endif
 
-    wiped_idx = culprit->propagate();
-
-#ifdef _PROFILING
-    t_tag = get_run_time()-t_tag;
-    //constraint_propag_time[culprit->type_id] += t_tag;
-    statistics.total_propag_time += t_tag;
-#endif
+      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+	sequence.remove(variables[var_evt.first]);
+	assignment_level[var_evt.first] = level;
+      }
 
 
-    culprit->defrost();
-
-   
-#ifdef _DEBUG_PROPAG
-    // bool concerned = false;
-    // for(unsigned int zz=0; zz<culprit->scope.size; ++zz) {
-    //   if(culprit->scope[zz].id() == 1287) concerned = true;
-    // }
-    // if(concerned) {
-    if(!IS_OK(wiped_idx)) {
-      std::cout << (o_propag->str()) << std::endl << culprit->scope[wiped_idx] 
-		<< " was wiped out" << std::endl;
-    } else {
-      for(unsigned int i=0; i<culprit->scope.size; ++i)
-	size_before -= culprit->scope[i].get_size();
-      if(size_before) {
-	std::cout << (o_propag->str()) << std::endl;
-	for(unsigned int i=0; i<culprit->scope.size; ++i)
-	  std::cout << culprit->scope[i] << ": " 
-		    << (culprit->scope[i].get_domain()) << " ";
-	std::cout << std::endl << std::endl;
-      } 
-    }
-    if(active_constraints.empty()) 
-      std::cout << "Get out of the AC loop because the closure is achieved" << std::endl;
-    //}
-#endif 
-
-
-  }
-
-  //  taboo_constraint = NULL;
-  active_constraints.clear();
+      // for each triggered constraint
+      for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+	    trig<3; ++trig) {
+	for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+	      --cons>=0;) {
+	  culprit = constraint_graph[var_evt.first].on[trig][cons];
+	  
+	  // idempotency, if the event was triggered by itself
+	  if(var_evt.third != culprit.propagator) {
 
 
 #ifdef _DEBUG_AC
+	    std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+	    std::cout << culprit << " (" << event2str(var_evt.second) << " on " 
+		      << culprit.get_scope()[culprit.index()] << ") "; 
+#endif
+	    
+#ifdef _DEBUG_PROPAGATE 
+	    std::cout << "  -> " << culprit << " (" << event2str(var_evt.second) << " on " ;
+
+	    //std::cout << "["<< culprit.index() << "] " << std::endl;
+	    
+	    std::cout << culprit.get_scope()[culprit.index()] << ") "; // << std::endl;
+#endif    
+	    
+	    // if the constraints asked to be pushed on the constraint stack we do that
+	    if(culprit.pushed()) {
+
+#ifdef _DEBUG_AC
+	      std::cout << "pushed on the stack" ;
+#endif    
+#ifdef _DEBUG_PROPAGATE 
+	      std::cout << "pushed on the stack" ;
+#endif    
+	      active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+					 culprit.index(), var_evt.second);
+	    }
+
+	    // if the constraint is not postponed, we propagate it
+	    if(!culprit.postponed()) {
+
+#ifdef _DEBUG_AC
+	      if(culprit.pushed()) std::cout << ", ";
+	      std::cout << "propagated: ";
+	      Variable *scp = culprit.get_scope();
+	      int arity = culprit.arity();
+	      for(int i=0; i<arity; ++i)
+		std::cout << scp[i].get_domain() << " ";
+	      std::cout << "-> ";
+#endif
+#ifdef _DEBUG_PROPAGATE 
+	      if(culprit.pushed()) std::cout << ", ";
+	      std::cout << "propagated: ";
+#endif
+
+	      ++statistics.num_propagations;  
+
+	      taboo_constraint = culprit.freeze();
+	      wiped_idx = culprit.propagate(var_evt.second); 
+	      taboo_constraint = culprit.defrost();
+
+
+#ifdef _DEBUG_AC
+	      if(IS_OK(wiped_idx)) {
+		Variable *scp = culprit.get_scope();
+		int arity = culprit.arity();
+		for(int i=0; i<arity; ++i)
+		  std::cout << scp[i].get_domain() << " ";
+		std::cout << "ok";
+	      } else std::cout << "fail";
+#endif
+#ifdef _DEBUG_PROPAGATE 
+	      if(IS_OK(wiped_idx)) std::cout << "ok";
+	      else std::cout << "fail";
+#endif
+	      
+	    }
+
+#ifdef _DEBUG_AC
+	    std::cout << std::endl;
+#endif
+#ifdef _DEBUG_PROPAGATE 
+	    std::cout << std::endl;
+#endif	    
+	    
+	  }
+	}
+      }
+    }
+    
+    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+
+// #ifdef _DEBUG_AC
+//       std::cout << "\npropagate postponed constraints: " 
+// 		<< active_constraints << std::endl;
+// #endif
+
+      // propagate postponed constraint
+      culprit = active_constraints.select(constraints);
+
+#ifdef _DEBUG_AC
+      std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+      std::cout << "  -> " << culprit << " (" ;
+
+      if(culprit.global()) {
+	GlobalConstraint *gc = (GlobalConstraint*)(culprit.propagator);
+		
+	std::cout << gc->events << " ";
+	std::cout.flush();
+	
+	std::cout << event2str(gc->event_type[gc->events[0]]) << " on " << gc->scope[gc->events[0]] ;
+	for(unsigned int i=1; i<gc->events.size; ++i) {
+	  std::cout << ", " << event2str(gc->event_type[gc->events[i]]) << " on " << gc->scope[gc->events[i]] ;
+	}
+      }
+      std::cout << ") ";
+      Variable *scp = culprit.get_scope();
+      int arity = culprit.arity();
+      for(int i=0; i<arity; ++i)
+	std::cout << scp[i].get_domain() << " ";
+      std::cout << "-> ";
+
+#endif
+#ifdef _DEBUG_PROPAGATE 
+      std::cout << "  -> " << culprit << " (" ;
+      GlobalConstraint *gc = (GlobalConstraint*)(culprit.propagator);
+      
+      std::cout << event2str(gc->event_type[gc->events[0]]) << " on " << gc->scope[gc->events[0]] ;
+      for(unsigned int i=1; i<gc->events.size; ++i) {
+	std::cout << ", " << event2str(gc->event_type[gc->events[i]]) << " on " << gc->scope[gc->events[i]] ;
+      }
+      std::cout << ") ";
+
+#endif
+
+      taboo_constraint = culprit.freeze();
+      wiped_idx = culprit.propagate(); 
+      taboo_constraint = culprit.defrost();
+
+#ifdef _DEBUG_AC
+      if(IS_OK(wiped_idx)) {
+	Variable *scp = culprit.get_scope();
+	int arity = culprit.arity();
+	for(int i=0; i<arity; ++i)
+	  std::cout << scp[i].get_domain() << " ";
+	std::cout << "ok";
+      } else std::cout << "fail";
+      std::cout << std::endl;
+#endif	
+#ifdef _DEBUG_PROPAGATE 
+     if(IS_OK(wiped_idx)) std::cout << "ok";
+      else std::cout << "fail" ;
+      std::cout << std::endl;
+#endif	
+      
+    } else if(active_variables.empty()) fix_point = true;
+  }
+    
+  taboo_constraint = NULL;
+  active_constraints.clear();
+  active_variables.clear();
+
+
+#ifdef _DEBUG_PROPAGATE
   if(!IS_OK(wiped_idx)) {
     std::cout << "inconsistency found!" << std::endl;
   } else {
@@ -1801,26 +1878,21 @@ bool Mistral::Solver::propagate()
   }
 #endif 
 
-  //std::cout << "end propagate: " << culprit << std::endl;
 
+
+  
+  
   if(IS_OK(wiped_idx)) {
     notify_success();
-
-#ifdef _DEBUG_PRUNING
-    for(unsigned int k=0; k<monitored_variables.size; ++k) {
-      std::cout << monitored_variables[k].get_domain() << " ";
-    }
-    std::cout << std::endl;
-#endif
-
+   
     return true;
   } else {
     ++statistics.num_failures;
     notify_failure();
 
-#ifdef _DEBUG_PRUNING
-    std::cout << "{}" << std::endl;
-#endif
+// #ifdef _MONITOR
+//     std::cout << "{}" << std::endl;
+// #endif
 
     return false;
   }
@@ -1828,13 +1900,91 @@ bool Mistral::Solver::propagate()
 }
 
 
-#ifdef _DEBUG_PRUNING
-void Mistral::Solver::monitor(VarArray& X) {
+
+// bool Mistral::Solver::propagate() 
+// {
+
+//   wiped_idx = -1;
+//   culprit = NULL;
+
+//   // if there is an objective function, it is propagated first, 
+//   // since upon backtrack, it could fail even if n-1 variables are set
+//   if(objective && objective->enforce())
+//     wiped_idx = objective->objective.id();
+
+//   ++statistics.num_filterings;
+
+//   int *v_index;
+//   Constraint **c_iter, **end, *c;
+//   bool finished = active_constraints.empty() && active_variables.empty();
+//   while( IS_OK(wiped_idx) && (!finished) ) {
+  
+//     while(!active_variables.empty()) {      
+//       var = active_variables.pop( evt );
+      
+//       c_iter = constraint_graph_array[var]->first(EVENT_TYPE(evt));
+//       v_index = constraint_graph_array[var]->get_index(c_iter);
+//       end = constraint_graph_array[var]->first();
+
+//       if(ASSIGNED(evt)) {
+// 	while(c_iter < end) {
+// 	  active_constraints.trigger(*c_iter, *v_index, evt);
+//        	  c = (*c_iter)->notify_assignment(*v_index, level);
+//        	  if(c) saved_cons.add(c);
+// 	  ++c_iter;
+// 	  ++v_index;
+//       	}
+//       	if(sequence.contain(variables[var])) {
+//       	  sequence.remove(variables[var]);
+//       	  assignment_level[var] = level;
+//       	}
+//       } else {
+// 	//if(!(ASSIGNED(evt)))
+// 	while(c_iter < end) {
+//   	  active_constraints.trigger(*c_iter, *v_index, evt);
+// 	  ++c_iter;
+// 	  ++v_index;
+// 	}
+//       }
+//     }
+
+//     if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+
+//       culprit = active_constraints.select(constraints);
+
+//       ++statistics.num_propagations;
+      
+//       wiped_idx = culprit->propagate();
+      
+//       culprit->defrost();
+      
+//      }
+
+//   }
+  
+//   //  taboo_constraint = NULL;
+//   active_constraints.clear();
+//   active_variables.clear();
+  
+//   if(IS_OK(wiped_idx)) {
+//     notify_success();
+//   } else {
+//     ++statistics.num_failures;
+//     notify_failure();
+//   }
+//   return IS_OK(wiped_idx); //!wiped_out;
+// }
+
+
+#ifdef _MONITOR
+void Mistral::Solver::monitor(Vector< Variable >& X) {
   for(unsigned int i=0; i<X.size; ++i)
-    monitored_variables.add(X[i]);
+    monitored.add(X[i].id());
+  monitored_index.add(monitored.size);
 }
 void Mistral::Solver::monitor(Variable X) {
-  monitored_variables.add(X);
+  monitored.add(X.id());
+  monitored_index.add(monitored.size);
 }
 #endif
 
@@ -1928,46 +2078,34 @@ void Mistral::Solver::debug_print() {
 //   return return_str;
 // }
 
- void Mistral::Solver::print_clist(int k) {
-   ConstraintNode nd = constraint_graph[k]->first(_VALUE_);
-   if(constraint_graph[k]->next(nd)) {
-     std::cout << " [ " << nd.elt.constraint->id;
-     while( constraint_graph[k]->next(nd) ) 
-       std::cout << " ][ " << nd.elt.constraint->id;
-     std::cout << " ] \n";
-   }
- }
+void Mistral::Solver::print_clist(int k) {
+  for(Event trig = 0; trig<3; ++trig) 
+     for(int cons = constraint_graph[k].on[trig].size; --cons;) 
+       std::cout << "[" << constraint_graph[k].on[trig][cons].id() << "]";
+  std::cout << "\n";
+}
 
 std::ostream& Mistral::Solver::display(std::ostream& os) {
   os << "Variables:\n";
-  ConstraintNode nd;
-  //Vector< int > con_id;
 
   for(unsigned int i=0; i<variables.size; ++i) {
-    //if(variables[i].get_degree()>0) {
     os << "  " << variables[i] << " in " << variables[i].get_domain() ; //<< "\n";
     
-    //if(!variables[i].is_ground()) {
-    nd = constraint_graph[i]->first(_VALUE_);
-    if(constraint_graph[i]->next(nd)) {
-      os << ": [" << nd.elt.constraint->id;
-      while( constraint_graph[i]->next(nd) ) {
-	os << "] [" << nd.elt.constraint->id;
+    os << ": " ;
+    for(Event trig = 0; trig<3; ++trig) 
+      for(int cons = constraint_graph[i].on[trig].size; --cons>=0;) {
+	os << "[" << constraint_graph[i].on[trig][cons].id() << "]";
       }
-      os << "]";
-    }
-    //}
     os << "\n";
-    //}
   }
   
   os << "\nConstraints:\n";
   for(unsigned int i=0; i<constraints.size; ++i)
-    if(constraints[i]->is_posted)
-      os << "  [" << constraints[i]->id << "]: " << constraints[i] << "\n";
+    os << "  [" << constraints[i].id() << "]: " << constraints[i] << "\n";
   
   return os;
 }
+
 
 
 //Mistral::Decision 
@@ -2157,6 +2295,7 @@ void Mistral::Solver::forget() {
   if(base) base->forget(parameters.forgetfulness);
 }
 
+
 void Mistral::Solver::branch_right() {
   Mistral::Decision deduction;
   //backtrack_level = level-1;
@@ -2208,10 +2347,10 @@ void Mistral::Solver::branch_right() {
 
 
 void Mistral::Solver::backjump() {
-  int backtrack_level = culprit->get_backtrack_level();
+  int backtrack_level = culprit.get_backtrack_level();
   decisions.size -= (level - backtrack_level);
   restore(backtrack_level);
-  Decision decision = culprit->get_decision();
+  Decision decision = culprit.get_decision();
   
 #ifdef _DEBUG_SEARCH
   std::cout << "c";
@@ -2247,9 +2386,16 @@ void Mistral::Solver::branch_left() {
 
   //if(decision.var.is_ground()) exit(1);
   
+
+  //std::cout << 11 << std::endl;
+
   decision.make();
+
+  //std::cout << 21 << std::endl;
+
   notify_decision();
 
+  //std::cout << 31 << std::endl;
 
   // //if(level>=2)
   // std::cout << "X4's trail: " << (variables[4].domain_type == RANGE_VAR ?
@@ -2269,33 +2415,41 @@ void Mistral::Solver::branch_left() {
     unsigned int i, j, k;
 
   if(parameters.checked) {
+
+    //std::cout << posted_constraints << std::endl;
+
     /// check the current solution
     Vector< int > tmp_sol;
-    Constraint *C;
+    Variable *scope;
+    Constraint C;
     //for(i=0; i<constraints.size; ++i) {
     for(i=0; i<posted_constraints.size; ++i) {
       C = constraints[posted_constraints[i]];
-      
-      k=C->scope.size;
+      k=C.arity();
+      scope = C.get_scope();
       for(j=0; j<k; ++j) {
-	if(C->scope[j].is_ground())
-	  tmp_sol.add(C->scope[j].get_value());
-	else break;
+	if(scope[j].is_ground()) 
+	  tmp_sol.add(scope[j].get_value());
+	else {
+	  tmp_sol.add(scope[j].get_min());
+	  //break;
+	}
       }
 
       bool consistent = true;
       if(tmp_sol.size < k) {
-	if(parameters.checked==2) {
-	  j = C->scope[0].get_min();
-	  consistent = (C->first_support(0,j) ||
-			C->find_support(0,j));
-	} else if(parameters.checked>2) {
-	  active_constraints.trigger(C);
-	  culprit = active_constraints.select(constraints);
-	  if(culprit != C) {
+	// if(parameters.checked==2) {
+	//   j = scope[0].get_min();
+	//   consistent = (C->first_support(0,j) ||
+	// 		C->find_support(0,j));
+	// } else if(parameters.checked>2) {
+	//active_constraints.trigger(C);
+	C.trigger();
+	culprit = active_constraints.select(constraints);
+	if(culprit != C) {
 	    std::cout << "c Triggered constraints during checking!" << std::endl;
 	  }
-	  if(IS_FAIL(C->Constraint::propagate())) {
+	  if(IS_FAIL(C.propagate())) {
 	    consistent = false;
 	  } else {
 	    if(!active_constraints.empty()) {
@@ -2305,20 +2459,20 @@ void Mistral::Solver::branch_left() {
 	      }
 	    }
 	  }
-	}
+	  //}
       } else {
-	consistent = !C->check(tmp_sol.stack_);
+	consistent = !C.check(tmp_sol.stack_);
       }
       if(!consistent)
       {
 	
 	if(tmp_sol.size < k) {
-	  std::cerr << "\nError: solution does not satisfies c" << C->id << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
+	  std::cerr << "\nError: solution does not satisfies c" << C.id() << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
 	  exit(0);
 	} else {
-	  std::cerr << "\nError: solution does not satisfies c" << C->id << ": " << C ;
+	  std::cerr << "\nError: solution does not satisfies c" << C.id() << ": " << C ;
 	  for(j=0; j<k; ++j) {
-	    std::cerr << " " << C->scope[j].get_domain();
+	    std::cerr << " " << scope[j].get_domain();
 	  }
 	  std::cerr << " (backtracking)"<< std::endl;
 	  exit(0);
@@ -2392,14 +2546,100 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
 {
   int status = UNKNOWN;
   while(status == UNKNOWN) {
+
+// #ifdef _DEBUG_SEARCH
+//     std::cout << sequence << std::endl;
+// #endif
+
     if(propagate()) {
+
+      ++statistics.num_nodes;
+
+#ifdef _MONITOR
+    std::cout << "c" << std::endl;
+    unsigned int k=0;
+    // for(; k<monitored_variables.size; ++k) {
+    //   monitored_variables[k] = monitored_variables[k].get_var();
+    // }
+    // k = 0;
+    for(unsigned int q=0; q<monitored_index.size; ++q) {
+      std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+      for(; k<monitored_index[q]; ++k) {
+	//std::cout << "|" << variables[monitored[k]] ;
+	//std::cout.flush();
+	std::cout << variables[monitored[k]].get_domain() << " ";
+	//std::cout.flush();
+	//std::cout << variables[monitored[k]].get_history() << " ";
+      }
+      std::cout << std::endl;
+    }
+
+  // for(int i=0; i<variables.size; ++i) {
+  //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+  //   for(int k=2; k>=0; --k) {
+  //     std::cout << "["; 
+  //     for(int j=0; j<constraint_graph[i].on[k].size; ++j) {
+  // 	std::cout << constraint_graph[i].on[k][j] << ":" << constraint_graph[i].on[k][j].index();
+  // 	if(j<constraint_graph[i].on[k].size-1) std::cout << ", ";
+  //     }
+  //     std::cout << "]";
+  //   }
+  //   std::cout << std::endl;
+  //   //std::cout << constraint_graph[i] << std::endl;
+  // }
+  // //std::cout << std::endl;
+#endif
+
       if( sequence.empty()  ) status = satisfied();
       else branch_left();
     } else {
+
+
+    // std::cout << "b" << std::endl;
+    // unsigned int k=0;
+    // // for(; k<monitored_variables.size; ++k) {
+    // //   monitored_variables[k] = monitored_variables[k].get_var();
+    // // }
+    // // k = 0;
+    // for(unsigned int q=0; q<monitored_index.size; ++q) {
+    //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+    //   for(; k<monitored_index[q]; ++k) {
+    // 	std::cout << "|" << variables[monitored[k]] ;
+    // 	std::cout.flush();
+    // 	std::cout << variables[monitored[k]].get_domain();
+    // 	std::cout.flush();
+    // 	std::cout << variables[monitored[k]].get_history() << " ";
+    //   }
+    //   std::cout << std::endl;
+    // }
+
+
+
       if( parameters.backjump ) learn_nogood();
       if( decisions.empty() ) status = exhausted();
       else if( limits_expired() ) status = LIMITOUT;
       else branch_right();
+
+
+    // std::cout << "a" << std::endl;
+    // k=0;
+    // // for(; k<monitored_variables.size; ++k) {
+    // //   monitored_variables[k] = monitored_variables[k].get_var();
+    // // }
+    // // k = 0;
+    // for(unsigned int q=0; q<monitored_index.size; ++q) {
+    //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+    //   for(; k<monitored_index[q]; ++k) {
+    // 	std::cout << "|" << variables[monitored[k]] ;
+    // 	std::cout.flush();
+    // 	std::cout << variables[monitored[k]].get_domain();
+    // 	std::cout.flush();
+    // 	std::cout << variables[monitored[k]].get_history() << " ";
+    //   }
+    //   std::cout << std::endl;
+    // }
+
+
     }
   }
   return status;
@@ -2454,4 +2694,445 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::SolverStatis
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::SolverStatistics* x) {
   return x->display(os);
 }
+
+// std::ostream& Mistral::operator<< (std::ostream& os, Mistral::ConstraintArray& x) {
+//   return x.display(os, true);
+// }
+// std::ostream& Mistral::operator<< (std::ostream& os, Mistral::ConstraintArray* x) {
+//   return x->display(os, true);
+// }
+
+
+
+// Mistral::ConstraintTriggerArray::ConstraintTriggerArray() {
+// }
+
+// Mistral::ConstraintTriggerArray::ConstraintTriggerArray(const int size) {
+//   initialise(size);
+// }
+
+// void Mistral::ConstraintTriggerArray::initialise(const int size) {
+//   for(int i=0; i<3; ++i)
+//     on[i].initialise(size);
+
+//   /*
+//   value_trigger.initialise(size);
+//   range_trigger.initialise(size);
+//   domain_trigger.initialise(size);
+//   */
+// }
+
+// Mistral::ConstraintTriggerArray::~ConstraintTriggerArray() { }
+
+// std::ostream& Mistral::ConstraintTriggerArray::display(std::ostream& os, bool full) const {
+//   return os;
+// }
+
+
+
+// Mistral::ConstraintArray::ConstraintArray() {
+//   bound[0] = bound[1] = data = end = trigger[0] = trigger[1] = trigger[2] = trigger[3] = NULL;
+//   var_index = NULL;
+// }
+
+// Mistral::ConstraintArray::ConstraintArray(const int size) {
+//   initialise(size);
+// }
+
+// void Mistral::ConstraintArray::initialise(const int size) {
+//   data = new Constraint*[size];
+//   end = data+size;
+//   bound[0] = bound[1] = trigger[0] = trigger[1] = trigger[2] = trigger[3] = data+(size/2);
+//   var_index = new int[size];
+// }
+
+// Mistral::ConstraintArray::~ConstraintArray() { delete [] data; }
+
+// void Mistral::ConstraintArray::extend() {
+
+//   //std::cout << "\nextend!! " << std::endl;
+
+//   int size = (end-data);
+//   Constraint **new_data = new Constraint *[2*size];
+//   int *new_var_index = new int[2*size];
+
+//   int old_start_offset = (trigger[0]-data);
+//   int old_end_offset = (end-trigger[3]);
+
+//   int offset = (size + old_end_offset + old_start_offset)/2;
+      
+//   memcpy(new_data+offset, trigger[0], 
+// 	 sizeof(Constraint*)*(trigger[3]-trigger[0]));
+//   memcpy(new_var_index+offset, var_index+(trigger[0]-data), 
+// 	 sizeof(int)*(trigger[3]-trigger[0]));
+
+//   end = new_data+2*size;
+//   bound[1] = new_data+offset+(bound[1]-trigger[0]);
+//   bound[0] = new_data+offset+(bound[0]-trigger[0]);
+
+//   trigger[1] = new_data+offset+(trigger[1]-trigger[0]);
+//   trigger[2] = new_data+offset+(trigger[2]-trigger[0]);
+//   trigger[3] = new_data+offset+(trigger[3]-trigger[0]);
+//   trigger[0] = new_data+offset;      
+
+//   for(Constraint** cit = trigger[0]; cit<trigger[3]; ++cit) {
+//     (*cit)->index[new_var_index[cit-new_data]] = cit;
+//   }
+
+//   delete [] data;
+//   delete [] var_index;
+
+//   data = new_data;
+//   var_index = new_var_index;
+
+
+
+//   //check_integrity();
+
+// }
+
+// void Mistral::ConstraintArray::remove(Mistral::Constraint** c_index) {
+//   Constraint *d;
+//   int d_rank;
+
+//   if(c_index < trigger[1]) {
+//     // value trigger, we move *trigger[0] to c_index and increment trigger[0]
+
+//     d = *(trigger[0]);
+//     *c_index = d;
+//     d_rank = var_index[c_index-data] = var_index[trigger[0]-data];
+//     d->index[d_rank] = c_index;
+//     ++trigger[0];
+
+//   } else if(c_index >= trigger[2]) {
+//     // domain trigger, we move *(trigger[3]-1) to c_index and decrement trigger[3]
+
+//     d = *(--trigger[3]);
+//     *c_index = d;
+//     d_rank = var_index[c_index-data] = var_index[trigger[3]-data];
+//     d->index[d_rank] = c_index;
+
+//   } else {
+//     // remove in the left: put *trigger[0] at *trigger[1] and *trigger[1] at c_index
+//     // remove in the right: put *trigger[3]-1 at *trigger[2]-1 and *trigger[2]-1 at c_index and decrement trigger[3] and trigger[2]
+
+//     d = *(--trigger[2]);
+//     *c_index = d;
+//     d_rank = var_index[c_index-data] = var_index[trigger[2]-data];
+//     d->index[d_rank] = c_index;
+
+//     d = *(--trigger[3]);
+//     if(trigger[3] != trigger[2]) {
+//       *trigger[2] = d;
+//       d_rank = var_index[trigger[2]-data] = var_index[trigger[3]-data];
+//       d->index[d_rank] = trigger[2];
+//     }
+//   }
+// }
+
+
+
+// // given a constraint and a constraint list, get the index of the constraint in the list
+// // 
+
+
+// Mistral::Constraint** Mistral::ConstraintArray::add_range(Mistral::Constraint *c, const int idx) {
+//   // add constraint c to its ith variable. Here we assume that 
+//   //  1/ c has been declared and removed, 
+//   //  2/ all removes of range triggers have been made by the right
+
+//   if(trigger[2] < trigger[3]) {	
+
+//     int d_rank = var_index[trigger[2]-data];
+//     var_index[trigger[3]-data] = d_rank;
+//     var_index[trigger[2]-data] = idx;
+	
+//     *trigger[3] = *trigger[2];
+//     *trigger[2] = c;
+	
+//     (*trigger[3])->index[d_rank] = trigger[3];
+
+//   } else {
+
+
+//     //std::cout << "here " << (trigger[2]-data) << std::endl;
+
+//     var_index[trigger[2]-data] = idx;
+//     *trigger[2] = c;
+
+//   }
+
+//   ++trigger[3];
+      
+//   return trigger[2]++;
+// }
+
+
+// Mistral::Constraint** Mistral::ConstraintArray::add_range_before(Mistral::Constraint *c, const int idx) {
+//   // put trigger[1]-1 at trigger[0]-1 put c at trigger[1]-1 and decrement them; 
+	
+//   if(trigger[0] < trigger[1]) {
+
+//     int d_rank = var_index[--trigger[1]-data];
+//     var_index[--trigger[0]-data] = d_rank;
+//     var_index[trigger[1]-data] = idx;
+       
+//     *trigger[0] = *trigger[1];
+//     *trigger[1] = c;
+       
+//     (*trigger[0])->index[d_rank] = trigger[0];
+
+//   } else {
+
+//     var_index[--trigger[1]-data] = idx;
+//     *trigger[1] = c;
+//     --trigger[0];
+
+//   }
+       
+     
+//   return trigger[1];
+// }
+
+// Mistral::Constraint** Mistral::ConstraintArray::add_value(Mistral::Constraint *c, const int idx) {
+//   // add constraint c to its ith variable. Here we assume that 
+//   //  1/ c has been declared and removed, 
+//   //  2/ all removes of range triggers have been made by the right
+	
+//   *(--trigger[0]) = c;
+//   var_index[trigger[0]-data] = idx;
+      
+//   return trigger[0];
+// }
+
+
+// Mistral::Constraint** Mistral::ConstraintArray::add_domain(Mistral::Constraint *c, const int idx) {
+//   // add constraint c to its ith variable. Here we assume that 
+//   //  1/ c has been declared and removed, 
+//   //  2/ all removes of range triggers have been made by the right
+	
+//   var_index[trigger[3]-data] = idx;
+//   *trigger[3] = c;
+      
+//   return trigger[3]++;
+// }
+
+// Mistral::Constraint** Mistral::ConstraintArray::declare_range(Mistral::Constraint *c, const int idx) {
+//   Constraint **ptr;
+//   if(bound[1] < end) {
+//     ++bound[1];
+//     ptr = add_range(c, idx);
+//   } else if(bound[0] > data) {
+//     --bound[0];
+//     ptr = add_range_before(c, idx);
+//   } else {
+//     extend();
+//     --bound[0];
+//     ptr = add_range_before(c, idx);
+//   }
+//   return ptr;
+// }
+	  
+// Mistral::Constraint** Mistral::ConstraintArray::declare_value(Mistral::Constraint *c, const int idx) {
+//   if(bound[0] == data) extend();
+//   --bound[0];
+//   return add_value(c, idx);	
+// }
+
+
+// Mistral::Constraint** Mistral::ConstraintArray::declare_domain(Mistral::Constraint *c, const int idx) {
+//   if(bound[1] == end) extend();
+//   ++bound[1];
+//   return add_domain(c, idx);	
+// }
+
+
+// std::ostream& Mistral::ConstraintArray::display(std::ostream& os, bool full) const {
+//   if(full) {
+//     os << (end-data) << " [" << (bound[0]-data) << "][" << (trigger[0]-bound[0]) << "]";
+//   }
+//   os << "(";
+
+//   BitSet all_ids(0, 1000, BitSet::empt);
+//   bool bug = false;
+
+//   for(int i=0; i<3; ++i) {
+//     if(full) os << i << " " << (trigger[i+1]-trigger[i]) << ": ";
+//     for(Constraint **cit = trigger[i]; cit<trigger[i+1]; ++cit) {
+//       if(cit>trigger[i]) os << ", ";
+//       os << (*cit)->id ;
+
+//       if(all_ids.contain((*cit)->id)) {
+// 	bug = true;
+//       }
+      
+//       all_ids.add((*cit)->id);
+//     }
+//     if(i<2) os << "|";
+//   }
+
+//   os << ")";
+//   if(full) {
+//     os << "[" << (bound[1]-trigger[3]) << "][" << (end-bound[1]) << "]";
+//   }
+  
+//   if(bug) {
+//     os << std::endl;
+//     exit(1);
+//   }
+
+//   return os;
+// }
+
+// void Mistral::ConstraintArray::check_integrity() const {
+
+//   //std::cout << "[" << (trigger[0]-data) << ".." << (trigger[3]-data) << "]" << std::endl;
+
+//   for(Constraint **cit = trigger[0]; cit<trigger[3]; ++cit) {
+//     if((*cit)->index[var_index[cit-data]] != cit) {
+//       std::cout << " on " ;
+//       display(std::cout, true);
+//       std::cout << ":\n  "
+// 		<< "problem with " << (*cit)->id << " at rank " << (cit-data) 
+// 		<< ": " << cit << " v " << (*cit)->index[var_index[cit-data]] 
+// 		<< " " << (*cit) << " " << (*cit)->id << std::endl;
+//       exit(1);
+//     }
+//   }
+// }
+
+
+/*
+Mistral::ValueTrigger::ValueTrigger(ConstraintArray * a) {
+  array = a;
+
+  bound = array->bound[0];
+  data = array->data;
+  trigger = array->trigger[0];
+  var_index = array->var_index;
+}
+
+Mistral::ValueTrigger::~ValueTrigger() { 
+  bound = data = trigger = NULL;
+  var_index = NULL;
+}
+
+void Mistral::ValueTrigger::remove(Mistral::Constraint** c_index) {
+  Constraint *d;
+  int d_rank;
+
+  d = *(trigger);
+  *c_index = d;
+  d_rank = var_index[c_index-data] = var_index[trigger-data];
+  d->index[d_rank] = c_index;
+  ++trigger;
+}
+
+Mistral::Constraint** Mistral::ValueTrigger::add(Mistral::Constraint *c, const int idx) {
+  // add constraint c to its ith variable. Here we assume that 
+  //  1/ c has been declared and removed, 
+  //  2/ all removes of range triggers have been made by the right
+	
+  *(--trigger) = c;
+  var_index[trigger-data] = idx;
+      
+  return trigger;
+}
+	  
+Mistral::Constraint** Mistral::ValueTrigger::declare(Mistral::Constraint *c, const int idx) {
+  if(bound == data) array->extend();
+  --bound;
+  return add(c, idx);	
+}
+
+
+
+
+Mistral::RangeTrigger::RangeTrigger(ConstraintArray * a) {
+  array = a;
+
+  bound[0] = array->bound[0];
+  bound[1] = array->bound[1];
+  data = array->data;
+  trigger[0] = array->trigger[2];
+  trigger[1] = array->trigger[3];
+  var_index = array->var_index;
+}
+
+Mistral::RangeTrigger::~RangeTrigger() { 
+  bound[0] = bound[1] = data = trigger[0] = trigger[1] = NULL;
+  var_index = NULL;
+}
+
+void Mistral::RangeTrigger::remove(Mistral::Constraint** c_index) {
+  Constraint *d;
+  int d_rank;
+
+  // remove in the left: put *trigger[0] at *trigger[1] and *trigger[1] at c_index
+  // remove in the right: put *trigger[3]-1 at *trigger[2]-1 and *trigger[2]-1 at c_index and decrement trigger[3] and trigger[2]
+  
+  d = *(--trigger[0]);
+  *c_index = d;
+  d_rank = var_index[c_index-data] = var_index[trigger[0]-data];
+  d->index[d_rank] = c_index;
+  
+  d = *(--trigger[1]);
+  if(trigger[1] != trigger[0]) {
+    *trigger[0] = d;
+    d_rank = var_index[trigger[0]-data] = var_index[trigger[1]-data];
+    d->index[d_rank] = trigger[0];
+  }
+  
+}
+
+Mistral::Constraint** Mistral::RangeTrigger::add(Mistral::Constraint *c, const int idx) {
+
+ // add constraint c to its ith variable. Here we assume that 
+  //  1/ c has been declared and removed, 
+  //  2/ all removes of range triggers have been made by the right
+
+  if(trigger[0] < trigger[1]) {	
+
+    int d_rank = var_index[trigger[0]-data];
+    var_index[trigger[1]-data] = d_rank;
+    var_index[trigger[0]-data] = idx;
+	
+    *trigger[1] = *trigger[0];
+    *trigger[0] = c;
+	
+    (*trigger[1])->index[d_rank] = trigger[1];
+
+  } else {
+
+
+    //std::cout << "here " << (trigger[0]-data) << std::endl;
+
+    var_index[trigger[0]-data] = idx;
+    *trigger[0] = c;
+
+  }
+
+  ++trigger[1];
+      
+  return trigger[0]++;
+}
+	  
+Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, const int idx) {
+
+  Constraint **ptr;
+  if(bound[1] < end) {
+    ++bound[1];
+    ptr = add(c, idx);
+  } else if(bound[0] > data) {
+    --bound[0];
+    ptr = add_before(c, idx);
+  } else {
+    extend();
+    --bound[0];
+    ptr = add_before(c, idx);
+  }
+  return ptr;
+
+}
+*/
 

@@ -26,6 +26,72 @@
 #include <mistral_variable.hpp>
 
 
+
+Mistral::ConsolidateListener::ConsolidateListener(Mistral::Solver *s) 
+  : solver(s), VariableListener(), ConstraintListener()
+{
+  sequence = &(solver->sequence);
+  constraints.initialise(solver->variables.size);
+  int n = solver->variables.size;
+  for(int i=0; i<n; ++i) {
+    Vector< Constraint > neighborhood;
+    neighborhood.initialise(solver->variables[i].get_degree());
+    for(int k=0; k<3; ++k) {
+      for(int j=solver->constraint_graph[i].on[k].size-1; j>=0; --j)
+     	neighborhood.add(solver->constraint_graph[i].on[k][j]);
+    }
+    constraints.add(neighborhood);
+  }
+}
+
+
+Mistral::ConsolidateListener::~ConsolidateListener() {}
+
+void Mistral::ConsolidateListener::notify_add_var() {
+  Variable x = solver->variables.back();
+  while(constraints.size<x.id()) {
+    Vector< Constraint > neighborhood;
+    constraints.add(neighborhood);
+  }
+  Vector< Constraint > neighborhood;
+  neighborhood.initialise(x.get_degree());
+  for(int k=0; k<3; ++k) {
+    for(int j=solver->constraint_graph[x.id()].on[k].size-1; j>=0; --j)
+      neighborhood.add(solver->constraint_graph[x.id()].on[k][j]);
+  }
+  constraints.add(neighborhood);
+}
+
+void Mistral::ConsolidateListener::notify_post (Constraint c) {};
+
+void Mistral::ConsolidateListener::notify_relax(Constraint c) {};
+
+void Mistral::ConsolidateListener::notify_add_con(Constraint c) {
+  Variable *scope = c.get_scope();
+  int arity = c.arity();
+  for(int i=0; i<arity; ++i) {
+    constraints[scope[i].id()].add(c);
+    constraints[scope[i].id()].back().set_index(i);
+  }
+}
+
+void Mistral::ConsolidateListener::notify_change(const int idx) {
+
+  // std::cout << "BEG REACT TO CHANGE ON " << solver->variables[idx] << std::endl;
+
+  Variable X = solver->variables[idx];
+  int ids = sequence->index(idx);
+  if(ids>=0) sequence->list_[ids] = X;
+
+  for(int i=constraints[idx].size-1; i>=0; --i) {
+    constraints[idx][i].consolidate_var();
+  }
+
+  // std::cout << "END REACT TO CHANGE ON " << solver->variables[idx] << std::endl;
+}
+
+
+
 //Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s, void *a) 
 Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
   : solver(s) {
@@ -97,10 +163,10 @@ Mistral::Lexicographic::Lexicographic(Solver *s)
   : solver(s) {
   index.initialise(s->variables.size);
   solver->add(this);
-  last.initialise(0,s);
+  last.initialise(s,0);
 }
 
-void Mistral::Lexicographic::initialise(VarStack< Variable >& seq) {
+void Mistral::Lexicographic::initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
   int n = solver->variables.size;
   std::fill(index.stack_, index.stack_+n, -1);
   for(unsigned int i=0; i<seq.size; ++i) {
@@ -114,7 +180,7 @@ void Mistral::Lexicographic::initialise(Solver *s) {
   solver = s;
   index.initialise(s->variables.size);
   solver->add(this);
-  last.initialise(0,s);
+  last.initialise(s,0);
 }
 
 Mistral::Lexicographic::~Lexicographic() {}

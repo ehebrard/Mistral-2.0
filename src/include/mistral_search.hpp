@@ -111,9 +111,9 @@ namespace Mistral {
   class ConstraintListener {
   public:
     int cid;
-    virtual void notify_post(Constraint *c) = 0;
-    virtual void notify_relax(Constraint *c) = 0;
-    virtual void notify_add(Constraint *c) = 0;
+    virtual void notify_post   (Constraint c) = 0;
+    virtual void notify_relax  (Constraint c) = 0;
+    virtual void notify_add_con(Constraint c) = 0;
 
     std::ostream& display(std::ostream& os) { os << "constraint-L"; return os; }    
   };
@@ -129,7 +129,7 @@ namespace Mistral {
   class VariableListener {
   public:
     int vid;
-    virtual void notify_add() = 0;
+    virtual void notify_add_var() = 0;
     virtual void notify_change(const int idx) = 0;
 
     std::ostream& display(std::ostream& os) { os << "variable-L"; return os; }    
@@ -219,35 +219,39 @@ namespace Mistral {
     double *get_weight() { return variable_weight.stack_; }     
 
     virtual void notify_failure() {
-      Constraint *con = solver->culprit;
-      if(con) {
-	int i = con->scope.size, idx;
-	++constraint_weight[con->id];
+      Constraint con = solver->culprit;
+      if(!con.empty()) {
+	Variable *scope = con.get_scope();
+	int i = con.arity(), idx;
+	++constraint_weight[con.id()];
 	while(i--) {
-	  idx = con->scope[i].id();
+	  idx = scope[i].id();
 	  if(idx>=0) ++variable_weight[idx];
 	}
       }
     }
 
-    virtual void notify_post(Constraint *con) {
-      int i = con->stress, idx;
+    virtual void notify_post(Constraint con) {
+      int i = con.num_active(), idx;
+      Variable *scope = con.get_scope();
       while(i--) {
-	idx = con->scope[con->active[i]].id();
-	if(idx>=0) variable_weight[idx] += constraint_weight[con->id];
+	idx = scope[con.get_active(i)].id();
+	if(idx>=0) variable_weight[idx] += constraint_weight[con.id()];
       }
     }
 
-    virtual void notify_relax(Constraint *con) {
-      int i = con->active.size, idx;
+    virtual void notify_relax(Constraint con) {
+      int i = con.num_active(), idx;
+      Variable *scope = con.get_scope();
       while(i--) {
-	idx = con->scope[con->active[i]].id();
-	if(idx>=0) variable_weight[idx] -= constraint_weight[con->id];
+	idx = scope[con.get_active(i)].id();
+	if(idx>=0) variable_weight[idx] -= constraint_weight[con.id()];
       }
     }
 
-    virtual void notify_add(Constraint *con) {
-      unsigned int idx = con->id;
+    virtual void notify_add_con(Constraint con) {
+      unsigned int idx = con.id();
+      Variable *scope = con.get_scope();
       while(constraint_weight.size <= idx) {
 	constraint_weight.add(1.0);
       }
@@ -412,7 +416,7 @@ namespace Mistral {
     virtual ~BranchingHeuristic() {}
 
     //virtual void initialise() {}
-    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     virtual void close() {}
 
     virtual Decision branch() = 0;
@@ -450,7 +454,7 @@ namespace Mistral {
     //   choice = ValSelector(s,a);
     // }
 
-    virtual void initialise(VarStack< Variable >& seq) {var.initialise(seq);}
+    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {var.initialise(seq);}
 
     virtual Decision branch() {
       return choice.make(var.select());
@@ -487,7 +491,7 @@ namespace Mistral {
     GenericDVO(Solver* s) : solver(s) {}
     //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
     virtual void initialise(Solver *s) { solver = s; }
-    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     //@}
     
     /**@name Utils*/
@@ -544,7 +548,7 @@ namespace Mistral {
     }
     //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
     virtual void initialise(Solver *s) { solver = s; }
-    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
 
     virtual ~GenericRandomDVO() 
     {
@@ -610,7 +614,7 @@ namespace Mistral {
     }
     //virtual void close() { manager->close(); }
     //virtual void initialise() { manager->initialise(); }
-    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     virtual void initialise_manager() {
       manager = new WeightManager(GenericDVO< VarComparator >::solver);
       //GenericDVO< VarComparator >::solver->add(manager);
@@ -653,7 +657,7 @@ namespace Mistral {
       initialise_manager();
     }
     //virtual void initialise(Solver *s) { manager->initialise(s); }
-    virtual void initialise(VarStack< Variable >& seq) {}
+    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     virtual void initialise_manager() {
       manager = new WeightManager(GenericRandomDVO< VarComparator, RAND >::solver);
       //GenericRandomDVO< VarComparator >::solver->add(manager);
@@ -684,7 +688,7 @@ namespace Mistral {
     virtual ~NoOrder();
     void initialise(Solver *s) { solver = s; }
     //void initialise(Solver *s, void *a) { solver = s; }
-    void initialise(VarStack< Variable >& seq) {}
+    void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     
     Variable select();
 
@@ -701,22 +705,49 @@ namespace Mistral {
 
   public: 
     
-    Solver *solver;
-    Vector< Variable >           order;
-    Vector< int >                index;
-    ReversibleNum< unsigned int > last;
+    Solver             *solver;
+    Vector< Variable >   order;
+    Vector< int >        index;
+    ReversibleNum< int >  last;
 
     Lexicographic() { solver = NULL; }
     Lexicographic(Solver *s);
     void initialise(Solver *s);
     //void initialise(Solver *s, void *a=NULL);
-    void initialise(VarStack< Variable >& seq);
+    void initialise(VarStack< Variable, ReversibleNum<int> >& seq);
     virtual ~Lexicographic();
 
-    virtual void notify_add() {};
+    virtual void notify_add_var() {};
     virtual void notify_change(const int idx);
     
     Variable select();
+
+  };
+
+
+  /*! \class Lexicographic
+    \brief  Class Lexicographic
+
+    This heuristic selects the variable with lowest rank
+    in the initial sequence of search variables.
+  */
+  class ConsolidateListener : public VariableListener, public ConstraintListener {
+
+  public: 
+    
+    Solver                                      *solver;
+    VarStack < Variable, ReversibleNum<int> > *sequence;
+    Vector< Vector< Constraint > >          constraints;
+
+
+    ConsolidateListener(Solver *s);
+    virtual ~ConsolidateListener();
+
+    virtual void notify_post   (Constraint c);
+    virtual void notify_relax  (Constraint c);
+    virtual void notify_add_con(Constraint c);
+    virtual void notify_add_var();
+    virtual void notify_change (const int idx);
 
   };
 

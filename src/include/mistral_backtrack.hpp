@@ -57,27 +57,186 @@ namespace Mistral {
  */
 
 
+
+
   /*! \class Environment
     \brief The minimal structures used to control the backtracking process
   */
   /********************************************
    * Environement Objects
    ********************************************/
+
+  class Constraint;
+  class Trigger : public Vector< Constraint > {
+
+  public:
+    
+    int post(Constraint ct) ;
+
+    void relax(const int idx) ;
+
+  };
+
+
+  template<class T> class ReversibleNum;
+  class ReversibleSet;
   class Reversible;
+  class Variable;
+  class Decision;
+  class Solver;
+  class ConstraintImplementation;
+  class Constraint  {
+    
+  public:
+    
+    ConstraintImplementation* propagator;
+    unsigned int data;
+    
+    Constraint() {propagator = NULL; data=0;}
+    Constraint(ConstraintImplementation* p) ;
+    Constraint(ConstraintImplementation* p, const int t) { propagator = p; data = t; }
+    void initialise(Solver*);
+    virtual ~Constraint() {}
+    
+    inline int index() const { return data&CTYPE; }
+    inline bool postponed() const { return (data&POSTPONED); }
+    inline bool pushed() const { return (data&PUSHED); }
+    inline bool global() const { return !(data&0xc0000000); }
+    inline bool binary() const { return (data&BINARY); }
+    inline bool ternary() const { return (data&TERNARY); }
+    inline bool idempotent() const { return (data&TERNARY); }
+
+    inline void clear() { propagator = NULL; data = 0; }
+    inline bool empty() const { return !propagator; }
+
+    int id() const ;
+    int priority() const ;
+    void set_index(const int idx);
+    void set_rank(const int idx);
+    void set_id(const int idx);
+    void post(Solver*);
+    void awaken();
+    void trigger();
+    int check(int* sol);
+    void consolidate();
+    void consolidate_var();
+    void re_link_to(Trigger* t);
+
+    ConstraintImplementation *freeze();
+    ConstraintImplementation *defrost();
+
+
+    int arity() const ;
+    int num_active() const ;
+    int get_active(const int i) const ;
+    Variable* get_scope() ;
+
+    PropagationOutcome propagate();
+    PropagationOutcome propagate(const Event evt);
+    void restore();
+
+    int get_backtrack_level();
+    Decision get_decision();
+    
+    bool operator==(Constraint c) const {return propagator == c.propagator;}
+    bool operator!=(Constraint c) const {return propagator != c.propagator;}
+
+    std::ostream& display(std::ostream& os) const;
+
+};
+
+
+
+  typedef TwoWayStack< Triplet < int, Event, ConstraintImplementation*> > VariableQueue;
+
   class Environment {
   public:
     
     /*!@name Parameters*/
     //@{
     int level;
-    Vector< Reversible* > saved_objs;
+
+    //Vector< Reversible* >       saved_objs;
+    Vector< int >                 saved_vars;
+    Vector< Constraint >          saved_cons;
+    Vector< int* >                saved_bools;
+    Vector< ReversibleSet* >      saved_lists;
+    Vector< ReversibleNum<int>* > saved_ints;
+    //Vector< ReversibleNum<double>* > saved_doubles;
+
+    /// The delimitation between different levels is kept by this vector of integers
+    Vector< int > trail_;
+
+    VariableQueue active_variables;
+
+    ConstraintImplementation *taboo_constraint;
     //@}
+
+  /*!@name Constructors*/
+    //@{
+    Environment() { 
+      level = 0;
+      taboo_constraint = NULL;
+    }
+    virtual ~Environment() {}
+    //@}
+
 
     /*!@name Backtrack method*/
     //@{
-    void save(Reversible *r);
+    inline void save() {
+
+      trail_.add(saved_vars.size);
+      trail_.add(saved_cons.size);
+      trail_.add(saved_bools.size);
+      trail_.add(saved_lists.size);
+      trail_.add(saved_ints.size);
+
+      ++level;
+
+    }
+
+
+    void trigger_event(const int var, const Event evt) {
+      Triplet< int, int, ConstraintImplementation* > t(var, evt, taboo_constraint);
+      active_variables.push_back(t);
+    }
+
+    void _restore_();//  {
+
+    //   unsigned int previous_level;
+
+    //   previous_level = trail_.pop();
+    //   while( saved_ints.size > previous_level ) 
+    // 	saved_ints.pop()->restore();
+
+    //   previous_level = trail_.pop();
+    //   while( saved_lists.size > previous_level ) 
+    // 	saved_lists.pop()->restore();
+      
+    //   previous_level = trail_.pop();
+    //   while( saved_bools.size > previous_level ) 
+    // 	*(saved_lists.pop()) = 3;
+
+    //   previous_level = trail_.pop();
+    //   previous_level = trail_.pop();
+      
+    //   --level;
+      
+    // }
+
+    inline void save(ReversibleNum<int> *r) {saved_ints.add(r);}
+    //inline void save(ReversibleNum<double> *r) {saved_doubles.add(r);}
+    inline void save(ReversibleSet *r) {saved_lists.add(r);}
+    inline void save(int *r) {saved_bools.add(r);}
+    
+    inline void save(int r) {saved_vars.add(r);}
+    inline void save(Constraint r) {saved_cons.add(r);}
     //@}
+
   };
+
+ 
 
 
   /********************************************
@@ -101,14 +260,86 @@ namespace Mistral {
     /*!@name Constructors*/
     //@{
     Reversible() { env=NULL; }
-    Reversible(Environment *s) {initialise(s);}
+    Reversible(Environment *s) : env(s) {;}
     void initialise(Environment *s) {env=s;}
     virtual ~Reversible() {}
     //@}
 
+  };
+
+
+
+  /********************************************
+   * Reversible Boolean Domain
+   ********************************************/
+  /*! \class ReversibleBool
+    \brief Backtrackable Primitive
+  */
+  class ReversibleBool : public Reversible
+  {
+  
+  public:
+    /*!@name Parameters*/
+    //@{  
+    int value;
+    //@}
+
+    /*!@name Constructors*/
+    //@{ 
+    ReversibleBool() : Reversible() {
+      value = 3;
+    }
+    ReversibleBool(Environment *s) 
+      : Reversible(s)
+    {
+      value = 3;
+    }
+
+    void initialise(Environment *s) {
+      Reversible::initialise(s);
+    }
+    
+
+    virtual ~ReversibleBool() {}
+    //@}
+
+
     /*!@name Backtrack method*/
     //@{
-    virtual void restore() = 0; 
+    inline void save() { 
+      if(value == 3) env->save(&value); 
+    }
+    inline void restore() { 
+      value = 3;
+    }
+    //@}
+
+    /*!@name Manipulation*/
+    //@{  
+    inline void remove(const int v) { 
+      save();
+      value = 2-v;
+    }
+
+    inline void operator=(const int v) { 
+      save();
+      value = 1+v;
+    }
+
+    inline bool contain(const int v) {
+      return value&(v+1);
+    }
+
+    inline bool equal(const int v) {
+      return (value&(v+1)) == value;
+    }
+    
+    inline int size() { return (1+(value==3)); }
+    //@}
+
+   /*!@name Printing*/
+    //@{
+    std::ostream& display(std::ostream& os) const { os << (value == 3 ? "{0,1}" : (value == 1 ? "0" : "1")) ; return os; }
     //@}
   };
 
@@ -134,19 +365,32 @@ namespace Mistral {
     /*!@name Constructors*/
     //@{ 
     ReversibleNum() : Reversible() {
-      value = NOVAL;
     }
-    ReversibleNum(const PRIMITIVE_TYPE v, Environment *s) 
+    ReversibleNum(const PRIMITIVE_TYPE v) 
+    {
+      initialise(v);
+    }
+    ReversibleNum(Environment *s) 
+      : Reversible(s)
+    {
+      Reversible::initialise(s);
+    }
+    ReversibleNum(Environment *s, const PRIMITIVE_TYPE v) 
       : Reversible(s)
     {
       Reversible::initialise(s);
       initialise(v);
     }
 
-    void initialise(const PRIMITIVE_TYPE v, Environment *s) 
+    void initialise(Environment *s, const PRIMITIVE_TYPE v) 
     {
       Reversible::initialise(s);
       initialise(v);
+    }
+
+    void initialise(Environment *s) 
+    {
+      Reversible::initialise(s);
     }
 
     void initialise(const PRIMITIVE_TYPE v) 
@@ -168,12 +412,13 @@ namespace Mistral {
     //@{
     inline void save() { 
       if((int)trail_.back() != env->level) { 
+	//env->save((ReversibleNum< PRIMITIVE_TYPE >*)this); 
 	env->save(this); 
 	trail_.add((int)value); 
 	trail_.add(env->level); 
       } 
     }
-    void restore() { 
+    inline void restore() { 
       trail_.pop();//current_level); 
       value = (PRIMITIVE_TYPE)(trail_.pop()); 
     }
@@ -198,12 +443,12 @@ namespace Mistral {
 
 
   /********************************************
-   * Reversible IntStack
+   * Reversible Set
    ********************************************/
-  /*! \class ReversibleIntStack
+  /*! \class ReversibleSet
     \brief Backtrackable IntStack
   */
-  class ReversibleIntStack : public Reversible, public IntStack {
+  class ReversibleSet : public Reversible, public IntStack {
     
   public:
 
@@ -215,31 +460,42 @@ namespace Mistral {
 
     /*!@name Constructors*/
     //@{ 
-    ReversibleIntStack() : Reversible(), IntStack() {}
-    ReversibleIntStack(const int lb, const int ub, bool full, Environment *s)
-      : Reversible()
+    ReversibleSet() : Reversible(), IntStack() {}
+    ReversibleSet(Environment *s, const int lb=0, const int ub=0, const bool full=true)
+      : Reversible(s)
     {
-      initialise(lb, ub, full, s);
+      initialise(lb, ub, full);
     }
 
-    virtual ~ReversibleIntStack()
+    virtual ~ReversibleSet()
     {
     }
 
-    virtual void initialise(const int lb, const int ub, 
-			    const bool full, Environment *s
-			    )
+    virtual void initialise(Environment *s, const int lb, const int ub, const bool full)
     {
       Reversible::initialise(s);
-      IntStack::initialise(lb, ub, full);
-      trail_.initialise(0, 2*(ub-lb+1));
+      initialise(lb, ub, full);
+    }
+
+    virtual void initialise(const int lb, const int ub, const bool full)
+    {
+      int l = lb;
+      int u = ub;
+      if(l>u) {
+	u = l-1;
+	l = 0;
+      }
+      IntStack::initialise(l, u, full);
+      trail_.initialise(0, 2*(u-l+1));
       trail_.add(-1);
     }
     //@}
 
     /*!@name Backtrack method*/
     //@{    
-    virtual void restore() { trail_.pop(); size = trail_.pop(); } 
+    inline void restore() { 
+      trail_.pop(); size = trail_.pop(); 
+    } 
     inline void save() { 
       if(trail_.back() != env->level) {
 	trail_.add(size);
@@ -279,203 +535,8 @@ namespace Mistral {
   };
 
 
-  /********************************************
-   * Reversible MultiList
-   ********************************************/
-  /*! \class ReversibleMultiList
-    \brief Backtrackable MultiList
-  */
-  template < class DATA_TYPE, int NUM_HEAD >
-  class ReversibleMultiList : public MultiList< DATA_TYPE, NUM_HEAD >, public Reversible
-  {
-  
-  public:
-    /*!@name Parameters*/
-    //@{  
-    Vector< int > trail_;
-    //@}
-
-    /*!@name Constructors*/
-    //@{
-    ReversibleMultiList(Environment *env) 
-      : MultiList< DATA_TYPE, NUM_HEAD >(), Reversible(env) {
-      trail_.initialise(0, 4+4*NUM_HEAD);
-      trail_.add(-1);
-    }
-    //@}
-
-    /*!@name List Manipulation*/
-    //@{
-    inline void reversible_remove(const int idx, const int k=0) {
-      _notify_();
-      MultiList< DATA_TYPE, NUM_HEAD >::remove(idx, k);      
-      _save_(idx, k);
-    }
-    inline int reversible_add(DATA_TYPE elt, const int k=0) {
-      _notify_();
-      return MultiList< DATA_TYPE, NUM_HEAD >::create(elt, k);
-    }
-    //@}
-
-
-    /*!@name Backtrack method*/
-    //@{
-    virtual void restore() {
-      _restore_();
-    }
-
-    inline void _restore_() {
-      //first_change = true;
-      int k, idx_start, idx_end, succ;
-
-      // pop the level flag
-      trail_.pop();
-
-      // restore the deletions
-      for(k=0; k<NUM_HEAD; ++k) {
-	// pop the first element of the circular list
-	trail_.pop(idx_start);
-
-	if(idx_start) {
-	  idx_end   = MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx_start].prev;
-	  
-	  // insert [idx_start -> idx_end] right at the start of the list
-	  succ = MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[MultiList< DATA_TYPE, NUM_HEAD >::head[k]].next;
-	  MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[succ].prev = idx_end;
-	  MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[MultiList< DATA_TYPE, NUM_HEAD >::head[k]].next = idx_start;
-	  MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx_end].next = succ;
-	  MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx_start].prev = MultiList< DATA_TYPE, NUM_HEAD >::head[k];
-	}
-      }
-
-      // restore the degree
-      MultiList< DATA_TYPE, NUM_HEAD >::degree = trail_.pop();
-
-      // restore the insertions
-      idx_start = MultiList< DATA_TYPE, NUM_HEAD >::data.size;
-      trail_.pop(idx_end);
-      while(idx_start > idx_end) {
-	k = --MultiList< DATA_TYPE, NUM_HEAD >::data.size;
-	MultiList< DATA_TYPE, NUM_HEAD >::remove(k);
-	++MultiList< DATA_TYPE, NUM_HEAD >::degree;
-	--idx_start;
-      }
-    } 
-
-    inline void _notify_() {
-      if(trail_.back() != env->level) {
-	env->save(this);
-	trail_.add(MultiList< DATA_TYPE, NUM_HEAD >::data.size);
-	trail_.add(MultiList< DATA_TYPE, NUM_HEAD >::degree);
-	for(int k=0; k<NUM_HEAD; ++k)
-	  trail_.add(0);
-	trail_.add(env->level);
-      }
-    }
-
-    inline void _save_(const int idx, const int k) {
-      int succ, pred;
-      pred = trail_.back(k+2);
-      if(pred) {
-	// set idx as the successor of the head of the circular list	
-	succ = MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[pred].next;
-	
-	MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[pred].next = idx;
-	MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[succ].prev = idx;
-	MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx].next = succ;
-	MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx].prev = pred;
-      } else {
-	// set up a circular list with only 'idx' in
-	trail_.setBack(idx, k+2);
-	MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx].next = idx;
-	MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[idx].prev = idx;
-      }
-    }
-    //@}
-
-
-    /*!@name Miscellaneous*/
-    //@{
-    /// Print on out stream
-    void reversible_debug_print(std::ostream& o) const 
-    {
-      for(unsigned int i=MultiList< DATA_TYPE, NUM_HEAD >::head[0]; i<MultiList< DATA_TYPE, NUM_HEAD >::data.size; ++i)
-	o << MultiList< DATA_TYPE, NUM_HEAD >::data.stack_[i];
-      MultiList<int,NUM_HEAD>::debug_print(o);
-      o << " / " << trail_
-	<< " ("  << MultiList< DATA_TYPE, NUM_HEAD >::degree << ")";
-    }
-    //@}
-
-  };
-
-
-  /********************************************
-   * Constraint Trigger
-   ********************************************/
-  /*! \class ConstraintTrigger 
-    \brief Element of a Constraints list
-    
-    Holds a pointer to a constraint and the index 
-    (in the scope) of the variable that owns the list 
-  */  
-  class Constraint;
-  class ConstraintTrigger {
-
-  public:
-
-    /*!@name Parameters*/
-    //@{  
-    Constraint *constraint;
-    int index;
-    //@}
-
-    /*!@name Constructors*/
-    //@{
-    ConstraintTrigger(Constraint* con, const int id) {
-      constraint = con;
-      index = id;
-    }
-
-    ConstraintTrigger(const int c=0) {
-      constraint = (Constraint*)c;
-      index = -1;
-    }
-    //@}
-
-    /*!@name Accessors*/
-    //@{  
-    bool operator!() { return !constraint; }
-    ConstraintTrigger& operator=(Constraint *con) { 
-      constraint = con; 
-      return *this;
-    }
-    ConstraintTrigger& operator=(const int id) { 
-      index = id; 
-      return *this;
-    }
-    //@}
-
-    /*!@name Miscellaneous*/
-    //@{
-    virtual std::ostream& display(std::ostream& os) const {
-      if(constraint) 
-	os << constraint;
-      else
-	os << ".";
-      return os;
-    }
-    //@}
-  };
-
-  typedef Node< ConstraintTrigger > ConstraintNode;
-  typedef ReversibleMultiList< ConstraintTrigger, 3 > ConstraintList;
-
-  std::ostream& operator<< (std::ostream& os, const ConstraintTrigger& x);
-
-  std::ostream& operator<< (std::ostream& os, const ConstraintTrigger* x);
-
-
+  std::ostream& operator<< (std::ostream& os, const ReversibleBool& x);
+  std::ostream& operator<< (std::ostream& os, const ReversibleBool* x);
 
 }
 

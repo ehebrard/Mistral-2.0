@@ -38,38 +38,57 @@
 #include <cstring>
 
 
+
+// std::string Mistral::event2str(Mistral::Event e) {
+//   //std::cout
+//   std::string str_out = "no event";
+//   if(ASSIGNED(e)) {
+//     str_out = "value";
+//     if(!LB_CHANGED(e)) str_out += " & ub";
+//     else if(!UB_CHANGED(e)) str_out += " & lb";
+//     else str_out += " & bounds";
+//     str_out += " changed";
+//   } else if(RANGE_CHANGED(e)) {
+//     if(!LB_CHANGED(e)) str_out = "ub";
+//     else if(!UB_CHANGED(e)) str_out = "lb";
+//     else str_out = "bounds";
+//     str_out += " changed";
+//   } else if(DOMAIN_CHANGED(e)) {
+//     str_out = "domain changed";
+//   }
+// }
+
 std::string Mistral::event2str(Mistral::Event e) {
-    std::string str_evt;
-    if(ASSIGNED(e)) {
-      str_evt = "value";
-      if(e != VALUE_C) {
-	str_evt += "("; 
-	if(LB_CHANGED(e)) str_evt += "+lb";
-	if(UB_CHANGED(e)) str_evt += "+ub";
-	str_evt += ")";
-      } 
-    } else if(LB_CHANGED(e)) {
-      str_evt = "lb";
-      if(UB_CHANGED(e)) str_evt += "/ub";
-    } else if(UB_CHANGED(e)) {
-      str_evt = "ub";
-    } else {
-      str_evt = "domain";
-    }
-    return str_evt;
+  std::string str_evt = "no event";
+  if(ASSIGNED(e)) {
+    str_evt = "value";
+    if(e != VALUE_C) {
+      if(!(LB_CHANGED(e))) str_evt += " & ub";
+      else if(!(UB_CHANGED(e))) str_evt += " & lb";
+      else str_evt += " & bounds";
+    } 
+  } else if(RANGE_CHANGED(e)) {
+    if(!(LB_CHANGED(e))) str_evt = "ub";
+    else if(!(UB_CHANGED(e))) str_evt = "lb";
+    else str_evt = "bounds";
+  } else if(DOMAIN_CHANGED(e)) {
+    str_evt = "domain";
   }
+  return str_evt;
+}
+
 
 std::string Mistral::outcome2str(Mistral::Outcome e) {
-    std::string str_out;
-    switch(e) {
-    case SAT: str_out = "SAT"; break;
-    case OPT: str_out = "OPT"; break;
-    case UNSAT: str_out = "UNSAT"; break;
-    case UNKNOWN: str_out = "UNKNOWN"; break;
-    case LIMITOUT: str_out = "LIMITOUT"; break;
-    }
-    return str_out;
+  std::string str_out;
+  switch(e) {
+  case SAT: str_out = "SAT"; break;
+  case OPT: str_out = "OPT"; break;
+  case UNSAT: str_out = "UNSAT"; break;
+  case UNKNOWN: str_out = "UNKNOWN"; break;
+  case LIMITOUT: str_out = "LIMITOUT"; break;
   }
+  return str_out;
+}
 
 std::string Mistral::domain2str(int d) {
   std::string str_out;

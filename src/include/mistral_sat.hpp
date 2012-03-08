@@ -247,7 +247,7 @@ namespace Mistral {
   /*! \class ConstraintNogoodBase
     \brief   Constraint.
   */
-  class ConstraintClauseBase : public Constraint {
+  class ConstraintClauseBase : public GlobalConstraint {
 
   public:
 
@@ -268,13 +268,17 @@ namespace Mistral {
     
     /**@name Constructors*/
     //@{
-    ConstraintClauseBase() : Constraint() { conflict = NULL; }
+    ConstraintClauseBase() : GlobalConstraint() { conflict = NULL; }
     ConstraintClauseBase(Vector< Variable >& scp);
     virtual void mark_domain();
-    virtual Constraint *clone() { return new ConstraintClauseBase(scope); }
+    virtual Constraint clone() { return Constraint(new ConstraintClauseBase(scope), type); }
     virtual void initialise();
     virtual ~ConstraintClauseBase();
-    
+
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+
     void add( Variable x );
     void add( Vector < Lit >& clause, double init_activity=0.0 );
     void learn( Vector < Lit >& clause, double init_activity=0.0 );
@@ -286,6 +290,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt) {}
     Clause* update_watcher(const int cw, const Lit p, PropagationOutcome& o);
     //virtual PropagationOutcome rewrite();
     //@}

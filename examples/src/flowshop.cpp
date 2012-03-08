@@ -64,6 +64,14 @@ public:
 
   int get_makespan() {return schedule.back().start_on_second_machine + schedule.back().duration_on_second_machine; }
 
+  bool is_minimal() {
+    bool minimal = true;
+    for(int i=get_size(); minimal && --i;) {
+      minimal = !swap_safe_probe(i);
+    }
+    return minimal;
+  }
+
   void set_time(const int i) {
 
     //std::cout << "set time " << i << std::endl;
@@ -630,6 +638,9 @@ bool print_swap(Flowshop& F, const int next_swap) {
   return true;
 }
 
+//bool is_local_optimal(Flowshop& F, )
+
+
 int explore3(Flowshop& F) {
 
   int ntasks = F.get_size();
@@ -666,17 +677,20 @@ int explore3(Flowshop& F) {
 
   while(true) {
     ++num_nodes;
+
+
+
     // if((++num_nodes%1000000)==0) {
     //   std::cout << ".";
     //   std::cout.flush();
     // }
 
     // for(unsigned int i=0; i<size_delta.size; ++i)
-    //   std::cout << " ";
-    // std::cout // << decisions
-    //   //<< " " << F  // << " " << local_opt.back()
-    //   << " " << F << " " << gamma << " " << gamma_ub << " " ;
-    // int j=0;
+    //    std::cout << " ";
+    //  std::cout // << decisions
+    //    //<< " " << F  // << " " << local_opt.back()
+    //    << " " << F << " " << gamma << " " << gamma_ub << " " << std::endl;
+    // // int j=0;
 
     // std::cout << "[";
     // for(int k=0; k<size_delta[0]; ++k)
@@ -757,13 +771,19 @@ int explore3(Flowshop& F) {
        // is the current sequence a local optima (if none of the children was one)
        if(local_opt) { 
 
-	 bool not_included = true;
-	 for(int i=0; not_included && i<solutions.size; ++i) {
-	   not_included = !(gamma.included(solutions[i]));
-	 }
+	 // bool not_included = true;
+	 // for(int i=solutions.size; not_included && i--;) {
+	 //   //for(int i=0; not_included && i<solutions.size; ++i) {
+	 //    not_included = !(gamma.included(solutions[i]));
+	 //  }
+	 //  //not_included = (solutions.empty() || !(gamma.included(solutions.back())));
 
-	 if(not_included) {
-	   //std::cout << "c " << F << std::endl;
+	 // if(not_included) {
+	 //   //std::cout << "c " << F << std::endl;
+	 //   solutions.add(gamma);
+	 // }
+
+	 if(F.is_minimal()) {
 	   solutions.add(gamma);
 	 }
        }
@@ -825,6 +845,198 @@ int explore3(Flowshop& F) {
 
   return  solutions.size;
 }
+
+bool set_next_swap(Flowshop& F, const int next_swap, int& pswap) {
+  pswap = F.get_seq_id(next_swap);
+  //std::cout << " try " <<  next_swap << "/" << pswap << std::endl;  
+  return true;
+}
+
+
+bool print(int i) {
+  std::cout << i << std::endl;
+  return true;
+}
+
+void print_delta(Vector<int>& delta, Vector<int>& size_delta) {
+  //delta[size_delta[i]] up delta[size_delta[i]-1] gives all the assumptions at level i  
+  for(int i=1; i<size_delta.size; ++i) {
+    std::cout << " l" << (i-1) << ":";
+    for(int j=size_delta[i-1]; j<size_delta[i]; ++j)
+      std::cout << " "<< delta[j] ;
+  }
+  std::cout << std::endl;
+}
+
+
+int explore4(Flowshop& F) {
+
+  int ntasks = F.get_size();
+  int max_depth = (ntasks * (ntasks-1) / 2);
+
+  BitSet gamma_ub(0, max_depth, BitSet::full);
+  BitSet gamma_lb(0, max_depth, BitSet::empt);
+
+
+  // stack of decisions (index of the swap: 1 to n-1)
+  Vector< int > decisions;
+
+  // secondary stack of decision, keeps the pair of swapped element (element of gamma)
+  Vector< int > delta;
+  // number of decision per level, used for backtracking
+  Vector< int > size_delta;
+
+  //delta[size_delta[i]] up delta[size_delta[i]-1] gives all the assumptions at level i
+
+
+
+  Vector< BitSet > solutions;
+
+  // the next decision (swap) to be computed
+  int pswap, next_swap;
+
+  // data
+  int num_nodes = 0;
+
+  // flag indicating if we stopped because we are in a local optima
+  bool local_opt = true;
+
+  int assumption, last_level;
+
+
+  // no deduction at level 0
+  size_delta.add(0);
+  size_delta.add(0);
+
+  decisions.add(0);
+
+  while(true) {
+    ++num_nodes;
+
+    for(int i=0; i<decisions.size; ++i) std::cout << " ";
+    std::cout << F << " -- "<< gamma_lb << " <= X <= " << gamma_ub << std::endl;   
+    // for(int i=0; i<decisions.size; ++i) std::cout << " ";
+    // print_delta(delta, size_delta);
+
+    // std::cout << decisions << std::endl;
+    // for(int i=0; i<decisions.size; ++i) std::cout << " ";
+    // std::cout << delta << std::endl;
+    // for(int i=0; i<decisions.size; ++i) std::cout << " ";
+    // //int k=0;
+    // for(int i=2; i<size_delta.size; ++i) {
+    //   for(int k=size_delta[i-1];k<size_delta[i]-1;++k) {
+    // 	if(delta[k] < 10) std::cout << "  ";
+    // 	else std::cout << "   ";
+    //   }
+    //   if(delta[size_delta[i]-1] < 10)
+    // 	std::cout << " |";
+    //   else
+    // 	std::cout << " | ";
+    // }
+    // std::cout << std::endl << size_delta << std::endl;;
+
+
+    next_swap = decisions.back();
+    // we probe the swaps to see if they degrade the solution too much
+    while(++next_swap<ntasks &&
+	  set_next_swap(F, next_swap, pswap) &&
+	  (
+	   // it is an acceptable move if it corresponds to a swap in the upper bound
+	   !gamma_ub.contain(pswap) ||
+	   // and to a swap not in the lower bound
+	   gamma_lb.contain(pswap) ||
+	   // and it remains optimal
+	   !F.swap_probe(next_swap)
+	   )
+	  );
+      
+    // left branch
+    if(next_swap < ntasks) {
+      // for(int i=0; i<decisions.size; ++i) std::cout << " ";
+      // std::cout << " branch left (swap " << F.schedule[next_swap].initial_rank << "&" 
+      // 		<< F.schedule[next_swap-1].initial_rank << ", i.e., rem " 
+      // 		<< pswap << ") "<< std::endl;       
+
+      // 
+      decisions.back() = next_swap;
+      decisions.add(0);
+
+      //
+      //gamma_lb.fast_remove(pswap);
+      gamma_ub.fast_remove(pswap);
+      delta.add(pswap);
+
+      size_delta.add(delta.size);
+      
+      local_opt = true;
+
+      // right branch
+    } else {
+      
+      
+      if(decisions.size < 2) {
+	break;
+	// std::cout << "here!!" << std::endl;
+	// exit(1);
+      }
+
+      //if(size_delta.empty()) break;
+
+      assumption = size_delta.pop();
+      last_level = size_delta.back();
+      //pswap = delta.back();
+
+      // forget the last decision
+      //gamma_ub.fast_add(delta.back());
+      //gamma_lb.fast_add(delta.back());
+      
+      //forget all assumptions from the last level
+      while(--assumption>last_level) {
+	gamma_lb.fast_remove(delta[assumption]);
+      }
+      
+      // make the deduction
+      delta.size = assumption+1;
+      gamma_ub.fast_add(delta.back());
+      gamma_lb.fast_add(delta.back());
+      ++size_delta.back();
+
+      // for(int i=0; i<decisions.size; ++i) std::cout << " ";
+      // std::cout << " branch right (add " << delta.back() << ")" << std::endl;
+
+      decisions.pop();
+
+
+      if(local_opt) {
+
+	bool not_included = true;
+	for(int i=solutions.size; not_included && i--;) {
+	  //for(int i=0; not_included && i<solutions.size; ++i) {
+	  not_included = (solutions[i].included(gamma_ub));
+	}
+	
+	if(not_included) {
+	  //std::cout << not_included << " | " << F << std::endl;
+	  solutions.add(gamma_ub);
+	}
+      }
+      local_opt = false;
+      
+
+      // std::cout << "swap " << decisions.back() << std::endl;
+      F.swap(decisions.back());
+      
+      
+    }
+
+  }
+
+  std::cout << "\nd NODES " << num_nodes << std::endl;
+
+
+  return  solutions.size;
+}
+
 
 
 

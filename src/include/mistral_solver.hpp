@@ -30,14 +30,13 @@
 #define __SOLVER_HPP
 
 
-#include <mistral_global.hpp>
-#include <mistral_backtrack.hpp>
-#include <mistral_structure.hpp>
 #include <mistral_constraint.hpp>
 
 
 
+
 namespace Mistral {
+
 
 
   class Solution {
@@ -140,45 +139,6 @@ namespace Mistral {
     void copy(const SolverStatistics&);
     void update(const SolverStatistics&);
 
-    // static const char* VARNAME[NUM_VARTYPES];
-    // static const char* METHOD_NAME[NUM_METHODS];
-    
-
-  //   static const char* VARNAME[NUM_VARTYPES] = {"virtual", "constant", "boolean", "range", "bitset", "list"};
-  //   static const char* METHOD_NAME[NUM_METHODS] = {
-  //   "get_size"         ,
-  //   "get_degree"       ,
-  //   "get_min"          ,
-  //   "get_max"          ,
-  //   "get_initial_min"  ,
-  //   "get_initial_max"  ,
-  //   "get_min_pos"      ,
-  //   "get_max_neg"      ,
-  //   "next"             ,
-  //   "prev"             ,
-  //   "is_range"         ,
-  //   "is_ground"        ,
-  //   "equal"            ,
-  //   "contain"          ,
-  //   "intersect_range"  ,
-  //   "included_range"   ,
-  //   "includes_range"   ,
-  //   "intersect_set"    ,
-  //   "included_set"     ,
-  //   "includes_set"     ,
-  //   "intersect_to"     ,
-  //   "union_to"         ,
-  //   "remove"           ,
-  //   "set_domain"       ,
-  //   "set_min"          ,
-  //   "set_max"          ,
-  //   "set_domain_bitset",
-  //   "remove_set"       ,
-  //   "remove_interval"  ,
-  //   "restore"          
-  // };
-
-
 
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_nodes; 
@@ -264,7 +224,7 @@ namespace Mistral {
     Solver *solver;
     int min_priority;
     /// The constraint being processed
-    Constraint *taboo_constraint;
+    //ConstraintImplementation* taboo_constraint;
 
   public:
 
@@ -277,49 +237,47 @@ namespace Mistral {
     ConstraintQueue();
     void initialise(Solver *s);
     void initialise(const int min_p, const int max_p, const int size);
-    void declare(Constraint *c, Solver *s);
+    void declare(Constraint c, Solver *s);
     virtual ~ConstraintQueue();
     inline bool empty() { return higher_priority<min_priority; }
-    void trigger(Constraint* cons);
-    void trigger(Constraint* cons, const int var, const Event evt);
+    
+    void trigger( BinaryConstraint *cons);
+    void trigger(TernaryConstraint *cons);
+    void trigger( GlobalConstraint *cons);
+    void trigger( GlobalConstraint *cons, const int var, const Event evt);
+    /*
+    void trigger(Constraint cons);
+    void trigger(Constraint cons, const Event evt);
+    */
 
-    inline void reset_higher_priority() {
-      while(--higher_priority>=min_priority && triggers[higher_priority].empty());
-    }
-    inline Constraint* select(Vector<Constraint*>& constraints) {
-      int cons_id = triggers[higher_priority].pop();
-      Constraint *cons = constraints[cons_id];
-      _set_.fast_remove(cons_id);
-      if(triggers[higher_priority].empty()) reset_higher_priority();
-      taboo_constraint = cons->freeze();
-      return cons;
-    }
-    inline void select(Constraint* cons) {
-      //_set_.remove(cons->id);
-      taboo_constraint = cons->freeze();
-    }
-    inline void clear() {
-      while(higher_priority>=min_priority) triggers[higher_priority--].clear();
-      _set_.clear();
-      taboo_constraint = NULL;
-    }
+    void reset_higher_priority();
+    // inline void reset_higher_priority() {
+    //   while(--higher_priority>=min_priority && triggers[higher_priority].empty());
+    // }
+
+    Constraint select(Vector<Constraint>& constraints);
+    // inline Constraint select(Vector<Constraint>& constraints) {
+    //   int cons_id = triggers[higher_priority].pop();
+    //   Constraint cons = constraints[cons_id];
+    //   _set_.fast_remove(cons_id);
+    //   if(triggers[higher_priority].empty()) reset_higher_priority();
+    //   //taboo_constraint = cons.freeze();
+    //   return cons;
+    // }
+    // // inline void select(Constraint cons) {
+    // //   //_set_.remove(cons->id);
+    // //   taboo_constraint = cons.freeze();
+    // // }
+
+    void clear();
+    // inline void clear() {
+    //   while(higher_priority>=min_priority) triggers[higher_priority--].clear();
+    //   _set_.clear();
+    //   //taboo_constraint = NULL;
+    // }
     virtual std::ostream& display(std::ostream&) ;
   };
 
-  class ConstraintPointer {
-
-  public:
-   
-    Constraint *constraint;
-
-    ConstraintPointer(Constraint *c) {
-      constraint = c;
-    }
-    
-    virtual ~ConstraintPointer() {}
-
-    int id() {return constraint->id;}
-  };
 
 
    /**********************************************
@@ -375,28 +333,32 @@ namespace Mistral {
     Vector< int >     domain_types;
     Vector< int > assignment_level;
 
-#ifdef _DEBUG_PRUNING
-    Vector< Variable > monitored_variables;
-    void monitor(VarArray& X);
+#ifdef _MONITOR
+    Vector< unsigned int > monitored;
+    Vector< unsigned int > monitored_index;
+    void monitor(Vector<Variable>& X);
     void monitor(Variable X);
 #endif
 
 
     /// The set of constraints, with special accessors for triggers
-    Vector< Constraint* >         constraints;
-    IntStack               posted_constraints;
-    ConstraintQueue        active_constraints;
+    Vector< Constraint >         constraints;
+    IntStack              posted_constraints;
+    ConstraintQueue       active_constraints;
+    //VariableQueue           active_variables;
     
-    Vector< ConstraintList* > constraint_graph;
-    Vector< Vector < ConstraintTrigger > > triggers;
+    
+    Vector< ConstraintTriggerArray > constraint_graph;
+
 
     /// For each level, the list of reversible objects that changed at this level, 
-    /// and will need to be restored
-    //Vector< Variable > saved_vars;
-    Vector< int > saved_vars;
-    /// For each level, the list of reversible objects that changed at this level, 
-    /// and will need to be restored
-    Vector< Constraint* > saved_cons;
+    // /// and will need to be restored
+    // //Vector< Variable > saved_vars;
+    // Vector< int > saved_vars;
+    // /// For each level, the list of reversible objects that changed at this level, 
+    // /// and will need to be restored
+    // Vector< Constraint > saved_post;
+    // Vector< Constraint > saved_relax;
 
     /// Stores the last solution
     Vector< int > last_solution_lb;
@@ -410,7 +372,9 @@ namespace Mistral {
 
     /// The search part
     /// These are the search variables.
-    VarStack < Variable > sequence;
+    VarStack < Variable, ReversibleNum<int> >   sequence;
+    //ReversibleNum<int> sequence_size;
+
     Vector< Decision > decisions;
     Vector< Clause* > reason;
     Vector< Lit > learnt_clause;
@@ -418,9 +382,6 @@ namespace Mistral {
     int num_search_variables;
     ConstraintClauseBase *base;
 
-    /// The delimitation between different levels is kept by this vector of integers
-    Vector< int > trail_;
-    Vector< int > con_trail_;
 
     /// Variable selection and branching
     BranchingHeuristic *heuristic;
@@ -437,7 +398,7 @@ namespace Mistral {
     Vector<ConstraintListener*> constraint_triggers;
 
     /// the constraint responsible for the last fail (NULL otherwise) 
-    Constraint *culprit;
+    Constraint culprit;
     /// the constraint-index of the last wiped_out variable in the culprit constraint (-1 otherwise)
     int wiped_idx;
     /// the overall-index of the variable responsible for the last trigger before a failure
@@ -492,7 +453,7 @@ namespace Mistral {
     /// add a variable (prior to search!!!)
     void add(Variable x);
     void add(VarArray& x);
-    void add(Constraint* x); 
+    void add(Constraint x); 
     void add(Vector< Lit >& clause); 
     //void add(ConstraintW x); 
     //void add(BranchingHeuristic* h);
@@ -502,8 +463,8 @@ namespace Mistral {
     void add(DecisionListener* l);
     void add(VariableListener* l);
     void add(ConstraintListener* l);
-
-   void remove(RestartListener* l);
+    
+    void remove(RestartListener* l);
     void remove(SuccessListener* l);
     void remove(FailureListener* l);
     void remove(DecisionListener* l);
@@ -518,21 +479,23 @@ namespace Mistral {
 
     /*!@name Trail accessors*/
     //@{
-    inline void save() {
-      trail_.add(sequence.size);
-      trail_.add(saved_objs.size);
-      trail_.add(saved_cons.size);
-      trail_.add(saved_vars.size);
+    // inline void save() {
+    //   trail_.add(sequence.size);
+    //   trail_.add(saved_objs.size);
+    //   trail_.add(saved_cons.size);
+    //   trail_.add(saved_vars.size);
+    //   trail_.add(saved_post.size);
+    //   trail_.add(saved_relax.size);
 
-      ++statistics.num_nodes;
-      ++level;
-    }
+    //   ++statistics.num_nodes;
+    //   ++level;
+    // }
     /// called by reversible objects when they want to be restored when backtrack to this level
-    inline void save(Reversible* object) { saved_objs.add(object); }
-    inline void save(Constraint* c) { saved_cons.add(c); }
-    //void save(Variable x); 
-    void save(const int idx); 
-    //void save(VariableImplementation *x, int dtype); 
+    // inline void save(Reversible* object) { saved_objs.add(object); }
+    // inline void save(Constraint c) { saved_cons.add(c); }
+    // //void save(Variable x); 
+    // void save(const int idx); 
+    // //void save(VariableImplementation *x, int dtype); 
     //@}
 
     /*!@name Propagation accessors*/
@@ -541,13 +504,13 @@ namespace Mistral {
     void notify_success();
     void notify_decision();
     void notify_restart();
-    void notify_relax(Constraint *c);
-    void notify_post(Constraint *c);
-    void notify_add(Constraint *c);
+    void notify_relax(Constraint c);
+    void notify_post(Constraint c);
+    void notify_add_constraint(Constraint c);
     void notify_change_variable(const int idx);
     void notify_add_variable();
     /// called when the var'th variable of constraint cons changes (with event type evt)
-    void trigger_event(const int var, const Event evt);
+    //void trigger_event(const int var, const Event evt);
 
     /// achieve propagation closure
     PropagationOutcome propagate(Constraint *c);
@@ -613,17 +576,18 @@ namespace Mistral {
     /// depth first search algorithm
     Outcome chronological_dfs();
 
-    /// sat search algorithm
+    // /// sat search algorithm
     Outcome conflict_directed_backjump();
     void learn_nogood();
     void forget();
-    //@}
+    // //@}
 
 
     double *get_literal_activity();
 
+    void check_constraints();
 
-    /*!@name Search accesors*/
+    /*!@name Printing*/
     //@{
     void debug_print();
     void full_print();
@@ -643,6 +607,9 @@ namespace Mistral {
 
   std::ostream& operator<< (std::ostream& os, const SolverStatistics& x);
   std::ostream& operator<< (std::ostream& os, const SolverStatistics* x);
+
+  std::ostream& operator<< (std::ostream& os, ConstraintTriggerArray& x);
+  std::ostream& operator<< (std::ostream& os, ConstraintTriggerArray* x);
 
 }
 

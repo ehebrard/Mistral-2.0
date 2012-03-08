@@ -405,6 +405,19 @@ public:
   virtual void run();
 };
 
+class ConstraintArrayTest : public UnitTest {
+
+public:
+  
+  ConstraintArrayTest(const int ql=MEDIUM, const int qt=MEDIUM);
+  ~ConstraintArrayTest();
+
+  virtual void run();
+};
+
+
+
+
 template<class CON_TYPE>
 class ConChecker {
 
@@ -495,6 +508,12 @@ public:
 
 
   void run(int n_iterations=1) {
+
+#ifdef _VARNCONQUEUE
+	      Event evt;
+	      int var;
+	      ConstraintNode nd;
+#endif
 
 
     std::cout << ".";
@@ -709,12 +728,35 @@ public:
 	    // }
 
 	    if( IS_OK(wiped1) ) {
+
+#ifdef _VARNCONQUEUE
+	      if(!s1.active_variables.empty()) {
+		var = s1.active_variables.pop( evt );
+		nd = s1.constraint_graph[var]->first(EVENT_TYPE(evt));
+		if(!(ASSIGNED(evt))) {
+		  s1.constraint_graph[var]->next(nd);
+		  s1.active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+		}
+	      }
+#endif
 		
 	      s1.active_constraints.select(con1);
 	      //con1->consolidate();
 	      wiped1 = con1->propagate();
 
 	      if(AC && IS_OK(wiped2)) {
+
+#ifdef _VARNCONQUEUE
+		if(!s2.active_variables.empty()) {
+		  var = s2.active_variables.pop( evt );
+		  nd = s2.constraint_graph[var]->first(EVENT_TYPE(evt));
+		  if(!(ASSIGNED(evt))) {
+		    s2.constraint_graph[var]->next(nd);
+		    s2.active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+		  }
+		}
+#endif
+
 		s2.active_constraints.select(con2);
 		//con2->consolidate();
 		con2->changes.fill();
@@ -722,6 +764,18 @@ public:
 	      }
 
 	      if(BC && IS_OK(wiped3)) {
+
+#ifdef _VARNCONQUEUE
+		if(!s3.active_variables.empty()) {
+		  var = s3.active_variables.pop( evt );
+		  nd = s3.constraint_graph[var]->first(EVENT_TYPE(evt));
+		  if(!(ASSIGNED(evt))) {
+		    s3.constraint_graph[var]->next(nd);
+		    s3.active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
+		  }
+		}
+#endif
+
 		s3.active_constraints.select(con3);
 		//con3->consolidate();
 		con3->changes.fill();
@@ -729,13 +783,24 @@ public:
 	      }
 
 	      s1.active_constraints.clear();
+#ifdef _VARNCONQUEUE
+	      s1.active_variables.clear();
+#endif
 
 	      if(AC) {
 		s2.active_constraints.clear();
+#ifdef _VARNCONQUEUE
+		s2.active_variables.clear();
+#endif
+
 	      }
 
 	      if(BC) {
 		s3.active_constraints.clear();
+#ifdef _VARNCONQUEUE
+		s3.active_variables.clear();
+#endif
+
 	      }
 	      
 	      
@@ -1479,7 +1544,6 @@ int main(int argc, char *argv[])
   int N = 8; //atoi(argv[1]);
   if(argc>1) N=atoi(argv[1]);
 
-
   tests.push_back(new CheckerTest());
   tests.push_back(new LexTest());
   tests.push_back(new IntersectionTest());
@@ -1506,6 +1570,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
+  tests.push_back(new ConstraintArrayTest());
 
 
   //tests[0]->Verbosity = HIGH;
@@ -1721,6 +1786,248 @@ void RandomDomainRandomRemove::run() {
       }      
     }
   }
+}
+
+ConstraintArrayTest::ConstraintArrayTest(const int ql, 
+					 const int qt) 
+  : UnitTest(LOW, ql, qt) {}
+ConstraintArrayTest::~ConstraintArrayTest() {}
+
+void ConstraintArrayTest::run() {
+
+  /// create vars with random domains and remove a random set of values.
+
+  if(Verbosity) cout << "Run constraint array checks ";// << endl;
+
+  Solver solver;
+
+  int N = 5;
+  int M = 5;
+  VarArray X(N, 1, M);
+
+  solver.add(X);
+  solver.consolidate();
+
+  for(int i=0; i<N; ++i) {
+    X.set(i, solver.variables[i]); //.get_var();
+  }
+
+  int K = 13;
+  Constraint* c[K];
+
+
+  VarArray scope;
+
+  scope.add(X[0]);
+  scope.add(X[1]);
+  c[0] = new ConstraintNotEqual(scope);
+  c[0]->initialise();
+  scope.clear();
+
+  scope.add(X[0]);
+  scope.add(X[2]);
+  c[1] = new ConstraintLess(scope);
+  c[1]->initialise();
+  scope.clear();
+  
+  scope.add(X[1]);
+  scope.add(X[3]);
+  c[2] = new ConstraintDisjunctive(scope, 2, 1);
+  c[2]->initialise();
+  scope.clear();
+
+  scope.add(X[0]);
+  scope.add(X[2]);
+  scope.add(X[4]);
+  c[3] = new PredicateAdd(scope);
+  c[3]->initialise();
+  scope.clear();
+  
+  scope.add(X[1]);
+  scope.add(X[2]);
+  scope.add(X[3]);
+  c[4] = new PredicateMul(scope);
+  c[4]->initialise();
+  scope.clear();
+
+  scope.add(X[2]);
+  scope.add(X[3]);
+  scope.add(X[4]);
+  c[5] = new PredicateDiv(scope);
+  c[5]->initialise();
+  scope.clear();
+
+  scope.add(X[1]);
+  scope.add(X[2]);
+  scope.add(X[3]);
+  scope.add(X[4]);
+  c[6] = new ConstraintAllDiff(scope);
+  c[6]->initialise();
+  scope.clear();
+
+  scope.add(X[0]);
+  scope.add(X[2]);
+  c[7] = new ConstraintEqual(scope);
+  c[7]->initialise();
+  scope.clear();
+
+
+  scope.add(X[1]);
+  scope.add(X[3]);
+  c[8] = new ConstraintEqual(scope);
+  c[8]->initialise();
+  scope.clear();
+
+
+  scope.add(X[2]);
+  scope.add(X[4]);
+  c[9] = new ConstraintEqual(scope);
+  c[9]->initialise();
+  scope.clear();
+
+
+  scope.add(X[0]);
+  scope.add(X[2]);
+  c[10] = new ConstraintNotEqual(scope);
+  c[10]->initialise();
+  scope.clear();
+
+  scope.add(X[0]);
+  scope.add(X[3]);
+  c[11] = new ConstraintNotEqual(scope);
+  c[11]->initialise();
+  scope.clear();
+
+  scope.add(X[0]);
+  scope.add(X[4]);
+  c[12] = new ConstraintNotEqual(scope);
+  c[12]->initialise();
+  scope.clear();
+
+  //solver.consolidate();
+
+  //cout << solver << endl;
+
+
+  // for(int i=0; i<N; ++i) {
+  //   cout << solver.constraint_graph_array[i] << endl;
+  // }
+
+
+  Vector<Constraint*> posted;
+  Vector<Constraint*> relaxed;
+
+
+  for(int k=0; k<K; ++k) {
+
+    c[k]->id = k+1;
+    
+    //cout << endl << "add " << c[k] << " [" << c[k]->id << "]" << endl;
+    c[k]->initial_post(&solver);
+    posted.add(c[k]);
+
+
+    for(int i=0; i<N; ++i) {
+      //cout << solver.constraint_graph_array[i] << endl;
+
+      solver.constraint_graph_array[i].check_integrity() ;
+    }
+  }
+
+
+  for(int k=0; k<1000000; ++k) {
+    
+    // cout << "posted:  " << posted << endl;
+    // cout << "relaxed: " << relaxed << endl;
+
+
+    if(!posted.empty() && (posted.size == K || randint(2))) {
+      // relax a constraint
+      int r = randint(posted.size);
+      
+      //cout << endl << "relax " << posted[r] << " [" << posted[r]->id << "]" << endl;
+
+      posted[r]->relax_from_array();
+
+      relaxed.add(posted[r]);
+      posted.remove(r);
+
+    } else {
+      // post a constraint
+      int r = randint(relaxed.size);
+      
+      //cout << endl << "post " << relaxed[r] << " [" << relaxed[r]->id << "]" << endl;
+
+      relaxed[r]->post_on_array();
+
+      posted.add(relaxed[r]);
+      relaxed.remove(r);
+
+    }
+
+
+      for(int i=0; i<N; ++i) {
+	//cout << solver.constraint_graph_array[i] << endl;
+	solver.constraint_graph_array[i].check_integrity() ;
+      }
+
+  }
+
+
+
+ 
+  /*
+  cout << endl << "add " << *c2 << endl;
+  c2->initial_post(&solver);
+  
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+
+  cout << endl << "add " << *c3 << endl;
+  c3->initial_post(&solver);
+  
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+
+  cout << endl << "add " << *c4 << endl;
+  c4->initial_post(&solver);
+
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+
+  cout << endl << "add " << *c5 << endl;
+  c5->initial_post(&solver);
+
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+  
+  cout << endl << "add " << *c6 << endl;
+  c6->initial_post(&solver);
+  
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+
+  cout << endl << "add " << *c7 << endl;
+  c7->initial_post(&solver);
+
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+
+  cout << endl << "add " << *c8 << endl;
+  c8->initial_post(&solver);
+
+  for(int i=0; i<N; ++i) {
+    cout << solver.constraint_graph_array[i] << endl;
+  }
+  */
+
+
 }
 
   
@@ -2540,19 +2847,36 @@ void CostasAllDiffAllSolutions::run() {
 
   s.add( AllDiff(X) );
 
-  Vector< Variable > scope;
+
+  Vector< Variable > distance[size-2];
   for(i=1; i<size-1; ++i) {
-    scope.clear();
     for(j=0; j<size-i; ++j) {
-      scope.add(X[j]-X[j+i]);
+      distance[i-1].add(X[j] - X[j+i]);
     }
-    s.add( AllDiff(scope, consistency) );
+    s.add( AllDiff(distance[i-1], consistency) );
   }
+
+  // Vector< Variable > scope;
+  // for(i=1; i<size-1; ++i) {
+  //   scope.clear();
+  //   for(j=0; j<size-i; ++j) {
+  //     scope.add(X[j]-X[j+i]);
+  //   }
+  //   s.add( AllDiff(scope, consistency) );
+  // }
 
 
   s.consolidate();
   //std::cout << s << std::endl;
   //cout << s << endl;
+
+#ifdef _DEBUG_PRUNING
+  s.monitor(X);
+  for(i=0; i<size-2; ++i)
+    s.monitor(distance[i]);
+#endif
+
+
 
   //s.initialise();
   s.initialise_search(X, 
@@ -2606,7 +2930,15 @@ void CostasNotEqualAllSolutions::run() {
 
   //s.initialise();
   s.consolidate();
+  
   //std::cout << s << std::endl;
+
+#ifdef _DEBUG_PRUNING
+  s.monitor(X);
+  for(i=0; i<size-2; ++i)
+    s.monitor(distance[i]);
+#endif
+
 
   s.initialise_search(X, 
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -4564,17 +4896,17 @@ void OpshopTest::run() {
   run1();
   //cout << (get_run_time() - TIME) << endl ;
   
-  //TIME = get_run_time();
-  cout << "2 ";
-  cout.flush();
-  run2();
-  //cout << (get_run_time() - TIME) << endl ;
+  // //TIME = get_run_time();
+  // cout << "2 ";
+  // cout.flush();
+  // run2();
+  // //cout << (get_run_time() - TIME) << endl ;
     
-  //TIME = get_run_time();
-  cout << "3 ";
-  cout.flush();
-  run3();
-  //cout << (get_run_time() - TIME) << endl ;
+  // //TIME = get_run_time();
+  // cout << "3 ";
+  // cout.flush();
+  // run3();
+  // //cout << (get_run_time() - TIME) << endl ;
 
 }
 
