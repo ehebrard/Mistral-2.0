@@ -1177,11 +1177,13 @@ namespace Mistral {
   
   
   class VSIDS : public GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
+					 //MinValue > {
 					 BoolMinWeightValue > {
   public:
     
     VSIDS(Solver *s) : GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
-					 BoolMinWeightValue >(s) {
+					 //MinValue >(s) {
+      BoolMinWeightValue >(s) {
       choice.weight = s->get_literal_activity();
   }
 };

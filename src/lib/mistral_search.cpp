@@ -110,8 +110,12 @@ double *Mistral::LiteralActivityManager::get_weight() { return var_activity; }
 
 void Mistral::LiteralActivityManager::notify_decision() {
   int i=n_vars;
-  while(i--) var_activity[i] *= decay;    
-  i=n_vars;
+  while(i--) {
+    //std::cout << i << " " << var_activity[i] << " -> ";
+    var_activity[i] *= decay;
+    //std::cout << var_activity[i] << std::endl;
+  }    
+  i=2*n_vars;
   while(i--) lit_activity[i] *= decay;
 }    
 

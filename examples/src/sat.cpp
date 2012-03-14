@@ -82,13 +82,13 @@ int main(int argc, char **argv)
     {
       SolverParameters params;
 
-      params.verbosity       = ( int_param[1] != NOVAL ? int_param[1] : 4 );
+      params.verbosity       = ( int_param[1] != NOVAL ? int_param[1] : 2 );
       params.time_limit      = ( (double)(int_param[2] != NOVAL ? int_param[2] : -1 ) );
       params.seed            = ( int_param[3] != NOVAL ? int_param[3] : 11041979 );	  
-      params.randomization   = ( int_param[4] != NOVAL ? abs(int_param[4]) : 2 );
+      params.randomization   = ( int_param[4] != NOVAL ? abs(int_param[4]) : 1 );
       if(params.randomization == 0)
 	params.randomization = 1;
-      params.shuffle         = ( int_param[4] > 0 );
+      params.shuffle         = ( int_param[4] != NOVAL ? int_param[4] : 0 );
       params.restart_base    = ( int_param[5] != NOVAL ? int_param[5] : 200 );
       params.restart_limit   = ( int_param[5] != NOVAL ? int_param[5] : 200 );
       params.checked         = ( int_param[6] != NOVAL ? int_param[6] : 1 );
@@ -103,22 +103,41 @@ int main(int argc, char **argv)
       params.normalize_activity = ( strcmp(str_param[4],"nil") ? atof(str_param[4]) : 0 );
       params.dynamic_value      = (params.value_selection>5);
 
+      params.activity_increment = 0.012;
+
       int method = ( strcmp(str_param[5],"sat") ? 0 : 1 );
 
      
       if(method) {
 
 	SatSolver solver;
+	solver.params.copy(params);
 	solver.parse_dimacs(argv[1]);
-	solver.params.verbosity = 2;
+	//solver.params.verbosity = 2;
+
+
 	solver.solve();
 
       } else {
 
 	Solver solver;
+
+	solver.parameters.copy(params);
+
 	solver.parse_dimacs(argv[1]);
 	solver.parameters.verbosity = 1;
 	solver.parameters.backjump = 1;
+
+
+	//solver.monitor(solver.variables);
+
+	//
+
+	// std::cout << solver << std::endl;
+
+	// std::cout << solver.base << std::endl;
+
+
 	solver.depth_first_search(solver.variables, 
 				  new VSIDS(&solver),
 				  new Geometric(200,1.05)

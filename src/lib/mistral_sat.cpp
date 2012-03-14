@@ -92,12 +92,12 @@ int SatSolver::solve()
   stats.start_time = get_run_time();
   if(!restart_policy)
     set_policy( params.restart_policy );
-  if(params.verbosity>1)
-    cout << endl 
-	 << "c  ==================================[ Mistral (Sat module) ]===================================" << endl
-	 << "c  |      SEARCH  STATISTICS           |                  PROBLEM STATISTICS                   |" << endl
-	 << "c  |  Conflicts |       Nodes  CPUTime |  Atoms  Clauses (Size)   Learnt (Size)   Added (Size) |" << endl
-	 << "c  =============================================================================================" << endl;
+  // if(params.verbosity>1)
+  //   cout << endl 
+  // 	 << "c  ==================================[ Mistral (Sat module) ]===================================" << endl
+  // 	 << "c  |      SEARCH  STATISTICS           |                  PROBLEM STATISTICS                   |" << endl
+  // 	 << "c  |  Conflicts |       Nodes  CPUTime |  Atoms  Clauses (Size)   Learnt (Size)   Added (Size) |" << endl
+  // 	 << "c  =============================================================================================" << endl;
   int result = (unsigned int)(stats.base_avg_size)+1;
   while(1) {
     //print_decisions(std::cout);
@@ -317,7 +317,7 @@ void SatSolver::parse_dimacs(const char* filename)
   ifstream infile( filename );
   char c=' ';
   string word;
-  int N, M, l=0, lit;
+  int N, M, l=0, lit, cs;
 
   // skip comments
   infile >> c;
@@ -346,11 +346,18 @@ void SatSolver::parse_dimacs(const char* filename)
 	  if(l>0) lit = (l-1)*2+1;
 	  else lit = (l+1)*-2;
 	  learnt_clause.add(lit);
-	  
-	  if(params.init_activity == 1)
-	    activity[lit] += params.activity_increment;
 	}
       } while(l && infile.good());
+
+
+      if(params.init_activity == 1) {
+	cs = learnt_clause.size;
+	for(int j=cs-1; j>=0; --j) {
+	  //std::cout << learnt_clause << " " << (params.activity_increment/cs) << std::endl;
+	  activity[learnt_clause[j]] += (params.activity_increment/cs);
+	}
+      }
+
       add_clause( learnt_clause );
       if(params.checked) add_original_clause( learnt_clause );
     }
@@ -395,6 +402,7 @@ int SatSolver::check_solution()
 Mistral::ConstraintClauseBase::ConstraintClauseBase(Vector< Variable >& scp) 
   : GlobalConstraint(scp) { 
   conflict = NULL;
+  priority = 1;
 }
 
 void Mistral::ConstraintClauseBase::mark_domain() {
@@ -407,7 +415,7 @@ void Mistral::ConstraintClauseBase::initialise() {
   //solver->base = this;
 
   for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_VALUE_, i);
+    trigger_on(_VALUE_, scope[i]);
   }
   //set_idempotent(true);
 
@@ -484,6 +492,9 @@ void Mistral::ConstraintClauseBase::add( Vector < Lit >& clause, double activity
    if(activity_increment > 0.0) {
      int i=clause.size;
      while(i--) {
+
+       //std::cout << clause << " " << activity_increment << std::endl;
+
        lit_activity[clause[i]] += activity_increment;
        var_activity[UNSIGNED(clause[i])] += activity_increment;
      }
@@ -720,6 +731,9 @@ Mistral::Clause* Mistral::ConstraintClauseBase::update_watcher(const int cw,
 	if( vb == 3 ) {
 	  // the last literal (other watched lit) is not set yet, we set it
 	  //add_lit(q);
+
+	  //std::cout << "    -> b" << UNSIGNED(q) << " = " << SIGN(q) << std::endl;
+
 	  v.set_domain(SIGN(q));
 	  reason[UNSIGNED(q)] = cl;
 	  //changes.add(UNSIGNED(q));
@@ -802,14 +816,14 @@ void Mistral::ConstraintClauseBase::forget(double forgetfulness)
 
 
 std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
-  // os << " (";
-  // if(clauses.size>0) {
-  //   os << clauses[0];
-  //   for(unsigned int i=1; i<clauses.size; ++i)
-  //     os << " " << clauses[i]  ;
-  // }
-  // os << ")";
-  os << "nogoods";
+  os << " (";
+  if(clauses.size>0) {
+    os << clauses[0];
+    for(unsigned int i=1; i<clauses.size; ++i)
+      os << " " << clauses[i]  ;
+  }
+  os << ")";
+  //os << "nogoods";
   return os;
 }
 

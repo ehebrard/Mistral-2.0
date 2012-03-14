@@ -107,6 +107,7 @@ namespace Mistral {
     
     inline void make_assumption(Lit p) {
       
+
       // swap p and assumptions[assumptions.size]
       Atom q_atom = assumptions.back(0);
       Atom p_atom = UNSIGNED(p);
@@ -377,22 +378,22 @@ inline void SatSolver::simplify_data_base()
   }
 }
 
-inline void SatSolver::add_original_clause( Vector<Lit>& conflict )
+inline void SatSolver::add_original_clause( Vector<Lit>& conf )
 {
-  Clause *cl = Clause::Array_new(conflict);
+  Clause *cl = Clause::Array_new(conf);
   original.add( cl );
 }
 
-inline void SatSolver::add_clause( Vector<Lit>& conflict )
+inline void SatSolver::add_clause( Vector<Lit>& conf )
 {
-  if(conflict.size > 1) {
-    Clause *cl = Clause::Array_new(conflict);
+  if(conf.size > 1) {
+    Clause *cl = Clause::Array_new(conf);
     base.add( cl );
     double size = base.size;
-    stats.base_avg_size = (stats.base_avg_size*(size-1) + double(conflict.size))/size;
-    if( conflict.size < 4 ) ++stats.small;
+    stats.base_avg_size = (stats.base_avg_size*(size-1) + double(conf.size))/size;
+    if( conf.size < 4 ) ++stats.small;
   } else {
-    Lit p = conflict[0];
+    Lit p = conf[0];
     Atom x = ATOM(p);
     if(LEVEL(x) > decisions.size)
       add_lit(p);
@@ -402,20 +403,20 @@ inline void SatSolver::add_clause( Vector<Lit>& conflict )
 }
 
 inline void SatSolver::add_clause( Vector<Clause*>& clauseList, 
-				  Vector<Lit>& conflict,
+				  Vector<Lit>& conf,
 				  double& avgsize )
 {
-  if(conflict.size > 1) {
-    Clause *cl = Clause::Array_new(conflict);
+  if(conf.size > 1) {
+    Clause *cl = Clause::Array_new(conf);
     clauseList.add( cl );
-    is_watched_by[conflict[0]].add(cl);
-    is_watched_by[conflict[1]].add(cl);
+    is_watched_by[conf[0]].add(cl);
+    is_watched_by[conf[1]].add(cl);
     double size = clauseList.size;
-    avgsize = (avgsize*(size-1) + double(conflict.size))/size;
-    if( conflict.size < 4 ) ++stats.small;
+    avgsize = (avgsize*(size-1) + double(conf.size))/size;
+    if( conf.size < 4 ) ++stats.small;
 
   } else {
-    Lit p = conflict[0];
+    Lit p = conf[0];
     Atom x = ATOM(p);
     if(LEVEL(x) > decisions.size)
       add_lit(p);
@@ -502,6 +503,13 @@ inline int SatSolver::iterative_search()
 //   for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
 //   print_decisions(std::cout);
 // #endif
+
+    // std::cout << "c "; for(int lvl=0; lvl<decisions.size; ++lvl) std::cout << " ";
+    // for(unsigned int k=1; k<state.size; ++k) {
+    //   std::cout << (assigned(k) ? (SIGN(k) ? "1" : "0") : "[0,1]") << " ";
+    // }
+    // std::cout << std::endl;
+  
 
   if(decisions.size == 0 && assumptions.size) simplify_data_base();
   
@@ -740,7 +748,17 @@ inline void SatSolver::decay_activity()
   if(params.activity_decay >= 0) {
     unsigned int i = 2*state.size;
     while(i--) {
+
+      // if(i%2) {
+      // 	std::cout << i/2 << " " << (activity[i]+activity[i-1]) << " -> ";
+      // }
+
       activity[i] *= params.activity_decay;
+
+      // if(!(i%2)) {
+      // 	std::cout << (activity[i]+activity[i+1]) << std::endl;
+      // }
+
     }
   }
 }
@@ -754,8 +772,6 @@ inline void SatSolver::decay_activity()
 
 inline Lit SatSolver::choice()
 {
-  decay_activity();
-
   Lit p;
 
   if(params.randomization) {
@@ -770,8 +786,7 @@ inline Lit SatSolver::choice()
 	
 	cur = activity[y];
 	cur += activity[NOT(y)]; 
-	
-	//std::cout << "activity of b" << UNSIGNED(y) << " = " << cur << std::endl;
+       
 	
 	for(j=crd; j && cur>best[j-1]; --j);
 	for(k=crd; k>j; --k) {
@@ -780,15 +795,23 @@ inline Lit SatSolver::choice()
 	}
 	best[j] = cur;
 	x[j] = y;
+
+
+
+	//std::cout << "activity of b" << UNSIGNED(y) << " = " << cur << std::endl;
 	
 	if(crd<params.randomization) ++crd;
 	++i;
       }
     
-    j = randint(crd);
+    j = (crd > 1 ? randint(crd) : 0);
+    //j = 0;
     
     //case FALSE_FIRST : 
     p = x[j]; //break;
+
+    //std::cout << j << " " << p << std::endl;
+
   } else {
     p = 2*assumptions.back(0);
   }
@@ -804,6 +827,9 @@ inline Lit SatSolver::choice()
   //   }
 
 
+  //std::cout << params.value_selection << std::endl;
+
+
   switch( params.value_selection ) 
     {
     case TRUE_FIRST  : p = NOT(p); break;
@@ -815,19 +841,39 @@ inline Lit SatSolver::choice()
     }
 
 
+  // print_literal(std::cout, 190);
+  // std::cout << " " << activity[190] << std::endl;
+
+  // print_literal(std::cout, NOT(190));
+  // std::cout << " " << activity[NOT(190)] << std::endl;
+
+
+#ifdef _DEBUG_SEARCH
+  std::cout << "c  ";
+  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
+  //std::cout << "decide: " ;
+  print_literal(std::cout, p);
+  std::cout << std::endl;
+#endif
+
+
+
+  decay_activity();
+
+
   return p;    
 }
 
 inline void SatSolver::make_decision(const Lit l)
 {
 
-#ifdef _DEBUG_SEARCH
-  std::cout << "c  ";
-  for(unsigned int i=0; i<decisions.size; ++i) std::cout << " " ;
-  //std::cout << "decide: " ;
-  print_literal(std::cout, l);
-  std::cout << std::endl;
-#endif
+
+  // print_literal(std::cout, 490);
+  // std::cout << " " << activity[490] << std::endl;
+
+  // print_literal(std::cout, NOT(490));
+  // std::cout << " " << activity[NOT(490)] << std::endl;
+  
 
   ++stats.num_nodes;
   next_deduction = assumptions.size;
@@ -1002,8 +1048,11 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
 
 	if( LEVEL(v) >= assumptions.size ) {
 	  // the last literal (other watched lit) is not set yet, we set it
+	  
 	  add_lit(q);
 	  reason[UNSIGNED(q)] = cl;
+
+	  std::cout << "    -> b" << UNSIGNED(q) << " = " << SIGN(q) << std::endl;
 
 #ifdef _DEBUG_WATCH
 	  std::cout << "    -> b" << UNSIGNED(q) << " in " << (SIGN(q) ? "{1}" : "{0}") << std::endl;

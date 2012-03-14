@@ -119,13 +119,35 @@ void Mistral::SolverParameters::initialise() {
   activity_decay = 0.96;
   checked = 1;
   backjump = 0;
-  value_selection = 0; //6;
+  value_selection = 2;
   dynamic_value = 0; //1;
 }
 Mistral::SolverParameters::SolverParameters(const SolverParameters& sp) {
   copy(sp);
 }
 void Mistral::SolverParameters::copy(const SolverParameters& sp) {
+  propagation_limit = sp.propagation_limit;
+  fail_limit = sp.fail_limit;
+  seed = sp.seed;
+
+  time_limit = sp.time_limit;
+  restart_policy = sp.restart_policy;
+  restart_base = sp.restart_base;
+  restart_limit = sp.restart_limit;
+  restart_factor = sp.restart_factor;
+  activity_increment = sp.activity_increment;
+  normalize_activity = sp.normalize_activity;
+  init_activity = sp.init_activity;
+  forgetfulness = sp.forgetfulness;
+  randomization = sp.randomization;
+  shuffle = sp.shuffle;
+  activity_decay = sp.activity_decay;
+  checked = sp.checked;
+  backjump = sp.backjump;
+  value_selection = sp.value_selection;
+  dynamic_value = sp.dynamic_value;
+
+
   verbosity = sp.verbosity;
   find_all = sp.find_all;
   node_limit = sp.node_limit;
@@ -761,8 +783,9 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
   }
 
   new_clause.initialise(0,N);
-  //ConstraintClauseBase *cbase = new ConstraintClauseBase(variables);
-  //add(cbase);
+  // ConstraintClauseBase *cbase = new ConstraintClauseBase(variables);
+  // base->reason = reason.stack_;
+  // add(cbase);
 
   for(int i=0; i<M; ++i)
     {
@@ -797,12 +820,12 @@ void Mistral::Solver::parse_dimacs(const char* filename) {
 
 
 void Mistral::Solver::add(Vector< Lit >& clause) {
- //  if(!base) {
-//     base = new ConstraintClauseBase(variables);
-//     add(base);
-//     base->reason = reason.stack_;
-//   }
-//   base->add( clause, (parameters.init_activity ? parameters.activity_increment : 0.0) );
+  if(!base) {
+    base = new ConstraintClauseBase(variables);
+    add(base);
+    base->reason = reason.stack_;
+  }
+  base->add( clause, (parameters.init_activity ? parameters.activity_increment : 0.0) );
  }
 
 void Mistral::Solver::set_parameters(SolverParameters& p) {
@@ -997,8 +1020,10 @@ Mistral::Outcome Mistral::Solver::search() {
 
     //std::cout << "current fails: " << statistics.num_failures << " / limit fails: " << parameters.restart_limit << std::endl;
 
-    satisfiability = chronological_dfs(); 
-    //conflict_directed_backjump(); //
+    satisfiability = //(parameters.backjump ? 
+      //conflict_directed_backjump() :
+      chronological_dfs(); //);
+		      
 
     if(satisfiability == LIMITOUT) {
       policy->reset(parameters.restart_limit);    
@@ -1141,10 +1166,10 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   statistics.num_constraints = constraints.size;
 
   if(parameters.verbosity)  std::cout << " c +" << std::setw(78) << std::setfill('=')
-			      //=============================================================================
-				      << "+" << std::endl << std::setfill(' ') 
-				      << " c |      INSTANCE STATS       |                    SEARCH STATS                 |" << std::endl 
-				      << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |" << std::endl;
+  			      //=============================================================================
+  				      << "+" << std::endl << std::setfill(' ') 
+  				      << " c |      INSTANCE STATS       |                    SEARCH STATS                 |" << std::endl 
+  				      << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |" << std::endl;
 }
 
 
@@ -1867,8 +1892,9 @@ bool Mistral::Solver::propagate()
     
   taboo_constraint = NULL;
   active_constraints.clear();
-  active_variables.clear();
-
+  if(!parameters.backjump) {
+    active_variables.clear();
+  }
 
 #ifdef _DEBUG_PROPAGATE
   if(!IS_OK(wiped_idx)) {
@@ -2122,6 +2148,13 @@ void Mistral::Solver::learn_nogood() {
 #endif
 
   //#ifdef _DEBUG_NOGOOD
+
+  // std::cout << base->changes << std::endl
+  // 	    << base->events << std::endl;
+
+  std::cout << active_variables << std::endl;
+
+
   for(unsigned int i=num_search_variables-1; i>=sequence.size; --i) {
     std::cout << num_search_variables-1-i << "\t"
 	      << assignment_level[sequence[i].id()] << "\t"
@@ -2136,6 +2169,18 @@ void Mistral::Solver::learn_nogood() {
 #endif
 
   //if(base->conflict) {
+
+
+
+  Triplet < int, Event, ConstraintImplementation* > var_evt;
+  while(!active_variables.empty()) {
+    var_evt = active_variables.pop_front();
+    if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+      sequence.remove(variables[var_evt.first]);
+      assignment_level[var_evt.first] = level;
+    }
+  }
+
 
   unsigned int j;
   int pathC = 0, index = sequence.size-1;//, index = assumptions.size;
@@ -2162,6 +2207,13 @@ void Mistral::Solver::learn_nogood() {
 
   do {
     // add the parents of the conflict to the current set of visited atoms
+
+    // if(!current_clause) {
+    //   std::cout << "No conflict!!" << std::endl;
+    //   exit(1);
+    // }
+
+
     Clause& con = *(current_clause);
 
 
@@ -2239,7 +2291,7 @@ void Mistral::Solver::learn_nogood() {
 #endif
 
     if( pathC > 1 ) {
-      // there are still atoms to expand, we start with 'a'
+      // there are still atoms to expend, we start with 'a'
       current_clause = reason[a];
       visited.fast_add(a);
     } 
@@ -2365,6 +2417,15 @@ void Mistral::Solver::branch_left() {
 
   save();
   Mistral::Decision decision = heuristic->branch();
+
+
+  // std::cout << variables[95] << " == 0 " << ((GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, BoolMinWeightValue >*)heuristic)->var.manager->lit_activity[190] << std::endl;
+
+
+
+
+  // std::cout << variables[95] << " == 1 " << ((GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, BoolMinWeightValue >*)heuristic)->var.manager->lit_activity[NOT(190)] << std::endl;
+
 
   //std::cout << decision << " " << decision.var.get_domain() << std::endl;
   
@@ -2556,27 +2617,27 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
       ++statistics.num_nodes;
 
 #ifdef _MONITOR
-    std::cout << "c" << std::endl;
-    unsigned int k=0;
-    // for(; k<monitored_variables.size; ++k) {
-    //   monitored_variables[k] = monitored_variables[k].get_var();
-    // }
-    // k = 0;
-    for(unsigned int q=0; q<monitored_index.size; ++q) {
-      std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
-      for(; k<monitored_index[q]; ++k) {
-	//std::cout << "|" << variables[monitored[k]] ;
-	//std::cout.flush();
-	std::cout << variables[monitored[k]].get_domain() << " ";
-	//std::cout.flush();
-	//std::cout << variables[monitored[k]].get_history() << " ";
+      //std::cout << "c" << std::endl;
+      unsigned int k=0;
+      // for(; k<monitored_variables.size; ++k) {
+      //   monitored_variables[k] = monitored_variables[k].get_var();
+      // }
+      // k = 0;
+      for(unsigned int q=0; q<monitored_index.size; ++q) {
+	std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+	for(; k<monitored_index[q]; ++k) {
+	  //std::cout << "|" << variables[monitored[k]] ;
+	  //std::cout.flush();
+	  std::cout << variables[monitored[k]].get_domain() << " ";
+	  //std::cout.flush();
+	  //std::cout << variables[monitored[k]].get_history() << " ";
+	}
+	std::cout << std::endl;
       }
-      std::cout << std::endl;
-    }
 
-  // for(int i=0; i<variables.size; ++i) {
-  //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
-  //   for(int k=2; k>=0; --k) {
+      // for(int i=0; i<variables.size; ++i) {
+      //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+      //   for(int k=2; k>=0; --k) {
   //     std::cout << "["; 
   //     for(int j=0; j<constraint_graph[i].on[k].size; ++j) {
   // 	std::cout << constraint_graph[i].on[k][j] << ":" << constraint_graph[i].on[k][j].index();
