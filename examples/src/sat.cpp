@@ -37,7 +37,7 @@ int int_param[nia];
 
 const int nsa = 6;
 const char* str_ident[nsa] = {
-  "-restart_factor",
+  "-factor",
   "-decay",
   "-forget",
   "-policy",
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 
 	solver.depth_first_search(solver.variables, 
 				  new VSIDS(&solver),
-				  new Geometric(200,1.05)
+				  new Geometric(params.restart_base,params.restart_factor)
 				  );
 
       }

@@ -119,41 +119,41 @@ public:
   virtual void run();
 };
 
-template< int NUM_HEAD >
-class RandomCListRandomRemoveAndRestore : public UnitTest {
+// template< int NUM_HEAD >
+// class RandomCListRandomRemoveAndRestore : public UnitTest {
 
-public:
+// public:
 
-  int NUM_ELT;
+//   int NUM_ELT;
   
-  RandomCListRandomRemoveAndRestore(const int ql=HIGH, 
-				   const int qt=MEDIUM); 
-  ~RandomCListRandomRemoveAndRestore();
+//   RandomCListRandomRemoveAndRestore(const int ql=HIGH, 
+// 				   const int qt=MEDIUM); 
+//   ~RandomCListRandomRemoveAndRestore();
 
-  class NaiveImplementation : public Reversible {
+//   class NaiveImplementation : public Reversible {
 
-  public:
-    Vector<int> elements;
-    Vector<int> whichlist;
-    Vector<int> whichleveladded;
-    Vector<int> whichlevelremoved;
+//   public:
+//     Vector<int> elements;
+//     Vector<int> whichlist;
+//     Vector<int> whichleveladded;
+//     Vector<int> whichlevelremoved;
 
-    NaiveImplementation(Solver *s) ;
+//     NaiveImplementation(Solver *s) ;
 
-    void create(int elt, int wl=0);
-    void reversible_remove(int elt, int wl);
-    void reversible_add(int elt, int wl=0);
-    void save();
-    void restore();
+//     void create(int elt, int wl=0);
+//     void reversible_remove(int elt, int wl);
+//     void reversible_add(int elt, int wl=0);
+//     void save();
+//     void restore();
 
-    void print(int num_lists);
-  };
+//     void print(int num_lists);
+//   };
 
 
-  void checkEquality(ReversibleMultiList<int,NUM_HEAD>& alist, 
-		     NaiveImplementation& blist);
-  virtual void run();
-};
+//   void checkEquality(ReversibleMultiList<int,NUM_HEAD>& alist, 
+// 		     NaiveImplementation& blist);
+//   virtual void run();
+// };
 
 
 
@@ -405,16 +405,6 @@ public:
   virtual void run();
 };
 
-class ConstraintArrayTest : public UnitTest {
-
-public:
-  
-  ConstraintArrayTest(const int ql=MEDIUM, const int qt=MEDIUM);
-  ~ConstraintArrayTest();
-
-  virtual void run();
-};
-
 
 
 
@@ -444,9 +434,9 @@ public:
   VarArray scope2;
   VarArray scope3;
 
-  CON_TYPE *con1;// = new CON_TYPE(scope1);
-  CON_TYPE *con2;// = new CON_TYPE(scope2);
-  CON_TYPE *con3;// = new CON_TYPE(scope3);
+  Constraint con1;// = new CON_TYPE(scope1);
+  Constraint con2;// = new CON_TYPE(scope2);
+  Constraint con3;// = new CON_TYPE(scope3);
 
   ConChecker(//CON_TYPE *cons, 
 	     std::string nm,
@@ -479,11 +469,10 @@ public:
     }
     
     
-    con1 = new CON_TYPE(scope1);
-    con2 = new CON_TYPE(scope2);
-    con3 = new CON_TYPE(scope3);
+    con1 = Constraint(new CON_TYPE(scope1));
+    con2 = Constraint(new CON_TYPE(scope2));
+    con3 = Constraint(new CON_TYPE(scope3));
 
-    
     usrand(seed);
   }
 
@@ -491,52 +480,37 @@ public:
 
   void init() {
 
-     s1.add( con1 );
-     s1.rewrite();
-     s1.consolidate();
-
-
-     s2.add( con2 );
-     s2.rewrite();
-     s2.consolidate();
-     
-     s3.add( con3 );
-     s3.rewrite();
-     s3.consolidate();
-
+    s1.add( (con1) );
+    //s1.rewrite();
+    s1.consolidate();
+    
+    s2.add( (con2) );
+    //s2.rewrite();
+    s2.consolidate();
+    
+    s3.add( (con3) );
+    //s3.rewrite();
+    s3.consolidate();
+    
   }
 
 
   void run(int n_iterations=1) {
 
-#ifdef _VARNCONQUEUE
-	      Event evt;
-	      int var;
-	      ConstraintNode nd;
-#endif
-
-
     std::cout << ".";
     std::cout.flush();
-
-    //std::cout << std::endl << con1 << std::endl;
-
     while(n_iterations--) {
-
-      //      std::cout << n_iterations << std::endl;
-
+      
       int n_reductions = 0;
-
-      //std::cout << s1  << std::endl;
-
+      
       PropagationOutcome wiped1 = CONSISTENT;
       PropagationOutcome wiped2 = CONSISTENT;
       PropagationOutcome wiped3 = CONSISTENT;
-    
+      
       s1.save();
       if(AC) s2.save();
       if(BC) s3.save();
-
+      
 #ifdef _DEBUG_CHECKER
       std::cout << std::endl << n_iterations << " check " << name << " " << con1 << std::endl;
       for(int j=0; j<arity; ++j) {
@@ -556,18 +530,13 @@ public:
       }
       std::cout << std::endl;
 #endif
-
-
+      
+      
       bool finished = false;
       while(!finished) {
-
+	
 	for(int j=0; j<arity; ++j) {
-
 	  
-	  // if(BC && !AC && scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
-	  //   std::cout << 11 << std::endl;
-	  // }
-
 	  bool is_ground = true;
 	  for(int i=0; is_ground && i<arity; ++i) {
 	    is_ground = scope1[i].get_var().is_ground();
@@ -576,39 +545,22 @@ public:
 	    finished = true;
 	    break;
 	  } else if(!scope1[j].get_var().is_ground()) {
-
-	    // std::cout << "reduce " << scope1[j].get_var() << "'s domain (" 
-	    // 	    << scope1[j].get_var().get_domain() << ")" << std::endl;
-	  
+	    
 	    int type = 0;
 	    if(j<(arity-nbool) && randint(3)<1) type = 1;
-	  
-	    int k = randint(scope1[j].get_var().get_max() - scope1[j].get_var().get_min() + 1) + scope1[j].get_var().get_min();
-	  
-	    ++n_reductions;
-	  
-	    // std::cout << "  " << n_reductions << std::endl;
-	  
-	    // if(n_iterations == 18 && n_reductions == 7) {
-	  
-	    //   std::cout << "HERE" << std::endl;
-	    //   s2.parameters.verbosity = 1;
-	    // }
-
-#ifdef _DEBUG_CHECKER
-		std::cout << std::endl << std::endl;;
-#endif
-
-	  
-	    if(type) {
-
-	      // if(BC && !AC && scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
-	      // 	std::cout << 22 << std::endl;
-	      // }
-
 	    
-	      if(randint(2)) {
+	    int k = randint(scope1[j].get_var().get_max() - scope1[j].get_var().get_min() + 1) + scope1[j].get_var().get_min();
+	    
+	    ++n_reductions;
+	    
+#ifdef _DEBUG_CHECKER
+	    std::cout << std::endl << std::endl;;
+#endif
+	    
+	    if(type) {
 	      
+	      if(randint(2)) {
+		
 		scope1[j] = scope1[j].get_var();
 		scope2[j] = scope2[j].get_var();
 		scope3[j] = scope3[j].get_var();
@@ -693,281 +645,175 @@ public:
 			<<tmp.get_domain() << " " ;//<< " |" <<tmp.get_size() << "| + ";
 	      //if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
 	    }
-	    // if(AC) {
-	    //   std::cout << std::endl;
-	    //   for(int j=0; j<arity; ++j) {
-	    // 	std::cout << scope2[j].get_var() << " in " << scope2[j].get_var().get_domain() << " " ;
-	    //   }	
-	    // }
-	    // if(BC) {
-	    //   std::cout << std::endl;
-	    //   for(int j=0; j<arity; ++j) {
-	    // 	tmp = scope3[j].get_var();
-	    // 	std::cout << tmp << " in " << tmp.get_domain() << " " ;//<< " |" << tmp.get_size() << "| + ";
-	    // 	//if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
-	    //   }	
-	    //   std::cout << std::endl;
-	    //   for(int j=0; j<arity; ++j) {
-	    // 	tmp = con3->scope[j];
-	    // 	std::cout << tmp << " in " << tmp.get_domain() << " " ;//<< " |" << tmp.get_size() << "| + ";
-	    // 	//if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
-	    //   }	
-	    // }
 	    std::cout << std::endl;
-
-	    //std::cout << scope1[2].get_var().get_size() << " =? " << scope3[2].get_var().get_size() << std::endl;
-	    
 #endif
-
-	    // if(BC && !AC && scope3.size>2) {
-	    //   Variable tmp = scope3[2].get_var();
-	    //   if(tmp.domain_type == BITSET_VAR) {
-	    // 	std::cout  << std::endl << "before pruning, x3[2]: " << std::endl;
-	    // 	((VariableBitmap*)(tmp.variable))->debug_print();
-	    //   }
-	    // }
 
 	    if( IS_OK(wiped1) ) {
 
-#ifdef _VARNCONQUEUE
-	      if(!s1.active_variables.empty()) {
-		var = s1.active_variables.pop( evt );
-		nd = s1.constraint_graph[var]->first(EVENT_TYPE(evt));
-		if(!(ASSIGNED(evt))) {
-		  s1.constraint_graph[var]->next(nd);
-		  s1.active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-		}
-	      }
-#endif
-		
-	      s1.active_constraints.select(con1);
-	      //con1->consolidate();
-	      wiped1 = con1->propagate();
+	      wiped1 = s1.propagate(con1);
 
 	      if(AC && IS_OK(wiped2)) {
 
-#ifdef _VARNCONQUEUE
-		if(!s2.active_variables.empty()) {
-		  var = s2.active_variables.pop( evt );
-		  nd = s2.constraint_graph[var]->first(EVENT_TYPE(evt));
-		  if(!(ASSIGNED(evt))) {
-		    s2.constraint_graph[var]->next(nd);
-		    s2.active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-		  }
-		}
-#endif
-
-		s2.active_constraints.select(con2);
-		//con2->consolidate();
-		con2->changes.fill();
-		wiped2 = con2->checker_propagate();
+		wiped2 = s2.checker_propagate(con2);
+		
 	      }
 
 	      if(BC && IS_OK(wiped3)) {
-
-#ifdef _VARNCONQUEUE
-		if(!s3.active_variables.empty()) {
-		  var = s3.active_variables.pop( evt );
-		  nd = s3.constraint_graph[var]->first(EVENT_TYPE(evt));
-		  if(!(ASSIGNED(evt))) {
-		    s3.constraint_graph[var]->next(nd);
-		    s3.active_constraints.trigger(nd.elt.constraint, nd.elt.index, evt);
-		  }
-		}
-#endif
-
-		s3.active_constraints.select(con3);
-		//con3->consolidate();
-		con3->changes.fill();
-		wiped3 = con3->bound_propagate();
-	      }
-
-	      s1.active_constraints.clear();
-#ifdef _VARNCONQUEUE
-	      s1.active_variables.clear();
-#endif
-
-	      if(AC) {
-		s2.active_constraints.clear();
-#ifdef _VARNCONQUEUE
-		s2.active_variables.clear();
-#endif
+		
+		s3.bound_checker_propagate( con3 );
 
 	      }
-
-	      if(BC) {
-		s3.active_constraints.clear();
-#ifdef _VARNCONQUEUE
-		s3.active_variables.clear();
-#endif
-
-	      }
-	      
 	      
 #ifdef _DEBUG_CHECKER
 	      std::cout << "=> ";
 	      for(int j=0; j<arity; ++j) {
 		std::cout << scope1[j].get_var().get_domain() << " ";
 	      }
-	    if(AC) {
-	      std::cout << std::endl << "=> ";
-	      for(int j=0; j<arity; ++j) {
-		std::cout << scope2[j].get_var().get_domain() << " " ;
-	      }	
-	    }
-	    if(BC) {
-	      std::cout << std::endl << "=> ";
-	      for(int j=0; j<arity; ++j) {
-		tmp = scope3[j].get_var();
-		std::cout << tmp.get_domain() << " " ;
-	      }	
-	    }
-	    std::cout << std::endl;
-
-	    //std::cout << scope1[2].get_var().get_size() << " =? " << scope3[2].get_var().get_size() << std::endl;
-	    
+	      if(AC) {
+		std::cout << std::endl << "=> ";
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope2[j].get_var().get_domain() << " " ;
+		}	
+	      }
+	      if(BC) {
+		std::cout << std::endl << "=> ";
+		for(int j=0; j<arity; ++j) {
+		  tmp = scope3[j].get_var();
+		  std::cout << tmp.get_domain() << " " ;
+		}	
+	      }
+	      std::cout << std::endl;
 #endif
-
-	    // if(BC && !AC && scope3.size>2) {
-	    //   Variable tmp = scope3[2].get_var();
-	    //   if(tmp.domain_type == BITSET_VAR) {
-	    // 	std::cout << "after pruning, x3[2]: " << std::endl;
-	    // 	((VariableBitmap*)(tmp.variable))->debug_print();
-	    // 	//std::cout << std::endl;
-	    //   }
-	    // }
-
-	  
-	  
-	      // test if there is a fail
+	      
+	      test if there is a fail
 	      if( AC && BC ) {
 		if(IS_OK(wiped2) && !IS_OK(wiped1)) {
 		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result propag </= AC)" 
 		       << endl << " propagator: fail " << endl ;
 		  std::cout << std::endl << " generic AC: "; 
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope2[j].get_var().get_domain() << " " ;
+		}
+		std::cout << std::endl;
+		exit(1);
+	      }
+	      if(IS_OK(wiped1) && !IS_OK(wiped3)) {
+		cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
+		     << endl << " propagator: " ;
+		for(int j=0; j<arity; ++j) {
+		  std::cout << scope1[j].get_domain() << " " ;
+		}
+		std::cout << std::endl << " generic BC: fail" << endl;
+		exit(1);
+	      }
+	    } else if(AC) {
+	      if(IS_OK(wiped1) != IS_OK(wiped2)) {
+		cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
+		     << endl << " propagator: " ;
+		if(IS_OK(wiped1)) {
+		  for(int j=0; j<arity; ++j) {
+		    std::cout << scope1[j].get_var().get_domain() << " " ;
+		  }
+		} else std::cout << "fail" ;
+		
+		std::cout << std::endl << " generic AC: "; 
+		if(IS_OK(wiped2)) {
 		  for(int j=0; j<arity; ++j) {
 		    std::cout << scope2[j].get_var().get_domain() << " " ;
 		  }
-		  std::cout << std::endl;
-		  exit(1);
-		}
-		if(IS_OK(wiped1) && !IS_OK(wiped3)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
-		       << endl << " propagator: " ;
-		  for(int j=0; j<arity; ++j) {
-		    std::cout << scope1[j].get_domain() << " " ;
-		  }
-		  std::cout << std::endl << " generic BC: fail" << endl;
-		  exit(1);
-		}
-	      } else if(AC) {
-		if(IS_OK(wiped1) != IS_OK(wiped2)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
-		       << endl << " propagator: " ;
-		  if(IS_OK(wiped1)) {
-		    for(int j=0; j<arity; ++j) {
-		      std::cout << scope1[j].get_var().get_domain() << " " ;
-		    }
-		  } else std::cout << "fail" ;
-
-		  std::cout << std::endl << " generic AC: "; 
-		  if(IS_OK(wiped2)) {
-		    for(int j=0; j<arity; ++j) {
-		      std::cout << scope2[j].get_var().get_domain() << " " ;
-		    }
-		  } else std::cout << "fail" ;
-		  std::cout << endl;
-		  exit(1);
-		}
-	      } else if(BC) {
-		if(IS_OK(wiped1) != IS_OK(wiped3)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
-		       << endl << " propagator: " ;
-		  if(IS_OK(wiped1)) {
-		    for(int j=0; j<arity; ++j) {
-		      std::cout << scope1[j].get_var().get_domain() << " " ;
-		    }
-		  } else std::cout << "fail" ;
-
-		  std::cout << std::endl << " generic BC: "; 
-		  if(IS_OK(wiped3)) {
-		    for(int j=0; j<arity; ++j) {
-		      std::cout << scope3[j].get_var().get_domain() << " " ;
-		    }
-		  } else std::cout << "fail"  ;
-		  std::cout << endl;
-		  exit(1);
-		}
+		} else std::cout << "fail" ;
+		std::cout << endl;
+		exit(1);
 	      }
-
-	      //std::cout << std::endl;
-	      if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
-		for(int i=0; i<arity; ++i) {
-		  int vnxt1 = scope1[i].get_var().get_min();
-		  int vnxt2 = scope2[i].get_var().get_min();
-		  int vnxt3 = scope3[i].get_var().get_min();
-		  int val1 = vnxt1-1;
-		  int val2 = vnxt2-1;
-		  int val3 = vnxt3-1;
-	      
-		  BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
-		  BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
-		  BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
-
-
-		  //std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
-		  while(val1<vnxt1) {
-		    val1 = vnxt1;
-		    vnxt1 = scope1[i].get_var().next(val1);
-		    d1.add(val1);
+	    } else if(BC) {
+	      if(IS_OK(wiped1) != IS_OK(wiped3)) {
+		cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
+		     << endl << " propagator: " ;
+		if(IS_OK(wiped1)) {
+		  for(int j=0; j<arity; ++j) {
+		    std::cout << scope1[j].get_var().get_domain() << " " ;
 		  }
-
-		  if(AC) {
-		    while(val2<vnxt2) {
-		      val2 = vnxt2;
-		      vnxt2 = scope2[i].get_var().next(val2);
-		      d2.add(val2);
-		    }
+		} else std::cout << "fail" ;
+		
+		std::cout << std::endl << " generic BC: "; 
+		if(IS_OK(wiped3)) {
+		  for(int j=0; j<arity; ++j) {
+		    std::cout << scope3[j].get_var().get_domain() << " " ;
 		  }
+		} else std::cout << "fail"  ;
+		std::cout << endl;
+		exit(1);
+	      }
+	    }
+	    
+	      std::cout << std::endl;
+	    if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
+	      for(int i=0; i<arity; ++i) {
+		int vnxt1 = scope1[i].get_var().get_min();
+		int vnxt2 = scope2[i].get_var().get_min();
+		int vnxt3 = scope3[i].get_var().get_min();
+		int val1 = vnxt1-1;
+		int val2 = vnxt2-1;
+		int val3 = vnxt3-1;
+		
+		BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
+		BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
+		BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
+		
 
-		  if(BC) {
-		    //std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
-		    while(val3<vnxt3) {
-		      val3 = vnxt3;
-		      vnxt3 = scope3[i].get_var().next(val3);
-		      //std::cout << " " << val3;
-		      d3.add(val3);
-		    }
-		    //std::cout << std::endl << d3 << std::endl;
-
+		std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
+		while(val1<vnxt1) {
+		  val1 = vnxt1;
+		  vnxt1 = scope1[i].get_var().next(val1);
+		  d1.add(val1);
+		}
+		
+		if(AC) {
+		  while(val2<vnxt2) {
+		    val2 = vnxt2;
+		    vnxt2 = scope2[i].get_var().next(val2);
+		    d2.add(val2);
 		  }
-
-		  if( AC && BC ) {
-		    if(!d1.includes(d2)) {
-		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
-			   << endl << " propagator: " ;
-		      for(int j=0; j<arity; ++j)
-			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		}
+		
+		if(BC) {
+		  std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
+		  while(val3<vnxt3) {
+		    val3 = vnxt3;
+		    vnxt3 = scope3[i].get_var().next(val3);
+		    std::cout << " " << val3;
+		    d3.add(val3);
+		  }
+		  std::cout << std::endl << d3 << std::endl;
 		  
-		      std::cout << std::endl << " generic AC: ";		  
-		      for(int j=0; j<arity; ++j)
-			std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		      std::cout << std::endl << std::endl;
-		      exit(1);
-		    }
-		    if(!d3.includes(d1)) {
-		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
-			   << endl << " propagator: " ;
-		      for(int j=0; j<arity; ++j)
-			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		  
-		      std::cout << std::endl << " generic BC: ";		  
-		      for(int j=0; j<arity; ++j)
-			std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		      std::cout << std::endl << std::endl;
-		      exit(1);
-		    }
-		  } else if(AC) {
+		  }
+		
+		if( AC && BC ) {
+		  if(!d1.includes(d2)) {
+		    cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
+			 << endl << " propagator: " ;
+		    for(int j=0; j<arity; ++j)
+		      std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		    
+		    std::cout << std::endl << " generic AC: ";		  
+		    for(int j=0; j<arity; ++j)
+		      std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		    std::cout << std::endl << std::endl;
+		    exit(1);
+		  }
+		  if(!d3.includes(d1)) {
+		    cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
+			 << endl << " propagator: " ;
+		    for(int j=0; j<arity; ++j)
+		      std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		    
+		    std::cout << std::endl << " generic BC: ";		  
+		    for(int j=0; j<arity; ++j)
+		      std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		    std::cout << std::endl << std::endl;
+		    exit(1);
+		  }
+		} else if(AC) {
 		    if(d1 != d2) {
 		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning AC =/= propag)" 
 			   << endl << " propagator: " ;
@@ -982,7 +828,7 @@ public:
 		    }
 		  } else if(BC) {
 		    if(d1 != d3) {
-		      //cout << d1 << " - " << d3 << std::endl;
+		      cout << d1 << " - " << d3 << std::endl;
 		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC =/= propag)" 
 			   << endl << " propagator: " ;
 		      for(int j=0; j<arity; ++j)
@@ -1005,12 +851,6 @@ public:
 	}
       }
     
-      //std::cout << " restore " << std::endl << std::endl ;
-    
-      // if(scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
-      // 	std::cout << 44 << std::endl;
-      // }
-
 
       s1.restore(0);
       if(AC) {
@@ -1020,17 +860,8 @@ public:
 	s3.restore(0);
       }
 
-
-      // if(BC && !AC && scope1.size > 2 && scope1[2].get_var().get_size() != scope3[2].get_var().get_size()) {
-      // 	std::cout << 55 << std::endl;
-      // }
-
-
-
-      //std::cout << n_reductions << " " ;
     }
-    
-    //std::cout << std::endl;
+
   }
   
   virtual ~ConChecker() {};
@@ -1562,7 +1393,7 @@ int main(int argc, char *argv[])
   tests.push_back(new CostasAllDiffAllSolutions(N+1, BOUND_CONSISTENCY, RANGE_VAR));
   tests.push_back(new CostasAllDiffAllSolutions(N+1, BOUND_CONSISTENCY));
   tests.push_back(new CostasNotEqualAllSolutions(N+1));
-  tests.push_back(new RandomCListRandomRemoveAndRestore<4>());
+  //tests.push_back(new RandomCListRandomRemoveAndRestore<4>());
   tests.push_back(new RandomDomainRandomRemoveRangeAndRestore());
   tests.push_back(new RandomDomainRandomSetDomainBitsetAndRestore());
   tests.push_back(new RandomDomainRandomSetDomainAndRestore());
@@ -1570,7 +1401,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
-  tests.push_back(new ConstraintArrayTest());
+  //tests.push_back(new ConstraintArrayTest());
 
 
   //tests[0]->Verbosity = HIGH;
@@ -1788,247 +1619,6 @@ void RandomDomainRandomRemove::run() {
   }
 }
 
-ConstraintArrayTest::ConstraintArrayTest(const int ql, 
-					 const int qt) 
-  : UnitTest(LOW, ql, qt) {}
-ConstraintArrayTest::~ConstraintArrayTest() {}
-
-void ConstraintArrayTest::run() {
-
-  /// create vars with random domains and remove a random set of values.
-
-  if(Verbosity) cout << "Run constraint array checks ";// << endl;
-
-  Solver solver;
-
-  int N = 5;
-  int M = 5;
-  VarArray X(N, 1, M);
-
-  solver.add(X);
-  solver.consolidate();
-
-  for(int i=0; i<N; ++i) {
-    X.set(i, solver.variables[i]); //.get_var();
-  }
-
-  int K = 13;
-  Constraint* c[K];
-
-
-  VarArray scope;
-
-  scope.add(X[0]);
-  scope.add(X[1]);
-  c[0] = new ConstraintNotEqual(scope);
-  c[0]->initialise();
-  scope.clear();
-
-  scope.add(X[0]);
-  scope.add(X[2]);
-  c[1] = new ConstraintLess(scope);
-  c[1]->initialise();
-  scope.clear();
-  
-  scope.add(X[1]);
-  scope.add(X[3]);
-  c[2] = new ConstraintDisjunctive(scope, 2, 1);
-  c[2]->initialise();
-  scope.clear();
-
-  scope.add(X[0]);
-  scope.add(X[2]);
-  scope.add(X[4]);
-  c[3] = new PredicateAdd(scope);
-  c[3]->initialise();
-  scope.clear();
-  
-  scope.add(X[1]);
-  scope.add(X[2]);
-  scope.add(X[3]);
-  c[4] = new PredicateMul(scope);
-  c[4]->initialise();
-  scope.clear();
-
-  scope.add(X[2]);
-  scope.add(X[3]);
-  scope.add(X[4]);
-  c[5] = new PredicateDiv(scope);
-  c[5]->initialise();
-  scope.clear();
-
-  scope.add(X[1]);
-  scope.add(X[2]);
-  scope.add(X[3]);
-  scope.add(X[4]);
-  c[6] = new ConstraintAllDiff(scope);
-  c[6]->initialise();
-  scope.clear();
-
-  scope.add(X[0]);
-  scope.add(X[2]);
-  c[7] = new ConstraintEqual(scope);
-  c[7]->initialise();
-  scope.clear();
-
-
-  scope.add(X[1]);
-  scope.add(X[3]);
-  c[8] = new ConstraintEqual(scope);
-  c[8]->initialise();
-  scope.clear();
-
-
-  scope.add(X[2]);
-  scope.add(X[4]);
-  c[9] = new ConstraintEqual(scope);
-  c[9]->initialise();
-  scope.clear();
-
-
-  scope.add(X[0]);
-  scope.add(X[2]);
-  c[10] = new ConstraintNotEqual(scope);
-  c[10]->initialise();
-  scope.clear();
-
-  scope.add(X[0]);
-  scope.add(X[3]);
-  c[11] = new ConstraintNotEqual(scope);
-  c[11]->initialise();
-  scope.clear();
-
-  scope.add(X[0]);
-  scope.add(X[4]);
-  c[12] = new ConstraintNotEqual(scope);
-  c[12]->initialise();
-  scope.clear();
-
-  //solver.consolidate();
-
-  //cout << solver << endl;
-
-
-  // for(int i=0; i<N; ++i) {
-  //   cout << solver.constraint_graph_array[i] << endl;
-  // }
-
-
-  Vector<Constraint*> posted;
-  Vector<Constraint*> relaxed;
-
-
-  for(int k=0; k<K; ++k) {
-
-    c[k]->id = k+1;
-    
-    //cout << endl << "add " << c[k] << " [" << c[k]->id << "]" << endl;
-    c[k]->initial_post(&solver);
-    posted.add(c[k]);
-
-
-    for(int i=0; i<N; ++i) {
-      //cout << solver.constraint_graph_array[i] << endl;
-
-      solver.constraint_graph_array[i].check_integrity() ;
-    }
-  }
-
-
-  for(int k=0; k<1000000; ++k) {
-    
-    // cout << "posted:  " << posted << endl;
-    // cout << "relaxed: " << relaxed << endl;
-
-
-    if(!posted.empty() && (posted.size == K || randint(2))) {
-      // relax a constraint
-      int r = randint(posted.size);
-      
-      //cout << endl << "relax " << posted[r] << " [" << posted[r]->id << "]" << endl;
-
-      posted[r]->relax_from_array();
-
-      relaxed.add(posted[r]);
-      posted.remove(r);
-
-    } else {
-      // post a constraint
-      int r = randint(relaxed.size);
-      
-      //cout << endl << "post " << relaxed[r] << " [" << relaxed[r]->id << "]" << endl;
-
-      relaxed[r]->post_on_array();
-
-      posted.add(relaxed[r]);
-      relaxed.remove(r);
-
-    }
-
-
-      for(int i=0; i<N; ++i) {
-	//cout << solver.constraint_graph_array[i] << endl;
-	solver.constraint_graph_array[i].check_integrity() ;
-      }
-
-  }
-
-
-
- 
-  /*
-  cout << endl << "add " << *c2 << endl;
-  c2->initial_post(&solver);
-  
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-
-  cout << endl << "add " << *c3 << endl;
-  c3->initial_post(&solver);
-  
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-
-  cout << endl << "add " << *c4 << endl;
-  c4->initial_post(&solver);
-
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-
-  cout << endl << "add " << *c5 << endl;
-  c5->initial_post(&solver);
-
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-  
-  cout << endl << "add " << *c6 << endl;
-  c6->initial_post(&solver);
-  
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-
-  cout << endl << "add " << *c7 << endl;
-  c7->initial_post(&solver);
-
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-
-  cout << endl << "add " << *c8 << endl;
-  c8->initial_post(&solver);
-
-  for(int i=0; i<N; ++i) {
-    cout << solver.constraint_graph_array[i] << endl;
-  }
-  */
-
-
-}
 
   
 RandomDomainRandomSetDomainAndRestore::RandomDomainRandomSetDomainAndRestore(const int ql, 
@@ -2557,215 +2147,215 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 
 
 
-template< int NUM_HEAD >
-RandomCListRandomRemoveAndRestore< NUM_HEAD >::
-RandomCListRandomRemoveAndRestore(const int ql, 
-				 const int qt) 
-  : UnitTest(LOW, ql, qt) { NUM_ELT = 100*(1 << (1 << Quality)); }
+// template< int NUM_HEAD >
+// RandomCListRandomRemoveAndRestore< NUM_HEAD >::
+// RandomCListRandomRemoveAndRestore(const int ql, 
+// 				 const int qt) 
+//   : UnitTest(LOW, ql, qt) { NUM_ELT = 100*(1 << (1 << Quality)); }
 
-template< int NUM_HEAD >
-RandomCListRandomRemoveAndRestore< NUM_HEAD >::
-~RandomCListRandomRemoveAndRestore() {}
+// template< int NUM_HEAD >
+// RandomCListRandomRemoveAndRestore< NUM_HEAD >::
+// ~RandomCListRandomRemoveAndRestore() {}
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::run() {
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::run() {
 
-  Solver s;
-  //s.initialise();
+//   Solver s;
+//   //s.initialise();
 
-  int N = (1<<(1<<Quantity));
-  if(Verbosity) cout << "Run " << N << " random ConstraintList checks " ;
-  if(Verbosity>LOW) cout << endl;
+//   int N = (1<<(1<<Quantity));
+//   if(Verbosity) cout << "Run " << N << " random ConstraintList checks " ;
+//   if(Verbosity>LOW) cout << endl;
     
-  for(int iteration=0; iteration<N; ++iteration) {
+//   for(int iteration=0; iteration<N; ++iteration) {
       
-    ReversibleMultiList<int,NUM_HEAD> alist(&s);
-    //alist.env = &s;
+//     ReversibleMultiList<int,NUM_HEAD> alist(&s);
+//     //alist.env = &s;
       
-    NaiveImplementation blist(&s);
+//     NaiveImplementation blist(&s);
       
-    Vector<unsigned int> wl;
+//     Vector<unsigned int> wl;
       
-    Vector<unsigned int> elts;
+//     Vector<unsigned int> elts;
       
-    Vector<unsigned int> idx1;
-    Vector<unsigned int> idx2;
-    for(int i=0; i<NUM_ELT; ++i)
-      elts.add(i+1);
-    for(int i=0; i<NUM_ELT; ++i) {
-      int j=randint(NUM_ELT-i)+i;
-      elts[i] = elts[j];
-      elts[j] = i+1;
-    }
+//     Vector<unsigned int> idx1;
+//     Vector<unsigned int> idx2;
+//     for(int i=0; i<NUM_ELT; ++i)
+//       elts.add(i+1);
+//     for(int i=0; i<NUM_ELT; ++i) {
+//       int j=randint(NUM_ELT-i)+i;
+//       elts[i] = elts[j];
+//       elts[j] = i+1;
+//     }
       
       
-    int i_elts = (1 << (1 << Quality));
-    int n_elts = i_elts;
-    int head;
-    for(int i=0; i<n_elts; ++i) {
-      head = randint(NUM_HEAD);
-      wl.add(head);
+//     int i_elts = (1 << (1 << Quality));
+//     int n_elts = i_elts;
+//     int head;
+//     for(int i=0; i<n_elts; ++i) {
+//       head = randint(NUM_HEAD);
+//       wl.add(head);
 
-      if( i >= (int)(elts.size) ) {
-	cout << i << " " << NUM_ELT << endl;
-	exit(1);
-      }
+//       if( i >= (int)(elts.size) ) {
+// 	cout << i << " " << NUM_ELT << endl;
+// 	exit(1);
+//       }
 
-      unsigned int the_elt = alist.create( elts[i], head );
-      idx1.add( the_elt );
-      idx2.add( i );
-      blist.create( elts[i], head );
-    }
+//       unsigned int the_elt = alist.create( elts[i], head );
+//       idx1.add( the_elt );
+//       idx2.add( i );
+//       blist.create( elts[i], head );
+//     }
       
-    checkEquality(alist, blist);
+//     checkEquality(alist, blist);
       
       
-    int branch_length = randint(2*i_elts);
+//     int branch_length = randint(2*i_elts);
       
-    BitSet isIn(0, NUM_ELT, BitSet::full);
-    isIn.set_max(i_elts-1);
+//     BitSet isIn(0, NUM_ELT, BitSet::full);
+//     isIn.set_max(i_elts-1);
       
 
-    if(Verbosity>LOW) cout << "Do a run on a branch of length " << branch_length << endl;
+//     if(Verbosity>LOW) cout << "Do a run on a branch of length " << branch_length << endl;
 
-    for(int i=0; i<branch_length; ++i) {
-      s.save();
+//     for(int i=0; i<branch_length; ++i) {
+//       s.save();
 	
-      if(!randint(2))
-	for(int k=0; k<2; ++k) {
-	  if(isIn.empty()) break;
+//       if(!randint(2))
+// 	for(int k=0; k<2; ++k) {
+// 	  if(isIn.empty()) break;
 	    
-	  int j = randint(n_elts);
-	  while(!isIn.contain(j))
-	    j = randint(n_elts);
+// 	  int j = randint(n_elts);
+// 	  while(!isIn.contain(j))
+// 	    j = randint(n_elts);
 	    
-	  alist.reversible_remove(idx1[j], wl[j]);
-	  blist.reversible_remove(idx2[j], wl[j]);
+// 	  alist.reversible_remove(idx1[j], wl[j]);
+// 	  blist.reversible_remove(idx2[j], wl[j]);
 	    
-	  if(Verbosity>MEDIUM) {
-	    for(int l=0; l<s.level; ++l) cout << " ";
-	    cout << s.level << " remove " << (elts[idx2[j]]) << endl;
-	    for(int l=0; l<s.level; ++l) cout << " ";
-	    //alistcout << alist << endl;
-	  }
+// 	  if(Verbosity>MEDIUM) {
+// 	    for(int l=0; l<s.level; ++l) cout << " ";
+// 	    cout << s.level << " remove " << (elts[idx2[j]]) << endl;
+// 	    for(int l=0; l<s.level; ++l) cout << " ";
+// 	    //alistcout << alist << endl;
+// 	  }
 
-	  isIn.remove(j);
+// 	  isIn.remove(j);
 	  
-	}
+// 	}
 
-      if(!randint(3) && n_elts<NUM_ELT-1) {
-	// add
-	head = randint(NUM_HEAD);
-	wl.add(head);
-	idx1.add( alist.reversible_add( elts[n_elts], head ) );
-	idx2.add( n_elts );
-	blist.create( elts[n_elts], head );
+//       if(!randint(3) && n_elts<NUM_ELT-1) {
+// 	// add
+// 	head = randint(NUM_HEAD);
+// 	wl.add(head);
+// 	idx1.add( alist.reversible_add( elts[n_elts], head ) );
+// 	idx2.add( n_elts );
+// 	blist.create( elts[n_elts], head );
 
-	if(Verbosity>MEDIUM) {
-	  for(int l=0; l<s.level; ++l) cout << " ";
-	  cout << s.level << " add " << (elts[idx2[n_elts]]) << " to " 
-	       << wl[n_elts] << "th list" << endl;
-	  for(int l=0; l<s.level; ++l) cout << " ";
-	  //cout << alist << endl;
-	}
+// 	if(Verbosity>MEDIUM) {
+// 	  for(int l=0; l<s.level; ++l) cout << " ";
+// 	  cout << s.level << " add " << (elts[idx2[n_elts]]) << " to " 
+// 	       << wl[n_elts] << "th list" << endl;
+// 	  for(int l=0; l<s.level; ++l) cout << " ";
+// 	  //cout << alist << endl;
+// 	}
 
-	isIn.add(n_elts);
+// 	isIn.add(n_elts);
 
-	++n_elts;
-      }
+// 	++n_elts;
+//       }
 
-      checkEquality(alist, blist);
-    }
+//       checkEquality(alist, blist);
+//     }
     
-    isIn.fill();
-    isIn.set_max(i_elts-1);
+//     isIn.fill();
+//     isIn.set_max(i_elts-1);
 
-    for(int i=0; i<branch_length; i++) {
-      s.restore();
-      //int j1 = (10+(50-i-1))%n_elts;
-      //int j2 = (10+(50-i-2))%n_elts;
+//     for(int i=0; i<branch_length; i++) {
+//       s.restore();
+//       //int j1 = (10+(50-i-1))%n_elts;
+//       //int j2 = (10+(50-i-2))%n_elts;
 
-      //cout << "add " << (elts[idx2[j1]]) << " and " << (elts[idx2[j2]]) << endl;
-      if(Verbosity>MEDIUM) {
-	for(int l=0; l<s.level; ++l) cout << " ";
-	cout << s.level << " restore" << endl;
-	for(int l=0; l<s.level; ++l) cout << " ";
-	//cout << alist << endl;      
-      }
+//       //cout << "add " << (elts[idx2[j1]]) << " and " << (elts[idx2[j2]]) << endl;
+//       if(Verbosity>MEDIUM) {
+// 	for(int l=0; l<s.level; ++l) cout << " ";
+// 	cout << s.level << " restore" << endl;
+// 	for(int l=0; l<s.level; ++l) cout << " ";
+// 	//cout << alist << endl;      
+//       }
       
-      checkEquality(alist, blist);
-    }
-  }
-}
+//       checkEquality(alist, blist);
+//     }
+//   }
+// }
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::
-checkEquality(ReversibleMultiList<int,NUM_HEAD>& alist, 
-	      RandomCListRandomRemoveAndRestore< NUM_HEAD >::
-	      NaiveImplementation& blist) {
-  BitSet inA(0, NUM_ELT, BitSet::empt);
-  BitSet inB(0, NUM_ELT, BitSet::empt);
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::
+// checkEquality(ReversibleMultiList<int,NUM_HEAD>& alist, 
+// 	      RandomCListRandomRemoveAndRestore< NUM_HEAD >::
+// 	      NaiveImplementation& blist) {
+//   BitSet inA(0, NUM_ELT, BitSet::empt);
+//   BitSet inB(0, NUM_ELT, BitSet::empt);
 
-  for(int i=0; i<NUM_HEAD; ++i) {
-    Node<int> nd = alist.first(i);
-    while(alist.next(nd)) {
-      inA.add((int)nd);
-    }
-    for(unsigned int j=0; j<blist.elements.size; ++j) {
-      if(blist.whichlist[j] >= i && 
-	 blist.whichlevelremoved[j] > blist.env->level &&
-	 blist.whichleveladded[j] <= blist.env->level) 
-	inB.add(blist.elements[j]);
-    }
+//   for(int i=0; i<NUM_HEAD; ++i) {
+//     Node<int> nd = alist.first(i);
+//     while(alist.next(nd)) {
+//       inA.add((int)nd);
+//     }
+//     for(unsigned int j=0; j<blist.elements.size; ++j) {
+//       if(blist.whichlist[j] >= i && 
+// 	 blist.whichlevelremoved[j] > blist.env->level &&
+// 	 blist.whichleveladded[j] <= blist.env->level) 
+// 	inB.add(blist.elements[j]);
+//     }
 
-    if(inA != inB) {
-      cout << "Discrepancy between the lists!" << endl
-	   << inA << endl
-	   << inB << endl;
-      exit(1);
-    }      
-    inA.clear();
-    inB.clear();
-  }
-}
+//     if(inA != inB) {
+//       cout << "Discrepancy between the lists!" << endl
+// 	   << inA << endl
+// 	   << inB << endl;
+//       exit(1);
+//     }      
+//     inA.clear();
+//     inB.clear();
+//   }
+// }
 
-template< int NUM_HEAD >
-RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::NaiveImplementation(Solver *s) 
-  : Reversible(s) {}
+// template< int NUM_HEAD >
+// RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::NaiveImplementation(Solver *s) 
+//   : Reversible(s) {}
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::create(int elt, int wl) {
-  elements.add(elt);
-  whichlist.add(wl);
-  whichleveladded.add(env->level);
-  whichlevelremoved.add(INFTY);
-}
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::create(int elt, int wl) {
+//   elements.add(elt);
+//   whichlist.add(wl);
+//   whichleveladded.add(env->level);
+//   whichlevelremoved.add(INFTY);
+// }
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::reversible_remove(int elt, int wl) {
-  whichlevelremoved[elt] = env->level;
-}
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::reversible_remove(int elt, int wl) {
+//   whichlevelremoved[elt] = env->level;
+// }
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::reversible_add(int elt, int wl) {
-  create(elt, wl);
-}
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::reversible_add(int elt, int wl) {
+//   create(elt, wl);
+// }
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::save() {}
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::restore() {}
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::save() {}
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::restore() {}
 
-template< int NUM_HEAD >
-void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::print(int num_lists) {
-  for(int i=0; i<num_lists; ++i) {
-    cout << "[";
-    for(unsigned int j=0; j<elements.size; ++j)
-      if(whichlist[j] >= i)
-	cout << " " << elements[j];
-    cout << " ] ";
-  }
-}
+// template< int NUM_HEAD >
+// void RandomCListRandomRemoveAndRestore< NUM_HEAD >::NaiveImplementation::print(int num_lists) {
+//   for(int i=0; i<num_lists; ++i) {
+//     cout << "[";
+//     for(unsigned int j=0; j<elements.size; ++j)
+//       if(whichlist[j] >= i)
+// 	cout << " " << elements[j];
+//     cout << " ] ";
+//   }
+// }
 
 
 

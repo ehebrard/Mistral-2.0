@@ -1342,7 +1342,7 @@ namespace Mistral {
     Variable operator+(Variable);
     Variable operator+(const int);
     Variable operator-(Variable);
-    //    Variable operator-(const int);
+    Variable operator-(const int);
     Variable operator*(Variable);
     Variable operator*(const int);
     Variable operator/(Variable);
@@ -1702,19 +1702,19 @@ namespace Mistral {
 
   };
 
-  // class MulExpression : public Expression {
+  class MulExpression : public Expression {
 
-  // public:
+  public:
 
-  //   MulExpression(Variable X, Variable Y);
-  //   virtual ~MulExpression();
+    MulExpression(Variable X, Variable Y);
+    virtual ~MulExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
   // class DivExpression : public Expression {
 
@@ -1730,37 +1730,37 @@ namespace Mistral {
 
   // };
 
-  // class OffsetExpression : public Expression {
+  class OffsetExpression : public Expression {
 
-  // public:
+  public:
 
-  //   int offset;
+    int offset;
 
-  //   OffsetExpression(Variable X, const int ofs);
-  //   virtual ~OffsetExpression();
+    OffsetExpression(Variable X, const int ofs);
+    virtual ~OffsetExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
-  // class FactorExpression : public Expression {
+  class FactorExpression : public Expression {
 
-  // public:
+  public:
 
-  //   int factor;
+    int factor;
 
-  //   FactorExpression(Variable X, const int ofs);
-  //   virtual ~FactorExpression();
+    FactorExpression(Variable X, const int ofs);
+    virtual ~FactorExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
   class SubExpression : public Expression {
 
@@ -1776,12 +1776,54 @@ namespace Mistral {
 
   };
 
-  // class AndExpression : public Expression {
+  class AndExpression : public Expression {
+
+  public:
+
+    AndExpression(Variable X, Variable Y);
+    virtual ~AndExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  class OrExpression : public Expression {
+
+  public:
+
+    OrExpression(Variable X, Variable Y);
+    virtual ~OrExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  class NotExpression : public Expression {
+
+  public:
+
+    NotExpression(Variable X);
+    virtual ~NotExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  // class NeqExpression : public Expression {
 
   // public:
 
-  //   AndExpression(Variable X, Variable Y);
-  //   virtual ~AndExpression();
+  //   NeqExpression(Variable X, Variable Y);
+  //   virtual ~NeqExpression();
 
   //   virtual void extract_constraint(Solver*);
   //   virtual void extract_variable(Solver*);
@@ -1790,12 +1832,12 @@ namespace Mistral {
 
   // };
 
-  // class OrExpression : public Expression {
+  // class EqualExpression : public Expression {
 
   // public:
 
-  //   OrExpression(Variable X, Variable Y);
-  //   virtual ~OrExpression();
+  //   EqualExpression(Variable X, Variable Y);
+  //   virtual ~EqualExpression();
 
   //   virtual void extract_constraint(Solver*);
   //   virtual void extract_variable(Solver*);
@@ -1803,48 +1845,6 @@ namespace Mistral {
   //   virtual const char* get_name() const;
 
   // };
-
-  // class NotExpression : public Expression {
-
-  // public:
-
-  //   NotExpression(Variable X);
-  //   virtual ~NotExpression();
-
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // // class NeqExpression : public Expression {
-
-  // // public:
-
-  // //   NeqExpression(Variable X, Variable Y);
-  // //   virtual ~NeqExpression();
-
-  // //   virtual void extract_constraint(Solver*);
-  // //   virtual void extract_variable(Solver*);
-  // //   virtual void extract_predicate(Solver*);
-  // //   virtual const char* get_name() const;
-
-  // // };
-
-  // // class EqualExpression : public Expression {
-
-  // // public:
-
-  // //   EqualExpression(Variable X, Variable Y);
-  // //   virtual ~EqualExpression();
-
-  // //   virtual void extract_constraint(Solver*);
-  // //   virtual void extract_variable(Solver*);
-  // //   virtual void extract_predicate(Solver*);
-  // //   virtual const char* get_name() const;
-
-  // // };
 
   class EqualExpression : public Expression {
 
@@ -1864,23 +1864,23 @@ namespace Mistral {
 
   };
 
-  // class EqualSetExpression : public Expression {
+  class EqualSetExpression : public Expression {
 
-  // public:
+  public:
   
-  //   int spin;
-  //   int value;
+    int spin;
+    int value;
 
-  //   EqualSetExpression(Variable X, Variable Y, const int sp=1);
-  //   EqualSetExpression(Variable X, const int y, const int sp=1);
-  //   virtual ~EqualSetExpression();
+    EqualSetExpression(Variable X, Variable Y, const int sp=1);
+    EqualSetExpression(Variable X, const int y, const int sp=1);
+    virtual ~EqualSetExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
   class PrecedenceExpression : public Expression {
 
@@ -1983,278 +1983,278 @@ namespace Mistral {
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 
 
-  // class LexExpression : public Expression {
+  class LexExpression : public Expression {
 
-  // public:
+  public:
 
-  //   int strict;
-  //   //int row_size;
+    int strict;
+    //int row_size;
 
-  //   LexExpression(Vector< Variable >& r1, Vector< Variable >& r2, const int st_);
-  //   virtual ~LexExpression();
+    LexExpression(Vector< Variable >& r1, Vector< Variable >& r2, const int st_);
+    virtual ~LexExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
-  // Variable LexLess(VarArray& r1, VarArray& r2);
-  // Variable LexLeq(VarArray& r1, VarArray& r2);
-
-
-  // class BoolSumExpression : public Expression {
-
-  // public:
-
-  //   int lb;
-  //   int ub;
-
-  //   BoolSumExpression() : Expression() {}
-  //   BoolSumExpression(const int l, const int u);
-  //   BoolSumExpression(Vector< Variable >& args, const int l, const int u);
-  //   virtual ~BoolSumExpression();
-
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // Variable BoolSum(Vector< Variable >& args);
-  // Variable BoolSum(Vector< Variable >& args, const int l, const int u);
-  // Variable BoolSum(std::vector< Variable >& args, const int l, const int u);
+  Variable LexLess(VarArray& r1, VarArray& r2);
+  Variable LexLeq(VarArray& r1, VarArray& r2);
 
 
+  class BoolSumExpression : public Expression {
 
-  // class LinearExpression : public Expression {
+  public:
 
-  // public:
+    int lb;
+    int ub;
 
-  //   int lower_bound;
-  //   int upper_bound;
-  //   Vector< int > weight;
+    BoolSumExpression() : Expression() {}
+    BoolSumExpression(const int l, const int u);
+    BoolSumExpression(Vector< Variable >& args, const int l, const int u);
+    virtual ~BoolSumExpression();
 
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  //   LinearExpression(Vector< Variable >& args, Vector< int >& wgt, const int l, const int u);
-  //   LinearExpression(std::vector< Variable >& args, std::vector< int >& wgt, const int l, const int u);
-  //   virtual ~LinearExpression();
-  //   void initialise_bounds();
+  };
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // //Variable Sum(Vector< Variable >& args);
-  // Variable Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T);
-  // Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T);
-  // Variable Sum(Vector< Variable >& args, Vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
-  // Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
+  Variable BoolSum(Vector< Variable >& args);
+  Variable BoolSum(Vector< Variable >& args, const int l, const int u);
+  Variable BoolSum(std::vector< Variable >& args, const int l, const int u);
 
 
 
-  // class ElementExpression : public Expression {
+  class LinearExpression : public Expression {
 
-  // public:
+  public:
 
-  //   int lower_bound;
-  //   int upper_bound;
-  //   int offset;
-  //   //BitSet domain;
-  //   Vector< int > values;
-
-  //   ElementExpression(Vector< Variable >& args, Variable X, int ofs);
-  //   virtual ~ElementExpression();
-  //   void initialise_domain();
-
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // Variable Element(Vector<Variable>& X, Variable selector, int offset=0);
-  // Variable Element(VarArray& X, Variable selector, int offset=0);
+    int lower_bound;
+    int upper_bound;
+    Vector< int > weight;
 
 
-  // class MinExpression : public Expression {
+    LinearExpression(Vector< Variable >& args, Vector< int >& wgt, const int l, const int u);
+    LinearExpression(std::vector< Variable >& args, std::vector< int >& wgt, const int l, const int u);
+    virtual ~LinearExpression();
+    void initialise_bounds();
 
-  // public:
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  //   MinExpression() : Expression() {};
-  //   MinExpression(Vector< Variable >& args);
-  //   virtual ~MinExpression();
-  //   //void initialise_domain();
+  };
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // Variable Min(Vector<Variable>& X);
-  // Variable Min(VarArray& X);
-  // Variable Min(Variable X, Variable Y);
-
-  // class MaxExpression : public Expression {
-
-  // public:
-
-  //   MaxExpression() : Expression() {};
-  //   MaxExpression(Vector< Variable >& args);
-  //   virtual ~MaxExpression();
-  //   //void initialise_domain();
-
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // Variable Max(Vector<Variable>& X);
-  // Variable Max(VarArray& X);
-  // Variable Max(Variable X, Variable Y);
+  //Variable Sum(Vector< Variable >& args);
+  Variable Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T);
+  Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T);
+  Variable Sum(Vector< Variable >& args, Vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
+  Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l=-INFTY, const int u=INFTY);
 
 
-  // class SetExpression : public BoolSumExpression {
+
+  class ElementExpression : public Expression {
+
+  public:
+
+    int lower_bound;
+    int upper_bound;
+    int offset;
+    //BitSet domain;
+    Vector< int > values;
+
+    ElementExpression(Vector< Variable >& args, Variable X, int ofs);
+    virtual ~ElementExpression();
+    void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Element(Vector<Variable>& X, Variable selector, int offset=0);
+  Variable Element(VarArray& X, Variable selector, int offset=0);
+
+
+  class MinExpression : public Expression {
+
+  public:
+
+    MinExpression() : Expression() {};
+    MinExpression(Vector< Variable >& args);
+    virtual ~MinExpression();
+    //void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Min(Vector<Variable>& X);
+  Variable Min(VarArray& X);
+  Variable Min(Variable X, Variable Y);
+
+  class MaxExpression : public Expression {
+
+  public:
+
+    MaxExpression() : Expression() {};
+    MaxExpression(Vector< Variable >& args);
+    virtual ~MaxExpression();
+    //void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Max(Vector<Variable>& X);
+  Variable Max(VarArray& X);
+  Variable Max(Variable X, Variable Y);
+
+
+  class SetExpression : public BoolSumExpression {
     
-  // public:
+  public:
     
-  //   //VarArray elements;
-  //   Vector< int > elts_ub;
-  //   Vector< int > elts_lb;
-  //   int num_args;
-  //   // BitSet required;
-  //   // BitSet allowed;
+    //VarArray elements;
+    Vector< int > elts_ub;
+    Vector< int > elts_lb;
+    int num_args;
+    // BitSet required;
+    // BitSet allowed;
  
-  //   SetExpression() : BoolSumExpression() {}
-  //   SetExpression(const int lelt, const int uelt, const int clb, const int cub);
-  //   // SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
-  //   SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub);
-  //   void initialise_elements();
-  //   virtual ~SetExpression();
+    SetExpression() : BoolSumExpression() {}
+    SetExpression(const int lelt, const int uelt, const int clb, const int cub);
+    // SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
+    SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub);
+    void initialise_elements();
+    virtual ~SetExpression();
     
-  //   Variable get_index_var(const int idx) {return children[num_args+idx];}
-  //   Variable get_elt_var(const int vali);
-  //   int get_element_index(const int vali);
+    Variable get_index_var(const int idx) {return children[num_args+idx];}
+    Variable get_elt_var(const int vali);
+    int get_element_index(const int vali);
     
-  //   // bool can_be_in(const int vali) { return allowed.contain(vali); }
-  //   // bool must_be_in(const int vali) { return required.contain(vali); }
-  //   // int get_smallest_elt() { return elements.front(); }
-  //   // int get_highest_elt() { return elements.back(); }
+    // bool can_be_in(const int vali) { return allowed.contain(vali); }
+    // bool must_be_in(const int vali) { return required.contain(vali); }
+    // int get_smallest_elt() { return elements.front(); }
+    // int get_highest_elt() { return elements.back(); }
 
-  //   virtual const char* get_name() const;
-  //   virtual std::ostream& display(std::ostream& os) const;
-  //   virtual int get_solution_int_value() const ;
-  //   virtual std::string get_solution_str_value() const ;
-  // };
+    virtual const char* get_name() const;
+    virtual std::ostream& display(std::ostream& os) const;
+    virtual int get_solution_int_value() const ;
+    virtual std::string get_solution_str_value() const ;
+  };
 
-  // Variable SetVariable(const int lelt, const int uelt, 
-  // 		       const int clb=0, const int cub=INFTY);
-  // Variable SetVariable(const Vector<int>& lb, const Vector<int>& ub, 
-  // 		       const int clb, const int cub);
-  // // Variable SetVariable(std::vector<int> lb, std::vector<int> ub, const int clb, const int cub);
-  // // Variable SetVariable(BitSet lb, Bitset ub, const int clb, const int cub);
+  Variable SetVariable(const int lelt, const int uelt, 
+  		       const int clb=0, const int cub=INFTY);
+  Variable SetVariable(const Vector<int>& lb, const Vector<int>& ub, 
+  		       const int clb, const int cub);
+  // Variable SetVariable(std::vector<int> lb, std::vector<int> ub, const int clb, const int cub);
+  // Variable SetVariable(BitSet lb, Bitset ub, const int clb, const int cub);
 
-  // Variable Card(Variable S); //{ return S; }
-
-
-  // class ElementSetExpression : public SetExpression {
-
-  // public:
-
-  //   int offset;
-  //   //VarArray elements;
-  //   //Vector< int > values;
-
-  //   ElementSetExpression(Vector< Variable >& args, Variable X, int ofs);
-  //   virtual ~ElementSetExpression();
-  //   void initialise_domain();
-
-  //   //virtual Variable get_index_var(const int idx);
-
-  //   virtual void extract_constraint(Solver*);
-  //   //virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
-
-  // };
-
-  // Variable ElementSet(Vector<Variable>& X, Variable selector, int offset=0);
-  // Variable ElementSet(VarArray& X, Variable selector, int offset=0);
+  Variable Card(Variable S); //{ return S; }
 
 
+  class ElementSetExpression : public SetExpression {
 
-  // class IntersectionExpression : public SetExpression {
+  public:
 
-  // public:
+    int offset;
+    //VarArray elements;
+    //Vector< int > values;
 
-  //   IntersectionExpression(Variable X, Variable Y);
-  //   virtual ~IntersectionExpression();
-  //   void initialise_domain();
+    ElementSetExpression(Vector< Variable >& args, Variable X, int ofs);
+    virtual ~ElementSetExpression();
+    void initialise_domain();
 
-  //   virtual void extract_constraint(Solver*);
-  //   //virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    //virtual Variable get_index_var(const int idx);
 
-  // };
+    virtual void extract_constraint(Solver*);
+    //virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // Variable Intersection(Variable X, Variable Y);
+  };
+
+  Variable ElementSet(Vector<Variable>& X, Variable selector, int offset=0);
+  Variable ElementSet(VarArray& X, Variable selector, int offset=0);
 
 
 
-  // class SubsetExpression : public Expression {
+  class IntersectionExpression : public SetExpression {
 
-  // public:
+  public:
 
-  //   SubsetExpression(Variable X, Variable Y);
-  //   virtual ~SubsetExpression();
+    IntersectionExpression(Variable X, Variable Y);
+    virtual ~IntersectionExpression();
+    void initialise_domain();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    //virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
-  // Variable Subset(Variable X, Variable Y);
+  Variable Intersection(Variable X, Variable Y);
 
 
-  // class MemberExpression : public Expression {
 
-  // public:
+  class SubsetExpression : public Expression {
 
-  //   int lb;
-  //   int ub;
-  //   int size;
-  //   BitSet values;
+  public:
 
-  //   MemberExpression(Variable X, Variable Y);
-  //   MemberExpression(Variable X, const int lo, const int up);
-  //   MemberExpression(Variable X, const BitSet& s);
-  //   MemberExpression(Variable X, const Vector<int>& s);
-  //   virtual ~MemberExpression();
+    SubsetExpression(Variable X, Variable Y);
+    virtual ~SubsetExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
 
-  // Variable Member(Variable X, Variable Y);
-  // Variable Member(Variable X, const int lo, const int up);
-  // Variable Member(Variable X, const BitSet& s);
-  // Variable Member(Variable X, const Vector<int>& s);
+  Variable Subset(Variable X, Variable Y);
+
+
+  class MemberExpression : public Expression {
+
+  public:
+
+    int lb;
+    int ub;
+    int size;
+    BitSet values;
+
+    MemberExpression(Variable X, Variable Y);
+    MemberExpression(Variable X, const int lo, const int up);
+    MemberExpression(Variable X, const BitSet& s);
+    MemberExpression(Variable X, const Vector<int>& s);
+    virtual ~MemberExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Member(Variable X, Variable Y);
+  Variable Member(Variable X, const int lo, const int up);
+  Variable Member(Variable X, const BitSet& s);
+  Variable Member(Variable X, const Vector<int>& s);
 
 
   class VarArray : public Vector< Variable > {

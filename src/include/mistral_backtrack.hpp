@@ -57,8 +57,6 @@ namespace Mistral {
  */
 
 
-
-
   /*! \class Environment
     \brief The minimal structures used to control the backtracking process
   */
@@ -98,12 +96,13 @@ namespace Mistral {
     void initialise(Solver*);
     virtual ~Constraint() {}
     
-    inline int index() const { return data&CTYPE; }
-    inline bool postponed() const { return (data&POSTPONED); }
-    inline bool pushed() const { return (data&PUSHED); }
-    inline bool global() const { return !(data&0xc0000000); }
-    inline bool binary() const { return (data&BINARY); }
-    inline bool ternary() const { return (data&TERNARY); }
+    
+    inline int  index()      const { return data&CTYPE; }
+    inline bool postponed()  const { return (data&POSTPONED); }
+    inline bool pushed()     const { return (data&PUSHED); }
+    inline bool global()     const { return !(data&0xc0000000); }
+    inline bool binary()     const { return (data&BINARY); }
+    inline bool ternary()    const { return (data&TERNARY); }
     inline bool idempotent() const { return (data&TERNARY); }
 
     inline void clear() { propagator = NULL; data = 0; }
@@ -156,13 +155,11 @@ namespace Mistral {
     //@{
     int level;
 
-    //Vector< Reversible* >       saved_objs;
     Vector< int >                 saved_vars;
     Vector< Constraint >          saved_cons;
     Vector< int* >                saved_bools;
     Vector< ReversibleSet* >      saved_lists;
     Vector< ReversibleNum<int>* > saved_ints;
-    //Vector< ReversibleNum<double>* > saved_doubles;
 
     /// The delimitation between different levels is kept by this vector of integers
     Vector< int > trail_;
@@ -172,7 +169,7 @@ namespace Mistral {
     ConstraintImplementation *taboo_constraint;
     //@}
 
-  /*!@name Constructors*/
+    /*!@name Constructors*/
     //@{
     Environment() { 
       level = 0;
@@ -202,31 +199,9 @@ namespace Mistral {
       active_variables.push_back(t);
     }
 
-    void _restore_();//  {
-
-    //   unsigned int previous_level;
-
-    //   previous_level = trail_.pop();
-    //   while( saved_ints.size > previous_level ) 
-    // 	saved_ints.pop()->restore();
-
-    //   previous_level = trail_.pop();
-    //   while( saved_lists.size > previous_level ) 
-    // 	saved_lists.pop()->restore();
-      
-    //   previous_level = trail_.pop();
-    //   while( saved_bools.size > previous_level ) 
-    // 	*(saved_lists.pop()) = 3;
-
-    //   previous_level = trail_.pop();
-    //   previous_level = trail_.pop();
-      
-    //   --level;
-      
-    // }
+    void _restore_();
 
     inline void save(ReversibleNum<int> *r) {saved_ints.add(r);}
-    //inline void save(ReversibleNum<double> *r) {saved_doubles.add(r);}
     inline void save(ReversibleSet *r) {saved_lists.add(r);}
     inline void save(int *r) {saved_bools.add(r);}
     
@@ -299,7 +274,6 @@ namespace Mistral {
       Reversible::initialise(s);
     }
     
-
     virtual ~ReversibleBool() {}
     //@}
 
@@ -336,8 +310,8 @@ namespace Mistral {
     
     inline int size() { return (1+(value==3)); }
     //@}
-
-   /*!@name Printing*/
+    
+    /*!@name Printing*/
     //@{
     std::ostream& display(std::ostream& os) const { os << (value == 3 ? "{0,1}" : (value == 1 ? "0" : "1")) ; return os; }
     //@}
@@ -412,7 +386,6 @@ namespace Mistral {
     //@{
     inline void save() { 
       if((int)trail_.back() != env->level) { 
-	//env->save((ReversibleNum< PRIMITIVE_TYPE >*)this); 
 	env->save(this); 
 	trail_.add((int)value); 
 	trail_.add(env->level); 

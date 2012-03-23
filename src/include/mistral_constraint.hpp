@@ -36,6 +36,21 @@
 #define __CONSTRAINT_HPP
 
 
+#define FILTER1( var, method )				    \
+  event_type[(var)] = scope[(var)].method ;		     \
+  if(event_type[(var)] == FAIL_EVENT) wiped = FAILURE(var);		\
+  else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var);
+
+
+#define FILTER2( evt, var, method )		\
+  evt = scope[(var)].method ; \
+  if(evt == FAIL_EVENT) wiped = FAILURE(var); \
+  else if(evt != NO_EVENT && !changes.contain(var)) { \
+  changes.add(var); \
+  event_type[(var)] |= evt; \
+  }
+
+
 
 /**
  *Constraint:
@@ -64,10 +79,6 @@
 
 namespace Mistral {
 
-
-
-
-
   /********************************************
    * ConstraintWrapper 
    ********************************************/
@@ -77,19 +88,6 @@ namespace Mistral {
     Holds a pointer to a constraint and the index 
     (in the scope) of the variable that owns the list 
   */  
-
-
-  //class Constraint;
-  // class Trigger : public Vector< Constraint > {
-
-  // public:
-
-  //   int post(Constraint ct) ;
-
-  //   void relax(const int idx) ;
-
-  // };
-
 
   
   class Variable;
@@ -186,6 +184,8 @@ namespace Mistral {
      *  assignment) or a ptr to the wiped-out variable otherwise. 
      */
     virtual PropagationOutcome propagate() = 0; // { return NULL; }
+    virtual PropagationOutcome checker_propagate() = 0;
+    virtual PropagationOutcome bound_checker_propagate() = 0;
     virtual PropagationOutcome propagate(const int changed_idx, 
 					 const Event evt) = 0;
     //  { return CONSISTENT; }
@@ -267,6 +267,7 @@ namespace Mistral {
 
   public:
 
+    int  **support[ARITY];
     Variable scope[ARITY];
     int active;
 
@@ -321,6 +322,25 @@ namespace Mistral {
     //virtual void initialise() {type = get_type();}
     //virtual int idempotent() {return 0;}
 
+
+    void initialise_supports() {
+      int vari, vali, vnext, min_vari, i;
+      for(vari=0; vari<ARITY; ++vari) {
+	min_vari = scope[vari].get_min();
+
+	support[vari] = new int*[scope[vari].get_max() - min_vari + 1];
+	support[vari] -= min_vari;
+
+	vnext = scope[vari].get_min();
+	do {
+	  vali = vnext;
+	  support[vari][vali] = new int[ARITY];
+	  support[vari][vali][vari] = vali;
+	  vnext = scope[vari].next(vali);
+
+	} while( vali < vnext );
+      }
+    }
 
     virtual void consolidate() {
       
@@ -541,12 +561,19 @@ namespace Mistral {
   class BinaryConstraint : public FixedArityConstraint<2> {
     
   public:
+
     BinaryConstraint() : FixedArityConstraint<2>() {}
     BinaryConstraint(Variable x, Variable y)  : FixedArityConstraint<2>(x,y) {}
     BinaryConstraint(Vector< Variable >& scp) : FixedArityConstraint<2>(scp) {}
     BinaryConstraint(std::vector< Variable >& scp) : FixedArityConstraint<2>(scp) {}
     virtual int get_type() { return BINARY|(IDEMPOTENT*idempotent()); }
 
+    virtual PropagationOutcome propagate(); // { return NULL; }
+    virtual PropagationOutcome checker_propagate() { return BinaryConstraint::propagate(); }
+    virtual PropagationOutcome bound_checker_propagate() { return BinaryConstraint::propagate(); }
+    virtual PropagationOutcome propagate(const int changed_idx, 
+					 const Event evt);
+    bool find_support(const int revise_idx, const int vli);
 
    void restore(const int rtype) {
 
@@ -600,6 +627,14 @@ namespace Mistral {
     TernaryConstraint(Vector< Variable >& scp) : FixedArityConstraint<3>(scp) { lvl = 3; }
     TernaryConstraint(std::vector< Variable >& scp) : FixedArityConstraint<3>(scp) { lvl = 3; }
     virtual int get_type() {return TERNARY|(IDEMPOTENT*idempotent());}
+
+    virtual PropagationOutcome checker_propagate() { return TernaryConstraint::propagate(); }
+    virtual PropagationOutcome bound_checker_propagate() { return TernaryConstraint::propagate(); }
+    virtual PropagationOutcome propagate(); // { return NULL; }
+    virtual PropagationOutcome propagate(const int changed_idx, 
+					 const Event evt);
+    bool find_support(const int revise_idx, const int vli);
+
 
     /*
     // the 3 first bits stand for the current set of active vars, 
@@ -858,8 +893,10 @@ namespace Mistral {
       }    
     }
 
+    virtual PropagationOutcome checker_propagate() { return GlobalConstraint::propagate(); }
+    virtual PropagationOutcome bound_checker_propagate() { return GlobalConstraint::propagate(); }
     virtual PropagationOutcome propagate();
-    virtual PropagationOutcome propagate(const int changed_idx, const Event evt) {}
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual int get_backtrack_level();
     virtual Decision get_decision();// { return solver->decisions.back(0); }
 
@@ -1087,6 +1124,105 @@ namespace Mistral {
   };
 
 
+  /**********************************************
+   * Interval Membership Predicate
+   **********************************************/
+  /*! \class PredicateIntervalMember
+    \brief  Truth value of a binary equality ((x0 = x1) <-> y)
+  */
+  class PredicateIntervalMember : public BinaryConstraint
+  {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int spin;
+    int lower_bound;
+    int upper_bound;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateIntervalMember() : BinaryConstraint() {}
+    PredicateIntervalMember(Variable x, Variable y, const int lb=-INFTY, const int ub=+INFTY, const int sp=1) 
+      : BinaryConstraint(x,y) { spin = sp; lower_bound=lb; upper_bound=ub; }
+    PredicateIntervalMember(Vector< Variable >& scp, const int lb=-INFTY, const int ub=+INFTY, const int sp=1) 
+      : BinaryConstraint(scp) { spin = sp; lower_bound=lb; upper_bound=ub; }
+    PredicateIntervalMember(std::vector< Variable >& scp, const int lb, const int ub, const int sp=1) 
+      : BinaryConstraint(scp) { spin = sp; lower_bound=lb; upper_bound=ub; }
+    virtual Constraint clone() { return Constraint(new PredicateIntervalMember(scope[0], scope[1], lower_bound, upper_bound, spin)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1; }
+    virtual void mark_domain();
+    virtual ~PredicateIntervalMember() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { return(((sol[0]>=lower_bound) && (sol[0]<=upper_bound)) 
+						       == (sol[1] ^ spin)); }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "are_equal"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Set Membership Predicate
+   **********************************************/
+  /*! \class PredicateSetMember
+    \brief  Truth value of a binary equality ((x0 = x1) <-> y)
+  */
+  class PredicateSetMember : public BinaryConstraint
+  {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int spin;
+    BitSet values;
+    BitSet non_values;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateSetMember() : BinaryConstraint() {}
+    // PredicateSetMember(Vector< Variable >& scp, const int sp=1) 
+    //   : BinaryConstraint(scp) { spin = sp; }
+    PredicateSetMember(Variable x, Variable y, const BitSet& vals, const int sp=1) 
+      : BinaryConstraint(x,y) { spin = sp; values=vals; }
+    PredicateSetMember(Vector< Variable >& scp, const BitSet& vals, const int sp=1) 
+      : BinaryConstraint(scp) { spin = sp; values=vals; }
+    PredicateSetMember(std::vector< Variable >& scp, const BitSet& vals, const int sp=1) 
+      : BinaryConstraint(scp) { spin = sp; values=vals; }
+    virtual Constraint clone() { return Constraint(new PredicateSetMember(scope[0], scope[1], values, spin)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1; }
+    virtual void mark_domain();
+    virtual ~PredicateSetMember() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { return((values.contain(sol[0]) == (sol[1] ^ spin))); }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "are_equal"; }
+    //@}
+  };
 
 
   /**********************************************
@@ -1280,6 +1416,275 @@ namespace Mistral {
 
 
 
+  /**********************************************
+   * And Predicate
+   **********************************************/
+  /*! \class PredicateAnd
+    \brief  Truth value of a conjunction ((x0 and x1) <-> y)
+  */
+  class PredicateAnd : public TernaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    PredicateAnd() : TernaryConstraint() {}
+    PredicateAnd(Vector< Variable >& scp) 
+      : TernaryConstraint(scp) {}
+    PredicateAnd(Variable x, Variable y, Variable z) 
+      : TernaryConstraint(x,y,z) {}
+    PredicateAnd(std::vector< Variable >& scp) 
+      : TernaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateAnd(scope[0], scope[1], scope[2])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~PredicateAnd() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return((sol[0] && sol[1]) != (sol[2])); 
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "and"; }
+    //@}
+  };
+
+  /**********************************************
+   * And Constraint
+   **********************************************/
+  /*! \class ConstraintAnd
+    \brief  Conjunction (x0 and x1)
+  */
+  class ConstraintAnd : public BinaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    ConstraintAnd() : BinaryConstraint() {}
+    ConstraintAnd(Vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    ConstraintAnd(Variable x, Variable y) 
+      : BinaryConstraint(x,y) {}
+    ConstraintAnd(std::vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new ConstraintAnd(scope[0], scope[1])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~ConstraintAnd() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return(!(sol[0] && sol[1])); 
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "and"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Or Predicate
+   **********************************************/
+  /*! \class PredicateOr
+    \brief  Truth value of a disjunction ((x0 or x1) <-> y)
+  */
+  class PredicateOr : public TernaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    PredicateOr() : TernaryConstraint() {}
+    PredicateOr(Vector< Variable >& scp) 
+      : TernaryConstraint(scp) {}
+    PredicateOr(Variable x, Variable y, Variable z) 
+      : TernaryConstraint(x,y,z) {}
+    PredicateOr(std::vector< Variable >& scp) 
+      : TernaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateOr(scope[0], scope[1], scope[2])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~PredicateOr() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return((sol[0] || sol[1]) != (sol[2])); 
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "and"; }
+    //@}
+  };
+
+  /**********************************************
+   * Or Constraint
+   **********************************************/
+  /*! \class ConstraintOr
+    \brief  Disjunction (x0 or x1)
+  */
+  class ConstraintOr : public BinaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    ConstraintOr(Vector< Variable >& scp) 
+      : BinaryConstraint(scp) { }
+    ConstraintOr(Variable x, Variable y) 
+      : BinaryConstraint(x,y) {}
+    ConstraintOr(std::vector< Variable >& scp) 
+      : BinaryConstraint(scp) { }
+    virtual Constraint clone() { return Constraint(new ConstraintOr(scope[0], scope[1])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~ConstraintOr() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return(!(sol[0] || sol[1])); 
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "and"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Lex Constraint
+   **********************************************/
+  /*! \class ConstraintLex
+    \brief  Basic bloc of a lex lt/leq constraint
+
+    let x0 and x1 being two cells with same rank on two rows/columns 
+    and b0, b1 be two Boolean variables.
+    This constraint ensures that 
+       - x0 =/= x1 => b1
+       - b0 < b1 => x0 < x1
+       - b0 <= b1 
+  */
+  class ConstraintLex : public GlobalConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    ConstraintLex() : GlobalConstraint() {}
+    ConstraintLex(Vector< Variable >& scp) 
+      : GlobalConstraint(scp) {}
+    ConstraintLex(std::vector< Variable >& scp) 
+      : GlobalConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new ConstraintLex(scope)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual ~ConstraintLex() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return( ((!sol[2] && !sol[3]) > (sol[0] == sol[1])
+	       || (sol[2] < sol[3]) > (sol[0] <  sol[1])
+	       || sol[2] > sol[3])
+	      ); 
+    }
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "lex"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Offset Predicate
+   **********************************************/
+  /*! \class PredicateOffset
+    \brief  Offset (x+k = y)
+  */
+  class PredicateOffset : public BinaryConstraint
+  {
+
+  public:
+
+    /**@name Parameters*/
+    //@{  
+    int offset;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateOffset() : BinaryConstraint() {}
+    PredicateOffset(Vector< Variable >& scp, const int ofs) 
+      : BinaryConstraint(scp) { offset=ofs; }
+    PredicateOffset(Variable x, Variable y, const int ofs) 
+      : BinaryConstraint(x,y) { offset=ofs; }
+    PredicateOffset(std::vector< Variable >& scp, const int ofs) 
+      : BinaryConstraint(scp) { offset=ofs; }
+    virtual Constraint clone() { return Constraint(new PredicateOffset(scope[0], scope[1], offset)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~PredicateOffset() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return((sol[0]+offset) != sol[1]);
+    }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "offset"; }
+    //@}
+  };
+
 
   /**********************************************
    * Addition Predicate
@@ -1321,6 +1726,119 @@ namespace Mistral {
     virtual std::string name() const { return "plus"; }
     //@}
   };
+
+
+  /**********************************************
+   * Factor Predicate
+   **********************************************/
+  /*! \class PredicateFactor
+    \brief  Truth value of a conjunction (!x0 <-> y)
+  */
+  class PredicateFactor : public BinaryConstraint
+  {
+
+  public:
+
+    /**@name Parameters*/
+    //@{  
+    int factor;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateFactor() : BinaryConstraint() {}
+    PredicateFactor(Vector< Variable >& scp, const int fct) 
+      : BinaryConstraint(scp) { factor=fct; }
+    PredicateFactor(Variable x, Variable y, const int fct) 
+      : BinaryConstraint(x,y) { factor=fct; }
+    PredicateFactor(std::vector< Variable >& scp, const int fct) 
+      : BinaryConstraint(scp) { factor=fct; }
+    virtual Constraint clone() { return Constraint(new PredicateFactor(scope[0], scope[1], factor)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~PredicateFactor() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return((sol[0]*factor) != sol[1]);
+    }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "factor"; }
+    //@}
+  };
+
+
+
+  /**********************************************
+   * Multiplication Predicate
+   **********************************************/
+  /*! \class PredicateMul
+    \brief  Binary mulition predicate (x0 + x1 = y)
+  */
+  class PredicateMul : public GlobalConstraint
+  {
+    
+  public:
+
+    int min_pos[3];
+    int max_pos[3];
+    int min_neg[3];
+    int max_neg[3];
+    int zero[3];
+
+    /**@name Constructors*/
+    //@{
+    PredicateMul() : GlobalConstraint() {}
+    PredicateMul(Vector< Variable >& scp) 
+      : GlobalConstraint(scp) {}
+    // PredicateMul(Variable x, Variable y, Variable z) 
+    //   : GlobalConstraint(x,y,z) {}
+    PredicateMul(std::vector< Variable >& scp) 
+      : GlobalConstraint(scp) {}
+    //virtual Constraint clone() { return Constraint(new PredicateMul(scope[0], scope[1], scope[2])); }
+virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual ~PredicateMul() {}
+    //@}
+    
+    /**@name Solving*/
+    //@{
+    //
+    PropagationOutcome revise_division(const int X, const int Y, const int Z);
+    //
+    PropagationOutcome revise_multiplication(const int X, const int Y, const int Z);
+    //
+    PropagationOutcome prune(const int lb_neg, 
+			     const int ub_neg, 
+			     const int lb_pos, 
+			     const int ub_pos,
+			     const bool pzero,
+			     const int Z);
+
+    virtual int check( const int* sol ) const { return (sol[2] != (sol[0]*sol[1])); }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome rewrite();
+    //@}
+    
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "plus"; }
+    //@}
+  };
+
 
 
 
@@ -1441,6 +1959,327 @@ namespace Mistral {
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "r-disjunctive"; }
+    //@}
+  };
+
+
+
+  /**********************************************
+   * BoolSum Equal Constraint
+   **********************************************/
+  //  lb <= x1 + ... + xn <= ub
+  /// Constraint on the value of the sum of a set of variables.
+  class ConstraintBoolSumEqual : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    int total;
+    ReversibleNum<int> min_;
+    ReversibleNum<int> max_;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintBoolSumEqual() : GlobalConstraint() {}
+    ConstraintBoolSumEqual(Vector< Variable >& scp, const int t);
+    ConstraintBoolSumEqual(std::vector< Variable >& scp, const int t);
+    virtual Constraint clone() { return Constraint(new ConstraintBoolSumEqual(scope, total)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual ~ConstraintBoolSumEqual();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bool_sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * BoolSum Interval Constraint
+   **********************************************/
+  //  lb <= x1 + ... + xn <= ub
+  /// Constraint on the value of the sum of a set of variables.
+  class ConstraintBoolSumInterval : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    int lb;
+    int ub;
+    ReversibleNum<int> min_;
+    ReversibleNum<int> max_;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintBoolSumInterval() : GlobalConstraint() {}
+    ConstraintBoolSumInterval(Vector< Variable >& scp, const int l, const int u);
+    ConstraintBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
+    virtual Constraint clone() { return Constraint(new ConstraintBoolSumInterval(scope, lb, ub)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual ~ConstraintBoolSumInterval();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bool_sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * BoolSum  Predicate
+   **********************************************/
+  //  x1 + ... + xn-1 = xn
+  /// predicate on the value of the sum of a set of variables.
+  class PredicateBoolSum : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    int lb;
+    int ub;
+    ReversibleNum<int> min_;
+    ReversibleNum<int> max_;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateBoolSum() : GlobalConstraint() {}
+    PredicateBoolSum(Vector< Variable >& scp);
+    PredicateBoolSum(std::vector< Variable >& scp);
+    PredicateBoolSum(Vector< Variable >& scp, Variable tot);
+    PredicateBoolSum(std::vector< Variable >& scp, Variable tot);
+    virtual Constraint clone() { return Constraint(new PredicateBoolSum(scope)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual ~PredicateBoolSum();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bool_sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Min Predicate
+   **********************************************/
+  /*! \class PredicateMin
+    \brief  Predicate on the mininum of a set of variables z = (x1 , ... , xn)
+  */
+  class PredicateMin : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int last_min;
+    ReversibleSet candidates;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateMin(Vector< Variable >& scp);
+    virtual ~PredicateMin();
+    virtual Constraint clone() { return Constraint(new PredicateMin(scope)); }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "min"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Max Predicate
+   **********************************************/
+  /*! \class PredicateMax
+    \brief  Predicate on the maxinum of a set of variables z = (x1 , ... , xn)
+  */
+  class PredicateMax : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int last_max;
+    ReversibleSet candidates;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateMax(Vector< Variable >& scp);
+    virtual ~PredicateMax();
+    virtual Constraint clone() { return Constraint(new PredicateMax(scope)); }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "max"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Element Predicate
+   **********************************************/
+  /*! \class PredicateElement
+    \brief  
+  */
+  class PredicateElement : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    BitSet aux_dom;
+    int offset;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateElement(Vector< Variable >& scp, const int o=0);
+    PredicateElement(std::vector< Variable >& scp, const int o=0);
+    virtual ~PredicateElement();
+    virtual Constraint clone() { return Constraint(new PredicateElement(scope, offset)); }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "sum"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * WeightedSum Constraint
+   **********************************************/
+  /*! \class ConstraintWeightedSum
+    \brief  Constraint on a sum of variables (a1 * x1 + ... + an * xn = total)
+  */
+  class PredicateWeightedSum : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    // Lower bound of the linear experssion
+    int lower_bound;
+
+    // Upper bound of the linear experssion
+    int upper_bound;
+
+    Vector< int > weight;
+    // from index 0 to wpos (not included), the coefficients are all 1s
+    int wpos;
+    // from index wpos to wneg (not included), the coefficients are all >0
+    int wneg;
+    // from index wneg to size (not included), the coefficients are all <0
+
+    // utils for the propagation
+    int *lo_bound;
+    int *up_bound;
+    int *span;
+    ReversibleNum<int> parity;
+    //ReversibleIntStack unknown_parity;
+    ReversibleSet unknown_parity;
+    
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateWeightedSum(Vector< Variable >& scp,
+			 const int L=0, const int U=0);
+    PredicateWeightedSum(Vector< Variable >& scp,
+			 Vector< int >& coefs,
+			 const int L=0, const int U=0);
+    PredicateWeightedSum(std::vector< Variable >& scp,
+			 std::vector< int >& coefs,
+			 const int L=0, const int U=0);
+    virtual ~PredicateWeightedSum();
+    virtual Constraint clone() { return Constraint(new PredicateWeightedSum(scope, weight)); }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "sum"; }
     //@}
   };
 
