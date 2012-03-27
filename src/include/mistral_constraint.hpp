@@ -1125,6 +1125,49 @@ namespace Mistral {
 
 
   /**********************************************
+   * Not Predicate
+   **********************************************/
+  /*! \class PredicateNot
+    \brief  Truth value of a conjunction (!x0 <-> y)
+  */
+  class PredicateNot : public BinaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    PredicateNot() : BinaryConstraint() {}
+    PredicateNot(Variable x, Variable y) 
+      : BinaryConstraint(x,y) {}
+    PredicateNot(Vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    PredicateNot(std::vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateNot(scope[0], scope[1])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1; }
+    virtual ~PredicateNot() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return((sol[0]>0) == sol[1]);
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "not"; }
+    //@}
+  };
+
+
+  /**********************************************
    * Interval Membership Predicate
    **********************************************/
   /*! \class PredicateIntervalMember
@@ -1194,8 +1237,8 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     PredicateSetMember() : BinaryConstraint() {}
-    // PredicateSetMember(Vector< Variable >& scp, const int sp=1) 
-    //   : BinaryConstraint(scp) { spin = sp; }
+    PredicateSetMember(Vector< Variable >& scp, const int sp=1) 
+      : BinaryConstraint(scp) { spin = sp; }
     PredicateSetMember(Variable x, Variable y, const BitSet& vals, const int sp=1) 
       : BinaryConstraint(x,y) { spin = sp; values=vals; }
     PredicateSetMember(Vector< Variable >& scp, const BitSet& vals, const int sp=1) 

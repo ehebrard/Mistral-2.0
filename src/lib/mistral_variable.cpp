@@ -1902,38 +1902,38 @@ Mistral::Variable Mistral::Variable::operator-(Variable x) {
 }
 
 
-// Mistral::NotExpression::NotExpression(Variable X) 
-//   : Expression(X) { 
-// }
-// Mistral::NotExpression::~NotExpression() {}
+Mistral::NotExpression::NotExpression(Variable X) 
+  : Expression(X) { 
+}
+Mistral::NotExpression::~NotExpression() {}
   
-// void Mistral::NotExpression::extract_constraint(Solver *s) {
-//   children[0].remove(0);
-//   // std::cerr << "Error: Not predicate can't be used as a constraint" << std::endl;
-//   // exit(0);
-// }
+void Mistral::NotExpression::extract_constraint(Solver *s) {
+  children[0].remove(0);
+  // std::cerr << "Error: Not predicate can't be used as a constraint" << std::endl;
+  // exit(0);
+}
 
-// void Mistral::NotExpression::extract_variable(Solver *s) {
-//   Variable aux(0, 1, BOOL_VAR);
-//   self = aux;
+void Mistral::NotExpression::extract_variable(Solver *s) {
+  Variable aux(0, 1, BOOL_VAR);
+  self = aux;
 
-//   self.initialise(s, false);
-//   self = self.get_var();
-//   children.add(self);
-// }
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+}
 
-// const char* Mistral::NotExpression::get_name() const {
-//   return "not";
-// }
+const char* Mistral::NotExpression::get_name() const {
+  return "not";
+}
 
-// void Mistral::NotExpression::extract_predicate(Solver *s) {
-//   s->add(new PredicateNot(children));
-// }
+void Mistral::NotExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(new PredicateNot(children)));
+}
 
-// Mistral::Variable Mistral::Variable::operator!() {
-//   Variable exp(new NotExpression(*this));
-//   return exp;
-// }
+Mistral::Variable Mistral::Variable::operator!() {
+  Variable exp(new NotExpression(*this));
+  return exp;
+}
 
 Mistral::AndExpression::AndExpression(Variable X, Variable Y) 
   : Expression(X,Y) {}

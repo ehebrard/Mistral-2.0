@@ -685,135 +685,135 @@ public:
 	      std::cout << std::endl;
 #endif
 	      
-	      test if there is a fail
+	      //test if there is a fail
 	      if( AC && BC ) {
 		if(IS_OK(wiped2) && !IS_OK(wiped1)) {
 		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result propag </= AC)" 
 		       << endl << " propagator: fail " << endl ;
 		  std::cout << std::endl << " generic AC: "; 
-		for(int j=0; j<arity; ++j) {
-		  std::cout << scope2[j].get_var().get_domain() << " " ;
-		}
-		std::cout << std::endl;
-		exit(1);
-	      }
-	      if(IS_OK(wiped1) && !IS_OK(wiped3)) {
-		cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
-		     << endl << " propagator: " ;
-		for(int j=0; j<arity; ++j) {
-		  std::cout << scope1[j].get_domain() << " " ;
-		}
-		std::cout << std::endl << " generic BC: fail" << endl;
-		exit(1);
-	      }
-	    } else if(AC) {
-	      if(IS_OK(wiped1) != IS_OK(wiped2)) {
-		cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
-		     << endl << " propagator: " ;
-		if(IS_OK(wiped1)) {
-		  for(int j=0; j<arity; ++j) {
-		    std::cout << scope1[j].get_var().get_domain() << " " ;
-		  }
-		} else std::cout << "fail" ;
-		
-		std::cout << std::endl << " generic AC: "; 
-		if(IS_OK(wiped2)) {
 		  for(int j=0; j<arity; ++j) {
 		    std::cout << scope2[j].get_var().get_domain() << " " ;
 		  }
-		} else std::cout << "fail" ;
-		std::cout << endl;
-		exit(1);
-	      }
-	    } else if(BC) {
-	      if(IS_OK(wiped1) != IS_OK(wiped3)) {
-		cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
-		     << endl << " propagator: " ;
-		if(IS_OK(wiped1)) {
+		  std::cout << std::endl;
+		  exit(1);
+		}
+		if(IS_OK(wiped1) && !IS_OK(wiped3)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
+		       << endl << " propagator: " ;
 		  for(int j=0; j<arity; ++j) {
-		    std::cout << scope1[j].get_var().get_domain() << " " ;
+		    std::cout << scope1[j].get_domain() << " " ;
 		  }
-		} else std::cout << "fail" ;
+		  std::cout << std::endl << " generic BC: fail" << endl;
+		  exit(1);
+		}
+	      } else if(AC) {
+		if(IS_OK(wiped1) != IS_OK(wiped2)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
+		       << endl << " propagator: " ;
+		  if(IS_OK(wiped1)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope1[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail" ;
 		
-		std::cout << std::endl << " generic BC: "; 
-		if(IS_OK(wiped3)) {
-		  for(int j=0; j<arity; ++j) {
-		    std::cout << scope3[j].get_var().get_domain() << " " ;
-		  }
-		} else std::cout << "fail"  ;
-		std::cout << endl;
-		exit(1);
+		  std::cout << std::endl << " generic AC: "; 
+		  if(IS_OK(wiped2)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope2[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail" ;
+		  std::cout << endl;
+		  exit(1);
+		}
+	      } else if(BC) {
+		if(IS_OK(wiped1) != IS_OK(wiped3)) {
+		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
+		       << endl << " propagator: " ;
+		  if(IS_OK(wiped1)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope1[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail" ;
+		
+		  std::cout << std::endl << " generic BC: "; 
+		  if(IS_OK(wiped3)) {
+		    for(int j=0; j<arity; ++j) {
+		      std::cout << scope3[j].get_var().get_domain() << " " ;
+		    }
+		  } else std::cout << "fail"  ;
+		  std::cout << endl;
+		  exit(1);
+		}
 	      }
-	    }
 	    
 	      std::cout << std::endl;
-	    if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
-	      for(int i=0; i<arity; ++i) {
-		int vnxt1 = scope1[i].get_var().get_min();
-		int vnxt2 = scope2[i].get_var().get_min();
-		int vnxt3 = scope3[i].get_var().get_min();
-		int val1 = vnxt1-1;
-		int val2 = vnxt2-1;
-		int val3 = vnxt3-1;
+	      if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
+		for(int i=0; i<arity; ++i) {
+		  int vnxt1 = scope1[i].get_var().get_min();
+		  int vnxt2 = scope2[i].get_var().get_min();
+		  int vnxt3 = scope3[i].get_var().get_min();
+		  int val1 = vnxt1-1;
+		  int val2 = vnxt2-1;
+		  int val3 = vnxt3-1;
 		
-		BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
-		BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
-		BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
+		  BitSet d1(vnxt1, scope1[i].get_var().get_max(), BitSet::empt);
+		  BitSet d2(vnxt2, scope2[i].get_var().get_max(), BitSet::empt);
+		  BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
 		
 
-		std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
-		while(val1<vnxt1) {
-		  val1 = vnxt1;
-		  vnxt1 = scope1[i].get_var().next(val1);
-		  d1.add(val1);
-		}
-		
-		if(AC) {
-		  while(val2<vnxt2) {
-		    val2 = vnxt2;
-		    vnxt2 = scope2[i].get_var().next(val2);
-		    d2.add(val2);
+		  std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
+		  while(val1<vnxt1) {
+		    val1 = vnxt1;
+		    vnxt1 = scope1[i].get_var().next(val1);
+		    d1.add(val1);
 		  }
-		}
 		
-		if(BC) {
-		  std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
-		  while(val3<vnxt3) {
-		    val3 = vnxt3;
-		    vnxt3 = scope3[i].get_var().next(val3);
-		    std::cout << " " << val3;
-		    d3.add(val3);
+		  if(AC) {
+		    while(val2<vnxt2) {
+		      val2 = vnxt2;
+		      vnxt2 = scope2[i].get_var().next(val2);
+		      d2.add(val2);
+		    }
 		  }
-		  std::cout << std::endl << d3 << std::endl;
+		
+		  if(BC) {
+		    std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
+		    while(val3<vnxt3) {
+		      val3 = vnxt3;
+		      vnxt3 = scope3[i].get_var().next(val3);
+		      std::cout << " " << val3;
+		      d3.add(val3);
+		    }
+		    std::cout << std::endl << d3 << std::endl;
 		  
 		  }
 		
-		if( AC && BC ) {
-		  if(!d1.includes(d2)) {
-		    cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
-			 << endl << " propagator: " ;
-		    for(int j=0; j<arity; ++j)
-		      std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		  if( AC && BC ) {
+		    if(!d1.includes(d2)) {
+		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
+			   << endl << " propagator: " ;
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
 		    
-		    std::cout << std::endl << " generic AC: ";		  
-		    for(int j=0; j<arity; ++j)
-		      std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		    std::cout << std::endl << std::endl;
-		    exit(1);
-		  }
-		  if(!d3.includes(d1)) {
-		    cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
-			 << endl << " propagator: " ;
-		    for(int j=0; j<arity; ++j)
-		      std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << " generic AC: ";		  
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope2[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << std::endl;
+		      exit(1);
+		    }
+		    if(!d3.includes(d1)) {
+		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
+			   << endl << " propagator: " ;
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
 		    
-		    std::cout << std::endl << " generic BC: ";		  
-		    for(int j=0; j<arity; ++j)
-		      std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
-		    std::cout << std::endl << std::endl;
-		    exit(1);
-		  }
-		} else if(AC) {
+		      std::cout << std::endl << " generic BC: ";		  
+		      for(int j=0; j<arity; ++j)
+			std::cout << scope3[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
+		      std::cout << std::endl << std::endl;
+		      exit(1);
+		    }
+		  } else if(AC) {
 		    if(d1 != d2) {
 		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning AC =/= propag)" 
 			   << endl << " propagator: " ;
@@ -885,16 +885,16 @@ public:
     cc1a.run(100);
 
     ConChecker< PredicateLess > cc1b("<=", false,true,12345,3,20,1);
-    cc1b.con1->offset = 3;
-    cc1b.con2->offset = 3;
-    cc1b.con3->offset = 3;
+    ((PredicateLess*)(cc1b.con1.propagator))->offset = 3;
+    ((PredicateLess*)(cc1b.con2.propagator))->offset = 3;
+    ((PredicateLess*)(cc1b.con3.propagator))->offset = 3;
     cc1b.init();
     cc1b.run(100);
 
     ConChecker< PredicateLess > cc1c("<=", false,true,12345,3,20,1);
-    cc1c.con1->offset = -3;
-    cc1c.con2->offset = -3;
-    cc1c.con3->offset = -3;   
+    ((PredicateLess*)(cc1c.con1.propagator))->offset = -3;
+    ((PredicateLess*)(cc1c.con2.propagator))->offset = -3;
+    ((PredicateLess*)(cc1c.con3.propagator))->offset = -3;   
     cc1c.init();
     cc1c.run(100);
 
@@ -903,37 +903,37 @@ public:
     cc2a.run(100);
 
     ConChecker< PredicateEqual > cc2b("!=", true,false,12345,3,20,1);
-    cc2b.con1->spin = 0;
-    cc2b.con2->spin = 0;
-    cc2b.con3->spin = 0;
+    ((PredicateEqual*)(cc2b.con1.propagator))->spin = 0;
+    ((PredicateEqual*)(cc2b.con2.propagator))->spin = 0;
+    ((PredicateEqual*)(cc2b.con3.propagator))->spin = 0;
     cc2b.init();
     cc2b.run(100);
 
     ConChecker< PredicateLowerBound > cc3a(">=-3", false,true,12345,2,20,1);
-    cc3a.con1->bound = -3;
-    cc3a.con2->bound = -3;
-    cc3a.con3->bound = -3;
+    ((PredicateLowerBound*)(cc3a.con1.propagator))->bound = -3;
+    ((PredicateLowerBound*)(cc3a.con2.propagator))->bound = -3;
+    ((PredicateLowerBound*)(cc3a.con3.propagator))->bound = -3;
     cc3a.init();
     cc3a.run(100);
 
     ConChecker< PredicateLowerBound > cc3b(">=3", false,true,12345,2,20,1);
-    cc3b.con1->bound = 3;
-    cc3b.con2->bound = 3;
-    cc3b.con3->bound = 3;
+    ((PredicateLowerBound*)(cc3b.con1.propagator))->bound = 3;
+    ((PredicateLowerBound*)(cc3b.con2.propagator))->bound = 3;
+    ((PredicateLowerBound*)(cc3b.con3.propagator))->bound = 3;
     cc3b.init();
     cc3b.run(100);
 
     ConChecker< PredicateUpperBound > cc4a("<=-3", false,true,12345,2,20,1);
-    cc4a.con1->bound = -3;
-    cc4a.con2->bound = -3;
-    cc4a.con3->bound = -3;
+    ((PredicateUpperBound*)(cc4a.con1.propagator))->bound = -3;
+    ((PredicateUpperBound*)(cc4a.con2.propagator))->bound = -3;
+    ((PredicateUpperBound*)(cc4a.con3.propagator))->bound = -3;
     cc4a.init();
     cc4a.run(100);
 
     ConChecker< PredicateUpperBound > cc4b("<=3", false,true,12345,2,20,1);
-    cc4b.con1->bound = 3;
-    cc4b.con2->bound = 3;
-    cc4b.con3->bound = 3;
+    ((PredicateUpperBound*)(cc4b.con1.propagator))->bound = 3;
+    ((PredicateUpperBound*)(cc4b.con2.propagator))->bound = 3;
+    ((PredicateUpperBound*)(cc4b.con3.propagator))->bound = 3;
     cc4b.init();
     cc4b.run(100);
 
@@ -942,9 +942,9 @@ public:
     cc5a.run(100);
 
     ConChecker< PredicateConstantEqual > cc5b("!=0", true,false,12345,2,20,1);
-    cc5b.con1->spin = 0;
-    cc5b.con2->spin = 0;
-    cc5b.con3->spin = 0;
+    ((PredicateConstantEqual*)(cc5b.con1.propagator))->spin = 0;
+    ((PredicateConstantEqual*)(cc5b.con2.propagator))->spin = 0;
+    ((PredicateConstantEqual*)(cc5b.con3.propagator))->spin = 0;
     cc5b.init();
     cc5b.run(100);
 
@@ -965,35 +965,35 @@ public:
 
 
     ConChecker< PredicateWeightedSum > cc9a("sum(1)", false,true,12345,5,10,0);
-    cc9a.con1->lower_bound = 10;
-    cc9a.con1->upper_bound = 10;
-    cc9a.con2->lower_bound = 10;
-    cc9a.con2->upper_bound = 10;
-    cc9a.con3->lower_bound = 10;
-    cc9a.con3->upper_bound = 10;
+    ((PredicateWeightedSum*)(cc9a.con1.propagator))->lower_bound = 10;
+    ((PredicateWeightedSum*)(cc9a.con1.propagator))->upper_bound = 10;
+    ((PredicateWeightedSum*)(cc9a.con2.propagator))->lower_bound = 10;
+    ((PredicateWeightedSum*)(cc9a.con2.propagator))->upper_bound = 10;
+    ((PredicateWeightedSum*)(cc9a.con3.propagator))->lower_bound = 10;
+    ((PredicateWeightedSum*)(cc9a.con3.propagator))->upper_bound = 10;
     cc9a.init();
     cc9a.run(20);
 
     ConChecker< PredicateWeightedSum > cc9b("sum(+)", false,true,12345,5,10,0);
     for(int i=2; i<5; ++i) {
-      cc9b.con1->weight[i] = randint(4)+2;
-      cc9b.con2->weight[i] = cc9b.con1->weight[i];
-      cc9b.con3->weight[i] = cc9b.con1->weight[i];
+      ((PredicateWeightedSum*)(cc9b.con1.propagator))->weight[i] = randint(4)+2;
+      ((PredicateWeightedSum*)(cc9b.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9b.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9b.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9b.con1.propagator))->weight[i];
       // if(!(cc9b.con1->weight[i]%2)) {
       // 	cc9b.con1->unknown_parity.reversible_remove(i);
       // 	cc9b.con2->unknown_parity.reversible_remove(i);
       // 	cc9b.con3->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9b.con1->lower_bound = 15;
-    cc9b.con1->upper_bound = 15;
-    cc9b.con2->lower_bound = 15;
-    cc9b.con2->upper_bound = 15;
-    cc9b.con3->lower_bound = 15;
-    cc9b.con3->upper_bound = 15;
-    cc9b.con1->wpos = 2;
-    cc9b.con2->wpos = 2;
-    cc9b.con3->wpos = 2;
+    ((PredicateWeightedSum*)(cc9b.con1.propagator))->lower_bound = 15;
+    ((PredicateWeightedSum*)(cc9b.con1.propagator))->upper_bound = 15;
+    ((PredicateWeightedSum*)(cc9b.con2.propagator))->lower_bound = 15;
+    ((PredicateWeightedSum*)(cc9b.con2.propagator))->upper_bound = 15;
+    ((PredicateWeightedSum*)(cc9b.con3.propagator))->lower_bound = 15;
+    ((PredicateWeightedSum*)(cc9b.con3.propagator))->upper_bound = 15;
+    ((PredicateWeightedSum*)(cc9b.con1.propagator))->wpos = 2;
+    ((PredicateWeightedSum*)(cc9b.con2.propagator))->wpos = 2;
+    ((PredicateWeightedSum*)(cc9b.con3.propagator))->wpos = 2;
     ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
     //std::cout << cc9b.con2 << std::endl;
     cc9b.init();
@@ -1001,35 +1001,35 @@ public:
 
     ConChecker< PredicateWeightedSum > cc9c("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
-      cc9c.con1->weight[i] = -(randint(4)+1);
-      cc9c.con2->weight[i] = cc9c.con1->weight[i];
-      cc9c.con3->weight[i] = cc9c.con1->weight[i];
+      ((PredicateWeightedSum*)(cc9c.con1.propagator))->weight[i] = -(randint(4)+1);
+      ((PredicateWeightedSum*)(cc9c.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9c.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9c.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9c.con1.propagator))->weight[i];
       // if(!(cc9c.con1->weight[i]%2)) {
       // 	cc9c.con1->unknown_parity.reversible_remove(i);
       // 	cc9c.con2->unknown_parity.reversible_remove(i);
       // 	cc9c.con3->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9c.con1->wpos = 3;
-    cc9c.con2->wpos = 3;
-    cc9c.con3->wpos = 3;
-    cc9c.con1->wneg = 3;
-    cc9c.con2->wneg = 3;
-    cc9c.con3->wneg = 3;
-    cc9c.con1->lower_bound = -10;
-    cc9c.con1->upper_bound = -10;
-    cc9c.con2->lower_bound = -10;
-    cc9c.con2->upper_bound = -10;
-    cc9c.con3->lower_bound = -10;
-    cc9c.con3->upper_bound = -10;
+    ((PredicateWeightedSum*)(cc9c.con1.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9c.con2.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9c.con3.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9c.con1.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9c.con2.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9c.con3.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9c.con1.propagator))->lower_bound = -10;
+    ((PredicateWeightedSum*)(cc9c.con1.propagator))->upper_bound = -10;
+    ((PredicateWeightedSum*)(cc9c.con2.propagator))->lower_bound = -10;
+    ((PredicateWeightedSum*)(cc9c.con2.propagator))->upper_bound = -10;
+    ((PredicateWeightedSum*)(cc9c.con3.propagator))->lower_bound = -10;
+    ((PredicateWeightedSum*)(cc9c.con3.propagator))->upper_bound = -10;
     cc9c.init();
     cc9c.run(20);
 
     ConChecker< PredicateWeightedSum > cc9d("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
-      cc9d.con1->weight[i] = randint(4)+2;
-      cc9d.con2->weight[i] = cc9d.con1->weight[i];
-      cc9d.con3->weight[i] = cc9d.con1->weight[i];
+      ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i] = randint(4)+2;
+      ((PredicateWeightedSum*)(cc9d.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9d.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i];
       // if(!(cc9d.con1->weight[i]%2)) {
       // 	cc9d.con1->unknown_parity.reversible_remove(i);
       // 	cc9d.con2->unknown_parity.reversible_remove(i);
@@ -1037,54 +1037,54 @@ public:
       // }
     }
     for(int i=3; i<5; ++i) {
-      cc9d.con1->weight[i] = -(randint(4)+1);
-      cc9d.con2->weight[i] = cc9d.con1->weight[i];
-      cc9d.con3->weight[i] = cc9d.con1->weight[i];
-      // if(!(cc9d.con1->weight[i]%2)) {
-      // 	cc9d.con1->unknown_parity.reversible_remove(i);
-      // 	cc9d.con2->unknown_parity.reversible_remove(i);
-      // 	cc9d.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i] = -(randint(4)+1);
+      ((PredicateWeightedSum*)(cc9d.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9d.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i];
+      // if(!(cc9d.con1.propagator))->weight[i]%2)) {
+      // 	cc9d.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9d.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9d.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9d.con1->wpos = 1;
-    cc9d.con2->wpos = 1;
-    cc9d.con3->wpos = 1;
-    cc9d.con1->wneg = 3;
-    cc9d.con2->wneg = 3;
-    cc9d.con3->wneg = 3;
+    ((PredicateWeightedSum*)(cc9d.con1.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9d.con2.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9d.con3.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9d.con1.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9d.con2.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9d.con3.propagator))->wneg = 3;
     cc9d.init();
     cc9d.run(20);
 
     ConChecker< PredicateWeightedSum > cc9e("sum(1)", false,true,12345,5,10,0);
-    cc9e.con1->lower_bound = 5;
-    cc9e.con1->upper_bound = 10;
-    cc9e.con2->lower_bound = 5;
-    cc9e.con2->upper_bound = 10;
-    cc9e.con3->lower_bound = 5;
-    cc9e.con3->upper_bound = 10;
+    ((PredicateWeightedSum*)(cc9e.con1.propagator))->lower_bound = 5;
+    ((PredicateWeightedSum*)(cc9e.con1.propagator))->upper_bound = 10;
+    ((PredicateWeightedSum*)(cc9e.con2.propagator))->lower_bound = 5;
+    ((PredicateWeightedSum*)(cc9e.con2.propagator))->upper_bound = 10;
+    ((PredicateWeightedSum*)(cc9e.con3.propagator))->lower_bound = 5;
+    ((PredicateWeightedSum*)(cc9e.con3.propagator))->upper_bound = 10;
     cc9e.init();
     cc9e.run(20);
 
     ConChecker< PredicateWeightedSum > cc9f("sum(+)", false,true,12345,5,10,0);
     for(int i=2; i<5; ++i) {
-      cc9f.con1->weight[i] = randint(4)+2;
-      cc9f.con2->weight[i] = cc9f.con1->weight[i];
-      cc9f.con3->weight[i] = cc9f.con1->weight[i];
-      // if(!(cc9f.con1->weight[i]%2)) {
-      // 	cc9f.con1->unknown_parity.reversible_remove(i);
-      // 	cc9f.con2->unknown_parity.reversible_remove(i);
-      // 	cc9f.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9f.con1.propagator))->weight[i] = randint(4)+2;
+      ((PredicateWeightedSum*)(cc9f.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9f.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9f.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9f.con1.propagator))->weight[i];
+      // if(!(cc9f.con1.propagator))->weight[i]%2)) {
+      // 	cc9f.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9f.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9f.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9f.con1->lower_bound = 10;
-    cc9f.con1->upper_bound = 15;
-    cc9f.con2->lower_bound = 10;
-    cc9f.con2->upper_bound = 15;
-    cc9f.con3->lower_bound = 10;
-    cc9f.con3->upper_bound = 15;
-    cc9f.con1->wpos = 2;
-    cc9f.con2->wpos = 2;
-    cc9f.con3->wpos = 2;
+    ((PredicateWeightedSum*)(cc9f.con1.propagator))->lower_bound = 10;
+    ((PredicateWeightedSum*)(cc9f.con1.propagator))->upper_bound = 15;
+    ((PredicateWeightedSum*)(cc9f.con2.propagator))->lower_bound = 10;
+    ((PredicateWeightedSum*)(cc9f.con2.propagator))->upper_bound = 15;
+    ((PredicateWeightedSum*)(cc9f.con3.propagator))->lower_bound = 10;
+    ((PredicateWeightedSum*)(cc9f.con3.propagator))->upper_bound = 15;
+    ((PredicateWeightedSum*)(cc9f.con1.propagator))->wpos = 2;
+    ((PredicateWeightedSum*)(cc9f.con2.propagator))->wpos = 2;
+    ((PredicateWeightedSum*)(cc9f.con3.propagator))->wpos = 2;
     ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
     //std::cout << cc9b.con2 << std::endl;
     cc9f.init();
@@ -1092,125 +1092,125 @@ public:
 
     ConChecker< PredicateWeightedSum > cc9g("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
-      cc9g.con1->weight[i] = -(randint(4)+1);
-      cc9g.con2->weight[i] = cc9g.con1->weight[i];
-      cc9g.con3->weight[i] = cc9g.con1->weight[i];
-      // if(!(cc9g.con1->weight[i]%2)) {
-      // 	cc9g.con1->unknown_parity.reversible_remove(i);
-      // 	cc9g.con2->unknown_parity.reversible_remove(i);
-      // 	cc9g.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9g.con1.propagator))->weight[i] = -(randint(4)+1);
+      ((PredicateWeightedSum*)(cc9g.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9g.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9g.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9g.con1.propagator))->weight[i];
+      // if(!(cc9g.con1.propagator))->weight[i]%2)) {
+      // 	cc9g.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9g.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9g.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9g.con1->wpos = 3;
-    cc9g.con2->wpos = 3;
-    cc9g.con3->wpos = 3;
-    cc9g.con1->wneg = 3;
-    cc9g.con2->wneg = 3;
-    cc9g.con3->wneg = 3;
-    cc9g.con1->lower_bound = -9;
-    cc9g.con1->upper_bound = -9;
-    cc9g.con2->lower_bound = -9;
-    cc9g.con2->upper_bound = -9;
-    cc9g.con3->lower_bound = -9;
-    cc9g.con3->upper_bound = -9;
+    ((PredicateWeightedSum*)(cc9g.con1.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9g.con2.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9g.con3.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9g.con1.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9g.con2.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9g.con3.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9g.con1.propagator))->lower_bound = -9;
+    ((PredicateWeightedSum*)(cc9g.con1.propagator))->upper_bound = -9;
+    ((PredicateWeightedSum*)(cc9g.con2.propagator))->lower_bound = -9;
+    ((PredicateWeightedSum*)(cc9g.con2.propagator))->upper_bound = -9;
+    ((PredicateWeightedSum*)(cc9g.con3.propagator))->lower_bound = -9;
+    ((PredicateWeightedSum*)(cc9g.con3.propagator))->upper_bound = -9;
     cc9g.init();
     cc9g.run(20);
 
     ConChecker< PredicateWeightedSum > cc9h("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
-      cc9h.con1->weight[i] = -(randint(4)+1);
-      cc9h.con2->weight[i] = cc9h.con1->weight[i];
-      cc9h.con3->weight[i] = cc9h.con1->weight[i];
-      // if(!(cc9h.con1->weight[i]%2)) {
-      // 	cc9h.con1->unknown_parity.reversible_remove(i);
-      // 	cc9h.con2->unknown_parity.reversible_remove(i);
-      // 	cc9h.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9h.con1.propagator))->weight[i] = -(randint(4)+1);
+      ((PredicateWeightedSum*)(cc9h.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9h.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9h.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9h.con1.propagator))->weight[i];
+      // if(!(cc9h.con1.propagator))->weight[i]%2)) {
+      // 	cc9h.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9h.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9h.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9h.con1->wpos = 3;
-    cc9h.con2->wpos = 3;
-    cc9h.con3->wpos = 3;
-    cc9h.con1->wneg = 3;
-    cc9h.con2->wneg = 3;
-    cc9h.con3->wneg = 3;
-    cc9h.con1->lower_bound = -9;
-    cc9h.con1->upper_bound = -3;
-    cc9h.con2->lower_bound = -9;
-    cc9h.con2->upper_bound = -3;
-    cc9h.con3->lower_bound = -9;
-    cc9h.con3->upper_bound = -3;
+    ((PredicateWeightedSum*)(cc9h.con1.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9h.con2.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9h.con3.propagator))->wpos = 3;
+    ((PredicateWeightedSum*)(cc9h.con1.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9h.con2.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9h.con3.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9h.con1.propagator))->lower_bound = -9;
+    ((PredicateWeightedSum*)(cc9h.con1.propagator))->upper_bound = -3;
+    ((PredicateWeightedSum*)(cc9h.con2.propagator))->lower_bound = -9;
+    ((PredicateWeightedSum*)(cc9h.con2.propagator))->upper_bound = -3;
+    ((PredicateWeightedSum*)(cc9h.con3.propagator))->lower_bound = -9;
+    ((PredicateWeightedSum*)(cc9h.con3.propagator))->upper_bound = -3;
     cc9h.init();
     cc9h.run(20);
 
     ConChecker< PredicateWeightedSum > cc9j("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
-      cc9j.con1->weight[i] = randint(4)+2;
-      cc9j.con2->weight[i] = cc9j.con1->weight[i];
-      cc9j.con3->weight[i] = cc9j.con1->weight[i];
-      // if(!(cc9j.con1->weight[i]%2)) {
-      // 	cc9j.con1->unknown_parity.reversible_remove(i);
-      // 	cc9j.con2->unknown_parity.reversible_remove(i);
-      // 	cc9j.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9j.con1.propagator))->weight[i] = randint(4)+2;
+      ((PredicateWeightedSum*)(cc9j.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9j.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9j.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9j.con1.propagator))->weight[i];
+      // if(!(cc9j.con1.propagator))->weight[i]%2)) {
+      // 	cc9j.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9j.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9j.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
     for(int i=3; i<5; ++i) {
-      cc9j.con1->weight[i] = -(randint(4)+1);
-      cc9j.con2->weight[i] = cc9j.con1->weight[i];
-      cc9j.con3->weight[i] = cc9j.con1->weight[i];
-      // if(!(cc9j.con1->weight[i]%2)) {
-      // 	cc9j.con1->unknown_parity.reversible_remove(i);
-      // 	cc9j.con2->unknown_parity.reversible_remove(i);
-      // 	cc9j.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9j.con1.propagator))->weight[i] = -(randint(4)+1);
+      ((PredicateWeightedSum*)(cc9j.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9j.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9j.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9j.con1.propagator))->weight[i];
+      // if(!(cc9j.con1.propagator))->weight[i]%2)) {
+      // 	cc9j.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9j.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9j.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9j.con1->wpos = 1;
-    cc9j.con2->wpos = 1;
-    cc9j.con3->wpos = 1;
-    cc9j.con1->wneg = 3;
-    cc9j.con2->wneg = 3;
-    cc9j.con3->wneg = 3;
-    cc9j.con1->lower_bound = -1;
-    cc9j.con1->upper_bound = -1;
-    cc9j.con2->lower_bound = -1;
-    cc9j.con2->upper_bound = -1;
-    cc9j.con3->lower_bound = -1;
-    cc9j.con3->upper_bound = -1;
+    ((PredicateWeightedSum*)(cc9j.con1.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9j.con2.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9j.con3.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9j.con1.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9j.con2.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9j.con3.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9j.con1.propagator))->lower_bound = -1;
+    ((PredicateWeightedSum*)(cc9j.con1.propagator))->upper_bound = -1;
+    ((PredicateWeightedSum*)(cc9j.con2.propagator))->lower_bound = -1;
+    ((PredicateWeightedSum*)(cc9j.con2.propagator))->upper_bound = -1;
+    ((PredicateWeightedSum*)(cc9j.con3.propagator))->lower_bound = -1;
+    ((PredicateWeightedSum*)(cc9j.con3.propagator))->upper_bound = -1;
     cc9j.init();
     cc9j.run(20);
 
     ConChecker< PredicateWeightedSum > cc9k("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
-      cc9k.con1->weight[i] = randint(4)+2;
-      cc9k.con2->weight[i] = cc9k.con1->weight[i];
-      cc9k.con3->weight[i] = cc9k.con1->weight[i];
-      // if(!(cc9k.con1->weight[i]%2)) {
-      // 	cc9k.con1->unknown_parity.reversible_remove(i);
-      // 	cc9k.con2->unknown_parity.reversible_remove(i);
-      // 	cc9k.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i] = randint(4)+2;
+      ((PredicateWeightedSum*)(cc9k.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9k.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i];
+      // if(!(cc9k.con1.propagator))->weight[i]%2)) {
+      // 	cc9k.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9k.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9k.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
     for(int i=3; i<5; ++i) {
-      cc9k.con1->weight[i] = -(randint(4)+1);
-      cc9k.con2->weight[i] = cc9k.con1->weight[i];
-      cc9k.con3->weight[i] = cc9k.con1->weight[i];
-      // if(!(cc9k.con1->weight[i]%2)) {
-      // 	cc9k.con1->unknown_parity.reversible_remove(i);
-      // 	cc9k.con2->unknown_parity.reversible_remove(i);
-      // 	cc9k.con3->unknown_parity.reversible_remove(i);
+      ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i] = -(randint(4)+1);
+      ((PredicateWeightedSum*)(cc9k.con2.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i];
+      ((PredicateWeightedSum*)(cc9k.con3.propagator))->weight[i] = ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i];
+      // if(!(cc9k.con1.propagator))->weight[i]%2)) {
+      // 	cc9k.con1.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9k.con2.propagator))->unknown_parity.reversible_remove(i);
+      // 	cc9k.con3.propagator))->unknown_parity.reversible_remove(i);
       // }
     }
-    cc9k.con1->wpos = 1;
-    cc9k.con2->wpos = 1;
-    cc9k.con3->wpos = 1;
-    cc9k.con1->wneg = 3;
-    cc9k.con2->wneg = 3;
-    cc9k.con3->wneg = 3;
-    cc9k.con1->lower_bound = -1;
-    cc9k.con1->upper_bound = 3;
-    cc9k.con2->lower_bound = -1;
-    cc9k.con2->upper_bound = 3;
-    cc9k.con3->lower_bound = -1;
-    cc9k.con3->upper_bound = 3;
+    ((PredicateWeightedSum*)(cc9k.con1.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9k.con2.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9k.con3.propagator))->wpos = 1;
+    ((PredicateWeightedSum*)(cc9k.con1.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9k.con2.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9k.con3.propagator))->wneg = 3;
+    ((PredicateWeightedSum*)(cc9k.con1.propagator))->lower_bound = -1;
+    ((PredicateWeightedSum*)(cc9k.con1.propagator))->upper_bound = 3;
+    ((PredicateWeightedSum*)(cc9k.con2.propagator))->lower_bound = -1;
+    ((PredicateWeightedSum*)(cc9k.con2.propagator))->upper_bound = 3;
+    ((PredicateWeightedSum*)(cc9k.con3.propagator))->lower_bound = -1;
+    ((PredicateWeightedSum*)(cc9k.con3.propagator))->upper_bound = 3;
     cc9k.init();
     cc9k.run(20);
 
@@ -1223,28 +1223,28 @@ public:
     cc11a.run(100);
 
     ConChecker< PredicateIntervalMember > cc12a("member[]", true,false,12345,2,20,1);
-    cc12a.con1->spin = 1;
-    cc12a.con1->lower_bound = -5;
-    cc12a.con1->upper_bound =  5;
-    cc12a.con2->spin = 1;
-    cc12a.con2->lower_bound = -5;
-    cc12a.con2->upper_bound =  5;
-    cc12a.con3->spin = 1;
-    cc12a.con3->lower_bound = -5;
-    cc12a.con3->upper_bound =  5;
+    ((PredicateIntervalMember*)(cc12a.con1.propagator))->spin = 1;
+    ((PredicateIntervalMember*)(cc12a.con1.propagator))->lower_bound = -5;
+    ((PredicateIntervalMember*)(cc12a.con1.propagator))->upper_bound =  5;
+    ((PredicateIntervalMember*)(cc12a.con2.propagator))->spin = 1;
+    ((PredicateIntervalMember*)(cc12a.con2.propagator))->lower_bound = -5;
+    ((PredicateIntervalMember*)(cc12a.con2.propagator))->upper_bound =  5;
+    ((PredicateIntervalMember*)(cc12a.con3.propagator))->spin = 1;
+    ((PredicateIntervalMember*)(cc12a.con3.propagator))->lower_bound = -5;
+    ((PredicateIntervalMember*)(cc12a.con3.propagator))->upper_bound =  5;
     cc12a.init();
     cc12a.run(1000);
 
     ConChecker< PredicateIntervalMember > cc12b("notmember[]", true,false,12345,2,20,1);
-    cc12b.con1->spin = 0;
-    cc12b.con1->lower_bound = -5;
-    cc12b.con1->upper_bound =  5;
-    cc12b.con2->spin = 0;
-    cc12b.con2->lower_bound = -5;
-    cc12b.con2->upper_bound =  5;
-    cc12b.con3->spin = 0;
-    cc12b.con3->lower_bound = -5;
-    cc12b.con3->upper_bound =  5;
+    ((PredicateIntervalMember*)(cc12b.con1.propagator))->spin = 0;
+    ((PredicateIntervalMember*)(cc12b.con1.propagator))->lower_bound = -5;
+    ((PredicateIntervalMember*)(cc12b.con1.propagator))->upper_bound =  5;
+    ((PredicateIntervalMember*)(cc12b.con2.propagator))->spin = 0;
+    ((PredicateIntervalMember*)(cc12b.con2.propagator))->lower_bound = -5;
+    ((PredicateIntervalMember*)(cc12b.con2.propagator))->upper_bound =  5;
+    ((PredicateIntervalMember*)(cc12b.con3.propagator))->spin = 0;
+    ((PredicateIntervalMember*)(cc12b.con3.propagator))->lower_bound = -5;
+    ((PredicateIntervalMember*)(cc12b.con3.propagator))->upper_bound =  5;
     cc12b.init();
     cc12b.run(1000);
 
@@ -1259,23 +1259,23 @@ public:
     vals.add(8);
     vals.add(9);
     ConChecker< PredicateSetMember > cc13a("member[]", true,false,12345,2,20,1);
-    cc13a.con1->spin = 1;
-    cc13a.con1->values = vals;
-    cc13a.con2->spin = 1;
-    cc13a.con2->values = vals;
-    cc13a.con3->spin = 1;
-    cc13a.con3->values = vals;
+    ((PredicateSetMember*)(cc13a.con1.propagator))->spin = 1;
+    ((PredicateSetMember*)(cc13a.con1.propagator))->values = vals;
+    ((PredicateSetMember*)(cc13a.con2.propagator))->spin = 1;
+    ((PredicateSetMember*)(cc13a.con2.propagator))->values = vals;
+    ((PredicateSetMember*)(cc13a.con3.propagator))->spin = 1;
+    ((PredicateSetMember*)(cc13a.con3.propagator))->values = vals;
     cc13a.init();
     cc13a.run(1000);
 
 
     ConChecker< PredicateSetMember > cc13b("notmember[]", true,false,12345,2,20,1);
-    cc13b.con1->spin = 0;
-    cc13b.con1->values = vals;
-    cc13b.con2->spin = 0;
-    cc13b.con2->values = vals;
-    cc13b.con3->spin = 0;
-    cc13b.con3->values = vals;
+    ((PredicateSetMember*)(cc13b.con1.propagator))->spin = 0;
+    ((PredicateSetMember*)(cc13b.con1.propagator))->values = vals;
+    ((PredicateSetMember*)(cc13b.con2.propagator))->spin = 0;
+    ((PredicateSetMember*)(cc13b.con2.propagator))->values = vals;
+    ((PredicateSetMember*)(cc13b.con3.propagator))->spin = 0;
+    ((PredicateSetMember*)(cc13b.con3.propagator))->values = vals;
     cc13b.init();
     cc13b.run(1000);
 
@@ -2375,7 +2375,7 @@ void RandomRevNumAffectations< T >::run() {
   T x = 1000;
   int val = 0;
 
-  ReversibleNum<T> rx(x, &s);
+  ReversibleNum<T> rx(&s, x);
 
   int x1 = x;
   int x2;

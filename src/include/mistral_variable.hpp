@@ -427,6 +427,11 @@ namespace Mistral {
       if(!contain(v)) return NO_EVENT;
       if(domain.size == 1) return FAIL_EVENT;
 
+      // if(id==1) {
+      // 	std::cout << "remove " << v << " from " << this << " in " << domain << std::endl;
+      // }
+
+
       save();
 
       // then change the static domain
@@ -451,6 +456,11 @@ namespace Mistral {
 	}       
       }  
       
+
+      // if(id==1) {
+      // 	std::cout << event2str(removal) << " event ==> " << this << " = " << domain << std::endl;
+      // }
+
       solver->trigger_event(id, removal);
       return removal; 
     }
@@ -529,6 +539,12 @@ namespace Mistral {
       if(domain.max <  lo) return FAIL_EVENT;
       if(domain.min >= lo) return NO_EVENT;
       
+      // if(id==1) {
+      // 	std::cout << "set_min " << lo << " of " << this << " in " << domain << std::endl;
+      // }
+
+
+
       save();
       
       // then change the static domain
@@ -536,13 +552,18 @@ namespace Mistral {
       if(lo == domain.max) {
 	domain.min = lo;
 	domain.size = 1;
-	lower_bound |= VALUE_EVENT;
+	lower_bound |= VALUE_C;
       } else {
 	domain.size = domain.values.size();
 	if(domain.values.contain(lo)) domain.min = lo;
 	else domain.min = domain.values.next(lo-1);
-	if(domain.size == 1) lower_bound |= VALUE_EVENT;
+	if(domain.size == 1) lower_bound |= VALUE_C;
       }
+
+
+      // if(id==1) {
+      // 	std::cout << event2str(lower_bound) << " event ==> " << this << " = " << domain << std::endl;
+      // }
       
       solver->trigger_event(id, lower_bound);
       //trigger_event(lower_bound);
@@ -568,12 +589,12 @@ namespace Mistral {
       if(up == domain.min) {
 	domain.max = up;
 	domain.size = 1;
-	upper_bound |= VALUE_EVENT;
+	upper_bound |= VALUE_C;
       } else {
 	domain.size = domain.values.size();
 	if(domain.values.contain(up)) domain.max = up;
 	else domain.max = domain.values.prev(up);
-	if(domain.size == 1) upper_bound |= VALUE_EVENT;
+	if(domain.size == 1) upper_bound |= VALUE_C;
       }
 
       //std::cout << domain << std::endl;

@@ -1531,8 +1531,8 @@ void Mistral::Solver::make_non_convex(const int idx)
 }
 
 
-// bool Mistral::Solver::rewrite() 
-// {
+ bool Mistral::Solver::rewrite() 
+ {
   
 // #ifdef _DEBUG_REWRITE
 //   std::cout << "start rewrite loop: " << (statistics.num_filterings) 
@@ -1660,9 +1660,29 @@ void Mistral::Solver::make_non_convex(const int idx)
 //   //return !wiped_out;
 
 
-//   return true;
+   return true;
 
-// }
+ }
+
+
+Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c) {
+  c.trigger();
+  propagate();
+  return wiped_idx;
+}
+
+Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c) {
+  c.trigger();
+  propagate();
+  return wiped_idx;
+}
+
+Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint c) {
+  c.trigger();
+  propagate();
+  return wiped_idx;
+}
+
 
 // Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint *cons) {
 //   culprit = cons;

@@ -1689,37 +1689,55 @@ std::ostream& Mistral::PredicateFactor::display(std::ostream& os) const {
 }
 
 
-// void Mistral::PredicateNot::initialise() {
-//   Constraint::initialise();
-//   for(int i=0; i<2; ++i)
-//     trigger_on(_VALUE_, i);
-//   set_idempotent(false);
-// }
+void Mistral::PredicateNot::initialise() {
+  trigger_on(_VALUE_, scope[0]);
+  trigger_on(_VALUE_, scope[1]);
+}
 
-// Mistral::PropagationOutcome Mistral::PredicateNot::propagate() {      
-//   Mistral::PropagationOutcome wiped = CONSISTENT;
+Mistral::PropagationOutcome Mistral::PredicateNot::propagate() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
 
-//   if( scope[1].is_ground() ) {
-//     if( scope[1].get_min() ) { // x[0] == 0
-//       if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
-//     } else if( scope[1].get_max() == 0 ) { //x[0] != 0
-//       if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
-//     } 
-//   } else {
-//     if( !scope[0].contain(0) ) {
-//       if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
-//     } else if( scope[0].is_ground() ) {
-//       if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
-//     }
-//   }
+  if( scope[1].is_ground() ) {
+    if( scope[1].get_min() ) { // x[0] == 0
+      if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+    } else if( scope[1].get_max() == 0 ) { //x[0] != 0
+      if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+    } 
+  } else {
+    if( !scope[0].contain(0) ) {
+      if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
+    } else if( scope[0].is_ground() ) {
+      if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
+    }
+  }
   
-//   return wiped;
-// }
+  return wiped;
+}
 
-// std::ostream& Mistral::PredicateNot::display(std::ostream& os) const {
-//   os << scope[1] << " <=> not(" << scope[0] << ")";
-//   return os;
-// }
+Mistral::PropagationOutcome Mistral::PredicateNot::propagate(const int changed_idx, const Event evt) {
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  if( changed_idx ) {
+    if( LB_CHANGED(evt) ) { // x[0] == 0
+      if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+    } else { //x[0] != 0
+      if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+    } 
+  } else {
+    if( UB_CHANGED(evt) ) {
+      if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
+    } else {
+      if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
+    }
+  }
+  
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateNot::display(std::ostream& os) const {
+  os << scope[1] << " <=> not(" << scope[0] << ")";
+  return os;
+}
 
 
 void Mistral::PredicateAnd::initialise() {
@@ -2219,14 +2237,14 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
   return wiped;
 }
 
-//#define _DEBUG_ADD true
+#define _DEBUG_ADD true
 
 Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_idx, 
 							     const Event evt) {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
 #ifdef _DEBUG_ADD
-  if(scope[2].id()==0) {
+  if(id==36) {
     std::cout << scope[0] << " + " 
 	      << scope[1] << " = " 
 	      << scope[2] << std::endl; 
@@ -2308,7 +2326,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
   }
 
 #ifdef _DEBUG_ADD
-  if(scope[2].id()==0) {
+  if(id==36) {
   std::cout << scope[0].get_domain() << " + " 
 	    << scope[1].get_domain() << " = " 
 	    << scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
