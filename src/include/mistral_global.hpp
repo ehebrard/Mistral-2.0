@@ -198,6 +198,7 @@ namespace Mistral {
 #define ASSIGNED(e)       (bool)((e)&VALUE_C)
 
 
+  std::string event2strc(Event e); //  {
   std::string event2str(Event e); //  {
   //   std::string str_evt;
   //   if(ASSIGNED(e)) {

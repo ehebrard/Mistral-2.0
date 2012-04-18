@@ -29,6 +29,9 @@ int main(int argc, char *argv[])
   if( !fm ) return 0;
   double parse_time = get_run_time() - cpu_time;
 
+
+  //std::cout << s << std::endl;
+
   fm->run(cout , p);
   delete fm;
 

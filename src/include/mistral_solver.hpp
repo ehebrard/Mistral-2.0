@@ -39,6 +39,7 @@ namespace Mistral {
 
 
 
+
   class Solution {
     
   public: 
@@ -208,8 +209,29 @@ namespace Mistral {
   };
   
 
-
   class Solver;
+  class SearchMonitor {
+    
+  public:
+    
+    SearchMonitor(Solver* s) { solver = s; }
+    virtual ~SearchMonitor() {}
+
+    Solver *solver;
+
+    Vector<int> sequence;
+    
+    std::vector<const char*> strs;
+
+    void add(Variable);
+    void add(Constraint);
+    void add(const char*);
+
+    virtual std::ostream& display( std::ostream& os ) const;
+
+  };
+
+
   /**********************************************
    * MultiQueue
    **********************************************/
@@ -334,6 +356,8 @@ namespace Mistral {
     Vector< int > assignment_level;
 
 #ifdef _MONITOR
+    SearchMonitor monitor_list;
+
     Vector< unsigned int > monitored;
     Vector< unsigned int > monitored_index;
     void monitor(Vector<Variable>& X);
@@ -513,9 +537,9 @@ namespace Mistral {
     //void trigger_event(const int var, const Event evt);
 
     /// achieve propagation closure
-    PropagationOutcome propagate(Constraint c);
-    PropagationOutcome checker_propagate(Constraint c);
-    PropagationOutcome bound_checker_propagate(Constraint c);
+    PropagationOutcome propagate(Constraint c, const bool t=true);
+    PropagationOutcome checker_propagate(Constraint c, const bool t=true);
+    PropagationOutcome bound_checker_propagate(Constraint c, const bool t=true);
     bool propagate(); 
     bool rewrite(); 
     void consolidate(); 
@@ -612,6 +636,15 @@ namespace Mistral {
 
   std::ostream& operator<< (std::ostream& os, ConstraintTriggerArray& x);
   std::ostream& operator<< (std::ostream& os, ConstraintTriggerArray* x);
+
+
+
+  SearchMonitor& operator<< (SearchMonitor& os, Variable& x);
+  SearchMonitor& operator<< (SearchMonitor& os, VarArray& x);
+  SearchMonitor& operator<< (SearchMonitor& os, Constraint& x);
+  //SearchMonitor& operator<< (SearchMonitor& os, std::string& x);
+  SearchMonitor& operator<< (SearchMonitor& os, const char* x);
+
 
 }
 

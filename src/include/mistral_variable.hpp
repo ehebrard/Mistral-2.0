@@ -382,7 +382,7 @@ namespace Mistral {
     inline bool contain(const int v) const { return (domain.min <= v && domain.max >= v && domain.values.fast_contain(v)); }
 
     /// Whether the domain has a nonempty intersection with the interval [l..u]
-    inline bool intersect(const int lo, const int up) const { return (domain.min <= up && domain.max >= lo); }
+    inline bool intersect(const int lo, const int up) const { return (domain.min <= up && domain.max >= lo && domain.values.intersect(lo, up)); }
     /// Whether the domain is included in the interval [l..u]
     inline bool included(const int lo, const int up) const { return (domain.min >= lo && domain.max <= up); }
     /// Whether the domain is included in the interval [l..u]
@@ -1384,7 +1384,7 @@ namespace Mistral {
     Variable operator<=(const int);
     Variable operator>(const int);
     Variable operator>=(const int);
-    //    Variable operator-();
+    Variable operator-();
     Variable operator!();
 
     void add_to(Solver *s) {
@@ -1409,7 +1409,12 @@ namespace Mistral {
     Event setValue( const int val );    
     Event setState( const int vals );    
     inline int id() const {return (domain_type == CONST_VAR ? -1 : variable->id);}
-    inline Solver* get_solver() {return (Solver*)(variable->solver);}
+    //inline 
+    Solver* get_solver();//  {
+    //   std::cout << (int*)(variable) << std::endl;
+
+    //   return (Solver*)(variable->solver);
+    // }
 
     /*!@name Constant Accessors and Iterators*/
     //@{
@@ -1831,6 +1836,21 @@ namespace Mistral {
 
     NotExpression(Variable X);
     virtual ~NotExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+
+  class NegExpression : public Expression {
+
+  public:
+
+    NegExpression(Variable X);
+    virtual ~NegExpression();
 
     virtual void extract_constraint(Solver*);
     virtual void extract_variable(Solver*);
@@ -2323,12 +2343,17 @@ namespace Mistral {
 
     virtual ~Goal();
 
+    virtual std::ostream& display(std::ostream& os) const;
+
     bool enforce();
     Outcome notify_solution(Solver *solver);
     Outcome notify_exhausted();
      
   };
 
+
+  std::ostream& operator<< (std::ostream& os, const Goal& x);
+  std::ostream& operator<< (std::ostream& os, const Goal* x);
 
   //   std::ostream& operator<< (std::ostream& os, const VarArray& x);
   //   std::ostream& operator<< (std::ostream& os, const VarArray* x);

@@ -77,6 +77,25 @@ std::string Mistral::event2str(Mistral::Event e) {
   return str_evt;
 }
 
+std::string Mistral::event2strc(Mistral::Event e) {
+  std::string str_evt = "no";
+  if(ASSIGNED(e)) {
+    str_evt = "v";
+    if(e != VALUE_C) {
+      if(!(LB_CHANGED(e))) str_evt += "&u";
+      else if(!(UB_CHANGED(e))) str_evt += "&l";
+      else str_evt += "&b";
+    } 
+  } else if(RANGE_CHANGED(e)) {
+    if(!(LB_CHANGED(e))) str_evt = "u";
+    else if(!(UB_CHANGED(e))) str_evt = "l";
+    else str_evt = "b";
+  } else if(DOMAIN_CHANGED(e)) {
+    str_evt = "d";
+  }
+  return str_evt;
+}
+
 
 std::string Mistral::outcome2str(Mistral::Outcome e) {
   std::string str_out;

@@ -251,7 +251,7 @@ namespace Mistral {
 
     virtual void notify_add_con(Constraint con) {
       unsigned int idx = con.id();
-      Variable *scope = con.get_scope();
+      //Variable *scope = con.get_scope();
       while(constraint_weight.size <= idx) {
 	constraint_weight.add(1.0);
       }

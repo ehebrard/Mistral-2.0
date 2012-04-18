@@ -67,6 +67,7 @@ void Mistral::Constraint::consolidate_var() {
 }
 
 void Mistral::Constraint::initialise(Solver *s) {
+  propagator->solver = s;
   propagator->initialise_vars(s);
   propagator->initialise();
 }
@@ -156,6 +157,21 @@ int Mistral::Constraint::check(int* sol) {
   return propagator->check(sol);
 }
 
+bool Mistral::Constraint::find_support(const int var, const int val) {
+  bool exist=false;
+  
+  if(binary()) {
+    exist = ((BinaryConstraint*)propagator)->find_support(var, val);
+  } else if(ternary()) {
+    exist = ((TernaryConstraint*)propagator)->find_support(var, val);
+  } else {
+    exist = (((GlobalConstraint*)propagator)->first_support(var, val) ||
+	     ((GlobalConstraint*)propagator)->find_support(var, val));
+  }
+
+  return exist;
+}
+
 Mistral::PropagationOutcome Mistral::Constraint::propagate() {
   return propagator->propagate();
 }
@@ -164,10 +180,43 @@ Mistral::PropagationOutcome Mistral::Constraint::propagate(const Event evt) {
   return propagator->propagate(index(), evt);
 }
 
+
+Mistral::PropagationOutcome Mistral::Constraint::checker_propagate() {
+  return propagator->checker_propagate();
+}
+
+Mistral::PropagationOutcome Mistral::Constraint::checker_propagate(const Event evt) {
+  return propagator->checker_propagate(index(), evt);
+}
+
+
+Mistral::PropagationOutcome Mistral::Constraint::bound_checker_propagate() {
+  
+  //std::cout << "backtrack.cpp: bound checker propagate()" << std::endl; 
+
+  PropagationOutcome wiped_idx = propagator->bound_checker_propagate();
+
+  //std::cout << wiped_idx << std::endl;
+
+  return wiped_idx;
+}
+
+Mistral::PropagationOutcome Mistral::Constraint::bound_checker_propagate(const Event evt) {
+
+  //std::cout << "backtrack.cpp: bound checker propagate(evt)" << std::endl; 
+
+  PropagationOutcome wiped_idx = propagator->bound_checker_propagate(index(), evt);
+
+  //std::cout << wiped_idx << std::endl;
+
+  return wiped_idx;
+}
+
 void Mistral::Constraint::restore() {
   unsigned int mytype = index();
 
-  // std::cout << "Restore " << (*this) << " " ;
+  //if(id() == 36)
+  //std::cout << "Restore " << (*this) << " (" << (int*)(propagator) << ")" << std::endl;
 
   if(binary()) {
 
@@ -247,5 +296,12 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ReversibleBo
   return x.display(os);
 }
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ReversibleBool* x) {
+  return x->display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::VarEvent& x) {
+  return x.display(os);
+}
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::VarEvent* x) {
   return x->display(os);
 }

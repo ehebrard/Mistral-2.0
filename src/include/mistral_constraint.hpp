@@ -39,7 +39,7 @@
 #define FILTER1( var, method )				    \
   event_type[(var)] = scope[(var)].method ;		     \
   if(event_type[(var)] == FAIL_EVENT) wiped = FAILURE(var);		\
-  else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var);
+  else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var); 
 
 
 #define FILTER2( evt, var, method )		\
@@ -132,7 +132,7 @@ namespace Mistral {
     virtual ~ConstraintImplementation();
 
     virtual void initialise() { type = get_type(); }
-    virtual void initialise_vars(Solver*);
+    virtual void initialise_vars(Solver*) = 0;
 
     virtual int get_type() = 0;
     virtual int postponed() = 0;
@@ -188,8 +188,12 @@ namespace Mistral {
     virtual PropagationOutcome bound_checker_propagate() = 0;
     virtual PropagationOutcome propagate(const int changed_idx, 
 					 const Event evt) = 0;
+    virtual PropagationOutcome checker_propagate(const int changed_idx, 
+					 const Event evt) = 0;
+    virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
+					 const Event evt) = 0;
     //  { return CONSISTENT; }
-    virtual PropagationOutcome rewrite() {}
+    virtual PropagationOutcome rewrite() { return CONSISTENT; }
     virtual void consolidate() = 0; 
     virtual void consolidate_var(const int idx) = 0; 
 
@@ -261,13 +265,27 @@ namespace Mistral {
 
    */
 
+  template< int ARITY >
+  class ValTuple {
+  public:
+
+    ValTuple() { std::fill(data, data+ARITY, NOVAL); }
+
+    int data[ARITY];
+    
+    inline int& operator[](const int i) { return data[i]; }
+    inline int operator[](const int i) const { return data[i]; }
+  };
+
+
 
   template< int ARITY >
   class FixedArityConstraint : public ConstraintImplementation {
 
   public:
 
-    int  **support[ARITY];
+    int solution[ARITY];
+    ValTuple<ARITY> *support[ARITY];
     Variable scope[ARITY];
     int active;
 
@@ -316,6 +334,14 @@ namespace Mistral {
       }
     }
 
+
+    virtual void initialise_vars(Solver *s) {
+      for(unsigned int i=0; i<ARITY; ++i) {
+	scope[i].initialise(s, false);
+      }
+    }
+
+
     //int init_type() { std::cout << "here" << std::endl; type=get_type(); }
     virtual int get_type() {return 0;}
     virtual int postponed() {return 0;}
@@ -324,17 +350,17 @@ namespace Mistral {
 
 
     void initialise_supports() {
-      int vari, vali, vnext, min_vari, i;
+      int vari, vali, vnext, min_vari;
       for(vari=0; vari<ARITY; ++vari) {
 	min_vari = scope[vari].get_min();
-
-	support[vari] = new int*[scope[vari].get_max() - min_vari + 1];
+	
+	support[vari] = new ValTuple<ARITY>[scope[vari].get_max() - min_vari + 1];
 	support[vari] -= min_vari;
-
+	
 	vnext = scope[vari].get_min();
 	do {
 	  vali = vnext;
-	  support[vari][vali] = new int[ARITY];
+	  //support[vari][vali] = new int[ARITY];
 	  support[vari][vali][vari] = vali;
 	  vnext = scope[vari].next(vali);
 
@@ -408,144 +434,36 @@ namespace Mistral {
       }
     }
 
-    // void un_relax() {
-    //   // std::cout << "UNRELAX: " ;
-    //   // print_active();
-    //   // std::cout << std::endl;
-
-    //   int i=0, x = (active&7);
-    //   while(x) {
-    // 	if(x&1) index[i] = on[i]->post(self[i]);
-    // 	++i;
-    // 	x>>=1;
-    //   }
-    // }
-
 
     void post_on(const int var) {
-
       if(scope[var].is_ground()) {
 	active^=(1<<var);
 	index[var] = -1;
       } else {
 	solver->save( self[var] );
-	//index[var] = on[var]->post(self[var]);
 	un_relax_from(var);
       }
-
     }
   
     void post() {
-
-      // std::cout << "post [" << id << "]";
-      // //display(std::cout);
-      // std::cout << " (domains: " << scope[0].get_domain()
-      // 		<< ", " << scope[1].get_domain() << " - " 
-      // 		<< active << ")" << std::endl; 
-
-
-    
       active = (1 << ARITY)-1;
       for(int i=on.size; i--;) {
-	//for(int i=0; i<ARITY; ++i) {
-
-	//std::cout << "add " << index[i] << " to " << on[i] << " -> ";
 	post_on(i);
-
-	
       }
     }
 
-    // void un_post() {
-
-    //   // std::cout << "un_post [" << id << "]";
-    //   // //display(std::cout);
-    //   // std::cout << " (domains: " << scope[0].get_domain()
-    //   // 		<< ", " << scope[1].get_domain() << " - " 
-    //   // 		<< active << ")" << std::endl; 
-
-    //   for(int i=on.size; i--;) {
-    // 	//for(int i=0; i<ARITY; ++i) {
-
-    // 	//std::cout << "remove " << index[i] << " from " << on[i] << " -> ";
-	
-    // 	if(index[i]>=0) {
-    // 	  on[i]->relax(index[i]);
-    // 	  index[i] = -1;
-    // 	}
-
-    // 	//std::cout << on[i]  << std::endl;
-    //   }
-
-    // }
-
-
- 
-
     void relax() {
-      
-      // std::cout << "relax [" << id << "]";
-      // //display(std::cout);
-      // std::cout << " (domains: " << scope[0].get_domain()
-      // 		<< ", " << scope[1].get_domain() << " - " 
-      // 		<< active << ")" << std::endl; 
-
-
-      //solver->save( Constraint(this, type|1) );
-      
       for(int i=on.size; i--;) {
-
-	//std::cout << active << "&" << (1 << i) << "?" << std::endl;
-
 	relax_from(i);
-	// //for(int i=0; i<ARITY; ++i) {
-	// if(active & (1 << i)) {
-
-	//   std::cout << "remove " << index[i] << " from " << on[i] << " -> ";
-	//   solver->save( Constraint(this, type|i) );
-
-	//   //on[i]->relax(index[i]);
-	//   //index[i] = -1;
-	//   un_post_from(i);
-	  
-
-	//   std::cout << on[i]  << std::endl;
-
-	// }
-
-	//std::cout << std::endl;
       }    
     }
 
     void relax_from(const int var) {
-
-   
-
-      // std::cout << "relax " ;
-      // display(std::cout) ;
-      // std::cout << " from " << _scope[var] << " in " << _scope[var].get_domain() 
-      // 		<< " (" << _scope[1-var] << " in " << _scope[1-var].get_domain()
-      // 		<< ") - " << active << std::endl;
-
-      // std::cout << on[var]->size << std::endl;
-
-      // std::cout << on[var] << std::endl;
-
       if(active & (1 << var)) {
-
 	solver->save( self[var] );
-
 	un_post_from(var);
-	// on[var]->relax(index[var]);
-	// index[var] = -1;
       }
-
-      //std::cout << on[var] << std::endl;
-
     }    
-
-
- 
 
     std::ostream& display(std::ostream& os) const {
       os << name() << "(" << scope[0] << ", " << scope[1];
@@ -573,44 +491,21 @@ namespace Mistral {
     virtual PropagationOutcome bound_checker_propagate() { return BinaryConstraint::propagate(); }
     virtual PropagationOutcome propagate(const int changed_idx, 
 					 const Event evt);
+    virtual PropagationOutcome checker_propagate(const int changed_idx, 
+						 const Event evt) { return BinaryConstraint::propagate(changed_idx, evt); }
+    virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
+						       const Event evt) { return BinaryConstraint::propagate(changed_idx, evt); }
     bool find_support(const int revise_idx, const int vli);
 
    void restore(const int rtype) {
-
-     // std::cout << "restore [" << id << "]" ;
-     // print_active();
-     // std::cout << std::endl
-     // 	       << scope[0] << " in " << scope[0].get_domain() 
-     // 	       << ": " << on[0]
-     // 	       << std::endl
-     // 	       << scope[1] << " in " << scope[1].get_domain() 
-     // 	       << ": " << on[1]
-     // 	       << std::endl;
-     
       int var = rtype&CTYPE;
       if(index[var]<0) {
 	un_relax_from(var);
-	//active |= (1 << var);
       } else {
 	un_post_from(var);
-	//active |= (1 << var);
       }
-
-      // if(rtype&1) un_relax();
-      // else un_post();
-      // // a binary constraint is relaxed as soon as the first variable get assigned
-      // // so active is to be set back to {0,1} anyway
       active = 3;
-
-      // print_active();
-      // std::cout << std::endl << scope[0] << " in " << scope[0].get_domain() 
-      // 		<< ": " << on[0]
-      // 		<< std::endl
-      // 		<< scope[1] << " in " << scope[1].get_domain() 
-      // 		<< ": " << on[1]
-      // 		<< std::endl << std::endl;
     }  
-
 
     void trigger();
   };
@@ -629,10 +524,23 @@ namespace Mistral {
     virtual int get_type() {return TERNARY|(IDEMPOTENT*idempotent());}
 
     virtual PropagationOutcome checker_propagate() { return TernaryConstraint::propagate(); }
-    virtual PropagationOutcome bound_checker_propagate() { return TernaryConstraint::propagate(); }
+    virtual PropagationOutcome bound_checker_propagate() { 
+      
+      //std::cout << "constraint.cpp: bound checker propagate()" << std::endl; 
+
+      return TernaryConstraint::propagate(); 
+    }
     virtual PropagationOutcome propagate(); // { return NULL; }
     virtual PropagationOutcome propagate(const int changed_idx, 
 					 const Event evt);
+    virtual PropagationOutcome checker_propagate(const int changed_idx, 
+						 const Event evt) { return TernaryConstraint::propagate(changed_idx, evt); }
+    virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
+						       const Event evt) { 
+
+      //std::cout << "constraint.cpp: bound checker propagate(evt)" << std::endl; 
+
+      return TernaryConstraint::propagate(changed_idx, evt); }
     bool find_support(const int revise_idx, const int vli);
 
 
@@ -670,11 +578,12 @@ namespace Mistral {
 
 
     bool assign(const int var) {
-      
+
+      // //if(id==36) {
       // std::cout << std::endl;
       // print_active();
       // std::cout << " Assign " << scope[var] << " " ;
-
+      // //}
 	
       bool ret_val = false;
       int elt = (1 << var);
@@ -683,12 +592,18 @@ namespace Mistral {
 	active <<= 3;
 	active |= tmp;
 	active ^= elt;
-	if(active&64) ret_val = true;
-	else solver->save(Constraint(this, type));
+
+	if(active&448) ret_val = true;
+	solver->save(Constraint(this, type|ACTIVITY));
+
+	// if(active&64) ret_val = true;
+	// else solver->save(Constraint(this, type|ACTIVITY));
       }
 
+      // //if(id==36) {
       // print_active();
       // std::cout << std::endl;
+      // //}
 
       return ret_val;
     }
@@ -696,50 +611,66 @@ namespace Mistral {
 
     void restore(const int rtype) {
 
+      // //if(id==36) {
+      // //std::cout << std::endl;
 
-      if(rtype&ACTIVITY) active <<= 3;	
+      // // std::cout << scope[0] << " " << on[0] << std::endl;
+      // // std::cout << scope[1] << " " << on[1] << std::endl;
+      // // std::cout << scope[2] << " " << on[2] << std::endl;
+      // print_active();
+      // std::cout << " restore " ;
+      // //}
 
+      if(rtype&ACTIVITY) active >>= 3;	
+      else {
       int var = rtype&CTYPE;
+
+      //std::cout << var << " " << index[var] << " ";
+
+
       if(index[var]<0) {
+
+	// std::cout << on[var] << " repost " ;
+	// display(std::cout);
+	// //std::cout << std::endl; 
+
 	un_relax_from(var);
+
+	// std::cout << " " << on[var] << " ";
+
       } else {
 	un_post_from(var);
       }
+      }
+      // //if(id==36) {
+      // print_active();
+      // std::cout << std::endl ;
 
+      // // std::cout << scope[0] << " " << on[0] << std::endl;
+      // // std::cout << scope[1] << " " << on[1] << std::endl;
+      // // std::cout << scope[2] << " " << on[2] << std::endl;
+      // std::cout << std::endl;
 
-      // //std::cout << "Restore " ;
+      // //}
 
-      // if(rtype&2) {
-	
-      // 	//std::cout << " un-post" << std::endl;
-
-      // 	un_post();
-      // } else {
-      // 	active <<= 3;	
-
-      // 	//print_active();
-
-      // 	if(rtype&1) {
-
-      // 	  //std::cout << " un-relax" ;
-      // 	  un_relax();
-      // 	}
-
-      // 	//std::cout << std::endl;
-      // }
-      // // a binary constraint is relaxed as soon as the first variable get assigned
-      // // so active is to be set back to {0,1} anyway
     }
 
     void update(const int changed_idx, const Event evt) {
       if(ASSIGNED(evt) && assign(changed_idx)) {
 
-  // std::cout << "RELAXFROM: " ;
-  //     print_active() ;
-  //     std::cout << std::endl;
+	
+	// std::cout << " (" << ((active&7)/2) << ") ";
+	// std::cout.flush();
+	// std::cout << on[((active&7)/2)] << " relax " ;
+	// display(std::cout) ;
+	// std::cout.flush();
 
 
-	relax_from(active/2);
+	relax_from((active&7)/2);
+
+	// std::cout << " from " << scope[((active&7)/2)] 
+	// 	  << on[((active&7)/2)] << std::endl;
+
       }
     }
     
@@ -778,6 +709,8 @@ namespace Mistral {
     virtual int postponed() = 0;
     virtual int idempotent() = 0;
     virtual ~GlobalConstraint();
+
+    virtual void initialise_vars(Solver*);
 
     void trigger();
 
@@ -867,7 +800,7 @@ namespace Mistral {
       active.fill();
       for(int i=on.size; --i;) {
 	if(scope[i].is_ground()) {
-	  active.remove(i);
+	  active.reversible_remove(i);
 	  index[i] = -1;
 	} else index[i] = on[i]->post(self[i]);
       }
@@ -897,6 +830,10 @@ namespace Mistral {
     virtual PropagationOutcome bound_checker_propagate() { return GlobalConstraint::propagate(); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome checker_propagate(const int changed_idx, 
+						 const Event evt) { return GlobalConstraint::propagate(changed_idx, evt); } 
+    virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
+						       const Event evt) { return GlobalConstraint::propagate(changed_idx, evt); } 
     virtual int get_backtrack_level();
     virtual Decision get_decision();// { return solver->decisions.back(0); }
 
@@ -906,8 +843,17 @@ namespace Mistral {
     inline void notify_other_event(const int var, 
 				   const Mistral::Event evt) {
 
+      
+
       if(ASSIGNED(evt) && active.contain(var)) {
-	active.remove(var);
+
+	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
+	// 	  << " is assigned -> " ;
+	
+	active.reversible_remove(var);
+	
+	// std::cout << active << std::endl;
+
       }
 
       if(events.contain(var)) {
@@ -922,7 +868,14 @@ namespace Mistral {
 				   const Mistral::Event evt) {
 
       if(ASSIGNED(evt) && active.contain(var)) {
-	active.remove(var);
+
+	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
+	// 	  << " is assigned -> " ;
+
+	active.reversible_remove(var);
+
+	// std::cout << active << std::endl;
+
       }
 
       events.set_to(var);
@@ -1163,6 +1116,49 @@ namespace Mistral {
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "not"; }
+    //@}
+  };
+
+
+  /**********************************************
+   * Neg Predicate
+   **********************************************/
+  /*! \class PredicateNeg
+    \brief  Truth value of a conjunction (!x0 <-> y)
+  */
+  class PredicateNeg : public BinaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    PredicateNeg() : BinaryConstraint() {}
+    PredicateNeg(Variable x, Variable y) 
+      : BinaryConstraint(x,y) {}
+    PredicateNeg(Vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    PredicateNeg(std::vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateNeg(scope[0], scope[1])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1; }
+    virtual ~PredicateNeg() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return(sol[0] != -sol[1]);
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual PropagationOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "neg"; }
     //@}
   };
 
@@ -1647,11 +1643,11 @@ namespace Mistral {
   public:
     /**@name Constructors*/
     //@{
-    ConstraintLex() : GlobalConstraint() {}
+    ConstraintLex() : GlobalConstraint() { priority=1; }
     ConstraintLex(Vector< Variable >& scp) 
-      : GlobalConstraint(scp) {}
+      : GlobalConstraint(scp) { priority=1; }
     ConstraintLex(std::vector< Variable >& scp) 
-      : GlobalConstraint(scp) {}
+      : GlobalConstraint(scp) { priority=1; }
     virtual Constraint clone() { return Constraint(new ConstraintLex(scope)); }
     virtual void initialise();
     virtual int idempotent() { return 1;}
@@ -1751,7 +1747,7 @@ namespace Mistral {
     virtual Constraint clone() { return Constraint(new PredicateAdd(scope[0], scope[1], scope[2])// , type
 						   ); }
     virtual void initialise();
-    virtual int idempotent() { return 1;}
+    virtual int idempotent() { return 0;}
     virtual ~PredicateAdd() {}
     //@}
     

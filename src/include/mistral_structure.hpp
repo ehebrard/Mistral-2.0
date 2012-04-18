@@ -366,6 +366,8 @@ template < int N, class T >
     Triplet(T1 t1, T2 t2, T3 t3) : first(t1), second(t2), third(t3) {}
     ~Triplet() {}
 
+    operator T1() { return first; }
+
    std::ostream& display(std::ostream& os) const {
       os << "<" << first << ", " << second << ", " << third << ">";
       return os;
@@ -380,7 +382,19 @@ template < int N, class T >
 
     /*!@name Parameters*/
     //@{
-    T *stack_;
+    /** <stack_> is an array of object T such that:
+	- The first element of the stack is the one at index <start>
+	- There are <size> elements;
+	- The current size of the stack is <capacity>
+	Moreover, we assume that elements T can be casted into int, and that
+	this integer is between 0 and <capacity>, then we have:
+	- <index_[i]> is the index_ of element i in <stack_>
+     */
+
+    T   *stack_;
+    int *index_;
+
+    // index
     unsigned int start;
     unsigned int capacity;
     unsigned int size;
@@ -394,6 +408,7 @@ template < int N, class T >
       capacity = 0;
       size = 0;
       stack_ = NULL;
+      index_ = NULL;
     }
     //@}
 
@@ -402,6 +417,7 @@ template < int N, class T >
     virtual ~TwoWayStack()
     {
       free( stack_ );
+      free( index_ );
     }
     //@}
 
@@ -413,30 +429,56 @@ template < int N, class T >
       size = 0;
       capacity = c;
 
-      stack_ = (T*) malloc(capacity*sizeof(T));
+      stack_ = (T  *) malloc(capacity*sizeof(T  ));
+      index_ = (int*) malloc(capacity*sizeof(int));
       
       int f = sizeof(T)/sizeof(int);
+
+      //int out = (start+size+1)%capacity;
+
       std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      std::fill(index_, index_+capacity, -1);
     }
+
+
+    // void check_intergrity() {
+    //   // check that elements 
+    // }
 
 
     void extend_stack( const unsigned int l=0 )
     {
       unsigned int increment = (l ? l : (capacity+1) << 1);
-      capacity += increment;
+      int f = sizeof(T)/sizeof(int);
+      //capacity += increment;
 
-      T* new_stack = (T*) malloc(capacity*sizeof(T));
-      memcpy(new_stack, stack_, (capacity-increment)*sizeof(T));
+      int* new_index = (int*) malloc((capacity+increment)*sizeof(int));
+      for(unsigned int i=0; i<capacity; ++i) {
+	new_index[i] = (index_[i]+capacity-start)%capacity;
+      }
+      // for(int i=start; i<capacity; ++i) {
+      // 	new_index[i] = index_[i]-start;
+      // }
+      //int out = (start+size+1)%(capacity+increment);
+      std::fill(new_index+capacity, new_index+capacity+increment, -1);
+
+      T* new_stack = (T*) malloc((capacity+increment)*sizeof(T));
+      memcpy(new_stack, stack_+start, (capacity-start)*sizeof(T));
+      memcpy(new_stack+capacity-start, stack_, (start)*sizeof(T));
+      std::fill((int*)new_stack+(capacity*f), (int*)new_stack+(capacity+increment)*f, 0);
 
       free(stack_); 
       stack_ = new_stack;
 
-      int f = sizeof(T)/sizeof(int);
-      std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      free(index_); 
+      index_ = new_index;
+
+      capacity += increment;
+      start = 0;
     }
 
     void declare( const int x ) {
-      if(x >= capacity) extend_stack();
+      if(x >= (int)capacity) extend_stack();
     }
     //@}
 
@@ -453,19 +495,35 @@ template < int N, class T >
     {
       int idx = (start+(size++))%capacity;
       stack_[idx] = x;
+      index_[(int)x] = idx;
     }
 
     inline void push_front(T x)
     {
       ++size;
-      start = (start+capacity-1)%capacity;
+      start = ((start+capacity-1)%capacity);
       stack_[start] = x;
+
+      index_[(int)x] = start;
     }
 
+    inline bool contain(const int x) {
+      return index_[x] >= 0;
+
+      //return (int)(stack_[index_[x]]) == x;
+
+      // return (( capacity+
+      // 		index_[x]-start)%capacity) < size;
+    }
+
+    inline T& operator[](const int x) {
+      return stack_[index_[x]];
+    }
 
     inline T pop_back()
     {
       int idx = (start+--size)%capacity;
+      index_[(int)stack_[idx]] = -1;
       return stack_[idx];
     }
 
@@ -473,24 +531,33 @@ template < int N, class T >
     {
       --size;
       T rval = stack_[start];
+      index_[(int)stack_[start]] = -1;
       start = (start+1)%capacity;
       return rval;
     }
 
     inline void pop_back(T& x)
     {
-      x = stack_[(start+--size)%capacity];
+      int idx = (start+--size)%capacity;
+      index_[(int)stack_[idx]] = -1;
+      //index_[idx] = -1;
+      x = stack_[idx];
     }
 
     inline void pop_front(T& x)
     {
       --size;
       x = stack_[start];
+      index_[(int)stack_[start]] = -1;
+      //index_[start] = -1;
       start = (start+1)%capacity;
     }
 
     inline void clear()
     {
+      for(unsigned int i=0; i<size; ++i) {
+       	index_[stack_[(start+i)%capacity]] = -1;
+      }
       size = 0;
     }
 
@@ -2158,7 +2225,7 @@ template < int N, class T >
     //@{  
     inline bool contain(const VAR_TYPE elt) const 
     {
-      return index_[elt.id()]<size;
+      return (int)(index_[elt.id()])<(int)size;
     } 
     inline bool contain(const int elt) const 
     {
@@ -2327,7 +2394,7 @@ template < int N, class T >
     std::ostream& display(std::ostream& os) const {
       os << "(";
       if(size) os << list_[0];
-      for(unsigned int i=1; i<size; ++i)
+      for(int i=1; i<size; ++i)
 	os << " " << list_[i];
       os << ")";
       return os;

@@ -45,6 +45,7 @@
 #include <set>
 
 
+
 #include <mistral_variable.hpp>
 
 using namespace std;
@@ -357,7 +358,8 @@ namespace FlatZinc {
   }
 
 
-  //#define _DEBUG_FLATZINC true
+ #define _DEBUG_FLATZINC true
+
 
   void
   FlatZincModel::run(std::ostream& out, const Printer& p) {
@@ -367,24 +369,25 @@ namespace FlatZinc {
 
 #ifdef _DEBUG_FLATZINC
     std::cout << "run!" << std::endl;
-    std::cout << "first " << solver << std::endl;
+    //std::cout << "first " << solver << std::endl;
 #endif
 
     solver.rewrite() ;
 
-#ifdef _DEBUG_FLATZINC
-    std::cout << "rewrite " << solver << std::endl;
-#endif
+// #ifdef _DEBUG_FLATZINC
+//     std::cout << "rewrite " << solver << std::endl;
+// #endif
 
     solver.consolidate();
     
 #ifdef _DEBUG_FLATZINC
-    std::cout << "consolidate " << solver << std::endl;
+    std::cout << "mistral representation:\n " << solver << std::endl;
 #endif
 
     Outcome result = UNKNOWN;
 
     solver.parameters.verbosity = 0;
+
 
     switch (_method) {
     case MINIMIZATION: {

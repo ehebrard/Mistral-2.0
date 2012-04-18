@@ -103,7 +103,7 @@ namespace Mistral {
     inline bool global()     const { return !(data&0xc0000000); }
     inline bool binary()     const { return (data&BINARY); }
     inline bool ternary()    const { return (data&TERNARY); }
-    inline bool idempotent() const { return (data&TERNARY); }
+    inline bool idempotent() const { return (data&IDEMPOTENT); }
 
     inline void clear() { propagator = NULL; data = 0; }
     inline bool empty() const { return !propagator; }
@@ -130,8 +130,16 @@ namespace Mistral {
     int get_active(const int i) const ;
     Variable* get_scope() ;
 
+    bool find_support(const int var, const int val);
     PropagationOutcome propagate();
     PropagationOutcome propagate(const Event evt);
+
+    PropagationOutcome checker_propagate();
+    PropagationOutcome checker_propagate(const Event evt);
+
+    PropagationOutcome bound_checker_propagate();
+    PropagationOutcome bound_checker_propagate(const Event evt);
+
     void restore();
 
     int get_backtrack_level();
@@ -145,8 +153,31 @@ namespace Mistral {
 };
 
 
+  class VarEvent : public Triplet < int, Event, ConstraintImplementation*> {
+    
+  public:
 
-  typedef TwoWayStack< Triplet < int, Event, ConstraintImplementation*> > VariableQueue;
+    VarEvent(int t1, Event t2, ConstraintImplementation* t3) : Triplet < int, Event, ConstraintImplementation*>(t1, t2, t3) {}
+
+    operator int() {
+      return first;
+    }
+
+    void update(const Event evt, const ConstraintImplementation* con) {
+      second |= evt;
+      if(third != con) third = NULL;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << event2strc(second) << "(x" << first << ")";
+      return os;
+    }
+  };
+
+
+    typedef TwoWayStack< VarEvent > VariableQueue;
+  //typedef TwoWayStack< Triplet < int, Event, ConstraintImplementation*> > VariableQueue;
+
 
   class Environment {
   public:
@@ -195,8 +226,13 @@ namespace Mistral {
 
 
     void trigger_event(const int var, const Event evt) {
-      Triplet< int, int, ConstraintImplementation* > t(var, evt, taboo_constraint);
-      active_variables.push_back(t);
+      if(active_variables.contain(var)) {
+	active_variables[var].update( evt, taboo_constraint );
+      } else {
+	//Triplet< int, int, ConstraintImplementation* > 
+	VarEvent t(var, evt, taboo_constraint);
+	active_variables.push_back(t);
+      }
     }
 
     void _restore_();
@@ -448,6 +484,8 @@ namespace Mistral {
     {
       Reversible::initialise(s);
       initialise(lb, ub, full);
+      // trail_.add(size);
+      // trail_.add(-1);
     }
 
     virtual void initialise(const int lb, const int ub, const bool full)
@@ -460,6 +498,7 @@ namespace Mistral {
       }
       IntStack::initialise(l, u, full);
       trail_.initialise(0, 2*(u-l+1));
+      trail_.add(size);
       trail_.add(-1);
     }
     //@}
@@ -510,6 +549,10 @@ namespace Mistral {
 
   std::ostream& operator<< (std::ostream& os, const ReversibleBool& x);
   std::ostream& operator<< (std::ostream& os, const ReversibleBool* x);
+
+
+  std::ostream& operator<< (std::ostream& os, const VarEvent& x);
+  std::ostream& operator<< (std::ostream& os, const VarEvent* x);
 
 }
 

@@ -28,7 +28,7 @@
 
 
 Mistral::ConsolidateListener::ConsolidateListener(Mistral::Solver *s) 
-  : solver(s), VariableListener(), ConstraintListener()
+  : VariableListener(), ConstraintListener(), solver(s)
 {
   sequence = &(solver->sequence);
   constraints.initialise(solver->variables.size);
@@ -49,7 +49,7 @@ Mistral::ConsolidateListener::~ConsolidateListener() {}
 
 void Mistral::ConsolidateListener::notify_add_var() {
   Variable x = solver->variables.back();
-  while(constraints.size<x.id()) {
+  while((int)(constraints.size)<x.id()) {
     Vector< Constraint > neighborhood;
     constraints.add(neighborhood);
   }
@@ -173,7 +173,7 @@ Mistral::Lexicographic::Lexicographic(Solver *s)
 void Mistral::Lexicographic::initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
   int n = solver->variables.size;
   std::fill(index.stack_, index.stack_+n, -1);
-  for(unsigned int i=0; i<seq.size; ++i) {
+  for(int i=0; i<seq.size; ++i) {
     index[seq[i].id()] = order.size;
     order.add(seq[i]);
   }
@@ -190,7 +190,7 @@ void Mistral::Lexicographic::initialise(Solver *s) {
 Mistral::Lexicographic::~Lexicographic() {}
 
 Mistral::Variable Mistral::Lexicographic::select() {
-  while(last<order.size && order[last].is_ground()) { 
+  while(last<(int)(order.size) && order[last].is_ground()) { 
     ++last;
   }
   return order[last];

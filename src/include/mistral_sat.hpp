@@ -291,7 +291,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
-    virtual PropagationOutcome propagate(const int changed_idx, const Event evt) {}
+    //virtual PropagationOutcome propagate(const int changed_idx, const Event evt) { return CONSISTENT; }
     Clause* update_watcher(const int cw, const Lit p, PropagationOutcome& o);
     //virtual PropagationOutcome rewrite();
     //@}

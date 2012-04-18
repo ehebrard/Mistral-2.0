@@ -174,6 +174,13 @@ Mistral::Variable Mistral::Variable::get_var() {
   return ((Solver*)(variable->solver))->variables[variable->id];
 }
 
+Mistral::Solver* Mistral::Variable::get_solver() {
+  //std::cout << (int*)(variable) << std::endl;
+  return (Solver*)(variable->solver);
+}
+
+
+
 std::ostream& Mistral::Variable::display(std::ostream& os) const {
   if(domain_type == EXPRESSION) {
     expression->display(os);
@@ -206,6 +213,11 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
 }
 
 void Mistral::Variable::initialise(Solver *s, const bool top) {
+
+  // std::cout << "beg initialise " ;
+  // display(std::cout);
+  // std::cout << std::endl;
+
   if(domain_type == EXPRESSION) {
     if(!expression->is_initialised()) {
 
@@ -247,6 +259,11 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
       s->sequence.declare(*this);
     } 
   }
+
+  // std::cout << "end initialise " ;
+  // display(std::cout);
+  // std::cout << std::endl;
+
 }
 
 
@@ -1149,8 +1166,8 @@ int Mistral::Variable::get_min_pos() const {
 
   Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
 
-      Event evt = NO_EVENT;
-
+    Event evt = NO_EVENT;
+    
     //if(x.is_ground()) evt = set_domain(x.get_min());
     if(x.is_ground()) {
       evt =  set_domain(x.get_min());
@@ -1165,7 +1182,10 @@ int Mistral::Variable::get_min_pos() const {
       std::cout << "TODO! (set_domain(var))" << std::endl;
       exit(1);
     }
-    evt = NO_EVENT;
+
+    return evt;
+
+    //evt = NO_EVENT;
   }
 
   Mistral::Event Mistral::Variable::removeSet(const BitSet& s) {
@@ -1408,6 +1428,14 @@ bool Mistral::Decision::propagateRelation() {
   return !var.constraint->propagate();
 }
 
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Goal& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Goal* x) {
+  return x->display(os);
+}
+
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Variable& x) {
   return x.display(os);
 }
@@ -1605,6 +1633,10 @@ Mistral::Variable Mistral::Variable::operator+(int k) {
   return exp;
 }
 
+Mistral::Variable Mistral::Variable::operator-(int k) {
+  Variable exp(new OffsetExpression(*this,-k));
+  return exp;
+}
 
 Mistral::MulExpression::MulExpression(Variable X, Variable Y) 
   : Expression(X,Y) {
@@ -1932,6 +1964,40 @@ void Mistral::NotExpression::extract_predicate(Solver *s) {
 
 Mistral::Variable Mistral::Variable::operator!() {
   Variable exp(new NotExpression(*this));
+  return exp;
+}
+
+
+Mistral::NegExpression::NegExpression(Variable X) 
+  : Expression(X) { 
+}
+Mistral::NegExpression::~NegExpression() {}
+  
+void Mistral::NegExpression::extract_constraint(Solver *s) {
+  //children[0].remove(0);
+  std::cerr << "Error: Neg predicate can't be used as a constraint" << std::endl;
+  // exit(0);
+}
+
+void Mistral::NegExpression::extract_variable(Solver *s) {
+  Variable aux(-children[0].get_max(), -children[0].get_min(), DYN_VAR);
+  self = aux;
+
+  self.initialise(s, false);
+  self = self.get_var();
+  children.add(self);
+}
+
+const char* Mistral::NegExpression::get_name() const {
+  return "neg";
+}
+
+void Mistral::NegExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(new PredicateNeg(children)));
+}
+
+Mistral::Variable Mistral::Variable::operator-() {
+  Variable exp(new NegExpression(*this));
   return exp;
 }
 
@@ -3900,12 +3966,10 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
 	scp.add(children[0]);
 	scp.add(x);
 	s->add(Constraint(new PredicateConstantEqual(scp,vali)));
-	
 	scp.clear();
 	scp.add(x);
 	scp.add(y->children[idx]);
 	s->add(Constraint(new ConstraintLess(scp)));
-
 	//s->add((children[0] == vali) <= y->children[idx]);
       } else {
 	children[0].remove(vali);
@@ -4073,6 +4137,19 @@ Mistral::Outcome Mistral::Goal::notify_exhausted() {
   if(type == SATISFACTION)
     return UNSAT;
   return OPT;
+}
+
+std::ostream& Mistral::Goal::display(std::ostream& os) const {
+  if(type == MINIMIZATION) {
+    os << "minimize " << objective ;
+  } else   if(type == MAXIMIZATION) {
+    os << "maximize " << objective ;
+  } else if(type == ALLSOLUTIONS) {
+    os << "find all solutions" ;
+  } else {
+    os << "find any solution" ;
+  }
+  return os;
 }
 
 Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {

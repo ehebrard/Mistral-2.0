@@ -14,11 +14,6 @@ using namespace std;
 using namespace Mistral;
 
 
-// create X random unit tests of each type, 
-// with verbosity V and thoroughness T.
-// Then run them
-
-
 #define LOW     1
 #define MEDIUM  2
 #define HIGH    3
@@ -476,7 +471,7 @@ public:
     usrand(seed);
   }
 
-  //#define _DEBUG_CHECKER true
+  #define _DEBUG_CHECKER true
 
   void init() {
 
@@ -650,17 +645,20 @@ public:
 
 	    if( IS_OK(wiped1) ) {
 
-	      wiped1 = s1.propagate(con1);
+	      //std::cout << "\nspecific propagate" << std::endl;
+	      wiped1 = s1.propagate(con1, false);
 
 	      if(AC && IS_OK(wiped2)) {
 
-		wiped2 = s2.checker_propagate(con2);
+		//std::cout << "\nchecker propagate" << std::endl;
+		wiped2 = s2.checker_propagate(con2, false);
 		
 	      }
 
 	      if(BC && IS_OK(wiped3)) {
 		
-		s3.bound_checker_propagate( con3 );
+		//std::cout << "\nbound checker propagate" << std::endl;
+		wiped3 = s3.bound_checker_propagate(con3, false);
 
 	      }
 	      
@@ -746,7 +744,7 @@ public:
 		}
 	      }
 	    
-	      std::cout << std::endl;
+	      //std::cout << std::endl;
 	      if(IS_OK(wiped1) && (!AC || IS_OK(wiped2)) && (!BC || IS_OK(wiped3))) {
 		for(int i=0; i<arity; ++i) {
 		  int vnxt1 = scope1[i].get_var().get_min();
@@ -761,7 +759,7 @@ public:
 		  BitSet d3(vnxt3, scope3[i].get_var().get_max(), BitSet::empt);
 		
 
-		  std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
+		  //std::cout << std::endl << scope1[i].get_var().get_domain()  << " "  << scope1[i].get_var().get_min()  << std::endl;
 		  while(val1<vnxt1) {
 		    val1 = vnxt1;
 		    vnxt1 = scope1[i].get_var().next(val1);
@@ -777,14 +775,14 @@ public:
 		  }
 		
 		  if(BC) {
-		    std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
+		    //std::cout << scope3[i].get_var().get_domain() << " " << scope3[i].get_var().get_min() << std::endl;
 		    while(val3<vnxt3) {
 		      val3 = vnxt3;
 		      vnxt3 = scope3[i].get_var().next(val3);
-		      std::cout << " " << val3;
+		      //std::cout << " " << val3;
 		      d3.add(val3);
 		    }
-		    std::cout << std::endl << d3 << std::endl;
+		    //std::cout << std::endl << d3 << std::endl;
 		  
 		  }
 		
@@ -882,21 +880,23 @@ public:
 
     ConChecker< PredicateLess > cc1a("<=", false,true,12345,3,20,1);
     cc1a.init();
-    cc1a.run(100);
+    cc1a.run(10000);
+
 
     ConChecker< PredicateLess > cc1b("<=", false,true,12345,3,20,1);
     ((PredicateLess*)(cc1b.con1.propagator))->offset = 3;
     ((PredicateLess*)(cc1b.con2.propagator))->offset = 3;
     ((PredicateLess*)(cc1b.con3.propagator))->offset = 3;
     cc1b.init();
-    cc1b.run(100);
+    cc1b.run(10000);
+
 
     ConChecker< PredicateLess > cc1c("<=", false,true,12345,3,20,1);
     ((PredicateLess*)(cc1c.con1.propagator))->offset = -3;
     ((PredicateLess*)(cc1c.con2.propagator))->offset = -3;
     ((PredicateLess*)(cc1c.con3.propagator))->offset = -3;   
     cc1c.init();
-    cc1c.run(100);
+    cc1c.run(10000);
 
     ConChecker< PredicateEqual > cc2a("==", true,false,12345,3,20,1);
     cc2a.init();
@@ -908,6 +908,7 @@ public:
     ((PredicateEqual*)(cc2b.con3.propagator))->spin = 0;
     cc2b.init();
     cc2b.run(100);
+
 
     ConChecker< PredicateLowerBound > cc3a(">=-3", false,true,12345,2,20,1);
     ((PredicateLowerBound*)(cc3a.con1.propagator))->bound = -3;
@@ -962,7 +963,7 @@ public:
 
     // ConChecker< PredicateSub > cc8a("-", false,true,12345,3,20,0);
     // cc8a.run(100);
-
+    /*
 
     ConChecker< PredicateWeightedSum > cc9a("sum(1)", false,true,12345,5,10,0);
     ((PredicateWeightedSum*)(cc9a.con1.propagator))->lower_bound = 10;
@@ -1288,7 +1289,7 @@ public:
    ConChecker< PredicateMax > cc15("max", true,true,12345,5,10,0);
    cc15.init();
    cc15.run(200);
-
+    */
 
    /*
 
@@ -1375,7 +1376,9 @@ int main(int argc, char *argv[])
   int N = 8; //atoi(argv[1]);
   if(argc>1) N=atoi(argv[1]);
 
-  tests.push_back(new CheckerTest());
+
+  //tests.push_back(new CheckerTest());
+
   tests.push_back(new LexTest());
   tests.push_back(new IntersectionTest());
   tests.push_back(new CardTest());
@@ -1402,7 +1405,6 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
   //tests.push_back(new ConstraintArrayTest());
-
 
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
@@ -2460,7 +2462,7 @@ void CostasAllDiffAllSolutions::run() {
   //std::cout << s << std::endl;
   //cout << s << endl;
 
-#ifdef _DEBUG_PRUNING
+#ifdef _MONITOR
   s.monitor(X);
   for(i=0; i<size-2; ++i)
     s.monitor(distance[i]);
@@ -2866,8 +2868,8 @@ void SubsetTest::run() {
 
   if(Verbosity) cout << "Run Subset test: "; 
 
-  run1();
-  cout << "1 ";
+  // run1();
+  // cout << "1 ";
   run2();
   cout << "2 ";
 }
@@ -3037,6 +3039,21 @@ void MemberTest::run1() {
   
   //cout << "Consolidate\n" << s << endl;  
 
+#ifdef _MONITOR
+  
+  s.monitor_list << X ;
+  
+  s.monitor_list << " in " ;
+  
+  s.monitor_list << Y << "\n";
+
+  /*
+  s.monitor( X );
+  s.monitor( " in ");
+  s.monitor( Y );
+  s.monitor( "\n");
+  */
+#endif
 
   s.initialise_search(s.variables,
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -3073,7 +3090,7 @@ void MemberTest::run2() {
 
   //std::cout << X << " " << Y << std::endl;
 
-  s.add( Member(X,Y) == b );
+  s.add( Member(X,Y) != b );
 
   //std::cout << s << std::endl;
 
@@ -3228,6 +3245,8 @@ LexTest::~LexTest() {}
 void LexTest::run() {
 
   if(Verbosity) cout << "Run Lex test: "; 
+  cout.flush();
+
 
   Solver s;
 
@@ -3599,6 +3618,11 @@ void ElementTest::run1() {
   s.consolidate();
 
   //cout << "Consolidate\n" << s << endl;  
+
+
+#ifdef _MONITOR
+  s.monitor_list << X << "[" << Y << "] = " << Z << "\n";
+#endif
 
 
   s.initialise_search(X, //s.variables,
