@@ -240,13 +240,113 @@ Mistral::PropagationOutcome Mistral::BinaryConstraint::propagate() {
 
 }
 
+
+Mistral::PropagationOutcome Mistral::BinaryConstraint::bound_propagate() {
+
+  if(!support[0]) initialise_supports();
+
+  PropagationOutcome wiped = CONSISTENT; 
+  for(int i=0; IS_OK(wiped) && i<2; ++i) {
+    wiped = BinaryConstraint::bound_propagate(i, RANGE_EVENT);
+  }
+  return wiped;
+
+}
+
+
+Mistral::PropagationOutcome Mistral::BinaryConstraint::bound_propagate(const int changed_idx, const Event evt) {
+  PropagationOutcome wiped = CONSISTENT; 
+  int vali, vnext;
+  int revise_idx = 1-changed_idx;
+  
+  if(RANGE_CHANGED(evt)) {
+    
+#ifdef _DEBUG_GENPROPAG
+    std::cout << " - (bc) revise " << scope[revise_idx] << " in " << scope[revise_idx].get_domain() 
+	      << " w.r.t. " << scope[changed_idx] 
+	      << std::endl;
+#endif
+
+    if(!support[0]) initialise_supports();
+    
+    vnext = scope[revise_idx].get_min();
+    do {
+      vali = vnext;
+      vnext = scope[revise_idx].next(vali);
+      
+#ifdef _DEBUG_GENPROPAG
+      std::cout << "  *find a support for " << scope[revise_idx] << " = " << vali << std::endl;
+#endif
+      
+      if( !(scope[changed_idx].contain(support[revise_idx][vali][changed_idx])) &&
+	  !find_bound_support(revise_idx, vali) ) {
+	
+#ifdef _DEBUG_GENPROPAG
+	std::cout << "  => none found!" << std::endl;
+#endif
+	
+	if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	  wiped = FAILURE(revise_idx);
+	} 
+      }
+      else { 
+#ifdef _DEBUG_GENPROPAG
+     	std::cout << "  => ok" << std::endl;
+#endif
+	break;
+      } 
+    } while( vali < vnext );
+    
+    if( IS_OK(wiped) && vali < vnext ) {
+
+      vnext = scope[revise_idx].get_max();
+      do {
+	vali = vnext;
+	vnext = scope[revise_idx].prev(vali);
+	
+#ifdef _DEBUG_GENPROPAG
+	std::cout << "  *find a support for " << scope[revise_idx] << " = " << vali << std::endl;
+#endif
+      
+	if( !(scope[changed_idx].contain(support[revise_idx][vali][changed_idx])) &&
+	    !find_bound_support(revise_idx, vali) ) {
+	
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  => none found!" << std::endl;
+#endif
+	  
+	  if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	    wiped = FAILURE(revise_idx);
+	  } 
+	}
+	else { 
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  => ok" << std::endl;
+#endif
+	  break;
+	} 
+      } while( vali > vnext );
+      
+    }
+    
+#ifdef _DEBUG_GENPROPAG
+    if(!(IS_OK(wiped))) {
+      std::cout << "FAIL!!" << std::endl;
+    }
+#endif
+  }
+
+  return wiped;
+}
+
+
 Mistral::PropagationOutcome Mistral::BinaryConstraint::propagate(const int changed_idx, const Event evt) {
   PropagationOutcome wiped = CONSISTENT; 
   int vali, vnext;
   int revise_idx = 1-changed_idx;
 
 #ifdef _DEBUG_GENPROPAG
-    std::cout << " -revise " << scope[revise_idx] << " in " << scope[revise_idx].get_domain() 
+    std::cout << " - revise " << scope[revise_idx] << " in " << scope[revise_idx].get_domain() 
 	      << " w.r.t. " << scope[changed_idx] 
 	      << std::endl;
 #endif
@@ -319,6 +419,21 @@ bool Mistral::BinaryConstraint::find_support(const int revise_idx, const int vli
 }
 
 
+bool Mistral::BinaryConstraint::find_bound_support(const int revise_idx, const int vli) 
+{
+  int changed_idx = 1-revise_idx;
+  int max_val = scope[changed_idx].get_max(); 
+
+  solution[revise_idx] = vli;
+  
+  for(solution[changed_idx] = scope[changed_idx].get_min(); 
+      solution[changed_idx] <= max_val && !check( solution );
+      ++solution[changed_idx]);
+
+  return solution[changed_idx]<=max_val;
+}
+
+
 Mistral::PropagationOutcome Mistral::TernaryConstraint::propagate() {
   if(!support[0]) initialise_supports();
 
@@ -326,6 +441,18 @@ Mistral::PropagationOutcome Mistral::TernaryConstraint::propagate() {
 
   for(int i=0; IS_OK(wiped) && i<3; ++i) {
     wiped = TernaryConstraint::propagate(i, RANGE_EVENT);
+  }
+
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::TernaryConstraint::bound_propagate() {
+  if(!support[0]) initialise_supports();
+
+  PropagationOutcome wiped = CONSISTENT; 
+
+  for(int i=0; IS_OK(wiped) && i<3; ++i) {
+    wiped = TernaryConstraint::bound_propagate(i, RANGE_EVENT);
   }
 
   return wiped;
@@ -409,22 +536,120 @@ Mistral::PropagationOutcome Mistral::TernaryConstraint::propagate(const int chan
   return wiped;
 }
 
+
+
+Mistral::PropagationOutcome Mistral::TernaryConstraint::bound_propagate(const int changed_idx, const Event evt) {
+  PropagationOutcome wiped = CONSISTENT; 
+  int vali, vnext;
+  int revise_idx, other_idx;
+  int x, y;
+
+  if(!support[0]) initialise_supports();
+
+#ifdef _DEBUG_GENPROPAG
+  std::cout << " bound propagate " << event2str(evt) << " on " << scope[changed_idx] << std::endl;
+#endif
+
+
+  for(int i=1; i<3; ++i) {
+    revise_idx = (changed_idx+i)%3;
+    other_idx = (changed_idx+3-i)%3;
+
+
+#ifdef _DEBUG_GENPROPAG
+    std::cout << " - (bc) revise " << scope[revise_idx] << " in " << scope[revise_idx].get_domain() 
+	      << " w.r.t. " << scope[changed_idx] << " & " << scope[other_idx]
+	      << std::endl;
+#endif
+
+    vnext = scope[revise_idx].get_min();
+    do {
+      vali = vnext;
+      vnext = scope[revise_idx].next(vali);
+
+#ifdef _DEBUG_GENPROPAG
+      std::cout << "  *find a support for " << scope[revise_idx] << " = " << vali << std::endl;
+      std::cout.flush();
+#endif
+      x = support[revise_idx][vali][changed_idx];
+      y = support[revise_idx][vali][other_idx];
+      
+      if( (x == NOVAL 
+	   || y == NOVAL
+	   || !scope[changed_idx].contain(x)
+	   || !scope[other_idx].contain(y)
+	   ) &&
+	  !find_bound_support(revise_idx, vali) ) {
+
+#ifdef _DEBUG_GENPROPAG
+	std::cout << "  => none found!" << std::endl;
+#endif
+
+	if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	  wiped = FAILURE(revise_idx);
+	} 
+      } 
+      else {
+#ifdef _DEBUG_GENPROPAG
+	std::cout << "  => ok" << std::endl;
+#endif
+	break;
+      }
+    } while( vali < vnext );
+
+    if( IS_OK(wiped) && vali < vnext ) {
+
+      vnext = scope[revise_idx].get_max();
+      do {
+	vali = vnext;
+	vnext = scope[revise_idx].prev(vali);
+
+#ifdef _DEBUG_GENPROPAG
+	std::cout << "  *find a support for " << scope[revise_idx] << " = " << vali << std::endl;
+	std::cout.flush();
+#endif
+	x = support[revise_idx][vali][changed_idx];
+	y = support[revise_idx][vali][other_idx];
+	
+	if( (x == NOVAL 
+	     || y == NOVAL
+	   || !scope[changed_idx].contain(x)
+	     || !scope[other_idx].contain(y)
+	     ) &&
+	    !find_bound_support(revise_idx, vali) ) {
+	  
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  => none found!" << std::endl;
+#endif
+	  
+	  if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	    wiped = FAILURE(revise_idx);
+	  } 
+	} 
+	else {
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  => ok" << std::endl;
+#endif
+	  break;
+	}
+      } while( vali > vnext );
+    }
+  }
+
+#ifdef _DEBUG_GENPROPAG
+  if(!(IS_OK(wiped))) {
+    std::cout << "FAIL!!" << std::endl;
+  }
+#endif
+
+  return wiped;
+}
+
 bool Mistral::TernaryConstraint::find_support(const int revise_idx, const int vli) 
 {
-  
-  //std::cout << 33 << std::endl;
-
-
   bool no_support = true;
 
   int x_idx = (revise_idx+1)%3, y_idx = (revise_idx+2)%3;
-
-  // std::cout << x_idx << " "  << y_idx << std::endl;
-
-  // std::cout << scope[x_idx] << " "  << scope[y_idx] << std::endl;
-
-  // std::cout << scope[x_idx].get_min() << " "  << scope[y_idx].get_min() << std::endl;
-
 
   int valx = scope[x_idx].get_min(), valy; //, *solution = support[revise_idx][vli];
   
@@ -454,6 +679,42 @@ bool Mistral::TernaryConstraint::find_support(const int revise_idx, const int vl
 
   } while( solution[x_idx] < valx );
 
+
+  return !no_support;
+}
+
+
+bool Mistral::TernaryConstraint::find_bound_support(const int revise_idx, const int vli) 
+{
+  bool no_support = true;
+
+  int x_idx = (revise_idx+1)%3, y_idx = (revise_idx+2)%3;
+
+
+  int min_y_val = scope[y_idx].get_min();
+  int max_y_val = scope[y_idx].get_max();
+  int max_x_val = scope[x_idx].get_max();
+  
+  solution[revise_idx] = vli;
+
+
+  for(solution[x_idx] = scope[x_idx].get_min();
+      no_support && solution[x_idx] <= max_x_val;
+      ++solution[x_idx]
+      ) {
+    for(solution[y_idx] = min_y_val;
+	no_support && solution[y_idx] <= max_y_val;
+	++solution[y_idx]
+	) {
+    
+#ifdef _DEBUG_GENPROPAG
+      std::cout << "    " << solution[0] << " " << solution[1] << " " << solution[2] << std::endl;
+#endif
+
+      no_support = check(solution); 
+      
+    }
+  }
 
   return !no_support;
 }
@@ -517,6 +778,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
   unsigned int i, j;
   int vali, vnext;
 
+
   while(!changes.empty()) {
     j = changes.pop();
     for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
@@ -543,6 +805,153 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
       }	
     }
   }
+  return wiped;
+}
+
+
+Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate(const int changed_idx, const Event evt) {
+  PropagationOutcome wiped = CONSISTENT; 
+  unsigned int i;
+
+
+  int vali, valmax;//, vnext;
+  bool supported;
+  for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
+    if( (int)i != changed_idx ) { 
+      supported = false;
+      vali = scope[i].get_min();
+      valmax = scope[i].get_max();
+      while(!supported && IS_OK(wiped) && vali<=valmax) {
+	
+	//std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
+	
+	if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+	  if(IS_FAIL(scope[i].remove(vali))) {
+	    wiped = FAILURE(i);
+	  } else if(changes.list_ == events.list_) {
+	    if(!changes.contain(i)) changes.add(i);
+	  }
+	} else supported = true;
+	
+	++vali;
+      }
+      
+      if(supported && vali<=valmax) {
+	supported = false;
+	vali = valmax;
+	while(!supported && IS_OK(wiped)) {
+	  
+	  //std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
+	  
+	  if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+	    if(IS_FAIL(scope[i].remove(vali))) {
+		wiped = FAILURE(i);
+	    }  else if(changes.list_ == events.list_) {
+	      if(!changes.contain(i)) changes.add(i);
+	    }
+	  } else supported = true;
+	  --vali;
+	}
+      }
+    }	
+  }
+  return wiped;
+}
+
+
+Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate() {
+  PropagationOutcome wiped = CONSISTENT;
+  
+  unsigned int i, j;
+
+  int vali, valmax;//, vnext;
+  bool supported;
+
+  while(!changes.empty()) {
+    j = changes.pop();
+
+#ifdef _DEBUG_GENPROPAG
+  std::cout << " propagate " << event2str(event_type[j]) << " on " << scope[j] << std::endl;
+#endif
+
+    for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
+      //if( i != j ) { 
+
+#ifdef _DEBUG_GENPROPAG
+    std::cout << " - (bc) revise " << scope[i] << " in " << scope[i].get_domain() 
+	      << " w.r.t. " << scope[j] 
+	      << std::endl;
+#endif
+
+	supported = false;
+	vali = scope[i].get_min();
+	valmax = scope[i].get_max();
+	while(!supported && IS_OK(wiped) && vali<=valmax) {
+
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  *find a support for " << scope[i] << " = " << vali << std::endl;
+	  std::cout.flush();
+#endif
+	  
+	  if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+	    
+#ifdef _DEBUG_GENPROPAG
+	    std::cout << "  => none found!" << std::endl;
+#endif
+
+	    if(IS_FAIL(scope[i].remove(vali))) {
+	      wiped = FAILURE(i);
+	    } else if(changes.list_ == events.list_) {
+	      if(!changes.contain(i)) changes.add(i);
+	    }
+	  } else {
+
+#ifdef _DEBUG_GENPROPAG
+	    std::cout << "  => ok" << std::endl;
+#endif
+
+	    supported = true;
+	  }
+	  ++vali;
+	}
+
+	if(supported && vali<=valmax) {
+	  supported = false;
+	  vali = valmax;
+	  while(!supported && IS_OK(wiped)) {
+
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  *find a support for " << scope[i] << " = " << vali << std::endl;
+	  std::cout.flush();
+#endif
+
+	    if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+
+#ifdef _DEBUG_GENPROPAG
+	  std::cout << "  *find a support for " << scope[i] << " = " << vali << std::endl;
+	  std::cout.flush();
+#endif
+
+	      if(IS_FAIL(scope[i].remove(vali))) {
+		wiped = FAILURE(i);
+	      }  else if(changes.list_ == events.list_) {
+		if(!changes.contain(i)) changes.add(i);
+	      }
+	    } else {
+
+#ifdef _DEBUG_GENPROPAG
+	      std::cout << "  => ok" << std::endl;
+#endif
+	      
+	      supported = true;
+	    }
+	    --vali;
+	  }
+	}
+	//}	
+    }
+  }
+  
   return wiped;
 }
 
@@ -624,6 +1033,61 @@ bool Mistral::GlobalConstraint::find_support(const int vri, const int vli)
       	break;
       } else {
 	solution[i] = scope[i].get_min();
+      }
+      --i;
+    }
+    if( i >= 0 )
+      i = scope.size;
+  } 
+  return found;
+}
+
+
+bool Mistral::GlobalConstraint::find_bound_support(const int vri, const int vli) 
+{
+  int i=scope.size, vali;
+  bool found=false;
+  // sol is initialized: either to the value 
+  // a variable is already assigned to
+  // or to the first value in its domain
+  while(i >= 0) {
+
+
+    // std::cout << "\t<" << solution[0] ;
+    // for(unsigned int k=1; k<scope.size; ++k) {
+    //   std::cout << " " << solution[k];
+    // }
+    // std::cout << "> ";
+
+    // check this assignment
+    if( !check( solution ) ) {
+
+      //std::cout << "OK!" << std::endl;
+
+      found=true;
+      if( supports ) {
+	vali = scope.size;
+	while( vali-- )
+	  supports[vri][vli][vali] = solution[vali];
+      }
+      break;
+    } //  else {
+    //   std::cout << "NO" << std::endl;
+    // }
+ 
+    // try to assign more things
+    // find the last var whose domain we have not exhausted
+    --i;
+    while( i >= 0 ) {
+      if( i == vri || scope[i].is_ground() ) {
+	--i;
+	continue;
+      }
+      if(solution[i]>=scope[i].get_max())
+	solution[i] = scope[i].get_min();
+      else {
+	++solution[i];
+      	break;
       }
       --i;
     }
@@ -2567,6 +3031,8 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
 Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_idx, 
 							     const Event evt) {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
+  int cidx = changed_idx;
+  int cevt = evt;
 
 #ifdef _DEBUG_ADD
   if(id==73) {
@@ -2584,73 +3050,94 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
 #endif
 
   //_x_ + y = z
-
-  if(changed_idx == 0) {
+  
+  //do {
+  if(cidx == 0) {
     if(LB_CHANGED(evt)) {
       // max(y) = max(z) - min(x) 
       // update y's ub
-      if(IS_FAIL(scope[1].set_max(scope[2].get_max() - scope[0].get_min()))) wiped = FAILURE(1);
-      
-      // min(z) = min(x) + min(y);
-      // update z's lb
-      if(IS_FAIL(scope[2].set_min(scope[0].get_min() + scope[1].get_min()))) wiped = FAILURE(2);
+      cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
+      if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	
+	if(IS_OK(wiped)) {
+	  // min(z) = min(x) + min(y);
+	  // update z's lb
+	  cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
+	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	}
+      }
+      if(UB_CHANGED(evt)) {
+	// min(y) = min(z) - max(x) 
+	// update y's lb
+	cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
+	if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	
+	if(IS_OK(wiped)) {
+	  // max(z) = max(x) + max(y)
+	  // update z's ub
+	  cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
+	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	}
+      }
+    } else if(cidx == 1) {
+      if(LB_CHANGED(evt)) {
+	// max(x) = max(z) - min(y) 
+	// update x's ub
+	cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
+	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+	
+	if(IS_OK(wiped)) {
+	  // min(z) = min(x) + min(y);
+	  // update z's lb
+	  cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
+	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	}
+      }
+      if(UB_CHANGED(evt)) {
+	// min(x) = min(z) - max(y) 
+	// update x's lb
+	cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
+	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+
+	if(IS_OK(wiped)) {	
+	  // max(z) = max(x) + max(y)
+	  // update z's ub
+	  cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
+	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	}
+      }
+    } else {
+      if(UB_CHANGED(evt)) {
+	// max(x) = max(z) - min(y) 
+	// update x's ub
+	cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
+	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+
+	if(IS_OK(wiped)) {	
+	  // max(y) = max(z) - min(x);
+	  // update y's ub
+	  cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
+	  if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	}
+      }
+      if(LB_CHANGED(evt)) {
+	// min(x) = min(z) - max(y) 
+	// update x's lb
+	cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
+	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+
+	if(IS_OK(wiped)) {	
+	  // min(y) = min(z) - max(x) 
+	  // update y's lb
+	  cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
+	  if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	}
+      }
+      //}
+    
+    if(IS_OK(wiped)) {
+      update(cidx, cevt);
     }
-    if(UB_CHANGED(evt)) {
-      // min(y) = min(z) - max(x) 
-      // update y's lb
-      if(IS_FAIL(scope[1].set_min(scope[2].get_min() - scope[0].get_max()))) wiped = FAILURE(1);
-
-      // max(z) = max(x) + max(y)
-      // update z's ub
-      if(IS_FAIL(scope[2].set_max(scope[0].get_max() + scope[1].get_max()))) wiped = FAILURE(2);
-    }
-  } else if(changed_idx == 1) {
-    if(LB_CHANGED(evt)) {
-      // max(x) = max(z) - min(y) 
-      // update x's ub
-
-      //std::cout << scope[2].get_max() << " - " << scope[1].get_min() << std::endl;
-
-      if(IS_FAIL(scope[0].set_max(scope[2].get_max() - scope[1].get_min()))) wiped = FAILURE(0);
-      
-      //std::cout << scope[0].get_max() << std::endl;
-
-      // min(z) = min(x) + min(y);
-      // update z's lb
-      if(IS_FAIL(scope[2].set_min(scope[0].get_min() + scope[1].get_min()))) wiped = FAILURE(2);
-    }
-    if(UB_CHANGED(evt)) {
-      // min(x) = min(z) - max(y) 
-      // update x's lb
-      if(IS_FAIL(scope[0].set_min(scope[2].get_min() - scope[1].get_max()))) wiped = FAILURE(0);
-
-      // max(z) = max(x) + max(y)
-      // update z's ub
-      if(IS_FAIL(scope[2].set_max(scope[0].get_max() + scope[1].get_max()))) wiped = FAILURE(2);
-    }
-  } else {
-    if(UB_CHANGED(evt)) {
-      // max(x) = max(z) - min(y) 
-      // update x's ub
-      if(IS_FAIL(scope[0].set_max(scope[2].get_max() - scope[1].get_min()))) wiped = FAILURE(0);
-      
-      // max(y) = max(z) - min(x);
-      // update y's ub
-      if(IS_FAIL(scope[1].set_max(scope[2].get_max() - scope[0].get_min()))) wiped = FAILURE(1);
-    }
-    if(LB_CHANGED(evt)) {
-      // min(x) = min(z) - max(y) 
-      // update x's lb
-      if(IS_FAIL(scope[0].set_min(scope[2].get_min() - scope[1].get_max()))) wiped = FAILURE(0);
-
-      // min(y) = min(z) - max(x) 
-      // update y's lb
-      if(IS_FAIL(scope[1].set_min(scope[2].get_min() - scope[0].get_max()))) wiped = FAILURE(1);
-    }
-  }
-
-  if(IS_OK(wiped)) {
-    update(changed_idx, evt);
   }
 
 #ifdef _DEBUG_ADD
@@ -4332,13 +4819,13 @@ Mistral::PredicateWeightedSum::~PredicateWeightedSum()
 
 Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate() 
 {
-
+  
   int i, j;
   // compute the max and th min
   int tmin, smin=0, tmax, smax=0// , maxspan=0
     , arity=scope.size;
   PropagationOutcome wiped = CONSISTENT;
-
+  
 #ifdef _DEBUG_WEIGHTEDSUM
   if(_DEBUG_WEIGHTEDSUM) {
     std::cout << std::endl << "propagate " << lower_bound << " <= " ;
@@ -4348,98 +4835,109 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
     std::cout << " <= " << upper_bound << std::endl << changes << std::endl;
   }
 #endif
-
+  
   for(i=0; i<wpos; ++i) {
     smax += (up_bound[i] = scope[i].get_max());
     smin += (lo_bound[i] = scope[i].get_min());
     span[i] = (up_bound[i]-lo_bound[i]);
 
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-     if(i)
-       std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
-     else
-       std::cout << "[" << smin << "," << smax << "] ";
-  }
+    if(_DEBUG_WEIGHTEDSUM) {
+      if(i)
+	std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
+      else
+	std::cout << "[" << smin << "," << smax << "] ";
+    }
 #endif
-
+    
   }
   for(i=wpos; i<wneg; ++i) {
     smax += weight[i] * (up_bound[i] = scope[i].get_max());
     smin += weight[i] * (lo_bound[i] = scope[i].get_min());
     span[i] = weight[i] * (up_bound[i]-lo_bound[i]);
-
+    
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-if(i)
-    std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
-else
-    std::cout << "[" << smin << "," << smax << "] ";
-  }
+    if(_DEBUG_WEIGHTEDSUM) {
+      if(i)
+	std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
+      else
+	std::cout << "[" << smin << "," << smax << "] ";
+    }
 #endif
-
+    
   }
   for(i=wneg; i<arity; ++i) {
     smax += weight[i] * (lo_bound[i] = scope[i].get_min());
     smin += weight[i] * (up_bound[i] = scope[i].get_max());
     span[i] = weight[i] * (lo_bound[i]-up_bound[i]);
-
+    
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-if(i)
-    std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
-else
-    std::cout << "[" << smin << "," << smax << "] ";
-  }
+    if(_DEBUG_WEIGHTEDSUM) {
+      if(i)
+	std::cout << " + [" << lo_bound[i] << "," << up_bound[i] << "] = [" << smin << "," << smax << "] ";
+      else
+	std::cout << "[" << smin << "," << smax << "] ";
+    }
 #endif
   }
+
   
   while(IS_OK(wiped) && !events.empty()) {
+
+#ifdef _DEBUG_WEIGHTEDSUM
+    if(_DEBUG_WEIGHTEDSUM) {
+      std::cout << "processing events: " << events << std::endl;
+    }
+#endif
+
     if(lower_bound == upper_bound) {
       j = events.size;
       while( j-- ) {
 	i = events[j];
+
+	//std::cout << i << ": " << (span[i]) << " " << (unknown_parity.contain(i)) << std::endl;
+
+
 	if(span[i]==0 && unknown_parity.contain(i)) {
 	  unknown_parity.reversible_remove(i);
 	  if( lo_bound[i]%2 ) parity = 1-parity;
 	}
       }
-     
+      
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    display(std::cout);
-    std::cout << std::endl << unknown_parity << ": " << (parity ? "odd" : "even") << std::endl;
-  }
+      if(_DEBUG_WEIGHTEDSUM) {
+	display(std::cout);
+	std::cout << std::endl << unknown_parity << ": " << (parity ? "odd" : "even") << std::endl;
+      }
 #endif   
       
       
       if(unknown_parity.size == 0) {
 
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << "parity failure " << std::endl;
-  }
+	if(_DEBUG_WEIGHTEDSUM) {
+	  std::cout << "parity failure " << std::endl;
+	}
 #endif
 
 	if(parity != 0) wiped = FAILURE(arity-1);
       } else if(unknown_parity.size == 1) { // it needs to be of parity "parity"
 	i = unknown_parity[0];
 	
-
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << "parity pruning: " << (lo_bound[i]%2) << " " << parity << std::endl ;
-  }
+	if(_DEBUG_WEIGHTEDSUM) {
+	  std::cout << "parity pruning: " << (lo_bound[i]%2) << " " << parity << std::endl ;
+	}
 #endif
-
+	
 	while(IS_OK(wiped) && (lo_bound[i]%2==0) != (parity==0)) {
 	  
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
-  }
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
+	  }
 #endif
-
+	  
 	  tmin = lo_bound[i];
 	  if( IS_FAIL(scope[i].set_min(++lo_bound[i])) ) wiped = FAILURE(i);
 	  else {
@@ -4449,21 +4947,21 @@ else
 	  }
 
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
-  }
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	  }
 #endif
 	  
 	}
-
+	
 	while(IS_OK(wiped) && (up_bound[i]%2==0) != (parity==0)) {
 
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
-  }
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
+	  }
 #endif
-
+	  
 	  tmin = up_bound[i];
 	  if( IS_FAIL(scope[i].set_max(--up_bound[i])) ) wiped = FAILURE(i);
 	  else {
@@ -4473,9 +4971,9 @@ else
 	  }
 
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
-  }
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	  }
 #endif
 
 	}
@@ -4483,23 +4981,29 @@ else
     }
 
     if(IS_OK(wiped)) {
-
+      
       events.clear();
-
+      
 #ifdef _DEBUG_WEIGHTEDSUM
-  if(_DEBUG_WEIGHTEDSUM) {
-    std::cout << " [" << smin << "," << smax << "]" << std::endl;
-  }
+      if(_DEBUG_WEIGHTEDSUM) {
+	std::cout << " [" << smin << "," << smax << "]" << std::endl;
+      }
 #endif
-
+      
       if( smax < lower_bound || smin > upper_bound ) wiped = FAILURE(arity-1);
       else {
 	tmax = (smax - lower_bound);
 	tmin = (upper_bound - smin);
-
+	
 	for(i=0; IS_OK(wiped) && i<wpos; ++i) {
 	  
 	  if( tmin < (up_bound[i] - lo_bound[i]) ) {
+
+#ifdef _DEBUG_WEIGHTEDSUM
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " <= " << (lo_bound[i] + tmin) << std::endl;
+	  }
+#endif
 	    
 	    if(IS_FAIL(scope[i].set_max( lo_bound[i] + tmin ))) wiped = FAILURE(i);
 	    else {
@@ -4514,6 +5018,12 @@ else
 	for(i=wpos; IS_OK(wiped) && i<wneg; ++i) {
 	  	  
 	  if( tmin < (up_bound[i] - lo_bound[i]) * weight[i] ) {
+
+#ifdef _DEBUG_WEIGHTEDSUM
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " <= " << (lo_bound[i] + tmin/weight[i]) << std::endl;
+	  }
+#endif
 	  	    
 	    if(IS_FAIL(scope[i].set_max( lo_bound[i] + tmin/weight[i] ))) wiped = FAILURE(i);
 	    
@@ -4527,6 +5037,12 @@ else
 	for(i=wneg; IS_OK(wiped) && i<arity; ++i) {
 	  
 	  if( tmin < (lo_bound[i] - up_bound[i]) * weight[i] ) {
+
+#ifdef _DEBUG_WEIGHTEDSUM
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " >= " << (up_bound[i] + tmin/weight[i]) << std::endl;
+	  }
+#endif
 	    
 	    if(IS_FAIL(scope[i].set_min( up_bound[i] + tmin/weight[i] ))) wiped = FAILURE(i);
 	    
@@ -4541,6 +5057,12 @@ else
 	  
 	  if( tmax < (up_bound[i] - lo_bound[i]) ) {
 	    
+#ifdef _DEBUG_WEIGHTEDSUM
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " >= " << (up_bound[i] - tmax) << std::endl;
+	  }
+#endif
+
 	    if(IS_FAIL(scope[i].set_min( up_bound[i] - tmax ))) wiped = FAILURE(i);
 	    
 	    else {
@@ -4559,6 +5081,12 @@ else
 	for(i=wpos; IS_OK(wiped) && i<wneg; ++i) {
 	  
 	  if( tmax < (up_bound[i] - lo_bound[i]) * weight[i] ) {
+
+#ifdef _DEBUG_WEIGHTEDSUM
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " >= " << (up_bound[i] - tmax/weight[i]) << std::endl;
+	  }
+#endif
 	    
 	    if(IS_FAIL(scope[i].set_min( up_bound[i] - tmax/weight[i] ))) wiped = FAILURE(i);
 	    
@@ -4580,6 +5108,12 @@ else
 	  
 	  if( tmax < (lo_bound[i] - up_bound[i]) * weight[i] ) {  
 	    
+#ifdef _DEBUG_WEIGHTEDSUM
+	  if(_DEBUG_WEIGHTEDSUM) {
+	    std::cout << scope[i] << " in " << scope[i].get_domain() << " <= " << (lo_bound[i] - tmax/weight[i]) << std::endl;
+	  }
+#endif
+
 	    if(IS_FAIL(scope[i].set_max( lo_bound[i] - tmax/weight[i] ))) wiped = FAILURE(i);
 	    
 	    else {
@@ -4603,33 +5137,39 @@ else
 	  if(LB_CHANGED(event_type[i])){ 
 	    smin -= lo_bound[i];
 	    lo_bound[i] = scope[i].get_min();
+	    span[i] = (up_bound[i]-lo_bound[i]);
 	    smin += lo_bound[i];
 	  } 
 	  if(UB_CHANGED(event_type[i])){ 
 	    smax -= up_bound[i];
 	    up_bound[i] = scope[i].get_max();
+	    span[i] = (up_bound[i]-lo_bound[i]);
 	    smax += up_bound[i];
 	  }
 	} else if(i<wneg) {
 	  if(LB_CHANGED(event_type[i])){ 
 	    smin -= (lo_bound[i] * weight[i]);
 	    lo_bound[i] = scope[i].get_min();
+	    span[i] = weight[i] * (up_bound[i]-lo_bound[i]);
 	    smin += (lo_bound[i] * weight[i]);
 	  } 
 	  if(UB_CHANGED(event_type[i])){ 
 	    smax -= (up_bound[i] * weight[i]);
 	    up_bound[i] = scope[i].get_max();
+	    span[i] = weight[i] * (up_bound[i]-lo_bound[i]);
 	    smax += (up_bound[i] * weight[i]);
 	  }
 	} else {
 	  if(LB_CHANGED(event_type[i])){ 
 	    smax -= (lo_bound[i] * weight[i]);
 	    lo_bound[i] = scope[i].get_min();
+	    span[i] = weight[i] * (lo_bound[i]-up_bound[i]);
 	    smax += (lo_bound[i] * weight[i]);
 	  } 
 	  if(UB_CHANGED(event_type[i])){ 
 	    smin -= (up_bound[i] * weight[i]);
 	    up_bound[i] = scope[i].get_max();
+	    span[i] = weight[i] * (lo_bound[i]-up_bound[i]);
 	    smin += (up_bound[i] * weight[i]);
 	  }
 	}
@@ -5853,7 +6393,6 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
   PropagationOutcome wiped = CONSISTENT;
   unsigned int i, n = scope.size-1, evt;
   int val, aux, var; 
-
 
 #ifdef _DEBUG_MAX
   std::cout << std::endl << active << std::endl << candidates << std::endl;

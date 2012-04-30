@@ -291,12 +291,14 @@ namespace Mistral {
 
 
     FixedArityConstraint() : ConstraintImplementation() { 
+      for(int i=0; i<ARITY; ++i) support[i] = NULL;
       //std::cout << "there" << std::endl;
       active = (1 << ARITY)-1; 
       //init_type(); //type = get_type();
     }
 
     FixedArityConstraint(Variable x, Variable y) : ConstraintImplementation() { 
+      for(int i=0; i<ARITY; ++i) support[i] = NULL;
       //std::cout << "there" << std::endl;
       active = (1 << ARITY)-1; 
       //init_type(); //type = get_type();
@@ -305,6 +307,7 @@ namespace Mistral {
     }
 
     FixedArityConstraint(Variable x, Variable y, Variable z) : ConstraintImplementation() { 
+      for(int i=0; i<ARITY; ++i) support[i] = NULL;
       //std::cout << "there" << std::endl;
       active = (1 << ARITY)-1; 
       //init_type(); //type = get_type();
@@ -314,6 +317,7 @@ namespace Mistral {
     }
 
     FixedArityConstraint(Vector< Variable >& scp) : ConstraintImplementation() { 
+      for(int i=0; i<ARITY; ++i) support[i] = NULL;
       //std::cout << "there" << std::endl;
       active = (1 << ARITY)-1; 
 
@@ -326,6 +330,7 @@ namespace Mistral {
     }
 
     FixedArityConstraint(std::vector< Variable >& scp) : ConstraintImplementation() { 
+      for(int i=0; i<ARITY; ++i) support[i] = NULL;
       //std::cout << "there" << std::endl;
       active = (1 << ARITY)-1; 
       //init_type(); //type = get_type();
@@ -487,15 +492,19 @@ namespace Mistral {
     virtual int get_type() { return BINARY|(IDEMPOTENT*idempotent()); }
 
     virtual PropagationOutcome propagate(); // { return NULL; }
+    virtual PropagationOutcome bound_propagate(); // { return NULL; }
     virtual PropagationOutcome checker_propagate() { return BinaryConstraint::propagate(); }
-    virtual PropagationOutcome bound_checker_propagate() { return BinaryConstraint::propagate(); }
+    virtual PropagationOutcome bound_checker_propagate() { return BinaryConstraint::bound_propagate(); }
     virtual PropagationOutcome propagate(const int changed_idx, 
+					 const Event evt);
+    virtual PropagationOutcome bound_propagate(const int changed_idx, 
 					 const Event evt);
     virtual PropagationOutcome checker_propagate(const int changed_idx, 
 						 const Event evt) { return BinaryConstraint::propagate(changed_idx, evt); }
     virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
 						       const Event evt) { return BinaryConstraint::propagate(changed_idx, evt); }
     bool find_support(const int revise_idx, const int vli);
+    bool find_bound_support(const int revise_idx, const int vli);
 
    void restore(const int rtype) {
       int var = rtype&CTYPE;
@@ -523,25 +532,28 @@ namespace Mistral {
     TernaryConstraint(std::vector< Variable >& scp) : FixedArityConstraint<3>(scp) { lvl = 3; }
     virtual int get_type() {return TERNARY|(IDEMPOTENT*idempotent());}
 
-    virtual PropagationOutcome checker_propagate() { return TernaryConstraint::propagate(); }
+    virtual PropagationOutcome checker_propagate() 
+    { return TernaryConstraint::propagate(); }
     virtual PropagationOutcome bound_checker_propagate() { 
-      
-      //std::cout << "constraint.cpp: bound checker propagate()" << std::endl; 
-
-      return TernaryConstraint::propagate(); 
+      return TernaryConstraint::bound_propagate(); 
     }
     virtual PropagationOutcome propagate(); // { return NULL; }
+    virtual PropagationOutcome bound_propagate(); // { return NULL; }
     virtual PropagationOutcome propagate(const int changed_idx, 
 					 const Event evt);
+    virtual PropagationOutcome bound_propagate(const int changed_idx, 
+					 const Event evt);
     virtual PropagationOutcome checker_propagate(const int changed_idx, 
-						 const Event evt) { return TernaryConstraint::propagate(changed_idx, evt); }
+						 const Event evt) 
+    { return TernaryConstraint::propagate(changed_idx, evt); }
     virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
 						       const Event evt) { 
 
       //std::cout << "constraint.cpp: bound checker propagate(evt)" << std::endl; 
 
-      return TernaryConstraint::propagate(changed_idx, evt); }
+      return TernaryConstraint::bound_propagate(changed_idx, evt); }
     bool find_support(const int revise_idx, const int vli);
+    bool find_bound_support(const int revise_idx, const int vli);
 
 
     /*
@@ -809,8 +821,9 @@ namespace Mistral {
     inline void un_post() {
       for(int i=on.size; --i;) {
 	if(index[i]>=0) {
-	  on[i]->relax(index[i]);
-	  index[i] = -1;
+	  un_post_from(i);
+	  // on[i]->relax(index[i]);
+	  // index[i] = -1;
 	}
       }
     }
@@ -820,25 +833,31 @@ namespace Mistral {
 
       for(int i=on.size; --i;) {
 	if(active.contain(i)) {
-	  on[i]->relax(index[i]);
-	  index[i] = -1;
+	  un_post_from(i);
+	  // on[i]->relax(index[i]);
+	  // index[i] = -1;
 	}
       }    
     }
 
     virtual PropagationOutcome checker_propagate() { return GlobalConstraint::propagate(); }
-    virtual PropagationOutcome bound_checker_propagate() { return GlobalConstraint::propagate(); }
+    virtual PropagationOutcome bound_checker_propagate() { return GlobalConstraint::bound_propagate(); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome bound_propagate();
+    virtual PropagationOutcome bound_propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome checker_propagate(const int changed_idx, 
-						 const Event evt) { return GlobalConstraint::propagate(changed_idx, evt); } 
+						 const Event evt) 
+    { return GlobalConstraint::propagate(changed_idx, evt); } 
     virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
-						       const Event evt) { return GlobalConstraint::propagate(changed_idx, evt); } 
+						       const Event evt) 
+    { return GlobalConstraint::bound_propagate(changed_idx, evt); } 
     virtual int get_backtrack_level();
     virtual Decision get_decision();// { return solver->decisions.back(0); }
 
     bool first_support(const int vri, const int vli);
     bool find_support(const int vri, const int vli);
+    bool find_bound_support(const int vri, const int vli);
 
     inline void notify_other_event(const int var, 
 				   const Mistral::Event evt) {

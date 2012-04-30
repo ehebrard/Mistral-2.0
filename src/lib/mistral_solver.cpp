@@ -1696,12 +1696,14 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
   // 	    << active_constraints << std::endl;
 
   int trig, cons;
-  bool fix_point =  (active_variables.empty() && active_constraints.empty());
+  bool fix_point;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
   wiped_idx = CONSISTENT;
   if(trigger_self) c.trigger();
   
+  fix_point = (active_variables.empty() && active_constraints.empty());
+
   while(IS_OK(wiped_idx) && !fix_point) {
 
     // empty the var stack first
@@ -1778,12 +1780,14 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
 Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c, 
 							       const bool trigger_self) {
   int trig, cons;
-  bool fix_point =  (active_variables.empty() && active_constraints.empty());
+  bool fix_point;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
   wiped_idx = CONSISTENT;
   if(trigger_self) c.trigger();
   
+  fix_point = (active_variables.empty() && active_constraints.empty());
+
   while(IS_OK(wiped_idx) && !fix_point) {
 
     // empty the var stack first
@@ -1849,20 +1853,29 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 								     const bool trigger_self) {
 
 
-  // std::cout << "solver.cpp: bound checker propagate(" << c << ")" << std::endl;
+  //std::cout << "solver.cpp: bound checker propagate(" << c << ")" << std::endl;
 
   // std::cout << active_variables << std::endl
   // 	    << active_constraints << std::endl;
 
 
   int trig, cons;
-  bool fix_point =  (active_variables.empty() && active_constraints.empty());
+  bool fix_point;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
   //VarEvent var_evt;
 
   wiped_idx = CONSISTENT;
   if(trigger_self) c.trigger();
+
+  fix_point =  (active_variables.empty() && active_constraints.empty());
   
+  // std::cout << active_variables << std::endl;
+
+  // std::cout << active_constraints << std::endl;
+
+  // std::cout << (IS_OK(wiped_idx)) << " " << fix_point <<std::endl;
+
+
   while(IS_OK(wiped_idx) && !fix_point) {
 
     // empty the var stack first
@@ -1920,10 +1933,16 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
       }
     }
 
+    // std::cout << active_constraints << std::endl;
+    // std::cout << active_constraints.empty() << std::endl;
+
     if(IS_OK(wiped_idx) && !active_constraints.empty()) {
       // propagate postponed constraint
       culprit = active_constraints.select(constraints);
       taboo_constraint = culprit.freeze();
+
+      //std::cout << "solver.cpp: bound checker prop" << std::endl;
+
       wiped_idx = culprit.bound_checker_propagate(); 
       taboo_constraint = culprit.defrost();
     } else if(active_variables.empty()) fix_point = true;
