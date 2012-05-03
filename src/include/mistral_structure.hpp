@@ -1153,7 +1153,7 @@ template < int N, class T >
       return v;
     }
 
-    inline int popHead()
+    inline int pop_head()
     {
       const int elt = values_[0];
 
@@ -1294,38 +1294,21 @@ template < int N, class T >
     {
       int lb = (int)(start_-index_), new_lb = lb;
       int ub = capacity+lb-1, new_ub = ub;
-
-
-      //       std::cout << "create a new element: " << new_elt << std::endl;
-
       if(new_elt < lb) {
 	new_lb = new_elt;
-	// 	std::cout << "   new lb" << std::endl; 
       } else if(new_elt > ub) {
 	new_ub = new_elt;
-	// 	std::cout << "   new ub" << std::endl; 
       } else {
-	// 	std::cout << "   already in" << std::endl; 
 	return;
       }
       
       unsigned int new_capacity = new_ub-new_lb+1;
-
-      //       std::cout << "requires a capacity of at least " << new_capacity
-      // 		<< " (was: " << capacity << ")" << std::endl;
-
       if(new_capacity < capacity*2) new_capacity = capacity*2;
-
-      //       std::cout << "   allocate: " << new_capacity << std::endl;
-
       if(new_lb < lb) {
 	new_lb = ub-new_capacity+1;
       } else {
 	new_ub = lb+new_capacity-1;
       }
-
-      //       std::cout << "extend to: [" << new_lb 
-      // 		<< ".." << new_ub << "]" << std::endl; 
 
       int *aux_list = list_;
       list_ = new int[new_capacity];
@@ -1426,7 +1409,7 @@ template < int N, class T >
       return list_[--size];
     }
 
-    inline int popHead()
+    inline int pop_head()
     {
       --size;
       index_[list_[size]] = 0;
@@ -1449,9 +1432,6 @@ template < int N, class T >
 
     inline void add(const int elt)
     {
-      //       std::cout << elt << ", " << size << " <= " << capacity << std::endl; 
-      //       std::cout << index_[elt] << " <= " << capacity << std::endl; 
-
       index_[list_[size]] = index_[elt];
       list_[index_[elt]] = list_[size];
       list_[size] = elt;
@@ -1505,16 +1485,6 @@ template < int N, class T >
 
     /*!@name Miscellaneous*/
     //@{
-    //     std::string getString() const {
-    //       std::string return_str = "(";
-    //       if(size) return_str += toString(list_[0]);
-    //       for(unsigned int i=1; i<size; ++i)
-    // 	return_str += (" "+toString(list_[i]));
-    //       return_str += ")";
-      
-    //       return return_str;
-    //     }
-
     std::ostream& display(std::ostream& os) const {
       os << "(";
       if(size) os << list_[0];
@@ -1719,7 +1689,7 @@ template < int N, class T >
 //       return list_[--size];
 //     }
 
-//     inline int popHead()
+//     inline int pop_head()
 //     {
 //       --size;
 //       index_[list_[size]] = 0;
@@ -1995,7 +1965,7 @@ template < int N, class T >
   //     return list_[--size];
   //   }
 
-  //   inline PTR_TYPE popHead()
+  //   inline PTR_TYPE pop_head()
   //   {
   //     --size;
   //     index_[list_[size]->id] = 0;
@@ -2311,7 +2281,7 @@ template < int N, class T >
       return list_[--size];
     }
 
-    inline VAR_TYPE popHead()
+    inline VAR_TYPE pop_head()
     {
       --size;
       index_[list_[size].id()] = 0;
@@ -2616,7 +2586,7 @@ template < int N, class T >
       return list_[--size];
     }
 
-    inline CON_TYPE popHead()
+    inline CON_TYPE pop_head()
     {
       --size;
       index_[list_[size]->id] = 0;
@@ -2823,7 +2793,7 @@ template < int N, class T >
   //     return list_[--size];
   //   }
 
-  //   inline DATA_TYPE popHead()
+  //   inline DATA_TYPE pop_head()
   //   {
   //     --size;
   //     const DATA_TYPE elt = *list_;
@@ -3315,21 +3285,6 @@ template < int N, class T >
       }
     }
 
-    // Bitset(const Bitset< WORD_TYPE, FLOAT_TYPE >& s)
-    // {
-    //   initialise(s);
-    // }
-    
-    // void initialise(const Bitset< WORD_TYPE, FLOAT_TYPE >& s)
-    // {
-    //   pos_words = s.pos_words;
-    //   neg_words = s.neg_words;
-   
-    //   table = new WORD_TYPE[pos_words-neg_words];
-    //   for(int i=neg_words; i<pos_words; ++i) 
-    // 	table[i]=s.table[i];
-    // }
-
     void initialise()
     {
       pos_words = 0;
@@ -3363,8 +3318,7 @@ template < int N, class T >
 	add( elt[i] );
     }
 
-
-    Bitset(const int lb, const int ub, const WORD_TYPE p)//, WORD_TYPE *pool=NULL) 
+    Bitset(const int lb, const int ub, const WORD_TYPE p)
     {
       initialise(lb,ub,p,NULL);
     }
@@ -3384,8 +3338,6 @@ template < int N, class T >
 
     Bitset<WORD_TYPE,FLOAT_TYPE>& operator=(const Bitset<WORD_TYPE,FLOAT_TYPE>& q) 
     {
-      //table += neg_words;
-      //delete [] table; 
       if(!table)
 	clone(q);
       else
@@ -3448,7 +3400,6 @@ template < int N, class T >
       fast_add(elt);
     }
 
-
     void extend(const int elt) 
     {
       int nval = (elt >> EXP);
@@ -3470,9 +3421,6 @@ template < int N, class T >
 	  }
 
 	  if(need_to_extend) {
-	    
-	    //std::cout << "extend" << std::endl;
-
 	    WORD_TYPE *aux = table;
 	    table = new WORD_TYPE[new_pos_words-new_neg_words];
 	    table -= new_neg_words;
@@ -3555,7 +3503,7 @@ template < int N, class T >
       table = NULL;
     }
 
-    bool isBuilt()
+    bool is_built()
     {
       return (table != NULL);
     }
@@ -3584,7 +3532,7 @@ template < int N, class T >
     }
 
     /*!
-      Minimum element in the set [O(N/8)]. 
+      Minimum element in the set [O(N/32)]. 
     */
     inline int min() const
     { 
@@ -3960,7 +3908,7 @@ template < int N, class T >
       return c;  
     }
 
-    inline unsigned int wordSize() const 
+    inline unsigned int word_size() const 
     {  
       unsigned int v, c=0;
       if( (v = table[neg_words]) ) 
@@ -4013,9 +3961,6 @@ template < int N, class T >
 
     inline  void fast_add(const int elt)
     {
-
-      //std::cout << neg_words << " " << pos_words << " " << (elt >> EXP) << std::endl;
-
       table[(elt >> EXP)] |= ((WORD_TYPE)1 << (elt & CACHE));
     }
 
@@ -4206,12 +4151,7 @@ template < int N, class T >
       int j = (lb >> EXP);
       
       if( i >= neg_words || j < pos_words ) {
-	
-	// if( i >= pos_words ) 
-	// 	i = pos_words-1;
-	// if( j < neg_words ) 
-	// 	j = neg_words;
-	
+		
 	WORD_TYPE masked_lb = (full << (lb & CACHE));
 	WORD_TYPE masked_ub = (full >> (CACHE - (ub & CACHE)));
 	
@@ -4354,12 +4294,6 @@ template < int N, class T >
 	  //masked_ub ^= ((full-1) << (ub & CACHE) );
 	  masked_ub ^= ((full-1) << (ub & CACHE));
 
-	// std::cout << std::endl;
-	// showUint( masked_lb, std::cout );
-	// std::cout << std::endl;
-	// showUint( masked_ub, std::cout );
-	// std::cout << std::endl;    
-
 	if( lb_word == ub_word ) 
 	  table[lb_word] |= (masked_lb & masked_ub);
 	else {
@@ -4369,41 +4303,12 @@ template < int N, class T >
 	    table[ub_word] = full;
 	}
       }
-
-      //std::cout << " => " << table[neg_words] << std::endl;
-
     }
 
     inline bool operator[](const int i)
     {
       return fast_contain(i);
     }
-
-    //     std::string getString() const {  
-    //       std::string return_str = "{";
-    //       if( !empty() ) {
-    // 	int last = NOVAL, cur=min(), aft;
-
-    // 	bool flag=false;
-    // 	do{
-    // 	  aft = next(cur);
-
-    // 	  if(aft != cur+1 || cur != last+1) {
-    // 	    if( flag )
-    // 	      return_str += ",";
-    // 	    return_str += toString(cur);
-    // 	    flag = true;
-    // 	  } else if(flag) {
-    // 	    return_str += "..";
-    // 	    flag = false;
-    // 	  }
-    // 	  last = cur;
-    // 	  cur = aft;
-    // 	} while( cur != NOVAL && cur != last );
-    //       }
-    //       return_str += "}";
-    //       return return_str;
-    //     }
 
     std::ostream& display(std::ostream& os) const {
       os << "{";
@@ -4431,41 +4336,7 @@ template < int N, class T >
       return os;
     }
 
-    //     void  print(std::ostream & os) const 
-    //     {
-    //       //simplePrint();
-    //       if( table )
-    // 	print( os, "{,}" );
-    //     }
-
-    //     void  print(std::ostream & os, 
-    // 		const char *delim) const
-    //     {
-    //       os << delim[0];
-    //       if( !empty() ) {
-    // 	int last = NOVAL, cur=min(), aft;
-
-    // 	bool flag=false;
-    // 	do{
-    // 	  aft = next(cur);
-
-    // 	  if(aft != cur+1 || cur != last+1) {
-    // 	    if( flag )
-    // 	      os << delim[1];
-    // 	    os << cur;
-    // 	    flag = true;
-    // 	  } else if(flag) {
-    // 	    os << "..";
-    // 	    flag = false;
-    // 	  }
-    // 	  last = cur;
-    // 	  cur = aft;
-    // 	} while( cur != NOVAL && cur != last );
-    //       }
-    //       os << delim[2];
-    //     }
-
-    void  printBits(std::ostream & os) const 
+    void  print_bits(std::ostream & os) const 
     {
       os << "[";
       for(int i=neg_words; i<pos_words; ++i)
@@ -4535,7 +4406,6 @@ template < int N, class T >
     
     /**@name Parameters*/
     //@{
-    //BitSet _set_;
     int *next; // next element in the list (one for each elt + one for the head)
     int _head; // last_index+1
     int _tail; // last element

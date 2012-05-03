@@ -537,10 +537,10 @@ namespace Mistral {
       return pop();
     }
 
-    inline int reversible_popHead()
+    inline int reversible_pop_head()
     {
       save();
-      return popHead();
+      return pop_head();
     }
     //@}    
 
