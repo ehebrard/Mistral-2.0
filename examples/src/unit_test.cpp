@@ -907,7 +907,7 @@ public:
 
     ConChecker< PredicateLess > cc1a("<=", false,true,12345,3,20,1);
     cc1a.init();
-    cc1a.run(10000);
+    cc1a.run(1000);
 
 
     ConChecker< PredicateLess > cc1b("<=", false,true,12345,3,20,1);
@@ -915,7 +915,7 @@ public:
     ((PredicateLess*)(cc1b.con2.propagator))->offset = 3;
     ((PredicateLess*)(cc1b.con3.propagator))->offset = 3;
     cc1b.init();
-    cc1b.run(10000);
+    cc1b.run(1000);
 
 
     ConChecker< PredicateLess > cc1c("<=", false,true,12345,3,20,1);
@@ -923,18 +923,18 @@ public:
     ((PredicateLess*)(cc1c.con2.propagator))->offset = -3;
     ((PredicateLess*)(cc1c.con3.propagator))->offset = -3;   
     cc1c.init();
-    cc1c.run(10000);
+    cc1c.run(1000);
 
     ConChecker< PredicateEqual > cc2a("==", true,false,12345,3,20,1);
     cc2a.init();
-    cc2a.run(10000);
+    cc2a.run(1000);
 
     ConChecker< PredicateEqual > cc2b("!=", true,false,12345,3,20,1);
     ((PredicateEqual*)(cc2b.con1.propagator))->spin = 0;
     ((PredicateEqual*)(cc2b.con2.propagator))->spin = 0;
     ((PredicateEqual*)(cc2b.con3.propagator))->spin = 0;
     cc2b.init();
-    cc2b.run(10000);
+    cc2b.run(1000);
 
 
     ConChecker< PredicateLowerBound > cc3a(">=-3", false,true,12345,2,20,1);
@@ -942,51 +942,51 @@ public:
     ((PredicateLowerBound*)(cc3a.con2.propagator))->bound = -3;
     ((PredicateLowerBound*)(cc3a.con3.propagator))->bound = -3;
     cc3a.init();
-    cc3a.run(10000);
+    cc3a.run(1000);
 
     ConChecker< PredicateLowerBound > cc3b(">=3", false,true,12345,2,20,1);
     ((PredicateLowerBound*)(cc3b.con1.propagator))->bound = 3;
     ((PredicateLowerBound*)(cc3b.con2.propagator))->bound = 3;
     ((PredicateLowerBound*)(cc3b.con3.propagator))->bound = 3;
     cc3b.init();
-    cc3b.run(10000);
+    cc3b.run(1000);
 
     ConChecker< PredicateUpperBound > cc4a("<=-3", false,true,12345,2,20,1);
     ((PredicateUpperBound*)(cc4a.con1.propagator))->bound = -3;
     ((PredicateUpperBound*)(cc4a.con2.propagator))->bound = -3;
     ((PredicateUpperBound*)(cc4a.con3.propagator))->bound = -3;
     cc4a.init();
-    cc4a.run(10000);
+    cc4a.run(1000);
 
     ConChecker< PredicateUpperBound > cc4b("<=3", false,true,12345,2,20,1);
     ((PredicateUpperBound*)(cc4b.con1.propagator))->bound = 3;
     ((PredicateUpperBound*)(cc4b.con2.propagator))->bound = 3;
     ((PredicateUpperBound*)(cc4b.con3.propagator))->bound = 3;
     cc4b.init();
-    cc4b.run(10000);
+    cc4b.run(1000);
 
     ConChecker< PredicateConstantEqual > cc5a("==0", true,false,12345,2,20,1);
     cc5a.init();
-    cc5a.run(10000);
+    cc5a.run(1000);
 
     ConChecker< PredicateConstantEqual > cc5b("!=0", true,false,12345,2,20,1);
     ((PredicateConstantEqual*)(cc5b.con1.propagator))->spin = 0;
     ((PredicateConstantEqual*)(cc5b.con2.propagator))->spin = 0;
     ((PredicateConstantEqual*)(cc5b.con3.propagator))->spin = 0;
     cc5b.init();
-    cc5b.run(10000);
+    cc5b.run(1000);
 
     ConChecker< PredicateAnd > cc6a("and", true,false,12345,3,1,3);
     cc6a.init();
-    cc6a.run(10000);
+    cc6a.run(1000);
 
     ConChecker< PredicateOr > cc7a("or", true,false,12345,3,1,3);
     cc7a.init();
-    cc7a.run(10000);
+    cc7a.run(1000);
 
     ConChecker< PredicateAdd > cc8a("+", false,true,12345,3,20,0);
     cc8a.init();
-    cc8a.run(10000);
+    cc8a.run(1000);
 
 
 
@@ -1002,7 +1002,7 @@ public:
     ((PredicateWeightedSum*)(cc9a.con3.propagator))->lower_bound = 10;
     ((PredicateWeightedSum*)(cc9a.con3.propagator))->upper_bound = 10;
     cc9a.init();
-    cc9a.run(1000);
+    cc9a.run(100);
 
 
 
@@ -1029,7 +1029,7 @@ public:
     ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
     //std::cout << cc9b.con2 << std::endl;
     cc9b.init();
-    cc9b.run(1000);
+    cc9b.run(100);
 
     ConChecker< PredicateWeightedSum > cc9c("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
@@ -1055,7 +1055,7 @@ public:
     ((PredicateWeightedSum*)(cc9c.con3.propagator))->lower_bound = -10;
     ((PredicateWeightedSum*)(cc9c.con3.propagator))->upper_bound = -10;
     cc9c.init();
-    cc9c.run(1000);
+    cc9c.run(100);
 
     ConChecker< PredicateWeightedSum > cc9d("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
@@ -1085,7 +1085,7 @@ public:
     ((PredicateWeightedSum*)(cc9d.con2.propagator))->wneg = 3;
     ((PredicateWeightedSum*)(cc9d.con3.propagator))->wneg = 3;
     cc9d.init();
-    cc9d.run(1000);
+    cc9d.run(100);
 
     ConChecker< PredicateWeightedSum > cc9e("sum(1)", false,true,12345,5,10,0);
     ((PredicateWeightedSum*)(cc9e.con1.propagator))->lower_bound = 5;
@@ -1095,7 +1095,7 @@ public:
     ((PredicateWeightedSum*)(cc9e.con3.propagator))->lower_bound = 5;
     ((PredicateWeightedSum*)(cc9e.con3.propagator))->upper_bound = 10;
     cc9e.init();
-    cc9e.run(1000);
+    cc9e.run(100);
 
     ConChecker< PredicateWeightedSum > cc9f("sum(+)", false,true,12345,5,10,0);
     for(int i=2; i<5; ++i) {
@@ -1120,7 +1120,7 @@ public:
     ///std::cout << std::endl<< std::endl<< cc9b.con1 << std::endl;
     //std::cout << cc9b.con2 << std::endl;
     cc9f.init();
-    cc9f.run(1000);
+    cc9f.run(100);
 
     ConChecker< PredicateWeightedSum > cc9g("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
@@ -1146,7 +1146,7 @@ public:
     ((PredicateWeightedSum*)(cc9g.con3.propagator))->lower_bound = -9;
     ((PredicateWeightedSum*)(cc9g.con3.propagator))->upper_bound = -9;
     cc9g.init();
-    cc9g.run(1000);
+    cc9g.run(100);
 
     ConChecker< PredicateWeightedSum > cc9h("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
@@ -1172,7 +1172,7 @@ public:
     ((PredicateWeightedSum*)(cc9h.con3.propagator))->lower_bound = -9;
     ((PredicateWeightedSum*)(cc9h.con3.propagator))->upper_bound = -3;
     cc9h.init();
-    cc9h.run(1000);
+    cc9h.run(100);
 
     ConChecker< PredicateWeightedSum > cc9j("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
@@ -1208,7 +1208,7 @@ public:
     ((PredicateWeightedSum*)(cc9j.con3.propagator))->lower_bound = -1;
     ((PredicateWeightedSum*)(cc9j.con3.propagator))->upper_bound = -1;
     cc9j.init();
-    cc9j.run(1000);
+    cc9j.run(100);
 
     ConChecker< PredicateWeightedSum > cc9k("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
@@ -1244,7 +1244,7 @@ public:
     ((PredicateWeightedSum*)(cc9k.con3.propagator))->lower_bound = -1;
     ((PredicateWeightedSum*)(cc9k.con3.propagator))->upper_bound = 3;
     cc9k.init();
-    cc9k.run(1000);
+    cc9k.run(100);
 
 
 
@@ -1252,9 +1252,12 @@ public:
     cc10a.init();
     cc10a.run(100);
 
+
+    /// propagator for MUL does NOT enforce BC
     ConChecker< PredicateMul > cc11a("*", true,true,12345,3,20,0);
     cc11a.init();
     cc11a.run(100);
+
 
     ConChecker< PredicateIntervalMember > cc12a("member[]", true,false,12345,2,20,1);
     ((PredicateIntervalMember*)(cc12a.con1.propagator))->spin = 1;
@@ -1313,16 +1316,16 @@ public:
     cc13b.init();
     cc13b.run(1000);
 
-  
 
    ConChecker< PredicateMin > cc14("min", true,true,12345,5,10,0);
    cc14.init();
    cc14.run(20);
-
+  
 
    ConChecker< PredicateMax > cc15("max", true,true,12345,5,10,0);
    cc15.init();
    cc15.run(200);
+
 
 
    /*

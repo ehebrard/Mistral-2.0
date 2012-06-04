@@ -43,19 +43,19 @@ all: lib $(BINS)
 lib: $(PLIBOBJ) $(PUTIOBJ)
 $(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
 	@echo 'compile '$<
-	$(CCC) $(CFLAGS) -c $< -o $@ 
+	@$(CCC) $(CFLAGS) -c $< -o $@ 
 
 # The examples
 $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<
-	$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $@
+	@$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $@
 
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
-	$(CCC) $(CFLAGS) -c $< -o $@ 
+	@$(CCC) $(CFLAGS) -c $< -o $@ 
 
 # Examples, one at a time
 %: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<	
-	$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
+	@$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
 

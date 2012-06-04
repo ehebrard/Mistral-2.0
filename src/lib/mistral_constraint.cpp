@@ -26,6 +26,7 @@
 
 
 //#define _DEBUG_GENPROPAG true
+//#define _DEBUG_MUL true
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -6135,16 +6136,17 @@ int Mistral::PredicateMin::check( const int* sol ) const {
 
 Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
   PropagationOutcome wiped = CONSISTENT;
-  unsigned int i, n = scope.size-1, evt;
-  int val, aux, var; 
+  unsigned int n = scope.size-1, evt;
+  int i, val, aux, var; 
 
 
 #ifdef _DEBUG_MIN
   std::cout << std::endl << active << std::endl << candidates << std::endl;
 #endif
 
-  while(IS_OK(wiped) && !changes.empty()) {
-    if(changes.contain(n)) { 
+  if(candidates.size != 1) {
+    while(IS_OK(wiped) && !changes.empty()) {
+      if(changes.contain(n)) { 
 
 #ifdef _DEBUG_MIN
       std::cout << " " << scope[n] << " has changed " << std::endl;
@@ -6156,7 +6158,7 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
       // if the lower bound has been changed, we need to update the lb of every active variable
       if(LB_CHANGED(event_type[n])) {
 	val = scope[n].get_min();
-	for(i=0; IS_OK(wiped) && i<candidates.size; ++i) {
+	for(i=candidates.size; IS_OK(wiped) && --i>=0; ) {
 	  var = candidates[i];
 
 #ifdef _DEBUG_MIN
@@ -6168,10 +6170,20 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  else if(!changes.contain(var)) {
 	    
 #ifdef _DEBUG_MIN
-	  std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+	    std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
 #endif
 
 	    changes.add(var);
+	    
+	    if((scope[var].get_min() > scope[n].get_max()) && candidates.contain(var)) {
+	      
+	      candidates.reversible_remove(var);
+	    
+#ifdef _DEBUG_MAX
+	      std::cout << "    " << scope[var] << " can no longer be min" << std::endl;
+#endif
+	    }
+
 	  }
 	}
       }
@@ -6322,6 +6334,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  
 	}
       }
+    }
+  }  
+  }
 
       if(candidates.size == 1) {
 
@@ -6332,8 +6347,7 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
 	if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
       }
-    }
-  }  
+
 
   return wiped;
 }
@@ -6391,205 +6405,228 @@ int Mistral::PredicateMax::check( const int* sol ) const {
 
 Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
   PropagationOutcome wiped = CONSISTENT;
-  unsigned int i, n = scope.size-1, evt;
-  int val, aux, var; 
+  unsigned int n = scope.size-1, evt;
+  int i, val, aux, var; 
 
 #ifdef _DEBUG_MAX
+  std::cout << "propagate max( " ;
+  for(i=0; i<n; ++i) 
+    std::cout << "[" << scope[i].get_min() << "," << scope[i].get_max() << "] ";
+  std::cout << ") = [" << scope[n].get_min() << "," << scope[n].get_max() << "]" ;
+
   std::cout << std::endl << active << std::endl << candidates << std::endl;
 #endif
 
-  while(IS_OK(wiped) && !changes.empty()) {
-    if(changes.contain(n)) { 
-
-#ifdef _DEBUG_MAX
-      std::cout << " " << scope[n] << " has changed " << std::endl;
-#endif
-     
-      changes.remove(n);
-      // the "self" variable has changed.
+  if(candidates.size != 1) {
+    while(IS_OK(wiped) && !changes.empty()) {
+      if(changes.contain(n)) { 
 	
-      // if the upper bound has been changed, we need to update the ub of every active variable
-      if(UB_CHANGED(event_type[n])) {
-	val = scope[n].get_max();
-	for(i=0; IS_OK(wiped) && i<candidates.size; ++i) {
-	  var = candidates[i];
-
 #ifdef _DEBUG_MAX
-	  std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " <= " << val << std::endl;
+	std::cout << " " << scope[n] << " has changed " << std::endl;
 #endif
+	
+	changes.remove(n);
+	// the "self" variable has changed.
+	
+	// if the upper bound has been changed, we need to update the ub of every active variable
+	if(UB_CHANGED(event_type[n])) {
+	  val = scope[n].get_max();
+	  for(i=candidates.size; IS_OK(wiped) && --i>=0; ) {
 
-	  event_type[var] = scope[var].set_max(val);
-	  if(event_type[var] == FAIL_EVENT) wiped = FAILURE(var);
-	  else if(!changes.contain(var)) {
+	    var = candidates[i];
 	    
 #ifdef _DEBUG_MAX
-	  std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+	    std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " <= " << val << std::endl;
 #endif
+	    
+	    event_type[var] = scope[var].set_max(val);
 
-	    changes.add(var);
+	    if(event_type[var] == FAIL_EVENT) wiped = FAILURE(var);
+	    else if(!changes.contain(var)) {
+		
+#ifdef _DEBUG_MAX
+		std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+#endif
+		
+		changes.add(var);
+	      
+		if((scope[var].get_max() < scope[n].get_min()) && candidates.contain(var)) {
+
+		  candidates.reversible_remove(var);
+
+#ifdef _DEBUG_MAX
+		  std::cout << "    " << scope[var] << " can no longer be max" << std::endl;
+#endif
+		}
+	    }
 	  }
 	}
-      }
-      
-      // if the lower bound has been changed, some active variables may become unactive
-      // The max(maximum) might also change because variables became unactive
-      if(IS_OK(wiped) && LB_CHANGED(event_type[n])) {
-	aux = val = scope[n].get_min();
 	
+	// if the lower bound has been changed, some active variables may become unactive
+	// The max(maximum) might also change because variables became unactive
+	if(IS_OK(wiped) && LB_CHANGED(event_type[n])) {
+	  aux = val = scope[n].get_min();
+	  
 #ifdef _DEBUG_MAX
-	std::cout << " relax the constraint from vars lower than " << val << std::endl;
+	  std::cout << " relax the constraint from vars lower than " << val << std::endl;
 #endif
-	
-	for(i=candidates.size; IS_OK(wiped) && i;) {
-	  --i;
-	  var = candidates[i];
-
-	  //std::cout << i << ": " << 
-
-	  if(scope[var].get_max() < val) {
+	  
+	  for(i=candidates.size; IS_OK(wiped) && i;) {
+	    --i;
+	    var = candidates[i];
 	    
+	    //std::cout << i << ": " << 
+	    
+	    if(scope[var].get_max() < val) {
+	      
 #ifdef _DEBUG_MAX
-	    std::cout << "    relax1 " << this << " from " << scope[var] << std::endl;
+	      std::cout << "    relax1 " << this << " from " << scope[var] << std::endl;
 #endif 
-
-	    //relax_from(var);
-	    if(candidates.contain(var)) candidates.reversible_remove(var);
-	    //std::cout << candidates << std::endl;
-
-	  } else if(aux < scope[var].get_min()) aux = scope[var].get_min();
-	}
-
+	      
+	      //relax_from(var);
+	      if(candidates.contain(var)) candidates.reversible_remove(var);
+	      //std::cout << candidates << std::endl;
+	      
+	    } else if(aux < scope[var].get_min()) aux = scope[var].get_min();
+	  }
+	  
 #ifdef _DEBUG_MAX
 	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() << " <= " << aux << std::endl;
 #endif
 
-	if(scope[n].set_min(aux) == FAIL_EVENT) wiped = FAILURE(n);	
-      }
-    } 
-
-    if(IS_OK(wiped)) {
-
-      // store the max max of the changed vars in aux, and the max max in val
-      aux = -INFTY;
-      val = -INFTY;
-      while(!changes.empty()) {
-	evt = changes.pop();
+	  if(scope[n].set_min(aux) == FAIL_EVENT) wiped = FAILURE(n);	
+	}
+      } 
+      
+      if(IS_OK(wiped)) {
 	
+	// store the max max of the changed vars in aux, and the max max in val
+	aux = -INFTY;
+	val = -INFTY;
+	while(!changes.empty()) {
+	  evt = changes.pop();
+	  
 #ifdef _DEBUG_MAX
-	std::cout << "-event on " << scope[evt] 
-		  << (LB_CHANGED(event_type[evt]) ? " (lb) " : " ")
-		  << (UB_CHANGED(event_type[evt]) ? "(ub) " : " ")
-		  << std::endl;
+	  std::cout << "-event on " << scope[evt] 
+		    << (LB_CHANGED(event_type[evt]) ? " (lb) " : " ")
+		    << (UB_CHANGED(event_type[evt]) ? "(ub) " : " ")
+		    << std::endl;
 #endif
-	
-	if(UB_CHANGED(event_type[evt]) 
-	   && scope[evt].get_max()>aux
-	   ) {
-	  aux = scope[evt].get_max();
-	  if(aux < scope[n].get_min()) {
-
+	  
+	  if(UB_CHANGED(event_type[evt]) 
+	     && scope[evt].get_max()>aux
+	     ) {
+	    aux = scope[evt].get_max();
+	    if(aux < scope[n].get_min()) {
+	      
 #ifdef _DEBUG_MAX
-	    std::cout << "    relax2 " << this << " from " << scope[evt] << std::endl;
+	      std::cout << "    relax2 " << this << " from " << scope[evt] << std::endl;
 #endif 
 
-	    //relax_from(evt);
-	    if(candidates.contain(evt)) candidates.reversible_remove(evt);
-	    //std::cout << candidates << std::endl;
-	  }
-	}
-	if(LB_CHANGED(event_type[evt]) && scope[evt].get_min()>val)
-	  val = scope[evt].get_min();
-	//if(ASSIGNED(event_type[evt]))
-	//candidates.reversible_remove(evt);
-      }
-      
-#ifdef _DEBUG_MAX
-      if(val > -INFTY) 
-	std::cout << " New min maximum: " << val << std::endl;
-      if(aux > -INFTY) 
-	std::cout << " New max maximum: " << aux << std::endl;
-#endif
-      
-      
-      if(val > -INFTY) {
-	
-#ifdef _DEBUG_MAX
-	std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
-		  << " >= " << val << std::endl;
-#endif
-	
-	event_type[n] = scope[n].set_min(val);
-	if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
-	else {
-	  changes.add(n);
-	}
-      }
-      
-      if(aux > -INFTY) {
-	val = scope[n].get_max();
-	
-#ifdef _DEBUG_MAX
-	std::cout << " previous max minimum witness: " << scope[last_max] 
-		  << " in " << scope[last_max].get_domain() << std::endl;
-#endif
-      
-	if(aux < val && scope[last_max].get_max() < val) {
-	  
-	  // std::cout << candidates << std::endl;
-	  // for(i=0; i<scope.size; ++i) {
-	  //   std::cout << " " << scope[i].get_domain();
-	  // }
-	  // std::cout << std::endl;
-
-	  // look for a new witness for the max
-	  i = candidates.size;
-	  while( i > 0 ) {
-	    --i;
-
-	    // std::cout << i << std::endl;
-	    
-	    // std::cout << candidates[i] << std::endl;
-
-	    var = scope[candidates[i]].get_max();
-	    if(aux < var) aux = var;
-	    if(var >= val) {
-	      last_max = candidates[i];
-	      break;
-	    } 
-	  }
-	  
-	  if(aux < val) {
-#ifdef _DEBUG_MAX
-	    std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
-		      << " <= " << aux << std::endl;
-#endif
-	    event_type[n] = scope[n].set_max(aux);
-	    if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
-	    else {
-	      if(!changes.contain(n)) changes.add(n);
+	      //relax_from(evt);
+	      if(candidates.contain(evt)) candidates.reversible_remove(evt);
+	      //std::cout << candidates << std::endl;
 	    }
 	  }
-	} else {
+	  if(LB_CHANGED(event_type[evt]) && scope[evt].get_min()>val)
+	    val = scope[evt].get_min();
+	  //if(ASSIGNED(event_type[evt]))
+	  //candidates.reversible_remove(evt);
+	}
+	
+#ifdef _DEBUG_MAX
+	if(val > -INFTY) 
+	  std::cout << " New min maximum: " << val << std::endl;
+	if(aux > -INFTY) 
+	  std::cout << " New max maximum: " << aux << std::endl;
+#endif
+      
+      
+	if(val > -INFTY) {
+	
+#ifdef _DEBUG_MAX
+	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
+		    << " >= " << val << std::endl;
+#endif
+	
+	  event_type[n] = scope[n].set_min(val);
+	  if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
+	  else {
+	    changes.add(n);
+	  }
+	}
+	
+	if(aux > -INFTY) {
+	  val = scope[n].get_max();
 	  
 #ifdef _DEBUG_MAX
-	  std::cout << " no need to update " << scope[n] << "'s max" << std::endl;
+	  std::cout << " previous max minimum witness: " << scope[last_max] 
+		    << " in " << scope[last_max].get_domain() << std::endl;
 #endif
+      
+	  if(aux < val && scope[last_max].get_max() < val) {
 	  
+	    // std::cout << candidates << std::endl;
+	    // for(i=0; i<scope.size; ++i) {
+	    //   std::cout << " " << scope[i].get_domain();
+	    // }
+	    // std::cout << std::endl;
+	    
+	    // look for a new witness for the max
+	    i = candidates.size;
+	    while( i > 0 ) {
+	      --i;
+	      
+	      // std::cout << i << std::endl;
+	      
+	      // std::cout << candidates[i] << std::endl;
+	      
+	      var = scope[candidates[i]].get_max();
+	      if(aux < var) aux = var;
+	      if(var >= val) {
+		last_max = candidates[i];
+		break;
+	      } 
+	    }
+	  
+	    if(aux < val) {
+#ifdef _DEBUG_MAX
+	      std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
+			<< " <= " << aux << std::endl;
+#endif
+	      event_type[n] = scope[n].set_max(aux);
+	      if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
+	      else {
+		if(!changes.contain(n)) changes.add(n);
+	      }
+	    }
+	  } else {
+	    
+#ifdef _DEBUG_MAX
+	    std::cout << " no need to update " << scope[n] << "'s max" << std::endl;
+#endif
+	    
+	  }
 	}
       }
-
-      if(candidates.size == 1) {
+    }  
+  }
 
 #ifdef _DEBUG_MAX
-	std::cout << scope[candidates[0]] << " is the last max var " << std::endl;
+  std::cout << candidates << std::endl;
 #endif
 
-	if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
-	if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
-      }
-    }
-  }  
 
+  if(candidates.size == 1) {
+    
+#ifdef _DEBUG_MAX
+    std::cout << scope[candidates[0]] << " is the last max var " << std::endl;
+#endif
+    
+    if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
+    if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
+  }
+  
   return wiped;
 }
 
