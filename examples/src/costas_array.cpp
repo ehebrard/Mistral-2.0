@@ -46,14 +46,14 @@ int main(int argc, char *argv[])
 			    MinValue >(&s), 
 			  new Geometric()) == SAT) {
     for(i=0; i<N; ++i)
-      cout << setw(3) << X[i].get_solution_value() << " " ;
+      cout << setw(3) << X[i].get_solution_int_value() << " " ;
     cout << endl;
     for(i=0; i<N-2; ++i) {
       for(j=0; j<N-i-1; ++j)
-	cout << setw(3) << differences[i][j].get_solution_value() << " " ;
+	cout << setw(3) << differences[i][j].get_solution_int_value() << " " ;
       cout << endl;
     }
-    cout << setw(3) << (X[0].get_solution_value() - X[N-1].get_solution_value()) << endl << endl;
+    cout << setw(3) << (X[0].get_solution_int_value() - X[N-1].get_solution_int_value()) << endl << endl;
   }
   std::cout << s.statistics << std::endl;
 }
