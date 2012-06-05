@@ -186,6 +186,7 @@ namespace Mistral {
 
     * Listener interface for weighted degree *
   */
+  //template< float DECAY > 
   class FailureCountManager : public FailureListener, public ConstraintListener {
 
   public:
@@ -219,16 +220,37 @@ namespace Mistral {
     double *get_weight() { return variable_weight.stack_; }     
 
     virtual void notify_failure() {
+      int i;
+
+      // if(DECAY >= 0) {
+      // 	for(i=variable_weight.size; --i>=0;)
+      // 	  variable_weight[i] *= DECAY;
+      // 	for(i=constraint_weight.size; --i>=0;)
+      // 	  constraint_weight[i] *= DECAY;
+      // }
+
+
+      std::cout << "increment weight of ";
+
       Constraint con = solver->culprit;
       if(!con.empty()) {
 	Variable *scope = con.get_scope();
-	int i = con.arity(), idx;
+	int idx;
+	i = con.arity();
 	++constraint_weight[con.id()];
 	while(i--) {
 	  idx = scope[i].id();
-	  if(idx>=0) ++variable_weight[idx];
+	  if(idx>=0) {
+
+	    std::cout << scope[idx] << " ";
+
+	    ++variable_weight[idx];
+	  }
 	}
       }
+
+      std::cout << std::endl;
+
     }
 
     virtual void notify_post(Constraint con) {
@@ -289,12 +311,27 @@ namespace Mistral {
     virtual void notify_success() {
       int // last_decision = solver->decisions.back().var.id(),
 	id;
-      unsigned int i = solver->trail_.back(), n=solver->saved_vars.size;
+      int i = solver->trail_.back(), n=solver->saved_vars.size;
+
+
+      // if(DECAY >= 0) {
+      // 	for(i=variable_weight.size; --i>=0;)
+      // 	  variable_weight[i] *= DECAY;
+      // }
+
+
+      std::cout << "increment weight of ";
       while(++i<n) {
+	
 	id = solver->saved_vars[i]; //.id();
+
+	std::cout << solver->variables[solver->saved_vars[i]] << " ";
+	
 	//if(id != last_decision) 
 	++variable_weight[id];
       }
+      
+      std::cout << std::endl;
     }
   };
 
@@ -856,7 +893,10 @@ namespace Mistral {
     inline double value() { return (wei_ ? (double)dom_/wei_ : (double)INFTY); } 
     inline bool operator<( MinDomainOverWeight& x ) const { return dom_*x.wei_ < x.dom_*wei_; }
     inline void operator=( MinDomainOverWeight& x ) { dom_ = x.dom_; wei_ = x.wei_; }
-    inline void operator=( Variable x ) { dom_ = x.get_size(); wei_ = weight[x.id()]; }
+    inline void operator=( Variable x ) { 
+      dom_ = x.get_size(); wei_ = weight[x.id()]; 
+      std::cout << x << ": " << dom_ << "/" << wei_ << std::endl;
+    }
     //@}  
 
     std::ostream& display(std::ostream& os) {

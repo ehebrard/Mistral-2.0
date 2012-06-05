@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
   if(s.depth_first_search(X, 
 			  new GenericHeuristic< 
 			    GenericWeightedDVO< 
-			      //FailureCountManager, 
-			      PruningCountManager, 
+			      FailureCountManager, 
+			      //PruningCountManager, 
 			      MinDomainOverWeight >,
 			    //GenericDVO< MinDomainOverDegree >,			    
 			    MinValue >(&s), 

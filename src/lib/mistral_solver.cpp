@@ -2175,6 +2175,9 @@ bool Mistral::Solver::propagate()
     return true;
   } else {
     ++statistics.num_failures;
+
+    std::cout << "solver: notify failure" << std::endl;
+
     notify_failure();
     return false;
   }
