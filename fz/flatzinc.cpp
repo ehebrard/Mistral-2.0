@@ -440,24 +440,24 @@ namespace FlatZinc {
 
     switch(result) {
     case UNKNOWN: {
-    	out << "c" <<  setw(5) << setfill('=') << '='
+    	out << "c " <<  setw(5) << setfill('=') << '='
           << "UNKNOWN" << setw(5) << '=' << "\n";
       break;
     }
     case SAT: {
     //  print(out, p);
-      out << "c" <<  setw(5) << setfill('=') << '='
+      out << "c " <<  setw(5) << setfill('=') << '='
           << "SAT" << setw(5) << '=' << "\n";
       break;
     }
     case UNSAT: {
-    	out << "c" <<  setw(5) << setfill('=') << '='
+    	out << "c " <<  setw(5) << setfill('=') << '='
           << "UNSAT" << setw(5) << '=' << "\n";
       break;
     }
     case OPT: {
      // print(out, p);
-      out << "c" << setw(5) << setfill('=') << '='
+      out << "c " << setw(5) << setfill('=') << '='
           << "OPTIMAL" << setw(5) << '=' << "\n";
       break;
     }

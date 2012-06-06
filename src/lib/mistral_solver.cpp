@@ -1080,7 +1080,7 @@ Mistral::Outcome Mistral::Solver::search() {
     // case UNSAT: std::cout << " s  UNSATISFIABLE" << std::endl; break;
     // case OPT: std::cout << " s  OPTIMAL" << std::endl; break;
     // }
-    std::cout << statistics << std::endl;
+    std::cout << statistics;
   }
 
   return satisfiability;
