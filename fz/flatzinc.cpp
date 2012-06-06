@@ -445,7 +445,11 @@ namespace FlatZinc {
       break;
     }
     case SAT: {
+<<<<<<< HEAD
     //  print(out, p);
+=======
+      print(out, p);
+>>>>>>> ffd71e59226001e7562706ef0cac2e1a5415502d
       out << "c" <<  setw(5) << setfill('=') << '='
           << "SAT" << setw(5) << '=' << "\n";
       break;
@@ -456,7 +460,11 @@ namespace FlatZinc {
       break;
     }
     case OPT: {
+<<<<<<< HEAD
 //      print(out, p);
+=======
+      print(out, p);
+>>>>>>> ffd71e59226001e7562706ef0cac2e1a5415502d
       out << "c" << setw(5) << setfill('=') << '='
           << "OPTIMAL" << setw(5) << '=' << "\n";
       break;
