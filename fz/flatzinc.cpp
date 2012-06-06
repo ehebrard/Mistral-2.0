@@ -368,7 +368,7 @@ namespace FlatZinc {
 
 
 #ifdef _DEBUG_FLATZINC
-    std::cout << "run!" << std::endl;
+    std::cout << "c run!" << std::endl;
     //std::cout << "first " << solver << std::endl;
 #endif
 
@@ -381,7 +381,7 @@ namespace FlatZinc {
     solver.consolidate();
     
 #ifdef _DEBUG_FLATZINC
-    std::cout << "mistral representation:\n " << solver << std::endl;
+   // std::cout << "c mistral representation:\n " << solver << std::endl;
 #endif
 
     Outcome result = UNKNOWN;
@@ -393,7 +393,7 @@ namespace FlatZinc {
     case MINIMIZATION: {
 
 #ifdef _DEBUG_FLATZINC
-      std::cout << "Minimize " << iv[_optVar].get_var() << std::endl;
+      std::cout << "c Minimize " << iv[_optVar].get_var() << std::endl;
 
 #ifdef _MONITOR
 
@@ -420,7 +420,7 @@ namespace FlatZinc {
     case MAXIMIZATION: {
 
 #ifdef _DEBUG_FLATZINC
-      std::cout << "Maximize " << iv[_optVar].get_var() << std::endl;
+      std::cout << "c Maximize " << iv[_optVar].get_var() << std::endl;
 #endif
 
       result = solver.maximize(iv[_optVar]);
@@ -429,7 +429,7 @@ namespace FlatZinc {
     case SATISFACTION: {
 
 #ifdef _DEBUG_FLATZINC
-      std::cout << "Solve " << std::endl;
+      std::cout << "c Solve " << std::endl;
 #endif
 
       result = solver.solve();
@@ -440,24 +440,24 @@ namespace FlatZinc {
 
     switch(result) {
     case UNKNOWN: {
-      out << setw(5) << setfill('=') << '='
+    	out << "c" <<  setw(5) << setfill('=') << '='
           << "UNKNOWN" << setw(5) << '=' << "\n";
       break;
     }
     case SAT: {
       print(out, p);
-      out << setw(5) << setfill('=') << '='
+      out << "c" <<  setw(5) << setfill('=') << '='
           << "SAT" << setw(5) << '=' << "\n";
       break;
     }
     case UNSAT: {
-      out << setw(5) << setfill('=') << '='
+    	out << "c" <<  setw(5) << setfill('=') << '='
           << "UNSAT" << setw(5) << '=' << "\n";
       break;
     }
     case OPT: {
       print(out, p);
-      out << setw(5) << setfill('=') << '='
+      out << "c" << setw(5) << setfill('=') << '='
           << "OPTIMAL" << setw(5) << '=' << "\n";
       break;
     }

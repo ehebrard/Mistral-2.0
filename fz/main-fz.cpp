@@ -11,7 +11,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 
-  cout << "Mistral-fzn" << endl;
+  cout << "c Mistral-fzn" << endl;
 
   list<string> args(argv+1, argv+argc);
 
