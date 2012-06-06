@@ -4117,8 +4117,8 @@ Mistral::Goal::Goal(method t, Variable X) : type(t) {
 
   // std::cout << "OBJECTIVE=" << objective << " in " << objective.get_domain() << std::endl;
 
-  lower_bound = objective.get_min()-1;
-  upper_bound = objective.get_max()+1;
+  lower_bound = objective.get_min()-1; //(type == MAXIMIZATION);
+  upper_bound = objective.get_max()+1; //(type == MINIMIZATION);
 }
 
 Mistral::Goal::~Goal() {}
@@ -4160,7 +4160,9 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
     //std::cout << upper_bound << ")" << std::endl;
     
     //std::cout << objective << " in " << objective.get_domain() << std::endl;
+    
     if(!solver->level) lower_bound = upper_bound;
+
     if(upper_bound == lower_bound) return OPT;
 
 

@@ -1,4 +1,4 @@
-
+ 
 /*
   Mistral 2.0 is a constraint satisfaction and optimisation library
   Copyright (C) 2009  Emmanuel Hebrard

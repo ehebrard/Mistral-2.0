@@ -1972,7 +1972,7 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 bool Mistral::Solver::propagate() 
 {
 
-  bool fix_point =  (active_variables.empty() && active_constraints.empty());
+  bool fix_point;
   int trig, cons;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
@@ -1984,6 +1984,9 @@ bool Mistral::Solver::propagate()
   // TODO, we shouldn't have to do that
   if(objective && objective->enforce())
     wiped_idx = objective->objective.id();
+
+  fix_point =  (active_variables.empty() && active_constraints.empty());
+
 
 #ifdef _DEBUG_AC
   int iteration = 0;
@@ -2019,6 +2022,7 @@ bool Mistral::Solver::propagate()
 	std::cout << " because of " << var_evt.third ;
       std::cout << ". var stack: " << active_variables << std::endl;
 #endif      
+
 
 
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
@@ -2176,7 +2180,7 @@ bool Mistral::Solver::propagate()
   } else {
     ++statistics.num_failures;
 
-    std::cout << "solver: notify failure" << std::endl;
+    //std::cout << "solver: notify failure" << std::endl;
 
     notify_failure();
     return false;
@@ -2815,7 +2819,9 @@ void Mistral::Solver::branch_left() {
   ++statistics.num_solutions;
 
   /// notify the objective and return the outcome
-  return objective->notify_solution(this);
+  Outcome result = objective->notify_solution(this);
+  
+  return result;
   
   //return SAT;
 }
@@ -2862,9 +2868,6 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
   int status = UNKNOWN;
   while(status == UNKNOWN) {
 
-// #ifdef _DEBUG_SEARCH
-//     std::cout << sequence << std::endl;
-// #endif
 
     if(propagate()) {
 

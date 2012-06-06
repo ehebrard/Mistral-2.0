@@ -230,7 +230,7 @@ namespace Mistral {
       // }
 
 
-      std::cout << "increment weight of ";
+      //std::cout << "increment weight of ";
 
       Constraint con = solver->culprit;
       if(!con.empty()) {
@@ -242,14 +242,14 @@ namespace Mistral {
 	  idx = scope[i].id();
 	  if(idx>=0) {
 
-	    std::cout << scope[idx] << " ";
+	    //std::cout << scope[idx] << " ";
 
 	    ++variable_weight[idx];
 	  }
 	}
       }
 
-      std::cout << std::endl;
+      //std::cout << std::endl;
 
     }
 
@@ -320,18 +320,18 @@ namespace Mistral {
       // }
 
 
-      std::cout << "increment weight of ";
+      //std::cout << "increment weight of ";
       while(++i<n) {
 	
 	id = solver->saved_vars[i]; //.id();
 
-	std::cout << solver->variables[solver->saved_vars[i]] << " ";
+	//std::cout << solver->variables[solver->saved_vars[i]] << " ";
 	
 	//if(id != last_decision) 
 	++variable_weight[id];
       }
       
-      std::cout << std::endl;
+      //std::cout << std::endl;
     }
   };
 
@@ -895,7 +895,7 @@ namespace Mistral {
     inline void operator=( MinDomainOverWeight& x ) { dom_ = x.dom_; wei_ = x.wei_; }
     inline void operator=( Variable x ) { 
       dom_ = x.get_size(); wei_ = weight[x.id()]; 
-      std::cout << x << ": " << dom_ << "/" << wei_ << std::endl;
+      //std::cout << x << ": " << dom_ << "/" << wei_ << std::endl;
     }
     //@}  
 

@@ -386,7 +386,7 @@ namespace FlatZinc {
 
     Outcome result = UNKNOWN;
 
-    solver.parameters.verbosity = 0;
+    solver.parameters.verbosity = 1;
 
 
     switch (_method) {
@@ -394,6 +394,24 @@ namespace FlatZinc {
 
 #ifdef _DEBUG_FLATZINC
       std::cout << "Minimize " << iv[_optVar].get_var() << std::endl;
+
+#ifdef _MONITOR
+
+      Variable X = iv[_optVar].get_var();
+
+      solver.monitor_list << "objective: " ;
+
+      solver.monitor_list << X ;
+
+      // solver.monitor_list << "\nvars: ";
+
+      // for(int h=0; h<solver.variables.size; ++h)
+      //   solver.monitor_list << solver.variables[h] ;
+
+      solver.monitor_list << "\n";
+
+#endif
+
 #endif
 
       result = solver.minimize(iv[_optVar]);
