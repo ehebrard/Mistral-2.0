@@ -259,6 +259,8 @@ namespace Mistral {
       int i, j, k, l;
       WORD_TYPE w;
 
+      //std::cout << prev_lb << " -> " << lb << ".." << ub << " <- " << prev_ub << std::endl;
+
       if(prev_lb < lb || prev_ub > ub) {
 	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
 	i = (lb >> BitSet::EXP);
@@ -268,16 +270,30 @@ namespace Mistral {
 	// std::cout << "change table[" << j << ":" << i << "]" << std::endl;
 	// std::cout << "change table[" << l << ":" << k << "]" << std::endl;
 
-	while( j ++< i ) {
-	  *(++delta_[j-1]) = BitSet::empt;
-	  domain.values.table[j-1] = BitSet::empt;
-	  *(++level_[j-1]) = level;
+	while( j < i ) {
+
+	  // std::cout << "set table[" << (j) << "] = ";
+	  // print_bitset(domain.values.table[j], (j), std::cout);
+	  // std::cout << " to void" << std::endl ;
+
+	  *(++delta_[j]) = BitSet::empt;
+	  domain.values.table[j] = BitSet::empt;
+	  *(++level_[j]) = level;
+
+	  ++j;
 	}
 	
-	while( k --> l ) {
+	while( k > l ) {
+
+	  // std::cout << "set table[" << k << "] = ";
+	  // print_bitset(domain.values.table[k], k, std::cout);
+	  // std::cout << " to void" << std::endl ;
+
 	  *(++delta_[k]) = BitSet::empt;
 	  domain.values.table[k] = BitSet::empt;
 	  *(++level_[k]) = level;
+
+	  --k;
 	}
 
 	if(i == l) {
@@ -310,7 +326,7 @@ namespace Mistral {
 	  if(prev_ub > ub) {
 	    w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
 
-	  // std::cout << "change " ;
+	  //   std::cout << "change "  ;
 	  // print_bitset(domain.values.table[l], l, std::cout);
 	  // std::cout << " to " ;
 	  // print_bitset(w, l, std::cout);
@@ -334,7 +350,7 @@ namespace Mistral {
       trail_.add(level);
 
 
-      // std::cout << domain << std::endl << std::endl;
+      // std::cout << domain << " " << domain.values << std::endl << std::endl;
 
     }
 
@@ -996,7 +1012,6 @@ namespace Mistral {
 
     // set the history of X to match self
     void set_history(VariableBitmap *X) {
-      //std::cout << "HISTORY: " << trail_ << std::endl;
 
       for(unsigned int i = 3; i<trail_.size; i+=3) {
 	//if(trail_[i] != trail_[i-3] || trail_[i+1] != trail_[i-2])
@@ -1011,7 +1026,7 @@ namespace Mistral {
       // if(id == 35) {
 
 
-      // 	std::cout << X->get_history() << std::endl;
+      //std::cout << X->get_history() << std::endl;
 
       // 	exit(1);
       // }
@@ -2345,6 +2360,7 @@ namespace Mistral {
 
     virtual std::ostream& display(std::ostream& os) const;
 
+    int value() const;
     bool enforce();
     Outcome notify_solution(Solver *solver);
     Outcome notify_exhausted();

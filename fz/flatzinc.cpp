@@ -392,9 +392,8 @@ namespace FlatZinc {
     switch (_method) {
     case MINIMIZATION: {
 
-#ifdef _DEBUG_FLATZINC
-      std::cout << "Minimize " << iv[_optVar].get_var() << std::endl;
-
+      //#ifdef _DEBUG_FLATZINC
+      std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
 #ifdef _MONITOR
 
       Variable X = iv[_optVar].get_var();
@@ -403,34 +402,59 @@ namespace FlatZinc {
 
       solver.monitor_list << X ;
 
-      // solver.monitor_list << "\nvars: ";
+      solver.monitor_list << "\nx16: ";
 
-      // for(int h=0; h<solver.variables.size; ++h)
-      //   solver.monitor_list << solver.variables[h] ;
+      solver.monitor_list << solver.variables[16] ;
+      
+      solver.monitor_list << "\nruler: ";
 
+      for(int i=28; i<36; ++i)
+        {
+          solver.monitor_list << solver.variables[i] ;
+          solver.monitor_list << " " ;
+        }
+
+
+      // solver.monitor_list << "\nx16: ";
+
+      // solver.monitor_list << solver.variables[16] ;
+      
+      solver.monitor_list << "\n";
+
+      for(int i=0; i<28; ++i)
+        {
+          solver.monitor_list << solver.variables[i] ;
+          solver.monitor_list << " " ;
+        }
+
+
+      // solver.monitor_list << "\nx16: ";
+
+      // solver.monitor_list << solver.variables[16] ;
+      
       solver.monitor_list << "\n";
 
 #endif
 
-#endif
+      //#endif
 
       result = solver.minimize(iv[_optVar]);
       break;
     } 
     case MAXIMIZATION: {
 
-#ifdef _DEBUG_FLATZINC
-      std::cout << "Maximize " << iv[_optVar].get_var() << std::endl;
-#endif
+      //#ifdef _DEBUG_FLATZINC
+      std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
+      //#endif
 
       result = solver.maximize(iv[_optVar]);
       break;
     }
     case SATISFACTION: {
 
-#ifdef _DEBUG_FLATZINC
-      std::cout << "Solve " << std::endl;
-#endif
+      //#ifdef _DEBUG_FLATZINC
+      std::cout << " c Solve " << std::endl;
+      //#endif
 
       result = solver.solve();
       break;
@@ -438,30 +462,34 @@ namespace FlatZinc {
     }
 
 
-    switch(result) {
-    case UNKNOWN: {
-      out << setw(5) << setfill('=') << '='
-          << "UNKNOWN" << setw(5) << '=' << "\n";
-      break;
-    }
-    case SAT: {
-      print(out, p);
-      out << setw(5) << setfill('=') << '='
-          << "SAT" << setw(5) << '=' << "\n";
-      break;
-    }
-    case UNSAT: {
-      out << setw(5) << setfill('=') << '='
-          << "UNSAT" << setw(5) << '=' << "\n";
-      break;
-    }
-    case OPT: {
-      print(out, p);
-      out << setw(5) << setfill('=') << '='
-          << "OPTIMAL" << setw(5) << '=' << "\n";
-      break;
-    }
-    }
+    std::cout << solver.statistics << std::endl;
+
+
+
+    // switch(result) {
+    // case UNKNOWN: {
+    //   out << "c" << setw(5) << setfill('=') << '='
+    //       << "UNKNOWN" << setw(5) << '=' << "\n";
+    //   break;
+    // }
+    // case SAT: {
+    //   print(out, p);
+    //   out << "c" << setw(5) << setfill('=') << '='
+    //       << "SAT" << setw(5) << '=' << "\n";
+    //   break;
+    // }
+    // case UNSAT: {
+    //   out << "c" << setw(5) << setfill('=') << '='
+    //       << "UNSAT" << setw(5) << '=' << "\n";
+    //   break;
+    // }
+    // case OPT: {
+    //   print(out, p);
+    //   out << "c" << setw(5) << setfill('=') << '='
+    //       << "OPTIMAL" << setw(5) << '=' << "\n";
+    //   break;
+    // }
+    // }
 
 
 

@@ -157,7 +157,9 @@ namespace Mistral {
     unsigned long int num_filterings;
     /// Search outcome
     Outcome outcome;
-    
+    /// Objective value (ub for minimization, lb for maximization, -1 otherwise)
+    long int objective_value;
+
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_variables; 
     /// Number of nodes, that is recursive calls to  the dfs algo

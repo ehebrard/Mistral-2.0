@@ -196,7 +196,7 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
       //       os << "y" << id;
       //     } 
     else if(domain_type ==   RANGE_VAR) {
-      os << "x" << id;
+      os << "r" << id;
     }
       //     } else if(domain_type == VIRTUAL_VAR) {
       //       return ((VariableVirtual *)implementation)->display(os);
@@ -1096,7 +1096,7 @@ int Mistral::Variable::get_min_pos() const {
       // 1 [1, inf[
       // 2 [2, inf[
       // 3 [2, inf[
-      evt =(lo==1 ? setValue(2) : (lo>1 ? FAIL_EVENT : NO_EVENT));
+      evt = (lo==1 ? setValue(2) : (lo>1 ? FAIL_EVENT : NO_EVENT));
 
 //       int dom = *bool_domain;
 //       evt = (lo<=(!(dom&1)) ? NO_EVENT : (lo>(dom>>1) ? FAIL_EVENT : setValue(2)));
@@ -4129,6 +4129,16 @@ bool Mistral::Goal::enforce() {
   } else if(type == MAXIMIZATION) {
     return IS_FAIL(objective.set_min(lower_bound+1));
   }
+  return false;
+}
+
+
+int Mistral::Goal::value() const {
+  if(type == MINIMIZATION) {
+    return upper_bound;
+  } else if(type == MAXIMIZATION) {
+    return lower_bound;
+  } else return -1;
   return false;
 }
     

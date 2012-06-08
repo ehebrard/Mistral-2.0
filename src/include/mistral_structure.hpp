@@ -438,6 +438,13 @@ template < int N, class T >
 
       std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
       std::fill(index_, index_+capacity, -1);
+
+
+
+      // std::cout << "CREATE " << std::endl;
+      // for(int i=0; i<capacity; ++i)
+      //  	std::cout << index_[i] << " ";
+      // std::cout << std::endl;
     }
 
 
@@ -454,7 +461,7 @@ template < int N, class T >
 
       int* new_index = (int*) malloc((capacity+increment)*sizeof(int));
       for(unsigned int i=0; i<capacity; ++i) {
-	new_index[i] = (index_[i]+capacity-start)%capacity;
+	new_index[i] = (index_[i]>=0 ? (index_[i]+capacity-start)%capacity : -1);
       }
       // for(int i=start; i<capacity; ++i) {
       // 	new_index[i] = index_[i]-start;
@@ -475,6 +482,12 @@ template < int N, class T >
 
       capacity += increment;
       start = 0;
+
+      // std::cout << "EXTEND" << std::endl;
+      // for(int i=0; i<capacity; ++i)
+      //  	std::cout << index_[i] << " ";
+      // std::cout << std::endl;
+
     }
 
     void declare( const int x ) {
@@ -493,6 +506,9 @@ template < int N, class T >
   
     inline void push_back(T x)
     {
+
+      //if((int)x == 355) std::cout << "PUSH B x355" << std::endl; 
+
       int idx = (start+(size++))%capacity;
       stack_[idx] = x;
       index_[(int)x] = idx;
@@ -500,6 +516,9 @@ template < int N, class T >
 
     inline void push_front(T x)
     {
+
+      //if((int)x == 355) std::cout << "PUSH F x355" << std::endl; 
+
       ++size;
       start = ((start+capacity-1)%capacity);
       stack_[start] = x;
@@ -508,6 +527,14 @@ template < int N, class T >
     }
 
     inline bool contain(const int x) {
+
+      // if(x == 355) {
+
+      // 	std::cout << "contain 355? " << index_[x] << std::endl;
+
+      // }
+
+
       return index_[x] >= 0;
 
       //return (int)(stack_[index_[x]]) == x;

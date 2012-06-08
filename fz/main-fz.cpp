@@ -11,12 +11,12 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 
-  cout << "Mistral-fzn" << endl;
+  cout << " c Mistral-fzn" << endl;
 
   list<string> args(argv+1, argv+argc);
 
   if(args.empty()) {
-    cout << "usage: minicsp-fz [options] input.fzn";
+    cout << "usage: mistral-fz [options] input.fzn";
     return 1;
   }
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
   double parse_time = get_run_time() - cpu_time;
 
 
-  //std::cout << s << std::endl;
+  std::cout << args.back() << std::endl;
 
   fm->run(cout , p);
   delete fm;
