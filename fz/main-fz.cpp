@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
   double parse_time = get_run_time() - cpu_time;
 
 
-  std::cout << args.back() << std::endl;
+  //std::cout << args.back() << std::endl;
 
   fm->run(cout , p);
   delete fm;

@@ -368,7 +368,7 @@ namespace FlatZinc {
 
 
 #ifdef _DEBUG_FLATZINC
-    std::cout << "run!" << std::endl;
+    std::cout << " c run!" << std::endl;
     //std::cout << "first " << solver << std::endl;
 #endif
 
@@ -381,7 +381,7 @@ namespace FlatZinc {
     solver.consolidate();
     
 #ifdef _DEBUG_FLATZINC
-    std::cout << "mistral representation:\n " << solver << std::endl;
+   // std::cout << "c mistral representation:\n " << solver << std::endl;
 #endif
 
     Outcome result = UNKNOWN;
@@ -392,69 +392,27 @@ namespace FlatZinc {
     switch (_method) {
     case MINIMIZATION: {
 
-      //#ifdef _DEBUG_FLATZINC
+#ifdef _DEBUG_FLATZINC
       std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
-#ifdef _MONITOR
-
-      Variable X = iv[_optVar].get_var();
-
-      solver.monitor_list << "objective: " ;
-
-      solver.monitor_list << X ;
-
-      solver.monitor_list << "\nx16: ";
-
-      solver.monitor_list << solver.variables[16] ;
-      
-      solver.monitor_list << "\nruler: ";
-
-      for(int i=28; i<36; ++i)
-        {
-          solver.monitor_list << solver.variables[i] ;
-          solver.monitor_list << " " ;
-        }
-
-
-      // solver.monitor_list << "\nx16: ";
-
-      // solver.monitor_list << solver.variables[16] ;
-      
-      solver.monitor_list << "\n";
-
-      for(int i=0; i<28; ++i)
-        {
-          solver.monitor_list << solver.variables[i] ;
-          solver.monitor_list << " " ;
-        }
-
-
-      // solver.monitor_list << "\nx16: ";
-
-      // solver.monitor_list << solver.variables[16] ;
-      
-      solver.monitor_list << "\n";
-
 #endif
-
-      //#endif
 
       result = solver.minimize(iv[_optVar]);
       break;
     } 
     case MAXIMIZATION: {
 
-      //#ifdef _DEBUG_FLATZINC
+#ifdef _DEBUG_FLATZINC
       std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
-      //#endif
+#endif
 
       result = solver.maximize(iv[_optVar]);
       break;
     }
     case SATISFACTION: {
 
-      //#ifdef _DEBUG_FLATZINC
+#ifdef _DEBUG_FLATZINC
       std::cout << " c Solve " << std::endl;
-      //#endif
+#endif
 
       result = solver.solve();
       break;
@@ -463,7 +421,6 @@ namespace FlatZinc {
 
 
     std::cout << solver.statistics << std::endl;
-
 
 
     // switch(result) {
@@ -490,7 +447,6 @@ namespace FlatZinc {
     //   break;
     // }
     // }
-
 
 
     // if(solver.statistics.num_solutions) {

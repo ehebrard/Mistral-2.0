@@ -1720,7 +1720,7 @@ yydestruct (yymsg, yytype, yyvaluep, parm)
 	break;
     }
 }
-
+
 
 /* Prevent warnings from -Wmissing-prototypes.  */
 
@@ -3459,6 +3459,5 @@ yyreturn:
   /* Make sure YYID is used.  */
   return YYID (yyresult);
 }
-
 
 
