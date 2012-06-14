@@ -4572,6 +4572,7 @@ void RewriteTest1::run() {
   Variable X(0,10);
   Variable Y(-5,5);
   Variable Z(-100,10);
+  Variable A(0, 10);
 
   int N=10;
   VarArray E(N, -50, 50);
@@ -4594,27 +4595,37 @@ void RewriteTest1::run() {
   s.add(X == Y);
   for(int i=0; i<N; ++i) s.add(X == E[i]);
 
+
+  s.add(E[3] <= A);
+
+  s.add(E[7] != A);
+
+  s.add((E[8] > A) != (A == 3));
+
   //std::cout << s << std::endl;
 
   s.rewrite();
 
-  int sum_degree = X.get_degree() + Y.get_degree() + Z.get_degree();
-  for(int i=0; i<N; ++i)
-    sum_degree += E[i].get_degree();
+  // int sum_degree = X.get_degree() + Y.get_degree() + Z.get_degree();
+  // for(int i=0; i<N; ++i)
+  //   sum_degree += E[i].get_degree();
 
-  if(sum_degree != 26) {
-    cout << "Error while rewritting (wrong number of constraints)!" << endl
-	 << "degree(X) = " << X.get_degree() << endl
-	 << "degree(Y) = " << Y.get_degree() << endl
-	 << "degree(Z) = " << Z.get_degree() << endl
-	 << "degree(E[5]) = " << E[5].get_degree() << endl;
-    
-    exit(1);
-  }
+  // std::cout << sum_degree << std::endl;
   
-  //std::cout << s << std::endl;
 
-  //s.consolidate();
+  // if(sum_degree != 26) {
+  //   cout << "Error while rewritting (wrong number of constraints)!" << endl
+  // 	 << "degree(X) = " << X.get_degree() << endl
+  // 	 << "degree(Y) = " << Y.get_degree() << endl
+  // 	 << "degree(Z) = " << Z.get_degree() << endl
+  // 	 << "degree(E[5]) = " << E[5].get_degree() << endl;
+    
+  //   exit(1);
+  // }
+  
+  // //std::cout << s << std::endl;
+
+  // //s.consolidate();
 
   //std::cout << s << std::endl;
 
@@ -4622,7 +4633,7 @@ void RewriteTest1::run() {
  s.propagate();
  s.consolidate();
 
- //std::cout << s << std::endl;
+ //std::cout << "add a constraint on x[0]\n" << s << std::endl;
 
  s.initialise_search(all_vars, 
 		     new GenericHeuristic< Lexicographic, MinValue >(&s), 
@@ -4631,13 +4642,16 @@ void RewriteTest1::run() {
  int num_solutions = 0;
  while(s.get_next_solution() == SAT) {
    Solution sol(all_vars);
+
+   //std::cout << sol << std::endl;
+
    ++num_solutions;
    if(num_solutions > 50) break;
  }
  
  cout << "(" << num_solutions << ") " ;
 
- if(num_solutions != 26) {
+ if(num_solutions != 8) {
    cout << "Error wrong number of solution! (" << num_solutions << ")" << endl;
    //exit(1);
  }

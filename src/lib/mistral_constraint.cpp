@@ -27,6 +27,8 @@
 
 //#define _DEBUG_GENPROPAG true
 //#define _DEBUG_MUL true
+//#define _DEBUG_MAX (id==288)
+//#define _DEBUG_REWRITE true
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -155,7 +157,7 @@ void Mistral::ConstraintImplementation::trigger_on(const int t, Variable x) {
     // 	    << (int*)(&(solver->constraint_graph[x.id()].on[t])) << std::endl;
     
     
-    on.add(&(((Solver*)solver)->constraint_graph[x.id()].on[t]));
+    on.add(&(get_solver()->constraint_graph[x.id()].on[t]));
   } else {
     on.add(NULL);
   }
@@ -169,13 +171,13 @@ bool Mistral::ConstraintImplementation::is_triggered_on(const int i, const int t
   // std::cout << (*this) << " " << t << std::endl;
 
   // std::cout << (int*)(on[i]) << " >=? "
-  // 	    << (int*)(&(((Solver*)solver)->constraint_graph[_scope[i].id()].on[t])) 
-  // 	    << (on[i] >= &(((Solver*)solver)->constraint_graph[_scope[i].id()].on[t]) ? " yes" : " no") << std::endl;
+  // 	    << (int*)(&(get_solver()->constraint_graph[_scope[i].id()].on[t])) 
+  // 	    << (on[i] >= &(get_solver()->constraint_graph[_scope[i].id()].on[t]) ? " yes" : " no") << std::endl;
 
   
 
 
-  return( on[i] >= &(((Solver*)solver)->constraint_graph[_scope[i].id()].on[t]) );
+  return( on[i] >= &(get_solver()->constraint_graph[_scope[i].id()].on[t]) );
 }
 
 
@@ -184,7 +186,7 @@ bool Mistral::ConstraintImplementation::is_triggered_on(const int i, const int t
 // }
 
 // Mistral::Decision Mistral::ConstraintImplementation::get_decision() { 
-//   Decision dec = ((Solver*)solver)->decisions.back(0); 
+//   Decision dec = get_solver()->decisions.back(0); 
 //   dec.invert();
 //   return dec;
 // }
@@ -213,7 +215,39 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
   //mark_domain();
 }
+
+int Mistral::ConstraintImplementation::get_trigger_type(const int i) {
+  return (int)(on[i] - &(get_solver()->constraint_graph[_scope[i].id()].on[0]));
+}
  
+void Mistral::ConstraintImplementation::set_scope(const int i, Variable x) {
+  // std::cout << "set scope[" << i << "] of ";
+  // display(std::cout);
+  // std::cout << " was " << _scope[i] << " now " << x << std::endl;
+
+  // std::cout << "previous trigger list: " << on[i] << " / " << (int)(on[i] - &get_solver()->constraint_graph[_scope[i].id()].on[0]) << std::endl; 
+
+
+
+  // std::cout << "trigger was: " << on[i] << " re-link to " ;
+
+  // std::cout << "\njjj: " << get_solver()->constraint_graph[x.id()].on[0] << std::endl;
+  // std::cout << "\njjj: " << get_solver()->constraint_graph[x.id()].on[1] << std::endl;
+  // std::cout << "\njjj: " << get_solver()->constraint_graph[x.id()].on[2] << std::endl;
+
+  // std::cout << get_trigger_type(i) << std::endl;
+
+  on[i] = &(get_solver()->constraint_graph[x.id()].on[get_trigger_type(i)]);
+
+
+  //std::cout << on[i] << std::endl;
+
+
+  _scope.stack_[i] = x;
+
+  // on[i] = 
+  // on.add(&(get_solver()->constraint_graph[x.id()].on[t]));
+}
 
 int Mistral::Trigger::post(Constraint ct) {
   add(ct);
@@ -721,9 +755,9 @@ bool Mistral::TernaryConstraint::find_bound_support(const int revise_idx, const 
 }
 
 
-void Mistral::BinaryConstraint::trigger()  { ((Solver*)solver)->active_constraints.trigger(this); }
-void Mistral::TernaryConstraint::trigger() { ((Solver*)solver)->active_constraints.trigger(this); }
-void Mistral::GlobalConstraint::trigger()  { ((Solver*)solver)->active_constraints.trigger(this); }
+void Mistral::BinaryConstraint::trigger()  { get_solver()->active_constraints.trigger(this); }
+void Mistral::TernaryConstraint::trigger() { get_solver()->active_constraints.trigger(this); }
+void Mistral::GlobalConstraint::trigger()  { get_solver()->active_constraints.trigger(this); }
 
 
 Mistral::GlobalConstraint::GlobalConstraint(Vector< Variable > scp) {
@@ -741,7 +775,7 @@ int Mistral::GlobalConstraint::get_backtrack_level() {
 }
 
 Mistral::Decision Mistral::GlobalConstraint::get_decision() { 
-  Decision dec = ((Solver*)solver)->decisions.back(0); 
+  Decision dec = get_solver()->decisions.back(0); 
   dec.invert();
   return dec;
 }
@@ -1137,7 +1171,7 @@ std::ostream& Mistral::ConstraintImplementation::display(std::ostream& os) const
 std::ostream& Mistral::GlobalConstraint::display(std::ostream& os) const {
   os << name() << "(" << scope[0];
   for(unsigned int i=1; i<scope.size; ++i)
-    os << ", " << scope[i];
+    os << ", " << scope[i].get_var();
   os << ")";
   return os;
 }
@@ -1157,6 +1191,52 @@ void Mistral::ConstraintNotEqual::mark_domain() {
   get_solver()->mark_non_convex(scope[0].id());
   get_solver()->mark_non_convex(scope[1].id());
 }
+
+Mistral::PropagationOutcome Mistral::ConstraintNotEqual::rewrite() {
+  RewritingOutcome r_evt = NO_EVENT; 
+
+  if(scope[0].is_ground() || scope[1].is_ground() || !(scope[0].intersect(scope[1]))) {
+
+#ifdef _DEBUG_REWRITE
+    std::cout << "    relax ";
+    display(std::cout);
+    std::cout << std::endl;
+#endif
+
+    r_evt = SUPPRESSED;
+    relax();
+  } else {
+
+    if( scope[0].get_min() == 0 && 
+	scope[1].get_min() == 0 &&
+	scope[0].get_max() == 1 && 
+	scope[1].get_max() == 1 &&
+	scope[0].is_expression() &&
+	scope[1].is_expression() ) {
+      
+      r_evt = SUPPRESSED;
+      
+#ifdef _DEBUG_REWRITE
+      std::cout << "    relax ";
+      display(std::cout);
+      std::cout << std::endl;
+#endif
+      
+      relax();
+      
+      Constraint con = Constraint( new PredicateNot(scope[0], scope[1]) );
+      
+#ifdef _DEBUG_REWRITE
+      std::cout << "    post " << con << std::endl;
+#endif
+
+      get_solver()->add( con );
+    }
+  }  
+
+  return r_evt;
+}
+
 
 Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
   PropagationOutcome wiped_idx = CONSISTENT;
@@ -1178,7 +1258,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate(const int cha
 }
 
 std::ostream& Mistral::ConstraintNotEqual::display(std::ostream& os) const {
-  os << scope[0] << " =/= " << scope[1];
+  os << scope[0].get_var() << " =/= " << scope[1].get_var();
   return os;
 }
 
@@ -1193,13 +1273,14 @@ void Mistral::ConstraintEqual::initialise() {
 
 Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
 
+// #ifdef _DEBUG_REWRITE
+//       std::cout << "REWRITE EQUALITY " ;
+//       display(std::cout);
+//       std::cout << std::endl;
+//       //std::cout << solver->variables << std::endl;
+// #endif
 
-      // std::cout << "REWRITE EQUALITY " ;
-      // display(std::cout);
-      // std::cout << std::endl;
-      // //std::cout << solver->variables << std::endl;
-
-  PropagationOutcome wiped = CONSISTENT; 
+  RewritingOutcome r_evt = SUPPRESSED; 
 
   //Mistral::PropagationOutcome wiped = propagate(); 
 
@@ -1212,43 +1293,76 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
   // // 	    << " = " << scope[1] << " in " << scope[1].get_domain() << std::endl;
 
 
-  // if( !scope[0].is_ground() && !scope[1].is_ground() ) {
-  //   if( scope[0].is_expression() && scope[1].is_expression() ) {
+  if( !scope[0].is_ground() && !scope[1].is_ground() ) {
+    if( scope[0].is_expression() && scope[1].is_expression() ) {
+
+// #ifdef _DEBUG_REWRITE
+//           std::cout << "ACTUALLY REWRITE " ;
+//           display(std::cout);
+//           std::cout << std::endl;
+//           // //std::cout << solver->variables << std::endl;
+// #endif 
+
+      relax();
+
+      int k[2], j;
+
+      k[0] = scope[0].id();
+      k[1] = scope[1].id();
+
+      j = get_solver()->constraint_graph[k[0]].size() > 
+   	get_solver()->constraint_graph[k[1]].size();
+      // j is 1 iff degree(x0) > degree(x1), 
+      // in that case we want to transfer x1's constraints on x0.
+      // x[j] <- x[1-j]
 
 
-  //     // std::cout << "ACTUALLY REWRITE " ;
-  //     // display(std::cout);
-  //     // std::cout << std::endl;
-  //     // // //std::cout << solver->variables << std::endl;
+      //std::cout << "k[j]=" << k[j] << std::endl;
+
+      get_solver()->remove(scope[j]);
+      //get_solver()->domain_types[k[j]] |= REMOVED_VAR;
+
+#ifdef _DEBUG_REWRITE
+      std::cout << "    relax constraints on " << scope[j].get_var() << " and post them on " << scope[1-j].get_var() << std::endl;
+#endif
+
+      Constraint con;
+      for(Event trig = 0; trig<3; ++trig) {
+	for(int i = get_solver()->constraint_graph[k[j]].on[trig].size; i--;) {
+	  //for(int t=0; t<3; ++t) {
+	  //for(int i=trigger[j]->on[t].size; --i;) {
+
+	  //con = trigger[j]->on[t][i];
 
 
-  //     relax();
+	  con = get_solver()->constraint_graph[k[j]].on[trig][i];
 
-  //     int k[2], j;
+#ifdef _DEBUG_REWRITE
+	  std::cout << "      relax " << con << std::endl;
+#endif
 
-  //     k[0] = scope[0].id();
-  //     k[1] = scope[1].id();
+	  con.relax();
+	  con.set_scope(con.index(), scope[1-j]);
 
-  //     j = solver->constraint_graph[k[0]]->degree > 
-  // 	solver->constraint_graph[k[1]]->degree;
-  //     // j is 1 iff degree(x0) > degree(x1), 
-  //     // in that case we want to transfer x1's constraints on x0.
-  //     // x[j] <- x[1-j]
+  	  //nscope.clear();
+  	  //trigger[j]->on[t][i].relax();
+  	  //VarArray nscope = trigger[j]->on[t][i].get_scope();
+  	  //nscope[trigger[j]->on[t][i].rank()] = scope[1-j];
 
-  //     solver->domain_types[k[j]] |= REMOVED_VAR;
+  	  get_solver()->add(con);
 
+#ifdef _DEBUG_REWRITE
+	  std::cout << "      post " << con  << std::endl;
+#endif
 
-  //     for(int t=0; t<3; ++t) {
-  //      	for(int i=trigger[j]->on[t].size; --i) {
+	  // std::cout << "trig[" << k[1-j] << "][0]: " << get_solver()->constraint_graph[k[1-j]].on[0] << std::endl;
+	  // std::cout << "trig[" << k[1-j] << "][1]: " << get_solver()->constraint_graph[k[1-j]].on[1] << std::endl;
+	  // std::cout << "trig[" << k[1-j] << "][2]: " << get_solver()->constraint_graph[k[1-j]].on[2] << std::endl;
 
-  // 	  nscope.clear();
-  // 	  trigger[j]->on[t][i].relax();
-  // 	  VarArray nscope = trigger[j]->on[t][i].get_scope();
-  // 	  nscope[trigger[j]->on[t][i].rank()] = scope[1-j];
-
-  // 	  solver->add()
-
-  //     }
+	  
+	  
+	}
+      }
 
   //     ConstraintNode nd;
   //     nd = solver->constraint_graph[k[j]]->first(_VALUE_);
@@ -1258,21 +1372,23 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
   // 	solver->add(nd.elt.constraint);
   //     }
       
-  //     //and now scope[j] points to scope[1-j]
-  //     scope[j].expression->self = scope[1-j];
-  //     scope[j].expression->id = scope[1-j].id();
+      //and now scope[j] points to scope[1-j]
+      scope[j].expression->self = scope[1-j];
+      scope[j].expression->id = scope[1-j].id();
 
-  //     // //std::cout << solver->variables << std::endl;
-  //     // std::cout << "EQUALITY REWRITEN " ;
-  //     // display(std::cout);
-  //     // std::cout << std::endl;
+// #ifdef _DEBUG_REWRITE
+//       //std::cout << solver->variables << std::endl;
+//       std::cout << "EQUALITY REWRITEN " ;
+//       display(std::cout);
+//       std::cout << std::endl;
+// #endif
 
-  //   } 
-  // } else {
-  //   relax();
-  // }
-
-  return wiped;
+    } 
+  } else {
+    relax();
+  }
+  
+  return r_evt;
 }
 
 
@@ -1294,7 +1410,7 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::propagate(const int change
 
 
 std::ostream& Mistral::ConstraintEqual::display(std::ostream& os) const {
-  os << scope[0] << " == " << scope[1];
+  os << (scope[0].get_var()) << " == " << (scope[1].get_var());
   return os;
 }
 
@@ -1302,6 +1418,10 @@ void Mistral::PredicateUpperBound::initialise() {
   ConstraintImplementation::initialise();
   trigger_on(_RANGE_, scope[0]);
   trigger_on(_VALUE_, scope[1]);
+}
+
+Mistral::Constraint Mistral::PredicateUpperBound::get_negation(const int var, Variable x) { 
+  return Constraint( new PredicateLowerBound( scope[0], x, bound-1 ) );
 }
 
 Mistral::PropagationOutcome Mistral::PredicateUpperBound::propagate() {      
@@ -1348,7 +1468,7 @@ Mistral::PropagationOutcome Mistral::PredicateUpperBound::propagate(const int ch
 }
 
 std::ostream& Mistral::PredicateUpperBound::display(std::ostream& os) const {
-  os << scope[1] << " <=> (" << scope[0] << " <= " << bound << ")";
+  os << scope[1].get_var() << " <=> (" << scope[0].get_var() << " <= " << bound << ")";
   return os;
 }
 
@@ -1404,7 +1524,7 @@ Mistral::PropagationOutcome Mistral::PredicateLowerBound::propagate(const int ch
 }
 
 std::ostream& Mistral::PredicateLowerBound::display(std::ostream& os) const {
-  os << scope[1] << " <=> (" << scope[0] << " >= " << bound << ")";
+  os << scope[1].get_var() << " <=> (" << scope[0].get_var() << " >= " << bound << ")";
   return os;
 }
 
@@ -1518,11 +1638,11 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate(const int changed_
 }
 
 std::ostream& Mistral::PredicateLess::display(std::ostream& os) const {
-  os << scope[2] << " <=> (" << scope[0] ;
+  os << scope[2].get_var() << " <=> (" << scope[0].get_var() ;
   if(offset==0) os << " <= ";
   else if(offset==1) os << " < ";
   else os << " + " << offset << " <= ";
-  os << scope[1] << ")";
+  os << scope[1].get_var() << ")";
   return os;
 }
 
@@ -1572,12 +1692,12 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate(const int changed
 }
 
 std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
-  os << scope[0];
+  os << scope[0].get_var();
   if(offset < 0) os << " - " << (-offset+1) << " < ";
   else if(offset > 1) os << " + " << (offset-1) << " < ";
   else if(offset > 0) os << " < ";
   else os << " <= ";
-  os << scope[1];
+  os << scope[1].get_var();
   return os;
 }
 
@@ -1976,13 +2096,13 @@ Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate(con
 std::ostream& Mistral::ConstraintReifiedDisjunctive::display(std::ostream& os) const {
   if(scope[2].is_ground()) {
     if(!scope[2].get_max()) {
-      os << scope[1] << " + " << processing_time[1] << " <= " << scope[0] ;
+      os << scope[1] << " + " << processing_time[1] << " <= " << scope[0].get_var() ;
     } else {
-      os << scope[0] << " + " << processing_time[0] << " <= " << scope[1] ;
+      os << scope[0] << " + " << processing_time[0] << " <= " << scope[1].get_var() ;
     }
   } else {
-    os << scope[0] << " + " << processing_time[0] << " <= " << scope[1] << " or " 
-       << scope[1] << " + " << processing_time[1] << " <= " << scope[0] ;
+    os << scope[0].get_var() << " + " << processing_time[0] << " <= " << scope[1].get_var() << " or " 
+       << scope[1].get_var() << " + " << processing_time[1] << " <= " << scope[0].get_var() ;
   }
   return os;
 }
@@ -2116,9 +2236,9 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed
 }
 
 std::ostream& Mistral::PredicateEqual::display(std::ostream& os) const {
-  os << scope[2] << " <=> (";
-  if(spin) os << scope[0] << " == " << scope[1];
-  else os << scope[0] << " =/= " << scope[1];
+  os << scope[2].get_var() << " <=> (";
+  if(spin) os << scope[0].get_var() << " == " << scope[1].get_var();
+  else os << scope[0].get_var() << " =/= " << scope[1].get_var();
   os << ")";
   return os;
 }
@@ -2175,9 +2295,9 @@ Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate(const int
 }
 
 std::ostream& Mistral::PredicateConstantEqual::display(std::ostream& os) const {
-  os << scope[1] << " <=> (";
-  if(spin) os << scope[0] << " == " << value;
-  else os << scope[0] << " =/= " << value;
+  os << scope[1].get_var() << " <=> (";
+  if(spin) os << scope[0].get_var() << " == " << value;
+  else os << scope[0].get_var() << " =/= " << value;
   os << ")";
   return os;
 }
@@ -2243,9 +2363,9 @@ Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate(const in
 }
 
 std::ostream& Mistral::PredicateIntervalMember::display(std::ostream& os) const {
-  os << scope[1] << " <=> (";
-  if(spin) os << scope[0] << " in [" << lower_bound << ".." << upper_bound << "]";
-  else os << scope[0] << " in ..]" << lower_bound << "," << upper_bound << "[..";
+  os << scope[1].get_var() << " <=> (";
+  if(spin) os << scope[0].get_var() << " in [" << lower_bound << ".." << upper_bound << "]";
+  else os << scope[0].get_var() << " in ..]" << lower_bound << "," << upper_bound << "[..";
   os << ")";
   return os;
 }
@@ -2306,7 +2426,7 @@ Mistral::PropagationOutcome Mistral::PredicateSetMember::propagate(const int cha
 }
 
 std::ostream& Mistral::PredicateSetMember::display(std::ostream& os) const {
-  os << scope[1] << " <=> (" << scope[0] ;
+  os << scope[1].get_var() << " <=> (" << scope[0].get_var() ;
   if(!spin) os << " not";
   os << " in " << values; 
   os << ")";
@@ -2346,7 +2466,7 @@ Mistral::PropagationOutcome Mistral::PredicateOffset::propagate(const int change
 }
 
 std::ostream& Mistral::PredicateOffset::display(std::ostream& os) const {
-  os << scope[1] << " == (" << scope[0] << " + " << offset << ")";
+  os << scope[1].get_var() << " == (" << scope[0].get_var() << " + " << offset << ")";
   return os;
 }
 
@@ -2416,7 +2536,7 @@ Mistral::PropagationOutcome Mistral::PredicateFactor::propagate(const int change
 }
 
 std::ostream& Mistral::PredicateFactor::display(std::ostream& os) const {
-  os << scope[1] << " == (" << scope[0] << " * " << factor << ")";
+  os << scope[1].get_var() << " == (" << scope[0].get_var() << " * " << factor << ")";
   return os;
 }
 
@@ -2426,6 +2546,78 @@ void Mistral::PredicateNot::initialise() {
   trigger_on(_VALUE_, scope[0]);
   trigger_on(_VALUE_, scope[1]);
 }
+
+
+Mistral::PropagationOutcome Mistral::PredicateNot::rewrite() {
+  RewritingOutcome r_evt = NO_EVENT; 
+
+  if(scope[0].is_ground() || scope[1].is_ground() ) {
+
+#ifdef _DEBUG_REWRITE
+    std::cout << "    relax ";
+    display(std::cout);
+    std::cout << std::endl;
+#endif
+
+    r_evt = SUPPRESSED;
+    relax();
+  } else {
+    
+    // find out if the constraints on x[0] can be negated
+
+    bool hold = true;
+    for(int var=0; hold && var<2; ++var) {
+
+      int idx = scope[var].id();
+      bool can_negate = true;
+      Constraint con;
+      for(Event trig = 0; can_negate && trig<3; ++trig) {
+	for(int i = get_solver()->constraint_graph[idx].on[trig].size; can_negate && i--;) {
+	  con = get_solver()->constraint_graph[idx].on[trig][i];
+	  can_negate &= con.absorb_negation(con.index());
+	}
+      }
+      
+      if(can_negate) {
+	
+	hold = false;
+
+	r_evt = SUPPRESSED;
+	
+#ifdef _DEBUG_REWRITE
+	std::cout << "    relax ";
+	display(std::cout);
+	std::cout << " and remove " << scope[var] << std::endl;
+#endif
+	
+	relax();
+	get_solver()->remove(scope[var]);
+	
+	for(Event trig = 0; trig<3; ++trig) {
+	  for(int i = get_solver()->constraint_graph[idx].on[trig].size; i--;) {
+	    con = get_solver()->constraint_graph[idx].on[trig][i];
+	    
+#ifdef _DEBUG_REWRITE
+	    std::cout << "      relax " << con << std::endl;
+#endif
+	    
+	    con.relax();
+	    con = Constraint(con.get_negation(con.index(), scope[1-var]));
+
+#ifdef _DEBUG_REWRITE
+	    std::cout << "      post " << con << std::endl;
+#endif
+
+	    get_solver()->add( con );
+	  }
+	}
+      }
+    }
+  }  
+
+  return r_evt;
+}
+
 
 Mistral::PropagationOutcome Mistral::PredicateNot::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
@@ -2450,25 +2642,32 @@ Mistral::PropagationOutcome Mistral::PredicateNot::propagate() {
 Mistral::PropagationOutcome Mistral::PredicateNot::propagate(const int changed_idx, const Event evt) {
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if( changed_idx ) {
-    if( LB_CHANGED(evt) ) { // x[0] == 0
-      if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
-    } else { //x[0] != 0
-      if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
-    } 
-  } else {
-    if( UB_CHANGED(evt) ) {
-      if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
-    } else {
-      if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
-    }
-  }
+  //  std::cout << std::endl << scope[0].get_domain() << " " << scope[1].get_domain() << std::endl; 
+
+  // if( changed_idx ) {
+  //   if( LB_CHANGED(evt) ) { // x[0] == 0
+  //     if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+  //   } else { //x[0] != 0
+  //     if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+  //   } 
+  // } else {
+  //   if( LB_CHANGED(evt) ) {
+  //     if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
+  //   } else {
+  //     if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
+  //   }
+  // }
+
+  if( IS_FAIL( scope[1-changed_idx].set_domain(UB_CHANGED(evt)) ) ) wiped = FAILURE(1-changed_idx);
+
+
+  //  std::cout << scope[0].get_domain() << " " << scope[1].get_domain() << std::endl << std::endl ; 
   
   return wiped;
 }
 
 std::ostream& Mistral::PredicateNot::display(std::ostream& os) const {
-  os << scope[1] << " <=> not(" << scope[0] << ")";
+  os << scope[1].get_var() << " <=> not(" << scope[0].get_var() << ")";
   return os;
 }
 
@@ -2525,7 +2724,7 @@ Mistral::PropagationOutcome Mistral::PredicateNeg::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateNeg::display(std::ostream& os) const {
-  os << scope[1] << " = -(" << scope[0] << ")";
+  os << scope[1].get_var() << " = -(" << scope[0].get_var() << ")";
   return os;
 }
 
@@ -2616,7 +2815,7 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateAnd::display(std::ostream& os) const {
-  os << scope[2] << " <=> (" << scope[0] << " and " << scope[1] << ")";
+  os << scope[2].get_var() << " <=> (" << scope[0].get_var() << " and " << scope[1].get_var() << ")";
   return os;
 }
 
@@ -2700,7 +2899,7 @@ Mistral::PropagationOutcome Mistral::PredicateOr::propagate() {
 }
 
 std::ostream& Mistral::PredicateOr::display(std::ostream& os) const {
-  os << scope[2] << " <=> (" << scope[0] << " or " << scope[1] << ")";
+  os << scope[2].get_var() << " <=> (" << scope[0].get_var() << " or " << scope[1].get_var() << ")";
   return os;
 }
 
@@ -2736,7 +2935,7 @@ Mistral::PropagationOutcome Mistral::ConstraintAnd::propagate(const int changed_
 }
 
 std::ostream& Mistral::ConstraintAnd::display(std::ostream& os) const {
-  os << "(" << scope[0] << " and " << scope[1] << ")";
+  os << "(" << scope[0].get_var() << " and " << scope[1].get_var() << ")";
   return os;
 }
 
@@ -2768,7 +2967,7 @@ Mistral::PropagationOutcome Mistral::ConstraintOr::propagate(const int changed_i
 }
 
 std::ostream& Mistral::ConstraintOr::display(std::ostream& os) const {
-  os << "(" << scope[0] << " or " << scope[1] << ")";
+  os << "(" << scope[0].get_var() << " or " << scope[1].get_var() << ")";
   return os;
 }
 
@@ -2938,7 +3137,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 }
 
 std::ostream& Mistral::ConstraintLex::display(std::ostream& os) const {
-  os << "(" << scope[0] << " lex " << scope[1] << " - " << scope[2] << "." << scope[3] << ")";
+  os << "(" << scope[0].get_var() << " lex " << scope[1].get_var() << " - " << scope[2].get_var() << "." << scope[3].get_var() << ")";
   return os;
 }
 
@@ -3156,7 +3355,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateAdd::display(std::ostream& os) const {
-  os << scope[2] << " == (" << scope[0] << " + " << scope[1] << ")";
+  os << scope[2].get_var() << " == (" << scope[0].get_var() << " + " << scope[1].get_var() << ")";
   return os;
 }
 
@@ -3702,7 +3901,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
 }
   
 std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
-  os << scope[2] << " == (" << scope[0] << " * " << scope[1] << ")";
+  os << scope[2].get_var() << " == (" << scope[0].get_var() << " * " << scope[1].get_var() << ")";
   return os;
 }
 
@@ -4532,9 +4731,9 @@ int Mistral::ConstraintBoolSumEqual::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintBoolSumEqual::display(std::ostream& os) const {
-  os << "(" << scope[0] ;
+  os << "(" << scope[0].get_var() ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << scope[i];
+    os << " + " << scope[i].get_var();
   os << ") == " << total ;
   return os;
 }
@@ -4587,9 +4786,9 @@ int Mistral::ConstraintBoolSumInterval::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintBoolSumInterval::display(std::ostream& os) const {
-  os << "(" << scope[0] ;
+  os << "(" << scope[0].get_var() ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << scope[i];
+    os << " + " << scope[i].get_var();
   os << ") in [" << lb << "," << ub << "]" ;
   return os;
 }
@@ -4669,9 +4868,9 @@ int Mistral::PredicateBoolSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateBoolSum::display(std::ostream& os) const {
-  os << "(" << scope[0] ;
+  os << "(" << scope[0].get_var() ;
   for(unsigned int i=1; i<scope.size-1; ++i) 
-    os << " + " << scope[i];
+    os << " + " << scope[i].get_var();
   os << ") = " << scope[scope.size-1];
   return os;
 }
@@ -5203,10 +5402,10 @@ int Mistral::PredicateWeightedSum::check( const int* s ) const
 std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
-  os << weight[0] << "*" << scope[0] ;
+  os << weight[0] << "*" << scope[0].get_var() ;
 
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << weight[i] << "*" << scope[i];
+    os << " + " << weight[i] << "*" << scope[i].get_var();
   
   if(upper_bound < INFTY) 
     os << " <= " << upper_bound;
@@ -5582,11 +5781,11 @@ int Mistral::PredicateElement::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateElement::display(std::ostream& os) const {
-  os << "(" << scope[0];
+  os << "(" << scope[0].get_var();
   for(unsigned int i=1; i<scope.size-2; ++i) {
-    os << " " << scope[i];
+    os << " " << scope[i].get_var();
   }
-  os << ")[" << scope.back(2) << "] == " << scope.back();
+  os << ")[" << scope.back(2).get_var() << "] == " << scope.back().get_var();
   return os;
 }
 
@@ -5737,9 +5936,9 @@ int Mistral::ConstraintCliqueNotEqual::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const {
-  os << "=/=(" << scope[0] ;
+  os << "=/=(" << scope[0].get_var() ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " ," << scope[i];
+    os << " ," << scope[i].get_var();
   os << ")" ; //<< events << " " << event_type;
   return os;
 }
@@ -6087,9 +6286,9 @@ int Mistral::ConstraintAllDiff::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
-  os << "alldiff(" << scope[0] ;
+  os << "alldiff(" << scope[0].get_var() ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " ," << scope[i];
+    os << " ," << scope[i].get_var();
   os << ")" ;
   return os;
 }
@@ -6141,7 +6340,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
   std::cout << std::endl << active << std::endl << candidates << std::endl;
+  }
 #endif
 
   if(candidates.size != 1) {
@@ -6149,7 +6350,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
       if(changes.contain(n)) { 
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
       std::cout << " " << scope[n] << " has changed " << std::endl;
+  }
 #endif
      
       changes.remove(n);
@@ -6162,7 +6365,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  var = candidates[i];
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	  std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " >= " << val << std::endl;
+  }
 #endif
 
 	  event_type[var] = scope[var].set_min(val);
@@ -6170,7 +6375,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  else if(!changes.contain(var)) {
 	    
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	    std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+  }
 #endif
 
 	    changes.add(var);
@@ -6179,8 +6386,10 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	      
 	      candidates.reversible_remove(var);
 	    
-#ifdef _DEBUG_MAX
+#ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	      std::cout << "    " << scope[var] << " can no longer be min" << std::endl;
+  }
 #endif
 	    }
 
@@ -6194,7 +6403,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	aux = val = scope[n].get_max();
 	
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	std::cout << " relax the constraint from vars greater than " << val << std::endl;
+  }
 #endif
 	
 	for(i=candidates.size; IS_OK(wiped) && i;) {
@@ -6206,7 +6417,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  if(scope[var].get_min() > val) {
 	    
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	    std::cout << "    relax1 " << this << " from " << scope[var] << std::endl;
+  }
 #endif 
 
 	    //relax_from(var);
@@ -6217,7 +6430,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	}
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() << " <= " << aux << std::endl;
+  }
 #endif
 
 	if(scope[n].set_max(aux) == FAIL_EVENT) wiped = FAILURE(n);	
@@ -6233,10 +6448,12 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	evt = changes.pop();
 	
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	std::cout << "-event on " << scope[evt] 
 		  << (LB_CHANGED(event_type[evt]) ? " (lb) " : " ")
 		  << (UB_CHANGED(event_type[evt]) ? "(ub) " : " ")
 		  << std::endl;
+  }
 #endif
 	
 	if(LB_CHANGED(event_type[evt]) 
@@ -6246,7 +6463,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  if(aux > scope[n].get_max()) {
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	    std::cout << "    relax2 " << this << " from " << scope[evt] << std::endl;
+  }
 #endif 
 
 	    //relax_from(evt);
@@ -6261,18 +6480,22 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
       }
       
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
       if(val < INFTY) 
 	std::cout << " New min maximum: " << val << std::endl;
       if(aux < INFTY) 
 	std::cout << " New min minimum: " << aux << std::endl;
+  }
 #endif
       
       
       if(val < INFTY) {
 	
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
 		  << " <= " << val << std::endl;
+  }
 #endif
 	
 	event_type[n] = scope[n].set_max(val);
@@ -6286,8 +6509,10 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	val = scope[n].get_min();
 	
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	std::cout << " previous min minimum witness: " << scope[last_min] 
 		  << " in " << scope[last_min].get_domain() << std::endl;
+  }
 #endif
       
 	if(aux > val && scope[last_min].get_min() >  val) {
@@ -6317,8 +6542,10 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	  
 	  if(aux > val) {
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	    std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
 		      << " >= " << aux << std::endl;
+  }
 #endif
 	    event_type[n] = scope[n].set_min(aux);
 	    if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
@@ -6329,7 +6556,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 	} else {
 	  
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	  std::cout << " no need to update " << scope[n] << "'s min" << std::endl;
+  }
 #endif
 	  
 	}
@@ -6341,7 +6570,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
       if(candidates.size == 1) {
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
 	std::cout << scope[candidates[0]] << " is the last min var " << std::endl;
+  }
 #endif
 
 	if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
@@ -6353,9 +6584,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 }
 
 std::ostream& Mistral::PredicateMin::display(std::ostream& os) const {
-  os << scope.back() << " == min(" << scope[0];
+  os << scope.back() << " == min(" << scope[0].get_var();
   for(unsigned int i=1; i<scope.size-1; ++i) {
-    os << ", " << scope[i] ;
+    os << ", " << scope[i].get_var() ;
   }
   os << ")";
   return os;
@@ -6409,12 +6640,14 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
   int i, val, aux, var; 
 
 #ifdef _DEBUG_MAX
+  {
   std::cout << "propagate max( " ;
   for(i=0; i<n; ++i) 
     std::cout << "[" << scope[i].get_min() << "," << scope[i].get_max() << "] ";
   std::cout << ") = [" << scope[n].get_min() << "," << scope[n].get_max() << "]" ;
 
   std::cout << std::endl << active << std::endl << candidates << std::endl;
+  }
 #endif
 
   if(candidates.size != 1) {
@@ -6422,7 +6655,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
       if(changes.contain(n)) { 
 	
 #ifdef _DEBUG_MAX
+  {
 	std::cout << " " << scope[n] << " has changed " << std::endl;
+  }
 #endif
 	
 	changes.remove(n);
@@ -6436,7 +6671,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	    var = candidates[i];
 	    
 #ifdef _DEBUG_MAX
+  {
 	    std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " <= " << val << std::endl;
+  }
 #endif
 	    
 	    event_type[var] = scope[var].set_max(val);
@@ -6445,7 +6682,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	    else if(!changes.contain(var)) {
 		
 #ifdef _DEBUG_MAX
+  {
 		std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
+  }
 #endif
 		
 		changes.add(var);
@@ -6455,7 +6694,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 		  candidates.reversible_remove(var);
 
 #ifdef _DEBUG_MAX
+  {
 		  std::cout << "    " << scope[var] << " can no longer be max" << std::endl;
+  }
 #endif
 		}
 	    }
@@ -6468,7 +6709,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	  aux = val = scope[n].get_min();
 	  
 #ifdef _DEBUG_MAX
+  {
 	  std::cout << " relax the constraint from vars lower than " << val << std::endl;
+  }
 #endif
 	  
 	  for(i=candidates.size; IS_OK(wiped) && i;) {
@@ -6480,7 +6723,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	    if(scope[var].get_max() < val) {
 	      
 #ifdef _DEBUG_MAX
+  {
 	      std::cout << "    relax1 " << this << " from " << scope[var] << std::endl;
+  }
 #endif 
 	      
 	      //relax_from(var);
@@ -6491,7 +6736,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	  }
 	  
 #ifdef _DEBUG_MAX
+  {
 	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() << " <= " << aux << std::endl;
+  }
 #endif
 
 	  if(scope[n].set_min(aux) == FAIL_EVENT) wiped = FAILURE(n);	
@@ -6507,10 +6754,12 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	  evt = changes.pop();
 	  
 #ifdef _DEBUG_MAX
+  {
 	  std::cout << "-event on " << scope[evt] 
 		    << (LB_CHANGED(event_type[evt]) ? " (lb) " : " ")
 		    << (UB_CHANGED(event_type[evt]) ? "(ub) " : " ")
 		    << std::endl;
+  }
 #endif
 	  
 	  if(UB_CHANGED(event_type[evt]) 
@@ -6520,7 +6769,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	    if(aux < scope[n].get_min()) {
 	      
 #ifdef _DEBUG_MAX
+  {
 	      std::cout << "    relax2 " << this << " from " << scope[evt] << std::endl;
+  }
 #endif 
 
 	      //relax_from(evt);
@@ -6535,18 +6786,22 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	}
 	
 #ifdef _DEBUG_MAX
+  {
 	if(val > -INFTY) 
 	  std::cout << " New min maximum: " << val << std::endl;
 	if(aux > -INFTY) 
 	  std::cout << " New max maximum: " << aux << std::endl;
+  }
 #endif
       
       
 	if(val > -INFTY) {
 	
 #ifdef _DEBUG_MAX
+  {
 	  std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
 		    << " >= " << val << std::endl;
+  }
 #endif
 	
 	  event_type[n] = scope[n].set_min(val);
@@ -6560,8 +6815,10 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	  val = scope[n].get_max();
 	  
 #ifdef _DEBUG_MAX
+  {
 	  std::cout << " previous max minimum witness: " << scope[last_max] 
 		    << " in " << scope[last_max].get_domain() << std::endl;
+  }
 #endif
       
 	  if(aux < val && scope[last_max].get_max() < val) {
@@ -6591,8 +6848,10 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	  
 	    if(aux < val) {
 #ifdef _DEBUG_MAX
+  {
 	      std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
 			<< " <= " << aux << std::endl;
+  }
 #endif
 	      event_type[n] = scope[n].set_max(aux);
 	      if(event_type[n] == FAIL_EVENT) wiped = FAILURE(n);
@@ -6603,7 +6862,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 	  } else {
 	    
 #ifdef _DEBUG_MAX
+  {
 	    std::cout << " no need to update " << scope[n] << "'s max" << std::endl;
+  }
 #endif
 	    
 	  }
@@ -6613,27 +6874,33 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
   }
 
 #ifdef _DEBUG_MAX
+  {
   std::cout << candidates << std::endl;
+  }
 #endif
 
 
   if(candidates.size == 1) {
     
 #ifdef _DEBUG_MAX
+  {
     std::cout << scope[candidates[0]] << " is the last max var " << std::endl;
+  }
 #endif
     
     if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
     if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
+  } else if(candidates.empty()) {
+    wiped = n;
   }
   
   return wiped;
 }
 
 std::ostream& Mistral::PredicateMax::display(std::ostream& os) const {
-  os << scope.back() << " == max(" << scope[0];
+  os << scope.back().get_var() << " == max(" << scope[0].get_var();
   for(unsigned int i=1; i<scope.size-1; ++i) {
-    os << ", " << scope[i] ;
+    os << ", " << scope[i].get_var() ;
   }
   os << ")";
   return os;

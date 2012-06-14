@@ -174,6 +174,15 @@ Mistral::Variable Mistral::Variable::get_var() {
   return ((Solver*)(variable->solver))->variables[variable->id];
 }
 
+const Mistral::Variable Mistral::Variable::get_var() const {
+  if(domain_type == EXPRESSION) {
+    return expression->self.get_var();
+  } else if(domain_type == CONST_VAR || !variable->solver) {
+    return *this;
+  }
+  return ((Solver*)(variable->solver))->variables[variable->id];
+}
+
 Mistral::Solver* Mistral::Variable::get_solver() {
   //std::cout << (int*)(variable) << std::endl;
   return (Solver*)(variable->solver);

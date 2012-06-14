@@ -151,7 +151,10 @@ namespace Mistral {
     }
     
     void un_relax_from(const int var) {
-      //std::cout << "post [" << id << "] on " << _scope[var] << ": " << on[var] << " -> " ;      
+      // std::cout << var << std::endl;
+      // std::cout << " urf post [" << id << "] on " << _scope[var] << ": " ;
+      // std::cout.flush();
+      // std::cout << on[var] << " -> " ;      
       
       index[var] = on[var]->post(self[var]);
       
@@ -166,6 +169,9 @@ namespace Mistral {
     bool is_triggered_on(const int i, const int t);
 
     void initial_post(Solver *s);
+   
+    int get_trigger_type(const int i) ;
+    void set_scope(const int i, Variable x);
 
     /*!@name Propagators*/
     //@{
@@ -193,7 +199,10 @@ namespace Mistral {
     virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
 					 const Event evt) = 0;
     //  { return CONSISTENT; }
-    virtual PropagationOutcome rewrite() { return CONSISTENT; }
+    virtual bool absorb_negation(const int var) { return false; }
+    virtual Constraint get_negation(const int var, Variable x) { return Constraint(); }
+    virtual bool rewritable() { return false; }
+    virtual RewritingOutcome rewrite() { return NO_EVENT; }
     virtual void consolidate() = 0; 
     virtual void consolidate_var(const int idx) = 0; 
 
@@ -441,16 +450,30 @@ namespace Mistral {
 
 
     void post_on(const int var) {
+
+      // std::cout << "po post " ;
+      // display(std::cout);
+      // std::cout << " on " << scope[var] << std::endl;
+
+
       if(scope[var].is_ground()) {
 	active^=(1<<var);
 	index[var] = -1;
       } else {
+
+	//std::cout << "(yep)" << std::endl;
+
 	solver->save( self[var] );
 	un_relax_from(var);
       }
     }
   
     void post() {
+
+      // std::cout << "p post " ;
+      // display(std::cout);
+      // std::cout << std::endl;
+
       active = (1 << ARITY)-1;
       for(int i=on.size; i--;) {
 	post_on(i);
@@ -944,7 +967,8 @@ namespace Mistral {
     virtual int check(const int* sol) const { return (sol[0] != sol[1]); }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    virtual PropagationOutcome rewrite();
+    virtual bool rewritable() { return true; }
+    virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -987,6 +1011,17 @@ namespace Mistral {
     virtual int check(const int* sol) const { return (sol[0] == sol[1]); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);  
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new ConstraintEqual( (var?scope[0]:x), (var?x:scope[1]) ) );
+    }
+    virtual bool absorb_negation(const int var) { 
+      return (scope[0].get_min()==0 &&
+	      scope[1].get_min()==0 &&
+	      scope[0].get_max()==1 &&
+	      scope[1].get_max()==1);
+    }
+    virtual bool rewritable() { return true; }
+    virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1036,7 +1071,8 @@ namespace Mistral {
     virtual int check( const int* sol ) const { return((sol[0] == sol[1]) == (sol[2] ^ spin)); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    virtual PropagationOutcome rewrite();
+    //virtual bool rewritable() { return true; }
+    virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1074,9 +1110,13 @@ namespace Mistral {
       : BinaryConstraint(scp) { value = val; spin = sp; }
     virtual Constraint clone() { return Constraint(new PredicateConstantEqual(scope[0], scope[1], value, spin)// , type
 						   ); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new PredicateConstantEqual( scope[0], x, value, !spin ) );
+    }
     virtual void initialise();
     virtual void mark_domain();
     virtual int idempotent() { return 1;}
+    virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateConstantEqual() {}
     //@}
 
@@ -1085,7 +1125,7 @@ namespace Mistral {
     virtual int check( const int* sol ) const { return((sol[0] == value) == (sol[1] ^ spin)); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1116,8 +1156,12 @@ namespace Mistral {
     PredicateNot(std::vector< Variable >& scp) 
       : BinaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateNot(scope[0], scope[1])); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new ConstraintEqual( (var?scope[0]:x), (var?x:scope[1]) ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1; }
+    virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateNot() {}
     //@}
 
@@ -1128,7 +1172,9 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    virtual bool rewritable() { return true; }
+    virtual RewritingOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1171,7 +1217,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1209,8 +1255,12 @@ namespace Mistral {
     PredicateIntervalMember(std::vector< Variable >& scp, const int lb, const int ub, const int sp=1) 
       : BinaryConstraint(scp) { spin = sp; lower_bound=lb; upper_bound=ub; }
     virtual Constraint clone() { return Constraint(new PredicateIntervalMember(scope[0], scope[1], lower_bound, upper_bound, spin)); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new PredicateIntervalMember( scope[0], x, lower_bound, upper_bound, !spin ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1; }
+    virtual bool absorb_negation(const int var) { return var==1; }
     virtual void mark_domain();
     virtual ~PredicateIntervalMember() {}
     //@}
@@ -1221,7 +1271,7 @@ namespace Mistral {
 						       == (sol[1] ^ spin)); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1261,8 +1311,12 @@ namespace Mistral {
     PredicateSetMember(std::vector< Variable >& scp, const BitSet& vals, const int sp=1) 
       : BinaryConstraint(scp) { spin = sp; values=vals; }
     virtual Constraint clone() { return Constraint(new PredicateSetMember(scope[0], scope[1], values, spin)); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new PredicateSetMember( scope[0], x, values, !spin ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1; }
+    virtual bool absorb_negation(const int var) { return var==1; }
     virtual void mark_domain();
     virtual ~PredicateSetMember() {}
     //@}
@@ -1272,7 +1326,7 @@ namespace Mistral {
     virtual int check( const int* sol ) const { return((values.contain(sol[0]) == (sol[1] ^ spin))); }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1312,6 +1366,13 @@ namespace Mistral {
 						   ); }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    // virtual bool absorb_negation(const int var) { 
+    //   return (offset = 0 &&
+    // 	      scope[0].get_min()==0 &&
+    // 	      scope[1].get_min()==0 &&
+    // 	      scope[0].get_max()==1 &&
+    // 	      scope[1].get_max()==1);
+    // }
     virtual ~ConstraintLess() {}
     //@}
 
@@ -1320,7 +1381,7 @@ namespace Mistral {
     virtual int check( const int* sol ) const { return (sol[0]+offset > sol[1]); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1356,8 +1417,12 @@ namespace Mistral {
       : TernaryConstraint(scp), offset(ofs) {}
     virtual Constraint clone() { return Constraint(new PredicateLess(scope[0], scope[1], scope[2], offset)// , type
 						   ); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new PredicateLess( scope[1], scope[0], x, 1-offset ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    virtual bool absorb_negation(const int var) { return var==2; }
     virtual ~PredicateLess() {}
     //@}
 
@@ -1403,8 +1468,13 @@ namespace Mistral {
       : BinaryConstraint(scp) { bound = b; }
     virtual Constraint clone() { return Constraint(new PredicateUpperBound(scope[0], scope[1], bound)// , type
 						   ); }
+    virtual Constraint get_negation(const int var, Variable x);
+    // { 
+    //   return Constraint( new PredicateLowerBound( scope[0], x, bound-1 ) );
+    // }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateUpperBound() {}
     //@}
 
@@ -1415,7 +1485,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1450,8 +1520,12 @@ namespace Mistral {
       : BinaryConstraint(scp) { bound = b; }
     virtual Constraint clone() { return Constraint(new PredicateLowerBound(scope[0], scope[1], bound)// , type
 						   ); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new PredicateUpperBound( scope[0], x, bound+1 ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateLowerBound() {}
     //@}
 
@@ -1462,7 +1536,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1494,8 +1568,12 @@ namespace Mistral {
     PredicateAnd(std::vector< Variable >& scp) 
       : TernaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateAnd(scope[0], scope[1], scope[2])); }
+    // virtual Constraint get_negation(const int var, Variable x) { 
+    //   return Constraint( new PredicateUpperBound( scope[0], x, bound+1 ) );
+    // }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateAnd() {}
     //@}
 
@@ -1506,7 +1584,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1538,6 +1616,7 @@ namespace Mistral {
     virtual Constraint clone() { return Constraint(new ConstraintAnd(scope[0], scope[1])); }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintAnd() {}
     //@}
 
@@ -1548,7 +1627,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1579,8 +1658,16 @@ namespace Mistral {
     PredicateOr(std::vector< Variable >& scp) 
       : TernaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateOr(scope[0], scope[1], scope[2])); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( (var<2 ? 
+			  new PredicateLess( x, (var?scope[0]:scope[1]), scope[2], 0 ) : 
+			  NULL
+			  //new PredicateNotOr(scope[0], scope[1], scope[2]) 
+			  ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateOr() {}
     //@}
 
@@ -1591,7 +1678,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1620,8 +1707,12 @@ namespace Mistral {
     ConstraintOr(std::vector< Variable >& scp) 
       : BinaryConstraint(scp) { }
     virtual Constraint clone() { return Constraint(new ConstraintOr(scope[0], scope[1])); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new ConstraintLess( x, (var?scope[0]:scope[1]), 0 ) );
+    }
     virtual void initialise();
     virtual int idempotent() { return 1;}
+    virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintOr() {}
     //@}
 
@@ -1632,7 +1723,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1684,7 +1775,7 @@ namespace Mistral {
 	      ); 
     }
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1733,7 +1824,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1775,7 +1866,7 @@ namespace Mistral {
     virtual int check( const int* sol ) const { return (sol[2] != (sol[0]+sol[1])); }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    virtual PropagationOutcome rewrite();
+    virtual RewritingOutcome rewrite();
     //@}
     
     /**@name Miscellaneous*/
@@ -1824,7 +1915,7 @@ namespace Mistral {
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1887,7 +1978,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
 
     virtual int check( const int* sol ) const { return (sol[2] != (sol[0]*sol[1])); }
     virtual PropagationOutcome propagate();
-    virtual PropagationOutcome rewrite();
+    virtual RewritingOutcome rewrite();
     //@}
     
     /**@name Miscellaneous*/
@@ -1939,7 +2030,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     virtual void consolidate();
     //@}
 
@@ -1978,9 +2069,13 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     ConstraintReifiedDisjunctive(std::vector< Variable >& scp, const int p0, const int p1); 
 
     virtual Constraint clone() { return Constraint(new ConstraintReifiedDisjunctive(scope[0], scope[1], scope[2], processing_time[0], processing_time[1])); }
+    virtual Constraint get_negation(const int var, Variable x) { 
+      return Constraint( new ConstraintReifiedDisjunctive( scope[0], scope[1], x, processing_time[0], processing_time[1] ) );
+    }
     virtual void initialise();
     virtual ~ConstraintReifiedDisjunctive() {}
     virtual int idempotent() { return 1; }
+    virtual bool absorb_negation(const int var) { return var==2; }
     //@}
 
     /**@name Solving*/
@@ -2009,7 +2104,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //virtual void consolidate();
     //@}
 
@@ -2047,6 +2142,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintBoolSumEqual();
     //@}
 
@@ -2054,7 +2150,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
   
     /**@name Miscellaneous*/
@@ -2091,6 +2187,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintBoolSumInterval();
     //@}
 
@@ -2136,6 +2233,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
+    virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateBoolSum();
     //@}
 
@@ -2264,7 +2362,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -2331,7 +2429,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -2373,7 +2471,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
     //virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -2447,7 +2545,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
     //virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual PropagationOutcome rewrite();
+    //virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/

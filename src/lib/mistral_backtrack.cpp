@@ -66,6 +66,27 @@ void Mistral::Constraint::consolidate_var() {
   propagator->consolidate_var(index());
 }
 
+bool Mistral::Constraint::rewritable() {
+  return propagator->rewritable(); 
+}
+
+bool Mistral::Constraint::absorb_negation(const int i) {
+  return propagator->absorb_negation(i); 
+}
+
+Mistral::Constraint Mistral::Constraint::get_negation(const int i, Variable x) {
+  return propagator->get_negation(i, x); 
+}
+
+void Mistral::Constraint::relax() {
+  if(binary()) 
+    ((BinaryConstraint*)propagator)->relax(); 
+  else if(ternary())
+    ((TernaryConstraint*)propagator)->relax(); 
+  else
+    ((GlobalConstraint*)propagator)->relax(); 
+}
+
 void Mistral::Constraint::initialise(Solver *s) {
   propagator->solver = s;
   propagator->initialise_vars(s);
@@ -79,9 +100,10 @@ int Mistral::Constraint::priority() const {
 void Mistral::Constraint::post(Solver* solver) { propagator->initial_post(solver); }
 
 void Mistral::Constraint::awaken() { 
-  if(binary()) 
+  if(binary()) {
+    //std::cout << "in awaken" << std::endl;
     ((BinaryConstraint*)propagator)->post(); 
-  else if(ternary())
+  } else if(ternary())
     ((TernaryConstraint*)propagator)->post(); 
   else
     ((GlobalConstraint*)propagator)->post(); 
@@ -124,6 +146,18 @@ Mistral::ConstraintImplementation* Mistral::Constraint::defrost() {
 
 Mistral::Variable* Mistral::Constraint::get_scope() { 
   return propagator->_scope.stack_;
+}
+
+void Mistral::Constraint::set_scope(const int i, Variable x) {
+  propagator->set_scope(i, x);
+  // propagator->_scope.stack_[i] = x;
+  // propagator->on[i] = ;
+  if(binary()) 
+    ((BinaryConstraint*)propagator)->scope[i] = x; 
+  else if(ternary())
+    ((TernaryConstraint*)propagator)->scope[i] = x; 
+  else
+    ((GlobalConstraint*)propagator)->scope[i] = x; 
 }
 
 int Mistral::Constraint::arity() const {
@@ -170,6 +204,10 @@ bool Mistral::Constraint::find_support(const int var, const int val) {
   }
 
   return exist;
+}
+
+Mistral::PropagationOutcome Mistral::Constraint::rewrite() {
+  return propagator->rewrite();
 }
 
 Mistral::PropagationOutcome Mistral::Constraint::propagate() {

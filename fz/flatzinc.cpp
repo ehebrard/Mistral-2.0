@@ -369,19 +369,19 @@ namespace FlatZinc {
 
 #ifdef _DEBUG_FLATZINC
     std::cout << " c run!" << std::endl;
-    //std::cout << "first " << solver << std::endl;
+    std::cout << "first " << solver << std::endl;
 #endif
 
     solver.rewrite() ;
-
-// #ifdef _DEBUG_FLATZINC
-//     std::cout << "rewrite " << solver << std::endl;
-// #endif
+    
+#ifdef _DEBUG_FLATZINC
+    std::cout << "rewrite " << solver << std::endl;
+#endif
 
     solver.consolidate();
     
 #ifdef _DEBUG_FLATZINC
-   // std::cout << "c mistral representation:\n " << solver << std::endl;
+    std::cout << "c mistral representation:\n " << solver << std::endl;
 #endif
 
     Outcome result = UNKNOWN;

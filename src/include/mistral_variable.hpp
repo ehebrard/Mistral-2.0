@@ -33,6 +33,10 @@
 #ifndef _MISTRAL_VARIABLE_HPP
 #define _MISTRAL_VARIABLE_HPP
 
+
+//#define _DEBUG_HISTORY true
+
+
 //
 namespace Mistral {
 
@@ -250,8 +254,10 @@ namespace Mistral {
 
     void set_bound_history(const int lb, const int ub, const int level) {
 
-      // std::cout << domain << std::endl;
-      // std::cout << "set bound history " << lb << ".." << ub << " @ " << level << std::endl;
+#ifdef _DEBUG_HISTORY
+      std::cout << domain << std::endl;
+      std::cout << "set bound history " << lb << ".." << ub << " @ " << level << std::endl;
+#endif
 
       // first find out which words have changed
       int prev_lb = domain.min; //trail_.back(-4);
@@ -259,7 +265,9 @@ namespace Mistral {
       int i, j, k, l;
       WORD_TYPE w;
 
-      //std::cout << prev_lb << " -> " << lb << ".." << ub << " <- " << prev_ub << std::endl;
+#ifdef _DEBUG_HISTORY
+      std::cout << prev_lb << " -> " << lb << ".." << ub << " <- " << prev_ub << std::endl;
+#endif
 
       if(prev_lb < lb || prev_ub > ub) {
 	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
@@ -267,14 +275,18 @@ namespace Mistral {
 	l = (ub >> BitSet::EXP);
 	k = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
 	
-	// std::cout << "change table[" << j << ":" << i << "]" << std::endl;
-	// std::cout << "change table[" << l << ":" << k << "]" << std::endl;
+#ifdef _DEBUG_HISTORY
+	std::cout << "change table[" << j << ":" << i << "]" << std::endl;
+	std::cout << "change table[" << l << ":" << k << "]" << std::endl;
+#endif
 
 	while( j < i ) {
 
-	  // std::cout << "set table[" << (j) << "] = ";
-	  // print_bitset(domain.values.table[j], (j), std::cout);
-	  // std::cout << " to void" << std::endl ;
+#ifdef _DEBUG_HISTORY
+	  std::cout << "set table[" << (j) << "] = ";
+	  print_bitset(domain.values.table[j], (j), std::cout);
+	  std::cout << " to void" << std::endl ;
+#endif
 
 	  *(++delta_[j]) = BitSet::empt;
 	  domain.values.table[j] = BitSet::empt;
@@ -285,9 +297,11 @@ namespace Mistral {
 	
 	while( k > l ) {
 
-	  // std::cout << "set table[" << k << "] = ";
-	  // print_bitset(domain.values.table[k], k, std::cout);
-	  // std::cout << " to void" << std::endl ;
+#ifdef _DEBUG_HISTORY
+	  std::cout << "set table[" << k << "] = ";
+	  print_bitset(domain.values.table[k], k, std::cout);
+	  std::cout << " to void" << std::endl ;
+#endif
 
 	  *(++delta_[k]) = BitSet::empt;
 	  domain.values.table[k] = BitSet::empt;
@@ -299,11 +313,13 @@ namespace Mistral {
 	if(i == l) {
 	  w = (BitSet::full << (lb & BitSet::CACHE)) & (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
 
-	  // std::cout << "change " ;
-	  // print_bitset(domain.values.table[i], i, std::cout);
-	  // std::cout << " to " ;
-	  // print_bitset(w, i, std::cout);
-	  // std::cout << std::endl;
+#ifdef _DEBUG_HISTORY
+	  std::cout << "change " ;
+	  print_bitset(domain.values.table[i], i, std::cout);
+	  std::cout << " to " ;
+	  print_bitset(w, i, std::cout);
+	  std::cout << std::endl;
+#endif
 
 	  domain.values.table[i] = w;
 	  *(++delta_[i]) = w;
@@ -312,12 +328,13 @@ namespace Mistral {
 	  if(prev_lb < lb) {
 	    w = (BitSet::full << (lb & BitSet::CACHE));
 
-	  // std::cout << "change " ;
-	  // print_bitset(domain.values.table[i], i, std::cout);
-	  // std::cout << " to " ;
-	  // print_bitset(w, i, std::cout);
-	  // std::cout << std::endl;
-
+#ifdef _DEBUG_HISTORY
+	  std::cout << "change " ;
+	  print_bitset(domain.values.table[i], i, std::cout);
+	  std::cout << " to " ;
+	  print_bitset(w, i, std::cout);
+	  std::cout << std::endl;
+#endif
 
 	    domain.values.table[i] = w;
 	    *(++delta_[i]) = w;
@@ -326,12 +343,13 @@ namespace Mistral {
 	  if(prev_ub > ub) {
 	    w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
 
-	  //   std::cout << "change "  ;
-	  // print_bitset(domain.values.table[l], l, std::cout);
-	  // std::cout << " to " ;
-	  // print_bitset(w, l, std::cout);
-	  // std::cout << std::endl;
-
+#ifdef _DEBUG_HISTORY
+	    std::cout << "change "  ;
+	  print_bitset(domain.values.table[l], l, std::cout);
+	  std::cout << " to " ;
+	  print_bitset(w, l, std::cout);
+	  std::cout << std::endl;
+#endif
 
 	    domain.values.table[l] = w;
 	    *(++delta_[l]) = w;
@@ -349,8 +367,9 @@ namespace Mistral {
       trail_.add(ub-lb+1);
       trail_.add(level);
 
-
-      // std::cout << domain << " " << domain.values << std::endl << std::endl;
+#ifdef _DEBUG_HISTORY
+      std::cout << domain << " " << domain.values << std::endl << std::endl;
+#endif
 
     }
 
@@ -1013,10 +1032,25 @@ namespace Mistral {
     // set the history of X to match self
     void set_history(VariableBitmap *X) {
 
+#ifdef _DEBUG_HISTORY
+      std::cout << "setup a bitset trail for ";
+      display(std::cout);
+      std::cout << " in [" << min << "," << max << "] at level " << solver->level << std::endl;
+      std::cout << "current trail: " << trail_ << std::endl;
+#endif
+
       for(unsigned int i = 3; i<trail_.size; i+=3) {
 	//if(trail_[i] != trail_[i-3] || trail_[i+1] != trail_[i-2])
 	X->set_bound_history(trail_[i], trail_[i+1], trail_[i+2]);
       }
+
+      // if(min > X->domain.min || max < X->domain.max) {
+      // 	X->set_bound_history(min, max, solver->level);
+      // }
+
+      //X->set_min(min);
+      //X->set_max(max);
+
       X->domain.values.set_min(min);
       X->domain.values.set_max(max);
       X->domain.min = min;
@@ -1025,9 +1059,10 @@ namespace Mistral {
 
       // if(id == 35) {
 
-
-      //std::cout << X->get_history() << std::endl;
-
+#ifdef _DEBUG_HISTORY
+      std::cout << "new trail: " << X->get_history() << std::endl
+		<< "domain: " << X->domain << std::endl;
+#endif
       // 	exit(1);
       // }
     }
@@ -1373,6 +1408,7 @@ namespace Mistral {
 
     //Variable get_children();
     Variable get_var();
+    const Variable get_var() const;
     bool is_expression() { return domain_type == EXPRESSION; }
 
     Variable operator+(Variable);

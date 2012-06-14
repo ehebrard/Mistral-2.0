@@ -265,6 +265,8 @@ namespace Mistral {
     virtual ~ConstraintQueue();
     inline bool empty() { return higher_priority<min_priority; }
     
+    void add( Constraint cons );
+    void add( ConstraintImplementation *cons);
     void trigger( BinaryConstraint *cons);
     void trigger(TernaryConstraint *cons);
     void trigger( GlobalConstraint *cons);
@@ -478,6 +480,7 @@ namespace Mistral {
     int declare(Variable x);
     /// add a variable (prior to search!!!)
     void add(Variable x);
+    void remove(Variable x);
     void add(VarArray& x);
     void add(Constraint x); 
     void add(Vector< Lit >& clause); 

@@ -57,13 +57,22 @@ namespace Mistral {
  */
 
 
-  /*! \class Environment
-    \brief The minimal structures used to control the backtracking process
+  /*! \class Trigger
+    \brief List of constraints
   */
   /********************************************
-   * Environement Objects
+   * Trigger Objects
    ********************************************/
-
+  /**
+  A trigger is list of constraints that should be triggerred on a given event
+  (there will be three lists per variable, one for domain events, one for range events, and one for value events)
+  
+  The difference with vectors is that when a constraint is added to such a list, the index in the vector is returned, 
+  then stored into the constraint object :index: (and linked to the variable :index[var]:) for further reference (i.e., relax itself)
+  
+  Similarly, when removing a constraint, since it is swapped with the last element in the list, the index of this last element 
+  must also be updated (set to the value of the relaxed constraint). A constraint from a trigger of variable will give index -1 to this variable
+  */
   class Constraint;
   class Trigger : public Vector< Constraint > {
 
@@ -76,6 +85,24 @@ namespace Mistral {
   };
 
 
+  /*! \class Constraint
+    \brief A wrapper class for constraints
+  */
+  /********************************************
+   * Constraint Objects
+   ********************************************/
+  /**
+     This class is mainly used to
+     1/ resolve subtypes at runtime without virtual overloading 
+        (there are only three main types of constraints: binary, ternary and global)
+
+     2/ manipulate constraints as objects instead of pointers
+
+     The "real" constraints are objects of the class ConstraintImplementation, pointed by "propagator"
+     The "data" field stores some data about the constraint (mainly its type), but also some
+     context dependent information. For instance, as element of a trigger, the field "data" 
+     will store the index of that variable in its scope 
+   */
   template<class T> class ReversibleNum;
   class ReversibleSet;
   class Reversible;
@@ -96,39 +123,81 @@ namespace Mistral {
     void initialise(Solver*);
     virtual ~Constraint() {}
     
-    
+    // return the context-dependent information [TODO: list all types]
     inline int  index()      const { return data&CTYPE; }
+
+    // [context-independent:] whether the constraint should be pushed on the constraint stack on  var event
+    inline bool pushed()     const { return (data&PUSHED); }    
+
+    // [context-independent:] whether the constraint should not be propagated on a variable event 
     inline bool postponed()  const { return (data&POSTPONED); }
-    inline bool pushed()     const { return (data&PUSHED); }
+    // [context-independent:] whether the constraint is of the "global" subtype (warning: it might be binary or ternary)
     inline bool global()     const { return !(data&0xc0000000); }
+    // [context-independent:] whether the constraint is of the "binary" subtype 
     inline bool binary()     const { return (data&BINARY); }
+    // [context-independent:] whether the constraint is of the "binary" subtype 
     inline bool ternary()    const { return (data&TERNARY); }
+    // [context-independent:] whether the constraint is idempotent (it should not be triggerred on its own changes)
     inline bool idempotent() const { return (data&IDEMPOTENT); }
 
+    // stop pointing to a constraint
     inline void clear() { propagator = NULL; data = 0; }
+    // whether the wrapper actually points to a constraint
     inline bool empty() const { return !propagator; }
 
+    // returns the unique id of the pointed constraint (equal to its rank in the "constraints" array of the Solver class)
     int id() const ;
+    // return the priority of the constraint during AC closure (the constraint list will have as many sub-lists as there are priorities)
     int priority() const ;
+    // set the context-dependent part of the data field to the value idx
     void set_index(const int idx);
+    // set the value of the "index[index()]" array of the pointed constraint to the value idx
     void set_rank(const int idx);
+    // set the unique id of the pointed constraint to the value idx
     void set_id(const int idx);
+    // post the constraint to the solver (initial post)
     void post(Solver*);
+    // re-post the constraint
     void awaken();
+    // activate the constraint (it will be propagated during the next call to solver.propagate())
     void trigger();
+    // check that the assignment sol satisfies the constraint
     int check(int* sol);
+    // change the variables of the pointed constraint to their "final" objects
     void consolidate();
+    // change the variable corresponding to "index()" of the pointed constraint to its "final" object
     void consolidate_var();
+    // set the constraint to be triggerred with t
     void re_link_to(Trigger* t);
+    // whether the pointed constraint is succeptible to be rewritten
+    bool rewritable(); 
+    // whether the constraint can be rewritten to accommodate the not(x[i]) instead of x[i]
+    bool absorb_negation(const int i);
+    // return the constraint C such that C(x1,..,xi-1,not(xi),i+1,..,xk) <=> this(x1,..,xk)
+    // and where the occurrence of not(xi) is taken by x
+    Constraint get_negation(const int i, Variable x);
 
+    // to be called before propagation, returns the constraint itself if it is idempotent and the NULL pointer otherwise
     ConstraintImplementation *freeze();
+    // to be called after propagation
     ConstraintImplementation *defrost();
 
-
+    // returns the arity of the pointed constraint
     int arity() const ;
+    // returns the number of active (i.e. non-ground) variables in the constraint's scope
     int num_active() const ;
+    // returns the index of the ith active variable of the constraint
     int get_active(const int i) const ;
+    // returns an array containing the constrained variables 
     Variable* get_scope() ;
+    // set the ith variable of the scope to x
+    void set_scope(const int i, Variable x) ;
+
+    // relax the constraint from all its active triggers
+    void relax();
+
+    // call the rewriting procedure of the constraint
+    RewritingOutcome rewrite();
 
     bool find_support(const int var, const int val);
     PropagationOutcome propagate();
@@ -153,6 +222,12 @@ namespace Mistral {
 };
 
 
+ /*! \class VarEvent
+    \brief Stores the variable id, the type of change, and the constraint that triggered this event
+  */
+  /********************************************
+   * Environment Objects
+   ********************************************/
   class VarEvent : public Triplet < int, Event, ConstraintImplementation*> {
     
   public:
@@ -179,6 +254,12 @@ namespace Mistral {
   //typedef TwoWayStack< Triplet < int, Event, ConstraintImplementation*> > VariableQueue;
 
 
+ /*! \class Environment
+    \brief The minimal structures used to control the backtracking process
+  */
+  /********************************************
+   * Environement Objects
+   ********************************************/
   class Environment {
   public:
     
@@ -448,6 +529,10 @@ namespace Mistral {
     inline ReversibleNum< PRIMITIVE_TYPE >& operator++ () { save(); ++value; return *this; }
     inline ReversibleNum< PRIMITIVE_TYPE >& operator-- () { save(); --value; return *this; } 
     //@}
+
+    std::ostream& display(std::ostream& os) const {
+      os << value;
+    }
   };
 
 
@@ -546,6 +631,16 @@ namespace Mistral {
 
   };
 
+
+  template < class PRIMITIVE_TYPE > 
+  std::ostream& operator<< (std::ostream& os, const ReversibleNum< PRIMITIVE_TYPE >& x) {
+    return x.display(os);
+  }
+
+  template < class PRIMITIVE_TYPE > 
+  std::ostream& operator<< (std::ostream& os, const ReversibleNum< PRIMITIVE_TYPE >* x) {
+    return x->display(os);
+  }
 
   std::ostream& operator<< (std::ostream& os, const ReversibleBool& x);
   std::ostream& operator<< (std::ostream& os, const ReversibleBool* x);

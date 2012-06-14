@@ -43,6 +43,7 @@ namespace Mistral {
   typedef int Event;
   typedef int Outcome;
   typedef int PropagationOutcome;
+  typedef int RewritingOutcome;
 
 
   typedef unsigned int Lit;
@@ -190,6 +191,8 @@ namespace Mistral {
   // DOMAIN_C+RANGE_C+VALUE_C
 #define VALUE_EVENT  31
 #define FAIL_EVENT   32
+
+#define SUPPRESSED   1
 
 #define DOMAIN_CHANGED(e) (bool)((e)&DOMAIN_C)
 #define RANGE_CHANGED(e)  (bool)((e)&RANGE_C)
