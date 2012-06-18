@@ -140,6 +140,8 @@ namespace Mistral {
 
     virtual void mark_domain() {}    
 
+    virtual void desactivate(const int var) = 0;
+
 
    void un_post_from(const int var) {
      //std::cout << "relax [" << id << "] from " << _scope[var] << ": " << on[var] << " -> " ;      
@@ -362,6 +364,10 @@ namespace Mistral {
     //virtual void initialise() {type = get_type();}
     //virtual int idempotent() {return 0;}
 
+    virtual void desactivate(const int var) { 
+      int var_elt = (1 << var);
+      if(active&var_elt) active ^= var_elt;
+    }
 
     void initialise_supports() {
       int vari, vali, vnext, min_vari;
@@ -481,6 +487,17 @@ namespace Mistral {
     }
 
     void relax() {
+      
+      // std::cout << "active variables: ";
+      // print_bitset(active, 0, std::cout);
+      // std::cout << "( ";
+      // for(int i=on.size; i--;) {
+      // 	if(active & (1 << i)) {
+      // 	  std::cout << scope[i] << " ";
+      // 	}
+      // }
+      // std::cout << ")" << std::endl;
+
       for(int i=on.size; i--;) {
 	relax_from(i);
       }    
@@ -488,6 +505,7 @@ namespace Mistral {
 
     void relax_from(const int var) {
       if(active & (1 << var)) {
+      //if(index[var] >= 0) {
 	solver->save( self[var] );
 	un_post_from(var);
       }
@@ -746,6 +764,10 @@ namespace Mistral {
     virtual ~GlobalConstraint();
 
     virtual void initialise_vars(Solver*);
+
+   virtual void desactivate(const int var) { 
+     active.remove(var);
+   }
 
     void trigger();
 

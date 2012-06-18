@@ -207,10 +207,26 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
     self[i] = Constraint(this, i|type);
     //post_on(i);
     solver->save( self[i] );
+
+    //std::cout << "POST ON " << _scope[i] << "? " ;
+
     
     //index[i] = on[i]->post(self[i]);
-    if(_scope[i].domain_type != CONST_VAR)
+    if(_scope[i].domain_type != CONST_VAR) {
       un_relax_from(i);
+      
+      //std::cout << "yes" << std::endl;
+    }  
+     else {
+    
+       desactivate(i);
+  
+     } 
+
+    // else {
+
+    //   //std::cout << "no" << std::endl;
+    // }
   }
 
   //mark_domain();
@@ -1293,7 +1309,37 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
   // // 	    << " = " << scope[1] << " in " << scope[1].get_domain() << std::endl;
 
 
-  if( !scope[0].is_ground() && !scope[1].is_ground() ) {
+  // // std::cout << 11 << std::endl;
+
+  // // std::cout << scope[0] << std::endl;
+
+  // std::cout << domain2str(scope[0].domain_type) 
+  // 	    << " "
+  // 	    << (int*)(scope[0].variable)
+  // 	    << std::endl;
+
+
+  // // std::cout << scope[1] << std::endl;
+
+  // std::cout << domain2str(scope[1].domain_type) 
+  // 	    << " ";
+
+
+  // std::cout << (int*)(scope[1].variable)
+  // 	    << std::endl;
+
+  // // 
+
+  // std::cout << 11 << std::endl;
+
+  // std::cout << (scope[1].is_ground()) << std::endl;
+
+  // std::cout << 22 << std::endl;
+
+  if( !(scope[1].is_ground()) && !(scope[0].is_ground()) ) {
+
+    //std::cout << 33 << std::endl;
+
     if( scope[0].is_expression() && scope[1].is_expression() ) {
 
 // #ifdef _DEBUG_REWRITE

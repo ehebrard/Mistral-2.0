@@ -282,18 +282,18 @@ void Mistral::get_command_line(const char** int_ident,
 
 
 int Mistral::log2( const unsigned int v ) {
-  union {float f; unsigned int i; } t;
-  unsigned int b = v & -v;
+//   union {float f; unsigned int i; } t;
+//   unsigned int b = v & -v;
   
-  t.f = (float)b; // cast the least significant bit in v to a float
-  b = t.i >> 23;
-  return b - 0x7f;
+//   t.f = (float)b; // cast the least significant bit in v to a float
+//   b = t.i >> 23;
+//   return b - 0x7f;
+// }
+  if( !v ) return NOVAL;
+  int exponent = -1;
+  while( (v >> (++exponent)) > 1 );
+  return exponent;
 }
-//     if( !x ) return NOVAL;
-//     int exponent = -1;
-//     while( (x >> (++exponent)) > 1 );
-//     return exponent;
-//   }
 
 
 // std::string Mistral::toString(const int x)

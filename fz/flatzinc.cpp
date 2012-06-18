@@ -48,6 +48,9 @@
 
 #include <mistral_variable.hpp>
 
+//#define _DEBUG_FLATZINC true
+
+
 using namespace std;
 
 namespace FlatZinc {
@@ -358,14 +361,26 @@ namespace FlatZinc {
   }
 
 
- #define _DEBUG_FLATZINC true
 
+  void
+  FlatZincModel::set_parameters(SolverParameters& p) {
+    std::cout << "hello!" << std::endl;
+  }
+
+
+  void 
+  FlatZincModel::set_strategy(string var_o, string val_o, string r_pol) {
+    heuristic = solver.heuristic_factory(var_o, val_o);
+    policy = solver.restart_factory(r_pol);
+  }
 
   void
   FlatZincModel::run(std::ostream& out, const Printer& p) {
     using std::setw;
     using std::setfill;
 
+    
+    //exit(1);
 
 #ifdef _DEBUG_FLATZINC
     std::cout << " c run!" << std::endl;
@@ -396,7 +411,10 @@ namespace FlatZinc {
       std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
 #endif
 
-      result = solver.minimize(iv[_optVar]);
+      Goal *goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
+      result = solver.depth_first_search(solver.variables, heuristic, policy, goal);
+
+      //result = solver.minimize(iv[_optVar]);
       break;
     } 
     case MAXIMIZATION: {

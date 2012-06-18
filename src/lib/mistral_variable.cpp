@@ -53,6 +53,7 @@ Mistral::Variable::Variable() {
 
 Mistral::Variable::Variable(const int value) {
   domain_type = CONST_VAR;
+  variable = NULL;
   constant_value = value;
 }
 
@@ -718,6 +719,15 @@ int Mistral::Variable::get_min_pos() const {
 #endif
 
       bool answer = true;
+
+    // std::cout << (int*)(variable)
+    // 	      << std::endl
+    // 	      << domain_type << " == " 
+    // 	      << BITSET_VAR << "? "
+    // 	      << LIST_VAR << "? "
+    // 	      << RANGE_VAR << "? "
+    // 	      << CONST_VAR << "? " << std::endl;
+
 
     if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_ground();
     else if(domain_type ==    LIST_VAR) answer = list_domain->is_ground();
@@ -4143,12 +4153,30 @@ bool Mistral::Goal::enforce() {
 
 
 int Mistral::Goal::value() const {
-  if(type == MINIMIZATION) {
-    return upper_bound;
-  } else if(type == MAXIMIZATION) {
-    return lower_bound;
-  } else return -1;
-  return false;
+  return(type == MINIMIZATION ? upper_bound : lower_bound);
+  // if(type == MINIMIZATION) {
+  //   return upper_bound;
+  // } else if(type == MAXIMIZATION) {
+  //   return lower_bound;
+  // } else return -1;
+  // return false;
+}
+
+// int Mistral::Goal::best() const {
+//   return(type = MINIMIZATION ? upper_bound : lower_bound);
+//   // if(type == MINIMIZATION) {
+//   //   return upper_bound;
+//   // } else if(type == MAXIMIZATION) {
+//   //   return lower_bound;
+//   // } else return -1;
+//   // return false;
+// }
+
+bool Mistral::Goal::improving(const int val) const {
+  return( type == SATISFACTION ? false :
+	  (type == MINIMIZATION ? 
+	   (val < upper_bound) : 
+	   (val > lower_bound)) );
 }
     
 

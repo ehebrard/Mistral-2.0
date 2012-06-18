@@ -30,7 +30,46 @@ int main(int argc, char *argv[])
   double parse_time = get_run_time() - cpu_time;
 
 
-  //std::cout << args.back() << std::endl;
+  map<string, string> options;
+
+  // default value
+  options["--var_heuristic"] = "dom/wdeg";
+  options["--val_heuristic"] = "randminmax";
+  options["--restart"] = "luby";
+
+
+
+  string option_name = "error";
+  //string option_value = "error";
+
+  list<string>::iterator it;
+  list<string>::iterator the_end = args.end();
+  --the_end;
+  for(it=args.begin(); it!=the_end; ++it) {
+    if((*it)[0] == '-') option_name = (*it);
+    else {
+      //option_value = (*it);
+      options[option_name] = (*it);
+      //std::cout << option_name << " <- " << (*it) << std::endl;
+    }
+  }
+
+  map<string,string>::iterator ito;
+
+  // // show content:
+  // for ( ito=options.begin() ; ito != options.end(); ito++ )
+  //   std::cout << (*ito).first << " => " << (*ito).second << std::endl;
+
+
+
+  //SolverParameters params(options);
+  fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
+ 
+
+
+
+  //string restart = options["--heuristic"];
+
 
   fm->run(cout , p);
   delete fm;

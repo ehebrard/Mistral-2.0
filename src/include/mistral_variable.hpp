@@ -1605,6 +1605,8 @@ namespace Mistral {
 
     inline int type() const {return _data_&3; }
     inline int value() const {return _data_>>2; }
+
+    inline void set_value(const int val) {_data_ = (_data_&3)|(val<<2); }
     
     Decision() {
       init_data(ASSIGNMENT,NOVAL);
@@ -2396,6 +2398,9 @@ namespace Mistral {
 
     virtual std::ostream& display(std::ostream& os) const;
 
+    bool improving(const int val) const;
+    //int worst() const;
+    //int best() const;
     int value() const;
     bool enforce();
     Outcome notify_solution(Solver *solver);

@@ -322,6 +322,7 @@ namespace Mistral {
   */
   //typedef Varstack< ConstraintElement > ConstraintStack;
 
+  class SolutionListener;
   class RestartListener;
   class SuccessListener;
   class FailureListener;
@@ -418,6 +419,7 @@ namespace Mistral {
     /// Goal 
     Goal *objective;
 
+    Vector<SolutionListener*>     solution_triggers;
     Vector<RestartListener*>       restart_triggers;
     Vector<SuccessListener*>       success_triggers;
     Vector<FailureListener*>       failure_triggers;
@@ -486,6 +488,8 @@ namespace Mistral {
     void add(Vector< Lit >& clause); 
     //void add(ConstraintW x); 
     //void add(BranchingHeuristic* h);
+
+    void add(SolutionListener* l);
     void add(RestartListener* l);
     void add(SuccessListener* l);
     void add(FailureListener* l);
@@ -493,6 +497,7 @@ namespace Mistral {
     void add(VariableListener* l);
     void add(ConstraintListener* l);
     
+    void remove(SolutionListener* l);
     void remove(RestartListener* l);
     void remove(SuccessListener* l);
     void remove(FailureListener* l);
@@ -614,9 +619,50 @@ namespace Mistral {
     // //@}
 
 
+    BranchingHeuristic *heuristic_factory(std::string var_ordering, std::string branching);
+    // {
+    //   BranchingHeuristic *heu = NULL;
+    //   if(var_ordering == "dom/wdeg") {
+    // 	if(branching == "minval") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinValue > (this); 
+    // 	} else if(branching == "maxval") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MaxValue > (this); 
+    // 	} else if(branching == "halfsplit") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+    // 	} else if(branching == "randminmax") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, RandMinMax > (this); 
+    // 	} else if(branching == "minweight") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+    // 	} 
+    //   } else if(var_ordering == "dom/activity") {
+    // 	if(branching == "minval") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+    // 	} else if(branching == "maxval") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+    // 	} else if(branching == "halfsplit") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+    // 	} else if(branching == "randminmax") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandMinMax > (this); 
+    // 	} else if(branching == "minweight") {
+    // 	  heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+    // 	} 
+    //   }						
+    //   return heu;
+    // }
+
+    RestartPolicy *restart_factory(std::string rpolicy);
+    // {
+    //   RestartPolicy pol = new NoRestart();
+    //   if(policy == "luby") pol = new Luby(); 
+    //   else if(policy == "geom") pol = new Geometric(); 
+    //   return pol;
+    // }
+
     double *get_literal_activity();
 
     void check_constraints();
+
+    void extract_instance_statistics();
 
     /*!@name Printing*/
     //@{

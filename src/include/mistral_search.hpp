@@ -55,6 +55,21 @@ namespace Mistral {
     std::ostream& display(std::ostream& os) { os << "restart-L"; return os; }    
   };
 
+  /*! \class SolutionListener
+    \brief SolutionListener Class
+
+    * Called whenever the solver solutions *
+    
+    This is used to implement procedures triggered by solutions
+  */
+  class SolutionListener {
+  public:
+    int mid;
+    virtual void notify_solution() = 0;
+    
+    std::ostream& display(std::ostream& os) { os << "solution-L"; return os; }    
+  };
+
   /*! \class DecisionListener
     \brief DecisionListener Class
 
@@ -336,6 +351,80 @@ namespace Mistral {
   };
 
 
+
+  // /*! \class ProgressSavingManager
+  //   \brief ProgressSavingManager Class
+
+  //   * Listener interface for progress saving *
+  // */
+  // class ProgressSavingManager : public FailureListener {
+
+  // public:
+
+  //   Solver *solver;
+
+  //   int max_solution_length;
+  //   int best_objective;
+
+  //   Vector<int> progress;
+    
+
+  //   //ProgressSavingManager(Solver *s, void *a=NULL) : solver(s) {
+  //   ProgressSavingManager(Solver *s) : solver(s) {
+  //     best_objective = objective->value();
+  //     max_solution_length = 0;
+  //     for(unsigned int i=0; i<solver->variables.size; ++i) {
+  // 	progress.add(solver->variables[i].get_min());
+  //     }
+  //     solver->add((FailureListener*)this);
+  //   }
+
+  //   virtual ~ProgressSavingManager() {
+  //     solver->remove((FailureListener*)this);
+  //   }
+
+  //    virtual void notify_failure() {
+
+  //   }
+  // };
+
+
+  // /*! \class GuidedSearchManager
+  //   \brief GuidedSearchManager Class
+
+  //   * Listener interface for progress saving *
+  // */
+  // class GuidedSearchManager : public FailureListener {
+
+  // public:
+
+  //   Solver *solver;
+
+  //   int best_objective;
+
+  //   Vector<int> best_solution;
+    
+
+  //   //GuidedSearchManager(Solver *s, void *a=NULL) : solver(s) {
+  //   GuidedSearchManager(Solver *s) : solver(s) {
+  //     best_objective = objective->value();
+  //     max_solution_length = 0;
+  //     for(unsigned int i=0; i<solver->variables.size; ++i) {
+  // 	progress.add(solver->variables[i].get_min());
+  //     }
+  //     solver->add((FailureListener*)this);
+  //   }
+
+  //   virtual ~GuidedSearchManager() {
+  //     solver->remove((FailureListener*)this);
+  //   }
+
+  //    virtual void notify_failure() {
+
+  //   }
+  // };
+
+
   /*! \class RestartPolicy
     \brief  Interface RestartPolicy
 
@@ -415,6 +504,10 @@ namespace Mistral {
     virtual ~Luby();
     
     void reset(unsigned int& limit) {
+      // unsigned int increment = (base * luby_seq(++iteration));
+      // std::cout << "restart for " << increment << std::endl;
+      // limit += increment;
+
       limit += (base * luby_seq(++iteration));
     }
 
@@ -1176,6 +1269,33 @@ namespace Mistral {
     }
 
   };
+
+
+
+  /*! \class Guided
+    \brief  Class Guided
+
+    Assigns the variable to its minimum value.
+  */
+  class Guided {
+    
+  public: 
+    
+    Solver *solver;
+    
+    Guided() {}
+    Guided(Solver *s) {solver=s;}
+    virtual ~Guided() {};
+    
+    inline Decision make(Variable x) {
+      int val = solver->last_solution_lb[x.id()];
+      Decision d(x, Decision::ASSIGNMENT, val);
+      if(!x.contain(val)) d.set_value(x.get_min());
+      return d;
+    }
+
+  };
+
 
 
 #define NEG(a) ((2*a))

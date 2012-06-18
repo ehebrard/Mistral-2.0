@@ -584,7 +584,18 @@ namespace FlatZinc {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
       int c = ce[2]->getInt();
-      s.add( (Sum(iv, ia) <= c) == getBoolVar(s, m, ce[3]) );
+      Variable b = getBoolVar(s, m, ce[3]);
+
+      // std::cout << ia << " * " << iv << " <= "<< b << std::endl;
+
+      // for(int i=0; i<iv.size; ++i)
+      //   std::cout << iv[i].get_domain() << std::endl;
+
+      // std::cout << b.get_domain() << std::endl;
+
+
+
+      s.add( (Sum(iv, ia) <= c) == b );
     }
     void p_int_lin_lt(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
@@ -891,7 +902,17 @@ namespace FlatZinc {
       Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
       Variable r = getBoolVar(s, m, ce[1]);
 
+
+      // std::cout << bv << " >= 1 <-> " << r << std::endl;
+
+      // for(int i=0; i<bv.size; ++i)
+      //   std::cout << bv[i].get_domain() << std::endl;
+
+      // std::cout << r.get_domain() << std::endl;
+
       s.add((BoolSum(bv) >= 1) == r);
+
+
 
       // vec<Lit> up;
       // up.push( ~safeLit(s, r) );
@@ -1245,6 +1266,9 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
 
+      std::cerr << "NOT IMPLEMENTED!!" << std::endl;
+      exit(1);
+
       //s.add( b == SetEqual(A,B) );
     }
 
@@ -1254,6 +1278,9 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
 
+      std::cerr << "NOT IMPLEMENTED!!" << std::endl;
+      exit(1);
+      
       //s.add( b == SetNotEqual(A,B) );
     }
 

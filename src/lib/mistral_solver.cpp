@@ -1003,7 +1003,7 @@ void Mistral::Solver::add(Constraint c) {
 
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
 
-  if(level <= 0 && !posted_constraints.contain(c.id())) 
+  if(level <= 0 && !posted_constraints.safe_contain(c.id())) 
     posted_constraints.safe_add(c.id());
 }
 
@@ -1103,7 +1103,9 @@ Mistral::Outcome Mistral::Solver::search() {
 		      
 
     if(satisfiability == LIMITOUT) {
-      policy->reset(parameters.restart_limit);    
+
+      policy->reset(parameters.restart_limit);
+    
       if(!limits_expired()) {
 
 	// std::cout << "LIMIT EXPIRED" << std::endl;
@@ -1460,6 +1462,10 @@ void Mistral::Solver::restore(const int lvl) {
 }
 
 
+void Mistral::Solver::add(Mistral::SolutionListener* l) {
+  l->mid = solution_triggers.size;
+  solution_triggers.add(l);
+}
 void Mistral::Solver::add(Mistral::RestartListener* l) {
   l->rid = restart_triggers.size;
   restart_triggers.add(l);
@@ -1486,6 +1492,12 @@ void Mistral::Solver::add(Mistral::ConstraintListener* l) {
 }
 
 
+void Mistral::Solver::remove(Mistral::SolutionListener* l) {
+  unsigned int idx = l->mid;
+  solution_triggers.remove(idx);
+  if(solution_triggers.size>idx) 
+    solution_triggers[idx]->mid = idx;
+}
 void Mistral::Solver::remove(Mistral::RestartListener* l) {
   unsigned int idx = l->rid;
   restart_triggers.remove(idx);
@@ -1674,7 +1686,8 @@ void Mistral::Solver::make_non_convex(const int idx)
 bool Mistral::Solver::rewrite() 
 {
   
-  int i=0, con_i=0;
+  int i=0;
+  unsigned int con_i=0;
   IntStack to_rewrite(0, constraints.size-1, false);
   Constraint con;
   RewritingOutcome rewritten;
@@ -3130,7 +3143,12 @@ void Mistral::Solver::branch_left() {
   std::cout << " SAT!" << std::endl; 
 #endif
 
-    unsigned int i, j, k;
+  unsigned int i, j, k;
+
+  for(i=0; i<solution_triggers.size; ++i) {
+    solution_triggers[i]->notify_solution();
+  }
+
 
   if(parameters.checked) {
 
@@ -3262,78 +3280,23 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
   int status = UNKNOWN;
   while(status == UNKNOWN) {
 
-
 #ifdef _MONITOR
-      // unsigned int k=0;
-
-      // for(unsigned int q=0; q<monitored_index.size; ++q) {
-      // 	std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
-      // 	for(; k<monitored_index[q]; ++k) {
-      // 	  std::cout << variables[monitored[k]].get_domain() << " ";
-      // 	}
-      // 	std::cout << std::endl;
-      // }
-
-
-      monitor_list.display(std::cout);
-      std::cout << std::endl;
-
-      
-
+    monitor_list.display(std::cout);
+    std::cout << std::endl;
 #endif
-
-
+          
     if(propagate()) {
+            
       ++statistics.num_nodes;
       if( sequence.empty()  ) status = satisfied();
       else branch_left();
+
     } else {
-
-
-    // std::cout << "b" << std::endl;
-    // unsigned int k=0;
-    // // for(; k<monitored_variables.size; ++k) {
-    // //   monitored_variables[k] = monitored_variables[k].get_var();
-    // // }
-    // // k = 0;
-    // for(unsigned int q=0; q<monitored_index.size; ++q) {
-    //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
-    //   for(; k<monitored_index[q]; ++k) {
-    // 	std::cout << "|" << variables[monitored[k]] ;
-    // 	std::cout.flush();
-    // 	std::cout << variables[monitored[k]].get_domain();
-    // 	std::cout.flush();
-    // 	std::cout << variables[monitored[k]].get_history() << " ";
-    //   }
-    //   std::cout << std::endl;
-    // }
-
-
 
       if( parameters.backjump ) learn_nogood();
       if( decisions.empty() ) status = exhausted();
       else if( limits_expired() ) status = LIMITOUT;
       else branch_right();
-
-
-    // std::cout << "a" << std::endl;
-    // k=0;
-    // // for(; k<monitored_variables.size; ++k) {
-    // //   monitored_variables[k] = monitored_variables[k].get_var();
-    // // }
-    // // k = 0;
-    // for(unsigned int q=0; q<monitored_index.size; ++q) {
-    //   std::cout << "c "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
-    //   for(; k<monitored_index[q]; ++k) {
-    // 	std::cout << "|" << variables[monitored[k]] ;
-    // 	std::cout.flush();
-    // 	std::cout << variables[monitored[k]].get_domain();
-    // 	std::cout.flush();
-    // 	std::cout << variables[monitored[k]].get_history() << " ";
-    //   }
-    //   std::cout << std::endl;
-    // }
-
 
     }
   }
@@ -3895,3 +3858,44 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 */
 
 
+
+Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching) {
+  BranchingHeuristic *heu = NULL;
+  if(var_ordering == "dom/wdeg") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinValue > (this); 
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MaxValue > (this); 
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+    } else if(branching == "minweight") {
+      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, Guided > (this); 
+    } 
+  } else if(var_ordering == "dom/activity") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+    } else if(branching == "minweight") {
+      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+    } 
+  }						
+  return heu;
+}
+
+Mistral::RestartPolicy *Mistral::Solver::restart_factory(std::string rpolicy) {
+  RestartPolicy *pol = new NoRestart();
+  if(rpolicy == "luby") pol = new Luby(); 
+  else if(rpolicy == "geom") pol = new Geometric(); 
+  return pol;
+}

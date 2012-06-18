@@ -39,6 +39,7 @@
 #define __GECODE_FLATZINC_HH__
 
 #include <iostream>
+#include <string>
 #include <map>
 
 #include "conexpr.hpp"
@@ -109,7 +110,11 @@ namespace FlatZinc {
       MAXIMIZATION  //< Solve as maximization problem
     };
   protected:
+    /// Mistral stuff
     Solver &solver;
+    BranchingHeuristic *heuristic;
+    RestartPolicy *policy;
+
 
     /// Number of integer variables
     int intVarCount;
@@ -176,6 +181,12 @@ namespace FlatZinc {
     void minimize(int var, AST::Array* annotation);
     /// Post that integer variable \a var should be maximized
     void maximize(int var, AST::Array* annotation);
+
+    /// setup parameters from the command line
+    void set_parameters(SolverParameters& p);
+
+    /// setup parameters from the command line
+    void set_strategy(std::string var_o, std::string val_o, std::string r_pol);
 
     /// Run the search
     void run(std::ostream& out, const Printer& p);

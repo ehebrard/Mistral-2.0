@@ -532,6 +532,7 @@ namespace Mistral {
 
     std::ostream& display(std::ostream& os) const {
       os << value;
+      return os;
     }
   };
 
