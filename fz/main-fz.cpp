@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
   options["--var_heuristic"] = "dom/wdeg";
   options["--val_heuristic"] = "randminmax";
   options["--restart"] = "luby";
-
+  options["--seed"] = "123456";
 
 
   string option_name = "error";
@@ -62,9 +62,8 @@ int main(int argc, char *argv[])
 
 
 
-  //SolverParameters params(options);
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
- 
+  s.initialise_random_seed(atoi(options["--seed"].c_str()));
 
 
 

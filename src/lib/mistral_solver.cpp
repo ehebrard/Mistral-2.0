@@ -358,38 +358,39 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
 
   switch(outcome) {
   case SAT: 
-    os << std::right << std::setw(48) << "SAT |" ;
+    os << std::right << std::setw(48) << "SAT" ;
     break;
   case OPT: 
-    os << std::right << std::setw(48) << "OPT |" ;
+    os << std::right << std::setw(48) << "OPT" ;
     break;
   case UNSAT: 
-    os << std::right << std::setw(48) << "UNSAT |" ;
+    os << std::right << std::setw(48) << "UNSAT" ;
     break;
   case UNKNOWN: 
-    os << std::right << std::setw(48) << "UNKNOWN |" ;
+    os << std::right << std::setw(48) << "UNKNOWN" ;
     break;
   case LIMITOUT: 
-    os << std::right << std::setw(48) << "LIMITOUT |" ;
+    os << std::right << std::setw(48) << "LIMITOUT" ;
     break;
   }
   os << std::endl
+     << std::left << std::setw(46) << " v  0" << std::endl
      << std::left << std::setw(46) << " d  OBJECTIVE"
-     << std::right << std::setw(46) << objective_value << " |" << std::endl
+     << std::right << std::setw(46) << objective_value  << std::endl
      << std::left << std::setw(46) << " d  TIME"
-     << std::right << std::setw(46) << (end_time - start_time) << " |" << std::endl
+     << std::right << std::setw(46) << (end_time - start_time)  << std::endl
      << std::left << std::setw(46) << " d  NODES"
-     << std::right << std::setw(46) << num_nodes << " |" << std::endl
+     << std::right << std::setw(46) << num_nodes  << std::endl
      << std::left << std::setw(46) << " d  RESTARTS"
-     << std::right << std::setw(46) << num_restarts << " |" << std::endl
+     << std::right << std::setw(46) << num_restarts << std::endl
      << std::left << std::setw(46) << " d  FAILURES"
-     << std::right << std::setw(46) << num_failures << " |" << std::endl
+     << std::right << std::setw(46) << num_failures << std::endl
      << std::left << std::setw(46) << " d  BACKTRACKS"
-     << std::right << std::setw(46) << num_backtracks << " |" << std::endl
+     << std::right << std::setw(46) << num_backtracks << std::endl
      << std::left << std::setw(46) << " d  PROPAGATIONS"
-     << std::right << std::setw(46) << num_propagations << " |" << std::endl
+     << std::right << std::setw(46) << num_propagations << std::endl
      << std::left << std::setw(46) << " d  FILTERINGS"
-     << std::right << std::setw(46) << num_filterings << " |" << std::endl
+     << std::right << std::setw(46) << num_filterings << std::endl
      << " c +" << std::setw(90) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
   //<< " c +=============================================================================+" << std::endl;
   return os;
@@ -1077,6 +1078,7 @@ Mistral::Outcome Mistral::Solver::search() {
 
   while(satisfiability == UNKNOWN) {
     
+    statistics.num_constraints = posted_constraints.size;
     statistics.num_variables = sequence.size;
     statistics.num_values = 0;
     for(int i=0; i<sequence.size; ++i)
@@ -3898,4 +3900,9 @@ Mistral::RestartPolicy *Mistral::Solver::restart_factory(std::string rpolicy) {
   if(rpolicy == "luby") pol = new Luby(); 
   else if(rpolicy == "geom") pol = new Geometric(); 
   return pol;
+}
+
+
+void Mistral::Solver::initialise_random_seed(const int seed) {
+  usrand(seed);
 }

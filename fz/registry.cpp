@@ -910,8 +910,11 @@ namespace FlatZinc {
 
       // std::cout << r.get_domain() << std::endl;
 
-      s.add((BoolSum(bv) >= 1) == r);
-
+      if(r.get_min() == 1 && bv.size == 2) {
+        s.add( bv[0] || bv[1] );
+      } else { 
+        s.add((BoolSum(bv) >= 1) == r);
+      }
 
 
       // vec<Lit> up;

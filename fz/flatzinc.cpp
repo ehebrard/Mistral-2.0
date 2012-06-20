@@ -438,7 +438,7 @@ namespace FlatZinc {
     }
 
 
-    std::cout << solver.statistics << std::endl;
+    //std::cout << solver.statistics << std::endl;
 
 
     // switch(result) {
