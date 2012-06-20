@@ -370,8 +370,11 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
     os << std::right << std::setw(48) << "UNKNOWN" ;
     break;
   case LIMITOUT: 
+    // if(objective->is_optimization() && statistics.num_solutions) 
+    //   os << std::right << std::setw(48) << "SUBOPTIMAL" ;
+    // else 
     os << std::right << std::setw(48) << "LIMITOUT" ;
-    break;
+    //break;
   }
   os << std::endl
      << std::left << std::setw(46) << " v  0" << std::endl
@@ -3905,4 +3908,12 @@ Mistral::RestartPolicy *Mistral::Solver::restart_factory(std::string rpolicy) {
 
 void Mistral::Solver::initialise_random_seed(const int seed) {
   usrand(seed);
+}
+
+
+void Mistral::Solver::set_time_limit(const double limit) {
+  if(limit > 0) {
+    parameters.limit = 1;
+    parameters.time_limit = limit;
+  }
 }

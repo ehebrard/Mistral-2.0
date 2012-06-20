@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
   options["--val_heuristic"] = "randminmax";
   options["--restart"] = "luby";
   options["--seed"] = "123456";
+  options["--limit"] = "10";
 
 
   string option_name = "error";
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
 
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
   s.initialise_random_seed(atoi(options["--seed"].c_str()));
+  s.set_time_limit(atof(options["--limit"].c_str()));
 
 
 

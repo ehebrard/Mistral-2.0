@@ -4172,6 +4172,11 @@ int Mistral::Goal::value() const {
 //   // return false;
 // }
 
+
+bool Mistral::Goal::is_optimization() const {
+  return (type == MINIMIZATION || type == MAXIMIZATION);
+}
+
 bool Mistral::Goal::improving(const int val) const {
   return( type == SATISFACTION ? false :
 	  (type == MINIMIZATION ? 

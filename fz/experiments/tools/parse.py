@@ -673,12 +673,16 @@ class Parser:
 
                     outcome = self.raw_data['res'][solver][bench][0]
                 self.result[solver][bench] = outcome
-                if( outcome[-11:] == 'SATISFIABLE' or outcome[-11:] == 'SAT' or outcome[-11:] == 'OPT'):
+                if( outcome[-11:] == 'SATISFIABLE' or 
+                    outcome[-11:] == 'SAT' or 
+                    outcome[-11:] == 'OPT' or 
+                    outcome[-11:] == 'LIMITOUT' 
+                    ):
                     self.solved_bench[solver].add( bench )
                 elif outcome != 'UNKNOWN':
                     if len(sta_line) >= 2:
                         rtime = float(sta_line[1])
-                        if outcome != "UNSAT" and rtime < (self.timelimit/2):
+                        if rtime < (self.timelimit/2):
                             self.result[solver][bench] = 'error--------'
                             self.error_bench[solver].add( bench )
 

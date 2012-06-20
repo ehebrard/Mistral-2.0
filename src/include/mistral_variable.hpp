@@ -2398,6 +2398,7 @@ namespace Mistral {
 
     virtual std::ostream& display(std::ostream& os) const;
 
+    bool is_optimization() const;
     bool improving(const int val) const;
     //int worst() const;
     //int best() const;

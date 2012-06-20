@@ -665,6 +665,7 @@ namespace Mistral {
     void extract_instance_statistics();
 
     void initialise_random_seed(const int seed);
+    void set_time_limit(const double limit);
 
     /*!@name Printing*/
     //@{
