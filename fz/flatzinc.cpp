@@ -401,7 +401,7 @@ namespace FlatZinc {
 
     Outcome result = UNKNOWN;
 
-    solver.parameters.verbosity = 1;
+    //solver.parameters.verbosity = 0;
 
 
     switch (_method) {

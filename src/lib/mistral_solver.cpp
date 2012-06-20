@@ -1087,7 +1087,7 @@ Mistral::Outcome Mistral::Solver::search() {
     for(int i=0; i<sequence.size; ++i)
       statistics.num_values += sequence[i].get_size();
     
-    if(parameters.verbosity) {
+    if(parameters.verbosity>1) {
       statistics.print_short(std::cout);
       //if(base) std::cout << " " << base->learnt.size ;
       std::cout << std::endl;
