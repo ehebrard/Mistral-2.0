@@ -47,22 +47,26 @@ if(domain_type != CONST_VAR) {	\
 
 
 Mistral::Variable::Variable() {
+  domain_type = NULL;
   domain_type = DYN_VAR;
   variable = NULL;
 }
 
 Mistral::Variable::Variable(const int value) {
+  domain_type = NULL;
   domain_type = CONST_VAR;
   variable = NULL;
   constant_value = value;
 }
 
 Mistral::Variable::Variable(VariableImplementation* impl, const int type) {
+  domain_type = NULL;
   domain_type = type;
   variable = impl;
 }
 
 Mistral::Variable::Variable(Expression* exp) {
+  domain_type = NULL;
   domain_type = EXPRESSION;
   expression = exp;
 }
@@ -496,7 +500,12 @@ std::string Mistral::Variable::get_history() const {
     //   return expression->self.get_min();
     // } else  return (!(*bool_domain & 1));
 
-
+      
+    //   std::cout << "get min of "  ;
+    // std::cout.flush();
+    // display(std::cout);
+    // std::cout << std::endl;
+    
     int of_the_living_dead = 0;
     if     (domain_type ==  BITSET_VAR) {
       //std::cout << "bitset " << bitset_domain->get_min() << std::endl;

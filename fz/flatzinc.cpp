@@ -387,7 +387,7 @@ namespace FlatZinc {
     std::cout << "first " << solver << std::endl;
 #endif
 
-    solver.rewrite() ;
+    //solver.rewrite() ;
     
 #ifdef _DEBUG_FLATZINC
     std::cout << "rewrite " << solver << std::endl;
@@ -423,7 +423,9 @@ namespace FlatZinc {
       std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
 #endif
 
-      result = solver.maximize(iv[_optVar]);
+      Goal *goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
+      result = solver.depth_first_search(solver.variables, heuristic, policy, goal);
+      //result = solver.maximize(iv[_optVar]);
       break;
     }
     case SATISFACTION: {
@@ -432,7 +434,18 @@ namespace FlatZinc {
       std::cout << " c Solve " << std::endl;
 #endif
 
-      result = solver.solve();
+      //Goal *goal = new Goal(Goal::SATISFACTION);
+  
+
+      // for(int i=0; i<solver.variables.size; ++i) {
+      //   solver.monitor_list << solver.variables[i] ;
+      //   solver.monitor_list << " " ;
+      // }
+
+
+      result = solver.depth_first_search(solver.variables, heuristic, policy);//, goal);
+
+      //result = solver.solve();
       break;
     }
     }

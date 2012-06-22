@@ -831,8 +831,9 @@ namespace FlatZinc {
           sd.add(d[i]);
         }
 
-        x.set_domain(sd);
-        s.add(x);
+        //x.set_domain(sd);
+        s.add(Member(x,sd));
+        //s.add()
 
         Variable y = getIntVar(s, m, ce[0]);
       } // else if (ce[0]->isSetVar()) {

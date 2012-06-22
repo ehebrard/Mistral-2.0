@@ -3148,6 +3148,8 @@ void Mistral::Solver::branch_left() {
   std::cout << " SAT!" << std::endl; 
 #endif
 
+  //std::cout << this << std::endl;
+
   unsigned int i, j, k;
 
   for(i=0; i<solution_triggers.size; ++i) {
@@ -3284,13 +3286,22 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
 {
   int status = UNKNOWN;
   while(status == UNKNOWN) {
-
+    
+    //std::cout << std::endl ;
 #ifdef _MONITOR
     monitor_list.display(std::cout);
     std::cout << std::endl;
 #endif
+    // for(int i=0; i<sequence.size; ++i) {
+    //   std::cout << sequence[i] << ":" << sequence[i].get_domain() << " ";
+    // }
+    // std::cout << std::endl;
           
     if(propagate()) {
+    // for(int i=0; i<sequence.size; ++i) {
+    //   std::cout << sequence[i] << ":" << sequence[i].get_domain() << " ";
+    // }
+    // std::cout << std::endl ;
             
       ++statistics.num_nodes;
       if( sequence.empty()  ) status = satisfied();
