@@ -357,6 +357,8 @@ namespace Mistral {
 
     /// The set of variables, in the initial order, that is as loaded from the model
     Vector< Variable >   variables;
+    /// The set of variables, as originally declared (i.e., as expressions)
+    Vector< Variable >   declared_variables;
     Vector< int >     domain_types;
     Vector< int > assignment_level;
 
@@ -698,6 +700,7 @@ namespace Mistral {
   SearchMonitor& operator<< (SearchMonitor& os, Constraint& x);
   //SearchMonitor& operator<< (SearchMonitor& os, std::string& x);
   SearchMonitor& operator<< (SearchMonitor& os, const char* x);
+  SearchMonitor& operator<< (SearchMonitor& os, const int x);
 
 
 }

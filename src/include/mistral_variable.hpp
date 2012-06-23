@@ -1723,7 +1723,9 @@ namespace Mistral {
   public :
     
     //int id;
-    Variable self;
+
+
+    Variable _self;
     Vector< Variable > children;
     
     
@@ -1739,6 +1741,9 @@ namespace Mistral {
     virtual ~Expression();
     
     void add(Variable X) { children.add(X); }
+
+    
+    Variable get_self(); //{ return ((Solver*)solver)->variables[id]; }
 
     virtual void extract_constraint(Solver*) {}
     virtual void extract_predicate(Solver*) {}

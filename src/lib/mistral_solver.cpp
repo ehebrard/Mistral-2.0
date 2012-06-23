@@ -50,9 +50,9 @@ static void Mistral_SIGINT_handler(int signum) {
 
 
 
-#ifdef _DEBUG_PROPAG 
-std::ostringstream *o_propag = NULL;
-#endif
+// #ifdef _DEBUG_PROPAG 
+// std::ostringstream *o_propag = NULL;
+// #endif
 
 Mistral::Solution::Solution( Vector< Variable >& vars ) {
   min_id = INFTY;
@@ -771,6 +771,7 @@ Mistral::Solver::Solver()
   // variables & constraints
   domain_types.initialise(0,128);
   variables.initialise(0,128);
+  declared_variables.initialise(0,128);
   assignment_level.initialise(0,128);
   visited.initialise(0,1023);
   reason.initialise(0,128);
@@ -922,6 +923,7 @@ int Mistral::Solver::declare(Variable x) {
   x.variable->solver = this;
   visited.extend(variables.size);
   variables.add(x);
+  declared_variables.add(x);
   assignment_level.add(INFTY);
   reason.add(NULL);
   domain_types.add(DYN_VAR|(x.is_range() ? RANGE_VAR : 0));
@@ -1645,9 +1647,26 @@ void Mistral::Solver::consolidate()
 
 void Mistral::Solver::make_non_convex(const int idx) 
 {
+
+  // std::cout << variables << std::endl;
+  // std::cout << "\nmake " << variables[idx] << " non convex\n"; 
+
+
   if(variables[idx].domain_type == RANGE_VAR) {
     Variable X(variables[idx], true);
-    variables[idx] = X;
+    
+    // if(variables[idx].is_expression()) {
+
+    //   std::cout << "(exp)" << std::endl;
+
+    //   Variable x = variables[idx];
+    //   while (x.expression->self.is_expression()) {
+    // 	x = x.expression->self;
+    //   }
+    //   x.expression->self = X;
+
+    // } else {
+      variables[idx] = X;
 
 
     // int ids = sequence.index(idx);
@@ -1661,8 +1680,8 @@ void Mistral::Solver::make_non_convex(const int idx)
 
     //std::cout << "MAKE " << variables[idx] << " NON CONVEX: NOTIFY CHANGE" << std::endl; 
 
-    notify_change_variable(idx);
-
+      notify_change_variable(idx);
+      // }
 
     // std::cout << "c" << std::endl;
     // unsigned int k=0;
@@ -2153,7 +2172,7 @@ bool Mistral::Solver::propagate()
     
 #ifdef _DEBUG_AC
 
-    std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
     std::cout << "var stack: " << active_variables << std::endl;
     // std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
     // std::cout << "con stack: " << active_constraints << std::endl
@@ -2170,7 +2189,7 @@ bool Mistral::Solver::propagate()
       var_evt = active_variables.pop_front();
 
 #ifdef _DEBUG_AC
-      std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
       std::cout << "react to " << event2str(var_evt.second) << " on " << variables[var_evt.first] 
 		<< " in " << variables[var_evt.first].get_domain() ;
       if(var_evt.third)
@@ -2205,8 +2224,9 @@ bool Mistral::Solver::propagate()
 	  // idempotency, if the event was triggered by itself
 	  if(var_evt.third != culprit.propagator) {
 #ifdef _DEBUG_AC
-	    std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
 	    std::cout << "  -awake " << culprit << ": "; 
+	    std::cout.flush();
 #endif
 	    // if the constraints asked to be pushed on the constraint stack we do that
 	    if(culprit.pushed()) {
@@ -2226,6 +2246,7 @@ bool Mistral::Solver::propagate()
 	      for(int i=0; i<arity; ++i)
 		std::cout << scp[i].get_domain() << " ";
 	      std::cout << "-> ";
+	      std::cout.flush();
 #endif
 	      ++statistics.num_propagations;  
 	      taboo_constraint = culprit.freeze();
@@ -2247,7 +2268,7 @@ bool Mistral::Solver::propagate()
 	  } 
 #ifdef _DEBUG_AC
 	  else {
-	    std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
 	    std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
 	  }
 #endif
@@ -2256,29 +2277,34 @@ bool Mistral::Solver::propagate()
     }
 
 
-#ifdef _DEBUG_AC
-    //std::cout << std::endl;
-    std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-    //std::cout << " var stack: " << active_variables << std::endl;
-    //std::cout << "c2 "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
-    //std::cout << "con stack: " << active_constraints << std::endl
-      ;
-#endif
+// #ifdef _DEBUG_AC
+//     //std::cout << std::endl;
+//     std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+//     //std::cout << " var stack: " << active_variables << std::endl;
+//     //std::cout << "c2 "; for(int lvl=0; lvl<level; ++lvl) std::cout << " ";
+//     //std::cout << "con stack: " << active_constraints << std::endl
+//       ;
+// #endif
 
 
     
     if(IS_OK(wiped_idx) && !active_constraints.empty()) {
 
-// #ifdef _DEBUG_AC
-//       std::cout << "\npropagate postponed constraints: " 
-// 		<< active_constraints << std::endl;
-// #endif
+#ifdef _DEBUG_AC
+      if(level > 0) {
+	std::cout << "\nc propagate postponed constraints: " 
+		  << active_constraints << std::endl;
+      } else {
+	std::cout << "\nc propagate postponed constraints: "
+		  << active_constraints._set_ << std::endl;
+      }
+#endif
 
       // propagate postponed constraint
       culprit = active_constraints.select(constraints);
 
 #ifdef _DEBUG_AC
-      std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
       std::cout << "  -propagate " << culprit << " (" ;
 
       if(culprit.global()) {
@@ -2298,7 +2324,7 @@ bool Mistral::Solver::propagate()
       for(int i=0; i<arity; ++i)
 	std::cout << scp[i].get_domain() << " ";
       std::cout << "-> ";
-
+      std::cout.flush();
 #endif
 
       taboo_constraint = culprit.freeze();
@@ -3284,14 +3310,17 @@ void Mistral::Solver::branch_left() {
 
 Mistral::Outcome Mistral::Solver::chronological_dfs() 
 {
-  int status = UNKNOWN;
-  while(status == UNKNOWN) {
-    
-    //std::cout << std::endl ;
+
 #ifdef _MONITOR
     monitor_list.display(std::cout);
     std::cout << std::endl;
 #endif
+
+  int status = UNKNOWN;
+  while(status == UNKNOWN) {
+    
+    //std::cout << std::endl ;
+
     // for(int i=0; i<sequence.size; ++i) {
     //   std::cout << sequence[i] << ":" << sequence[i].get_domain() << " ";
     // }
@@ -3302,6 +3331,12 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
     //   std::cout << sequence[i] << ":" << sequence[i].get_domain() << " ";
     // }
     // std::cout << std::endl ;
+
+
+#ifdef _MONITOR
+    monitor_list.display(std::cout);
+    std::cout << std::endl;
+#endif
             
       ++statistics.num_nodes;
       if( sequence.empty()  ) status = satisfied();
@@ -3429,6 +3464,24 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const c
 //   os.add(s);
 //   return os;
 // }
+Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const int x) {
+  //std::ostringstream o_aux;
+  //o_aux << x;
+  //const char *y = ;
+  // os.add((o_aux.str().c_str()));
+  //o_aux.close();
+
+
+  //std::string number = boost::lexical_cast(x);
+  // char buf[255];
+  // sprintf(buf,"%d",x);
+
+
+  os << " " ; //int2str(x).c_str() ;
+
+  //os << number.c_str() ;
+  return os;
+}
 
 
 

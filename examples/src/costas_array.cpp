@@ -31,6 +31,9 @@ int main(int argc, char *argv[])
   }
 
 
+  cout << s << endl;
+
+
   s.consolidate();
   cout << s << endl;
 

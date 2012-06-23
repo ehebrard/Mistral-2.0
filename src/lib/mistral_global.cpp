@@ -295,6 +295,34 @@ int Mistral::log2( const unsigned int v ) {
   return exponent;
 }
 
+std::string Mistral::int2str(const int x) {
+
+ //  unsigned n = x;
+
+  //char buffer[2]; // long enough for 32-bit UINT_MAX + NUL character
+ // char *p = buffer + sizeof(buffer);
+
+ // *--p = '\0';
+ // do {
+ //   *--p = '0' + n % 10;
+ //   n /= 10;
+ // } while (n);
+
+ // return p;
+
+  std::ostringstream oss;
+  
+  oss << x;
+
+  //buffer[1] = '\0';
+  std::string stb = oss.str();
+  
+  //const char* buf = stb.c_str();
+
+  return stb;
+
+}
+
 
 // std::string Mistral::toString(const int x)
 // {

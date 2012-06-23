@@ -171,18 +171,27 @@ void Mistral::Variable::initialise_domain(Vector< int >& values, const int type)
 
 
 Mistral::Variable Mistral::Variable::get_var() {
-  if(domain_type == EXPRESSION) {
-    return expression->self.get_var();
-  } else if(domain_type == CONST_VAR || !variable->solver) {
+  
+  // SELF CHANGE
+  // if(domain_type == EXPRESSION) {
+  //   //Variable x = expression->self;
+  //   //while(x.is_expression)
+  //   return expression->self.get_var();
+  // } else 
+ 
+  if(domain_type == CONST_VAR || !variable->solver) {
     return *this;
   }
   return ((Solver*)(variable->solver))->variables[variable->id];
 }
 
 const Mistral::Variable Mistral::Variable::get_var() const {
-  if(domain_type == EXPRESSION) {
-    return expression->self.get_var();
-  } else if(domain_type == CONST_VAR || !variable->solver) {
+  // SELF CHANGE
+  // if(domain_type == EXPRESSION) {
+  //   return expression->self.get_var();
+  // } else 
+  
+  if(domain_type == CONST_VAR || !variable->solver) {
     return *this;
   }
   return ((Solver*)(variable->solver))->variables[variable->id];
@@ -259,20 +268,27 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
       } else {
 	expression->extract_variable(s);
 
-	Variable X = expression->self;
-
+	// SELF CHANGE
+	Variable X = expression->_self;
 	expression->id = (X.domain_type == CONST_VAR ? s->variables.size-1 : X.id());
 	expression->solver = s;	
+
+
 	expression->extract_predicate(s);//);
       }
       s->expression_store.add(expression);
     }
+    //s->add_var(*this);
+    //s->declared_variables[id()] = *this;
   } else {
     if(domain_type != CONST_VAR && variable->solver != s) {
       s->declare(this->get_var());
       s->sequence.declare(*this);
     } 
+    //s->add_var(*this);
   }
+
+
 
   // std::cout << "end initialise " ;
   // display(std::cout);
@@ -389,7 +405,7 @@ int Mistral::Variable::get_solution_max() const {
     else if(domain_type ==   RANGE_VAR) return range_domain->get_value();
     //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_value();
     else if(domain_type ==   CONST_VAR) return constant_value;
-    else if(domain_type ==   EXPRESSION) return expression->self.get_value();
+    else if(domain_type ==   EXPRESSION) return expression->get_self().get_value();
     else  return (*bool_domain-1);
   }
 
@@ -406,7 +422,7 @@ unsigned int Mistral::Variable::get_size() const {
   else if(domain_type ==   RANGE_VAR) r_size = range_domain->get_size();
   //else if(domain_type == VIRTUAL_VAR) r_size = virtual_domain->get_size();
   else if(domain_type ==   CONST_VAR) r_size = 1;
-  else if(domain_type ==   EXPRESSION) r_size = expression->self.get_size();
+  else if(domain_type ==   EXPRESSION) r_size = expression->get_self().get_size();
   else  r_size = ((*bool_domain+1)/2);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -426,7 +442,7 @@ unsigned int Mistral::Variable::get_degree() const {
       unsigned int r_degree = NO_EVENT;
 
   if(domain_type ==   CONST_VAR) r_degree = 0;
-  else if(domain_type ==   EXPRESSION) r_degree = expression->self.get_degree();
+  else if(domain_type ==   EXPRESSION) r_degree = expression->get_self().get_degree();
   else r_degree = ((Solver*)(variable->solver))->constraint_graph[variable->id].size();
 
 
@@ -458,8 +474,9 @@ std::string Mistral::Variable::get_domain() const {
   else if(domain_type ==   BOOL_VAR)  {
     buf << "[0,1]";
   } 
-  else if(domain_type ==   EXPRESSION) return expression->self.get_domain();
-  else {
+  else if(domain_type ==   EXPRESSION) {
+    buf << "*" << expression->get_self().get_domain();
+  } else {
     if(*bool_domain == 3) buf << "[0,1]";
     else if(*bool_domain == 2) buf << "1";
     else buf << "0";
@@ -496,8 +513,8 @@ std::string Mistral::Variable::get_history() const {
     //   //std::cout << "constant" << std::endl;
     //   return constant_value;
     // } else if(domain_type ==   EXPRESSION)  {
-    //   //std::cout << "expression" << expression->self.get_min() << std::endl;
-    //   return expression->self.get_min();
+    //   //std::cout << "expression" << expression->get_self().get_min() << std::endl;
+    //   return expression->get_self().get_min();
     // } else  return (!(*bool_domain & 1));
 
       
@@ -521,8 +538,8 @@ std::string Mistral::Variable::get_history() const {
       //std::cout << "constant" << std::endl;
       of_the_living_dead =  constant_value;
     } else if(domain_type ==   EXPRESSION)  {
-      //std::cout << "expression" << expression->self.get_min() << std::endl;
-      of_the_living_dead =  expression->self.get_min();
+      //std::cout << "expression" << expression->get_self().get_min() << std::endl;
+      of_the_living_dead =  expression->get_self().get_min();
     } else  of_the_living_dead = !(*bool_domain & 1);
 
 
@@ -546,7 +563,7 @@ std::string Mistral::Variable::get_history() const {
     else if(domain_type ==   RANGE_VAR) of_the_mummy = range_domain->get_max();
     //else if(domain_type == VIRTUAL_VAR) of_the_mummy = virtual_domain->get_max();
     else if(domain_type ==   CONST_VAR) of_the_mummy = constant_value;
-    else if(domain_type ==   EXPRESSION) of_the_mummy = expression->self.get_max();
+    else if(domain_type ==   EXPRESSION) of_the_mummy = expression->get_self().get_max();
     else  of_the_mummy = (*bool_domain >> 1);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -569,7 +586,7 @@ std::string Mistral::Variable::get_history() const {
     else if(domain_type ==   RANGE_VAR) r_min = range_domain->get_initial_min();
     //else if(domain_type == VIRTUAL_VAR) r_min = virtual_domain->get_initial_min();
     else if(domain_type ==   CONST_VAR) r_min = constant_value;
-    else if(domain_type ==   EXPRESSION) r_min = expression->self.get_initial_min();
+    else if(domain_type ==   EXPRESSION) r_min = expression->get_self().get_initial_min();
     //else  r_min = 0;
 
 #ifdef _PROFILING_PRIMITIVE
@@ -592,7 +609,7 @@ std::string Mistral::Variable::get_history() const {
     else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_initial_max();
     //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_initial_max();
     else if(domain_type ==   CONST_VAR) r_max = constant_value;
-    else if(domain_type ==   EXPRESSION) r_max = expression->self.get_initial_max();
+    else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_initial_max();
     //else  r_max = 1;
 
 #ifdef _PROFILING_PRIMITIVE
@@ -615,7 +632,7 @@ int Mistral::Variable::get_min_pos() const {
   else if(domain_type ==   RANGE_VAR) r_min = range_domain->get_min_pos();
   //else if(domain_type == VIRTUAL_VAR) r_min = virtual_domain->get_min_pos();
   else if(domain_type ==   CONST_VAR) r_min = constant_value;
-  else if(domain_type ==   EXPRESSION) r_min = expression->self.get_min_pos();
+  else if(domain_type ==   EXPRESSION) r_min = expression->get_self().get_min_pos();
   else  r_min = (*bool_domain >> 1); //(!(*bool_domain & 1));
 
 #ifdef _PROFILING_PRIMITIVE
@@ -639,7 +656,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_max_neg();
     //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_max_neg();
     else if(domain_type ==   CONST_VAR) r_max = constant_value;
-    else if(domain_type ==   EXPRESSION) r_max = expression->self.get_max_neg();
+    else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_max_neg();
     else  r_max = (!(*bool_domain & 1));
 
 #ifdef _PROFILING_PRIMITIVE
@@ -662,7 +679,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) r_val = range_domain->next(v);
     //else if(domain_type == VIRTUAL_VAR) r_val = virtual_domain->next(v);
     else if(domain_type ==   CONST_VAR) r_val = constant_value;
-    else if(domain_type ==   EXPRESSION) r_val = expression->self.next(v);
+    else if(domain_type ==   EXPRESSION) r_val = expression->get_self().next(v);
     else  r_val = (*bool_domain >> 1);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -685,7 +702,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) r_val = range_domain->prev(v);
     //else if(domain_type == VIRTUAL_VAR) r_val = virtual_domain->prev(v);
     else if(domain_type ==   CONST_VAR) r_val = constant_value;
-    else if(domain_type ==   EXPRESSION) r_val = expression->self.prev(v);
+    else if(domain_type ==   EXPRESSION) r_val = expression->get_self().prev(v);
     else  r_val = (!(*bool_domain & 1));
 
 #ifdef _PROFILING_PRIMITIVE
@@ -708,7 +725,7 @@ int Mistral::Variable::get_min_pos() const {
     //else if(domain_type ==   RANGE_VAR) answer = range_domain->is_range();
     //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_range();
     //else if(domain_type ==   CONST_VAR) answer = true;
-    else if(domain_type ==   EXPRESSION) answer = expression->self.is_range();
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().is_range();
     //else answer = true;
 
 #ifdef _PROFILING_PRIMITIVE
@@ -743,7 +760,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->is_ground();
     //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_ground();
     else if(domain_type ==   CONST_VAR) answer = true;
-    else if(domain_type ==   EXPRESSION) answer = expression->self.is_ground();
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().is_ground();
     else  answer = (*bool_domain != 3);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -766,7 +783,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->equal(v);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->equal(v);
     else if(domain_type ==   CONST_VAR) answer = (constant_value == v);
-    else if(domain_type ==   EXPRESSION) answer = expression->self.equal(v);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().equal(v);
     else  answer = (*bool_domain-1 == v);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -789,7 +806,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->contain(v);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->contain(v);
     else if(domain_type ==   CONST_VAR) answer = (constant_value == v);
-    else if(domain_type ==   EXPRESSION) answer = expression->self.contain(v);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().contain(v);
     else  answer = (!(v >> 1) && (*bool_domain & (v+1)));
 
 #ifdef _PROFILING_PRIMITIVE
@@ -812,7 +829,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->intersect(lo, up);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->intersect(lo, up);
     else if(domain_type ==   CONST_VAR) answer = (constant_value >= lo && constant_value <= up);
-    else if(domain_type ==   EXPRESSION) answer = expression->self.intersect(lo, up);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().intersect(lo, up);
     else  answer = (((lo<=0) | (2*(up>0))) & *bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -835,7 +852,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->included(lo, up);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->included(lo, up);
     else if(domain_type ==   CONST_VAR) answer = (constant_value >= lo && constant_value <= up);
-    else if(domain_type ==   EXPRESSION) answer = expression->self.included(lo, up);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().included(lo, up);
     else  {
       int state = *bool_domain;
       answer = ( up >= (state >> 1) && (lo <= !(state & 1)) );
@@ -861,7 +878,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->includes(lo, up);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->includes(lo, up);
     else if(domain_type ==   CONST_VAR) answer = (constant_value == lo && constant_value == up);
-    else if(domain_type ==   EXPRESSION) answer = expression->self.includes(lo, up);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().includes(lo, up);
     else  {
       int state = *bool_domain;
       answer = ( up <= (state >> 1) && (lo >= !(state & 1)) );
@@ -887,7 +904,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->intersect(s);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->intersect(s);
     else if(domain_type ==   CONST_VAR) answer = (s.contain(constant_value));
-    else if(domain_type ==   EXPRESSION) answer = expression->self.intersect(s);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().intersect(s);
     else  answer = s.intersect(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -909,7 +926,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->included(s);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->included(s);
     else if(domain_type ==   CONST_VAR) answer = (s.contain(constant_value));
-    else if(domain_type ==   EXPRESSION) answer = expression->self.included(s);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().included(s);
     else  answer = s.includes(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -931,7 +948,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->includes(s);
     else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->includes(s);
     else if(domain_type ==   CONST_VAR) answer = (s.size() == 1 && s.contain(constant_value));
-    else if(domain_type ==   EXPRESSION) answer = expression->self.includes(s);
+    else if(domain_type ==   EXPRESSION) answer = expression->get_self().includes(s);
     else  answer = s.included(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -959,8 +976,8 @@ int Mistral::Variable::get_min_pos() const {
 
     // // }
     else 
-      answer = //x.intersect(expression->self); //
-	expression->self.intersect(x);
+      answer = //x.intersect(expression->get_self()); //
+	expression->get_self().intersect(x);
 
    return answer;
   }
@@ -978,8 +995,8 @@ int Mistral::Variable::get_min_pos() const {
     //std::cout << "TODO! (included)" << std::endl;
     //answer = true;
     else 
-      answer = //x.includes(expression->self);//.included(x);
-	expression->self.included(x);
+      answer = //x.includes(expression->get_self());//.included(x);
+	expression->get_self().included(x);
 
    return answer;
   }
@@ -998,7 +1015,7 @@ int Mistral::Variable::get_min_pos() const {
     // answer = true;
     else 
       answer = 
-	expression->self.includes(x);
+	expression->get_self().includes(x);
 
    return answer;
   }
@@ -1019,7 +1036,7 @@ int Mistral::Variable::get_min_pos() const {
 	s.add(constant_value);
       } else s.clear();
     }
-    else if(domain_type ==   EXPRESSION) expression->self.intersect_to(s);
+    else if(domain_type ==   EXPRESSION) expression->get_self().intersect_to(s);
     else  s.intersect_with(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -1046,7 +1063,7 @@ int Mistral::Variable::get_min_pos() const {
 
       virtual_domain->union_to(s);
     } else if(domain_type ==   CONST_VAR) s.add(constant_value);
-    else if(domain_type ==   EXPRESSION) expression->self.union_to(s);
+    else if(domain_type ==   EXPRESSION) expression->get_self().union_to(s);
     else s.union_with(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -1067,7 +1084,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->remove(v);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove(v);
     else if(domain_type ==   CONST_VAR) evt = (constant_value == v ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.remove(v);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove(v);
     else {
       evt = (v<0||v>1 ? NO_EVENT : setValue(2-v));
     }
@@ -1091,7 +1108,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->set_domain(v);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_domain(v);
     else if(domain_type ==   CONST_VAR) evt = (constant_value != v ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.set_domain(v);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_domain(v);
     else {
 
       evt = (v<0||v>1 ? FAIL_EVENT : setValue(1+v));
@@ -1118,7 +1135,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->set_min(lo);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_min(lo);
     else if(domain_type ==   CONST_VAR) evt = (constant_value < lo ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.set_min(lo);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_min(lo);
     else {
 
       // 1 [1, inf[
@@ -1150,7 +1167,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->set_max(up);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_max(up);
     else if(domain_type ==   CONST_VAR) evt = (constant_value > up ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.set_max(up);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_max(up);
     else {
 
       evt =(up==0 ? setValue(1) : (up<0 ? FAIL_EVENT : NO_EVENT));
@@ -1179,7 +1196,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->set_domain(s);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_domain(s);
     else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.set_domain(s);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_domain(s);
     else {
       //evt = ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
       evt = ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : setState(s.table[0]&*bool_domain));
@@ -1205,8 +1222,10 @@ int Mistral::Variable::get_min_pos() const {
       evt = evt;
     }
     else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
-    else if(x.domain_type ==  EXPRESSION) evt = set_domain(x.expression->self);
-    else {
+    else if(x.domain_type ==  EXPRESSION) {
+      Variable y = x.expression->get_self();
+      evt = set_domain(y);
+    } else {
       std::cout << "TODO! (set_domain(var))" << std::endl;
       exit(1);
     }
@@ -1228,7 +1247,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->removeSet(s);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->removeSet(s);
     else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.removeSet(s);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().removeSet(s);
     else {
 
       evt = ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
@@ -1253,7 +1272,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) evt = range_domain->remove_interval(lo, up);
     else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove_interval(lo, up);
     else if(domain_type ==   CONST_VAR) evt = ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->self.remove_interval(lo, up);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove_interval(lo, up);
     else {
 
       evt = (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
@@ -1293,7 +1312,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   EXPRESSION) {
       //std::cout << "RESTORE EXPRESSION" << std::endl;
       //exit(1);
-      evt = expression->self.restore();
+      evt = expression->get_self().restore();
     }
     else {
       *bool_domain = 3;
@@ -1492,14 +1511,14 @@ Mistral::Expression::Expression(const int lo, const int up)
   : VariableImplementation() {
   id=-1; 
   Variable x(lo, up, DYN_VAR);
-  self = x;
+  _self = x;
 }
 
 Mistral::Expression::Expression(Vector< int >& values) 
   : VariableImplementation() {
   id=-1; 
   Variable x(values, DYN_VAR);
-  self = x;
+  _self = x;
 }
 
 Mistral::Expression::Expression(Vector< Variable >& args) 
@@ -1512,7 +1531,7 @@ Mistral::Expression::Expression(Vector< Variable >& args, const int lo, const in
   : VariableImplementation() {
   id=-1; 
   Variable x(lo, up, DYN_VAR);
-  self = x;
+  _self = x;
   for(unsigned int i=0; i<args.size; ++i)
     children.add(args[i]);
 }
@@ -1526,7 +1545,7 @@ Mistral::Expression::Expression(std::vector< Variable >& args, const int lo, con
   : VariableImplementation() {
   id=-1; 
   Variable x(lo, up, DYN_VAR);
-  self = x;
+  _self = x;
   for(unsigned int i=0; i<args.size(); ++i)
     children.add(args[i]);
 }
@@ -1553,8 +1572,13 @@ Mistral::Expression::~Expression() {
 }
 
 void Mistral::Expression::extract_variable(Solver *s) {
-  self.initialise(s, false);
-  self = self.get_var();
+  // SELF CHANGE
+
+  _self.initialise(s, false);
+  _self = _self.get_var();
+
+  //solver = s;
+  //Variable self(lb, ub, );
 }
 
 // void Mistral::Expression::extract_variable(Solver *s) {
@@ -1562,11 +1586,13 @@ void Mistral::Expression::extract_variable(Solver *s) {
 //   self = self.get_var();
 // }
 
+Mistral::Variable Mistral::Expression::get_self() { return (id >= 0 ? ((Solver*)solver)->variables[id] : _self); }
+
 std::ostream& Mistral::Expression::display(std::ostream& os) const {
   if(is_initialised())
-    os << self << ":";
+    os << "e" << id << ":";
   os << get_name() << "(" ;
-  if(children.empty()) os << self;
+  if(children.empty()) os << (id>=0 ? ((Solver*)solver)->variables[id] : _self);
   else {
     os << children[0];
     for(unsigned int i=1; i<children.size-is_initialised(); ++i) {
@@ -1603,11 +1629,11 @@ void Mistral::AddExpression::extract_variable(Solver *s) {
     int ub = children[0].get_max()+children[1].get_max();
 
     Variable aux(lb, ub, DYN_VAR);
-    self = aux;
+    _self = aux;
 
-    self.initialise(s, false);
-    self = self.get_var();
-    children.add(self);
+    _self.initialise(s, false);
+    _self = _self.get_var();
+    children.add(_self);
   }
 
 const char* Mistral::AddExpression::get_name() const {
@@ -1636,11 +1662,11 @@ void Mistral::OffsetExpression::extract_variable(Solver *s) {
   int ub = children[0].get_max()+offset;
 
     Variable aux(lb, ub, DYN_VAR);
-    self = aux;
+    _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::OffsetExpression::get_name() const {
@@ -1725,11 +1751,11 @@ void Mistral::MulExpression::extract_variable(Solver *s) {
   // exit(1);
 
   Variable aux(lb, ub, DYN_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::MulExpression::get_name() const {
@@ -1838,11 +1864,11 @@ void Mistral::MulExpression::extract_predicate(Solver *s) {
 
 
 //   Variable aux(lb_neg, ub_pos, DYN_VAR);
-//   self = aux;
+//   _self = aux;
 
-//   self.initialise(s, false);
-//   self = self.get_var();
-//   children.add(self);
+//   _self.initialise(s, false);
+//   _self = _self.get_var();
+//   children.add(_self);
 // }
 
 // const char* Mistral::DivExpression::get_name() const {
@@ -1877,11 +1903,11 @@ void Mistral::FactorExpression::extract_variable(Solver *s) {
   int ub = (factor<0 ? children[0].get_min() : children[0].get_max())*factor;
 
   Variable aux(lb, ub, DYN_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::FactorExpression::get_name() const {
@@ -1933,11 +1959,11 @@ void Mistral::SubExpression::extract_variable(Solver *s) {
   int ub = children[0].get_max()-children[1].get_min();
   
     Variable aux(lb, ub, DYN_VAR);
-    self = aux;
+    _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
  
 }
 
@@ -1975,11 +2001,11 @@ void Mistral::NotExpression::extract_constraint(Solver *s) {
 
 void Mistral::NotExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::NotExpression::get_name() const {
@@ -2009,11 +2035,11 @@ void Mistral::NegExpression::extract_constraint(Solver *s) {
 
 void Mistral::NegExpression::extract_variable(Solver *s) {
   Variable aux(-children[0].get_max(), -children[0].get_min(), DYN_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::NegExpression::get_name() const {
@@ -2043,11 +2069,11 @@ void Mistral::AndExpression::extract_constraint(Solver *s) {
 
 void Mistral::AndExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::AndExpression::extract_predicate(Solver *s) {
@@ -2078,11 +2104,11 @@ void Mistral::OrExpression::extract_constraint(Solver *s) {
 
 void Mistral::OrExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::OrExpression::extract_predicate(Solver *s) {
@@ -2114,10 +2140,10 @@ Mistral::Variable Mistral::Variable::operator||(Variable x) {
 
 // //   void Mistral::NeqExpression::extract_variable(Solver *s) {
 // //     Variable aux(0, 1, BOOL_VAR);
-// //     self = aux;
+// //     _self = aux;
 
-// //     children.add(self);
-// //     self.initialise(s, false);
+// //     children.add(_self);
+// //     _self.initialise(s, false);
 // //   }
 
 // //   void Mistral::NeqExpression::extract_predicate(Solver *s) {
@@ -2346,11 +2372,11 @@ void Mistral::EqualExpression::extract_constraint(Solver *s) {
 
 void Mistral::EqualExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::EqualExpression::extract_predicate(Solver *s) {
@@ -2466,11 +2492,11 @@ void Mistral::EqualSetExpression::extract_constraint(Solver *s) {
 
 void Mistral::EqualSetExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
@@ -2550,11 +2576,11 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
 
 void Mistral::PrecedenceExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::PrecedenceExpression::extract_predicate(Solver *s) {
@@ -2664,11 +2690,11 @@ void Mistral::ReifiedDisjunctiveExpression::extract_constraint(Solver *s) {
 
 void Mistral::ReifiedDisjunctiveExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::ReifiedDisjunctiveExpression::extract_predicate(Solver *s) {
@@ -2845,15 +2871,16 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
 
 void Mistral::BoolSumExpression::extract_variable(Solver *s) {
   Variable aux(lb, ub, DYN_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  //children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  //children.add(_self);
 }
 
 void Mistral::BoolSumExpression::extract_predicate(Solver *s) { 
-  s->add(new PredicateBoolSum(children, self)); 
+  //s->add(new PredicateBoolSum(children, self)); 
+  s->add(new PredicateBoolSum(children, s->variables[id])); 
 }
 
 const char* Mistral::BoolSumExpression::get_name() const {
@@ -2973,11 +3000,11 @@ void Mistral::LinearExpression::extract_variable(Solver *s) {
   initialise_bounds();
 
   Variable aux(lower_bound, upper_bound, DYN_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
   weight.add(-1);
 }
 
@@ -3034,11 +3061,11 @@ void Mistral::MinExpression::extract_variable(Solver *s) {
   }
 
   Variable aux(lower_bound, upper_bound, DYN_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::MinExpression::get_name() const {
@@ -3109,11 +3136,11 @@ void Mistral::MaxExpression::extract_variable(Solver *s) {
   }
 
   Variable aux(lower_bound, upper_bound, DYN_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::MaxExpression::get_name() const {
@@ -3190,11 +3217,11 @@ void Mistral::ElementExpression::extract_variable(Solver *s) {
   initialise_domain();
 
   Variable aux(values, DYN_VAR);
-  self = aux;
+  _self = aux;
 
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 const char* Mistral::ElementExpression::get_name() const {
@@ -3228,7 +3255,7 @@ void Mistral::ElementSetExpression::extract_constraint(Solver *s) {
 }
 
 // Mistral::Variable Mistral::ElementSetExpression::get_index_var(const int idx) {
-//   ((SetExpression*)(self.variable))->children[i];
+//   ((SetExpression*)(_self.variable))->children[i];
 // }
 
 void Mistral::ElementSetExpression::initialise_domain() {
@@ -3357,11 +3384,11 @@ void Mistral::ElementSetExpression::initialise_domain() {
 //   initialise_domain();
 
 //   Variable aux(new SetExpression(elts_lb, elts_ub, lb, ub));
-//   self = aux;
+//   _self = aux;
 
-//   self.initialise(s, false);
-//   //self = self.get_var();
-//   //children.add(self);
+//   _self.initialise(s, false);
+//   //_self = _self.get_var();
+//   //children.add(_self);
 // }
 
 const char* Mistral::ElementSetExpression::get_name() const {
@@ -3437,14 +3464,16 @@ void Mistral::ElementSetExpression::extract_predicate(Solver *s) {
    
    
    // s->add(Element(scp[j], children[arity].get_var(), offset) == 
-   // 	   ((SetExpression*)(self.variable))->children[j].get_var());
+   // 	   ((SetExpression*)(_self.variable))->children[j].get_var());
  }
  
  scp[0].clear();
  for(i=0; i<=arity; ++i) {
    scp[0].add(children[i]);
  }
- scp[0].add(self);
+
+ //scp[0].add(self);
+ scp[0].add(s->variables[id]);
  s->add(new PredicateElement(scp[0], offset));
 
   // do {
@@ -3586,13 +3615,15 @@ void Mistral::IntersectionExpression::extract_predicate(Solver *s) {
     }
   }  
 
-  scp.add(self);
+  //scp.add(self);
+  scp.add(s->variables[id]);
   scp.add(X);
   s->add( Constraint(new ConstraintLess(scp)) );
  
   scp.clear();
  
-  scp.add(self);
+  //scp.add(self);
+  scp.add(s->variables[id]);
   scp.add(Y);
   s->add( Constraint(new ConstraintLess(scp)) );
  
@@ -4021,11 +4052,11 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
 
 void Mistral::MemberExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
-  self = aux;
+  _self = aux;
   
-  self.initialise(s, false);
-  self = self.get_var();
-  children.add(self);
+  _self.initialise(s, false);
+  _self = _self.get_var();
+  children.add(_self);
 }
 
 void Mistral::MemberExpression::extract_predicate(Solver *s) { 

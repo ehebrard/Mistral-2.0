@@ -3642,7 +3642,6 @@ void ElementTest::run1() {
   vals.add(12);
   Variable Z(vals);
 
-
   s.add( X[Y] == Z );
 
   //std::cout << s << std::endl;
@@ -3658,7 +3657,12 @@ void ElementTest::run1() {
 
 
 #ifdef _MONITOR
-  s.monitor_list << X << "[" << Y << "] = " << Z << "\n";
+  s.monitor_list << X ;
+  s.monitor_list << "[";
+  s.monitor_list << Y ;
+  s.monitor_list << "] = ";
+  s.monitor_list << Z ;
+  s.monitor_list << "\n";
 #endif
 
 
@@ -3743,32 +3747,32 @@ void ElementTest::run2() {
 
   // Variable Z = SetVariable(0,9,1,5);
 
-  // std::cout << Z << std::endl;
-
+  //std::cout << Z << std::endl;
+  
 
 
 
   Variable s1 = SetVariable(1,5,2,4);
   X.add(s1);
 
-  //std::cout << s1 << std::endl;
+  //  std::cout << s1 << std::endl;
 
 
   Variable s2 = SetVariable(5,9,1,3);
   X.add(s2);
 
-  //std::cout << s2 << std::endl;
+  //  std::cout << s2 << std::endl;
 
 
   Variable s3 = SetVariable(0,3,2,3);
   X.add(s3);
 
-  //std::cout << s3 << std::endl;
+  //  std::cout << s3 << std::endl;
 
 
   Variable Y(0,2);
 
-  //std::cout << Y << std::endl;
+  //  std::cout << Y << std::endl;
 
 
   Variable Z = SetVariable(0,9,1,4);

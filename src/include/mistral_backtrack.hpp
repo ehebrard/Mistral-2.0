@@ -244,7 +244,7 @@ namespace Mistral {
     }
 
     std::ostream& display(std::ostream& os) const {
-      os << event2strc(second) << "(x" << first << ")";
+      os << event2strc(second) << "(" << first << ")";
       return os;
     }
   };

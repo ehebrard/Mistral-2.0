@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
   fm = parse(args.back(), s, p);
   if( !fm ) return 0;
   double parse_time = get_run_time() - cpu_time;
-
+  std::cout << " d PARSETIME " << parse_time << std::endl;
 
   map<string, string> options;
 
@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
   options["--seed"] = "123456";
   options["--limit"] = "10";
   options["--verbose"] = "1";
+  options["--rewrite"] = "0";
 
 
   string option_name = "error";
@@ -68,6 +69,7 @@ int main(int argc, char *argv[])
   s.initialise_random_seed(atoi(options["--seed"].c_str()));
   s.set_time_limit(atof(options["--limit"].c_str()));
   s.parameters.verbosity = atoi(options["--verbose"].c_str());
+  fm->set_rewriting(atoi(options["--rewrite"].c_str()));
 
 
 
@@ -77,8 +79,7 @@ int main(int argc, char *argv[])
   fm->run(cout , p);
   delete fm;
 
-  // std::cout << "%sParse time:" << parse_time << std::endl
-  // 	    << s.statistics << std::endl;
+ 
  
   return 0;
 }

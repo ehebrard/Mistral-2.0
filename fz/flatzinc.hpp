@@ -112,8 +112,13 @@ namespace FlatZinc {
   protected:
     /// Mistral stuff
     Solver &solver;
+
+    /// Options
     BranchingHeuristic *heuristic;
     RestartPolicy *policy;
+    bool use_rewriting;
+
+    ////
 
 
     /// Number of integer variables
@@ -187,6 +192,10 @@ namespace FlatZinc {
 
     /// setup parameters from the command line
     void set_strategy(std::string var_o, std::string val_o, std::string r_pol);
+
+    /// setup the rewriting step
+    void set_rewriting(const bool on);
+
 
     /// Run the search
     void run(std::ostream& out, const Printer& p);

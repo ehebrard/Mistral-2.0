@@ -194,6 +194,9 @@ bool Mistral::ConstraintImplementation::is_triggered_on(const int i, const int t
 void Mistral::GlobalConstraint::initialise_vars(Solver *s) {
   for(unsigned int i=0; i<scope.size; ++i) {
     scope[i].initialise(s, false);
+
+    //std::cout << "INITIALISE " << scope[i] << " => " << get_solver()->variables[scope[i].id()] << std::endl;
+
   }
 }
 
@@ -1187,7 +1190,7 @@ std::ostream& Mistral::ConstraintImplementation::display(std::ostream& os) const
 std::ostream& Mistral::GlobalConstraint::display(std::ostream& os) const {
   os << name() << "(" << scope[0];
   for(unsigned int i=1; i<scope.size; ++i)
-    os << ", " << scope[i].get_var();
+    os << ", " << scope[i]/*.get_var()*/;
   os << ")";
   return os;
 }
@@ -1255,9 +1258,24 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::rewrite() {
 
 
 Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
+
+  // std::cout << "ACTIVE: " << active <<  " " ;
+  // std::cout.flush();
+  // std::cout << scope[0].get_domain() << " " << scope[1].get_domain() << std::endl;
+
   PropagationOutcome wiped_idx = CONSISTENT;
-  if(!active && scope[0].get_min() == scope[1].get_min()) wiped_idx = FAILURE(0);
-  else if(active != 3 && (scope[active-1].remove(scope[2-active].get_min()) == FAIL_EVENT)) wiped_idx = FAILURE(active-1);
+  if(!active) {
+    if(scope[0].get_min() == scope[1].get_min()) wiped_idx = FAILURE(0);
+  } else {
+    
+    // if(active != 3) {
+    //   std::cout << "remove the value of " << scope[2-active] << ": " 
+    // 		<< scope[2-active].get_domain() << " from " 
+    // 		<< scope[active-1] << " in " << scope[active-1].get_domain() << std::endl;
+    // }
+
+    if(active != 3 && (scope[active-1].remove(scope[2-active].get_min()) == FAIL_EVENT)) wiped_idx = FAILURE(active-1);
+  }
   return wiped_idx;
 }
 
@@ -1274,7 +1292,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate(const int cha
 }
 
 std::ostream& Mistral::ConstraintNotEqual::display(std::ostream& os) const {
-  os << scope[0].get_var() << " =/= " << scope[1].get_var();
+  os << scope[0]/*.get_var()*/ << " =/= " << scope[1]/*.get_var()*/;
   return os;
 }
 
@@ -1369,7 +1387,7 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
       //get_solver()->domain_types[k[j]] |= REMOVED_VAR;
 
 #ifdef _DEBUG_REWRITE
-      std::cout << "    relax constraints on " << scope[j].get_var() << " and post them on " << scope[1-j].get_var() << std::endl;
+      std::cout << "    relax constraints on " << scope[j]/*.get_var()*/ << " and post them on " << scope[1-j]/*.get_var()*/ << std::endl;
 #endif
 
       Constraint con;
@@ -1419,7 +1437,10 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
   //     }
       
       //and now scope[j] points to scope[1-j]
-      scope[j].expression->self = scope[1-j];
+
+      // SELF CHANGE
+      //scope[j].expression->self = scope[1-j];
+      
       scope[j].expression->id = scope[1-j].id();
 
 // #ifdef _DEBUG_REWRITE
@@ -1456,7 +1477,7 @@ Mistral::PropagationOutcome Mistral::ConstraintEqual::propagate(const int change
 
 
 std::ostream& Mistral::ConstraintEqual::display(std::ostream& os) const {
-  os << (scope[0].get_var()) << " == " << (scope[1].get_var());
+  os << (scope[0]/*.get_var()*/) << " == " << (scope[1]/*.get_var()*/);
   return os;
 }
 
@@ -1514,7 +1535,7 @@ Mistral::PropagationOutcome Mistral::PredicateUpperBound::propagate(const int ch
 }
 
 std::ostream& Mistral::PredicateUpperBound::display(std::ostream& os) const {
-  os << scope[1].get_var() << " <=> (" << scope[0].get_var() << " <= " << bound << ")";
+  os << scope[1]/*.get_var()*/ << " <=> (" << scope[0]/*.get_var()*/ << " <= " << bound << ")";
   return os;
 }
 
@@ -1570,7 +1591,7 @@ Mistral::PropagationOutcome Mistral::PredicateLowerBound::propagate(const int ch
 }
 
 std::ostream& Mistral::PredicateLowerBound::display(std::ostream& os) const {
-  os << scope[1].get_var() << " <=> (" << scope[0].get_var() << " >= " << bound << ")";
+  os << scope[1]/*.get_var()*/ << " <=> (" << scope[0]/*.get_var()*/ << " >= " << bound << ")";
   return os;
 }
 
@@ -1684,11 +1705,11 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate(const int changed_
 }
 
 std::ostream& Mistral::PredicateLess::display(std::ostream& os) const {
-  os << scope[2].get_var() << " <=> (" << scope[0].get_var() ;
+  os << scope[2]/*.get_var()*/ << " <=> (" << scope[0]/*.get_var()*/ ;
   if(offset==0) os << " <= ";
   else if(offset==1) os << " < ";
   else os << " + " << offset << " <= ";
-  os << scope[1].get_var() << ")";
+  os << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -1738,12 +1759,12 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate(const int changed
 }
 
 std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
-  os << scope[0].get_var();
+  os << scope[0]/*.get_var()*/;
   if(offset < 0) os << " - " << (-offset+1) << " < ";
   else if(offset > 1) os << " + " << (offset-1) << " < ";
   else if(offset > 0) os << " < ";
   else os << " <= ";
-  os << scope[1].get_var();
+  os << scope[1]/*.get_var()*/;
   return os;
 }
 
@@ -1838,8 +1859,8 @@ Mistral::PropagationOutcome Mistral::ConstraintDisjunctive::propagate(const int 
 
 void Mistral::ConstraintDisjunctive::consolidate() {
   for(unsigned int i=0; i<2; ++i) {
-    scope[i] = scope[i].get_var();
-    _scope[i] = _scope[i].get_var();
+    scope[i] = scope[i]/*.get_var()*/;
+    _scope[i] = _scope[i]/*.get_var()*/;
     precedence[i].consolidate();
     // precedence[0].get_scope()[i] = scope[i];
     // precedence[1].get_scope([1-i] = scope[i];
@@ -1942,11 +1963,11 @@ std::ostream& Mistral::ConstraintDisjunctive::display(std::ostream& os) const {
 
 // void Mistral::ConstraintTernaryDisjunctive::consolidate() {
 //   for(unsigned int i=0; i<2; ++i) {
-//     scope[i] = scope[i].get_var();
+//     scope[i] = scope[i]/*.get_var()*/;
 //     precedence[0]->scope[i] = scope[i];
 //     precedence[1]->scope[1-i] = scope[i];
 //   }
-//   scope[2] = scope[2].get_var();
+//   scope[2] = scope[2]/*.get_var()*/;
 // }
 
 // std::ostream& Mistral::ConstraintTernaryDisjunctive::display(std::ostream& os) const {
@@ -2142,13 +2163,13 @@ Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate(con
 std::ostream& Mistral::ConstraintReifiedDisjunctive::display(std::ostream& os) const {
   if(scope[2].is_ground()) {
     if(!scope[2].get_max()) {
-      os << scope[1] << " + " << processing_time[1] << " <= " << scope[0].get_var() ;
+      os << scope[1] << " + " << processing_time[1] << " <= " << scope[0]/*.get_var()*/ ;
     } else {
-      os << scope[0] << " + " << processing_time[0] << " <= " << scope[1].get_var() ;
+      os << scope[0] << " + " << processing_time[0] << " <= " << scope[1]/*.get_var()*/ ;
     }
   } else {
-    os << scope[0].get_var() << " + " << processing_time[0] << " <= " << scope[1].get_var() << " or " 
-       << scope[1].get_var() << " + " << processing_time[1] << " <= " << scope[0].get_var() ;
+    os << scope[0]/*.get_var()*/ << " + " << processing_time[0] << " <= " << scope[1]/*.get_var()*/ << " or " 
+       << scope[1]/*.get_var()*/ << " + " << processing_time[1] << " <= " << scope[0]/*.get_var()*/ ;
   }
   return os;
 }
@@ -2282,9 +2303,9 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed
 }
 
 std::ostream& Mistral::PredicateEqual::display(std::ostream& os) const {
-  os << scope[2].get_var() << " <=> (";
-  if(spin) os << scope[0].get_var() << " == " << scope[1].get_var();
-  else os << scope[0].get_var() << " =/= " << scope[1].get_var();
+  os << scope[2]/*.get_var()*/ << " <=> (";
+  if(spin) os << scope[0]/*.get_var()*/ << " == " << scope[1]/*.get_var()*/;
+  else os << scope[0]/*.get_var()*/ << " =/= " << scope[1]/*.get_var()*/;
   os << ")";
   return os;
 }
@@ -2341,9 +2362,9 @@ Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate(const int
 }
 
 std::ostream& Mistral::PredicateConstantEqual::display(std::ostream& os) const {
-  os << scope[1].get_var() << " <=> (";
-  if(spin) os << scope[0].get_var() << " == " << value;
-  else os << scope[0].get_var() << " =/= " << value;
+  os << scope[1]/*.get_var()*/ << " <=> (";
+  if(spin) os << scope[0]/*.get_var()*/ << " == " << value;
+  else os << scope[0]/*.get_var()*/ << " =/= " << value;
   os << ")";
   return os;
 }
@@ -2409,9 +2430,9 @@ Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate(const in
 }
 
 std::ostream& Mistral::PredicateIntervalMember::display(std::ostream& os) const {
-  os << scope[1].get_var() << " <=> (";
-  if(spin) os << scope[0].get_var() << " in [" << lower_bound << ".." << upper_bound << "]";
-  else os << scope[0].get_var() << " in ..]" << lower_bound << "," << upper_bound << "[..";
+  os << scope[1]/*.get_var()*/ << " <=> (";
+  if(spin) os << scope[0]/*.get_var()*/ << " in [" << lower_bound << ".." << upper_bound << "]";
+  else os << scope[0]/*.get_var()*/ << " in ..]" << lower_bound << "," << upper_bound << "[..";
   os << ")";
   return os;
 }
@@ -2472,7 +2493,7 @@ Mistral::PropagationOutcome Mistral::PredicateSetMember::propagate(const int cha
 }
 
 std::ostream& Mistral::PredicateSetMember::display(std::ostream& os) const {
-  os << scope[1].get_var() << " <=> (" << scope[0].get_var() ;
+  os << scope[1]/*.get_var()*/ << " <=> (" << scope[0]/*.get_var()*/ ;
   if(!spin) os << " not";
   os << " in " << values; 
   os << ")";
@@ -2512,7 +2533,7 @@ Mistral::PropagationOutcome Mistral::PredicateOffset::propagate(const int change
 }
 
 std::ostream& Mistral::PredicateOffset::display(std::ostream& os) const {
-  os << scope[1].get_var() << " == (" << scope[0].get_var() << " + " << offset << ")";
+  os << scope[1]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " + " << offset << ")";
   return os;
 }
 
@@ -2582,7 +2603,7 @@ Mistral::PropagationOutcome Mistral::PredicateFactor::propagate(const int change
 }
 
 std::ostream& Mistral::PredicateFactor::display(std::ostream& os) const {
-  os << scope[1].get_var() << " == (" << scope[0].get_var() << " * " << factor << ")";
+  os << scope[1]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " * " << factor << ")";
   return os;
 }
 
@@ -2713,7 +2734,7 @@ Mistral::PropagationOutcome Mistral::PredicateNot::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateNot::display(std::ostream& os) const {
-  os << scope[1].get_var() << " <=> not(" << scope[0].get_var() << ")";
+  os << scope[1]/*.get_var()*/ << " <=> not(" << scope[0]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -2770,7 +2791,7 @@ Mistral::PropagationOutcome Mistral::PredicateNeg::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateNeg::display(std::ostream& os) const {
-  os << scope[1].get_var() << " = -(" << scope[0].get_var() << ")";
+  os << scope[1]/*.get_var()*/ << " = -(" << scope[0]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -2861,7 +2882,7 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateAnd::display(std::ostream& os) const {
-  os << scope[2].get_var() << " <=> (" << scope[0].get_var() << " and " << scope[1].get_var() << ")";
+  os << scope[2]/*.get_var()*/ << " <=> (" << scope[0]/*.get_var()*/ << " and " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -2945,7 +2966,7 @@ Mistral::PropagationOutcome Mistral::PredicateOr::propagate() {
 }
 
 std::ostream& Mistral::PredicateOr::display(std::ostream& os) const {
-  os << scope[2].get_var() << " <=> (" << scope[0].get_var() << " or " << scope[1].get_var() << ")";
+  os << scope[2]/*.get_var()*/ << " <=> (" << scope[0]/*.get_var()*/ << " or " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -2981,7 +3002,7 @@ Mistral::PropagationOutcome Mistral::ConstraintAnd::propagate(const int changed_
 }
 
 std::ostream& Mistral::ConstraintAnd::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var() << " and " << scope[1].get_var() << ")";
+  os << "(" << scope[0]/*.get_var()*/ << " and " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -3013,7 +3034,7 @@ Mistral::PropagationOutcome Mistral::ConstraintOr::propagate(const int changed_i
 }
 
 std::ostream& Mistral::ConstraintOr::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var() << " or " << scope[1].get_var() << ")";
+  os << "(" << scope[0]/*.get_var()*/ << " or " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -3183,7 +3204,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {
 }
 
 std::ostream& Mistral::ConstraintLex::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var() << " lex " << scope[1].get_var() << " - " << scope[2].get_var() << "." << scope[3].get_var() << ")";
+  os << "(" << scope[0]/*.get_var()*/ << " lex " << scope[1]/*.get_var()*/ << " - " << scope[2]/*.get_var()*/ << "." << scope[3]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -3401,7 +3422,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateAdd::display(std::ostream& os) const {
-  os << scope[2].get_var() << " == (" << scope[0].get_var() << " + " << scope[1].get_var() << ")";
+  os << scope[2]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " + " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -3911,9 +3932,9 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
 
   
 #ifdef _DEBUG_MUL
-  std::cout << scope[0].get_var() << " in " << scope[0].get_domain() 
-	    << " * " << scope[1].get_var() << " in " << scope[1].get_domain() 
-    	    << " = " << scope[2].get_var() << " in " << scope[2].get_domain() << std::endl;
+  std::cout << scope[0]/*.get_var()*/ << " in " << scope[0].get_domain() 
+	    << " * " << scope[1]/*.get_var()*/ << " in " << scope[1].get_domain() 
+    	    << " = " << scope[2]/*.get_var()*/ << " in " << scope[2].get_domain() << std::endl;
 #endif
 
   int evt_idx;
@@ -3923,7 +3944,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
     evt_idx = changes.pop();
 
 #ifdef _DEBUG_MUL
-    std::cout << "react to " << scope[evt_idx].get_var() << " in " 
+    std::cout << "react to " << scope[evt_idx]/*.get_var()*/ << " in " 
 	      << scope[evt_idx].get_domain() 
 	      << (LB_CHANGED(event_type[evt_idx]) ? " (change on LB) " : "")
 	      << (UB_CHANGED(event_type[evt_idx]) ? " (change on UB) " : "")
@@ -3947,7 +3968,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
 }
   
 std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
-  os << scope[2].get_var() << " == (" << scope[0].get_var() << " * " << scope[1].get_var() << ")";
+  os << scope[2]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " * " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -4675,9 +4696,9 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
  
   
 // #ifdef _DEBUG_DIV
-//   std::cout << scope[0].get_var() << " in " << scope[0].get_domain() 
-// 	    << " / " << scope[1].get_var() << " in " << scope[1].get_domain() 
-//     	    << " = " << scope[2].get_var() << " in " << scope[2].get_domain() << std::endl;
+//   std::cout << scope[0]/*.get_var()*/ << " in " << scope[0].get_domain() 
+// 	    << " / " << scope[1]/*.get_var()*/ << " in " << scope[1].get_domain() 
+//     	    << " = " << scope[2]/*.get_var()*/ << " in " << scope[2].get_domain() << std::endl;
 // #endif
 
 //   //int i, j, lb, ub, evt_idx, rev_idx, aux_idx;
@@ -4694,7 +4715,7 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 //     evt_idx = changes.pop();
 
 // #ifdef _DEBUG_DIV
-//     std::cout << "react to " << scope[evt_idx].get_var() << " in " 
+//     std::cout << "react to " << scope[evt_idx]/*.get_var()*/ << " in " 
 // 	      << scope[evt_idx].get_domain() 
 // 	      << (LB_CHANGED(event_type[evt_idx]) ? " (change on LB) " : "")
 // 	      << (UB_CHANGED(event_type[evt_idx]) ? " (change on UB) " : "")
@@ -4777,9 +4798,9 @@ int Mistral::ConstraintBoolSumEqual::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintBoolSumEqual::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var() ;
+  os << "(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << scope[i].get_var();
+    os << " + " << scope[i]/*.get_var()*/;
   os << ") == " << total ;
   return os;
 }
@@ -4832,9 +4853,9 @@ int Mistral::ConstraintBoolSumInterval::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintBoolSumInterval::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var() ;
+  os << "(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << scope[i].get_var();
+    os << " + " << scope[i]/*.get_var()*/;
   os << ") in [" << lb << "," << ub << "]" ;
   return os;
 }
@@ -4914,9 +4935,9 @@ int Mistral::PredicateBoolSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateBoolSum::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var() ;
+  os << "(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size-1; ++i) 
-    os << " + " << scope[i].get_var();
+    os << " + " << scope[i]/*.get_var()*/;
   os << ") = " << scope[scope.size-1];
   return os;
 }
@@ -5448,10 +5469,10 @@ int Mistral::PredicateWeightedSum::check( const int* s ) const
 std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
-  os << weight[0] << "*" << scope[0].get_var() ;
+  os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
 
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << weight[i] << "*" << scope[i].get_var();
+    os << " + " << weight[i] << "*" << scope[i]/*.get_var()*/;
   
   if(upper_bound < INFTY) 
     os << " <= " << upper_bound;
@@ -5827,11 +5848,11 @@ int Mistral::PredicateElement::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateElement::display(std::ostream& os) const {
-  os << "(" << scope[0].get_var();
+  os << "(" << scope[0]/*.get_var()*/;
   for(unsigned int i=1; i<scope.size-2; ++i) {
-    os << " " << scope[i].get_var();
+    os << " " << scope[i]/*.get_var()*/;
   }
-  os << ")[" << scope.back(2).get_var() << "] == " << scope.back().get_var();
+  os << ")[" << scope.back(2)/*.get_var()*/ << "] == " << scope.back()/*.get_var()*/;
   return os;
 }
 
@@ -5982,9 +6003,9 @@ int Mistral::ConstraintCliqueNotEqual::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const {
-  os << "=/=(" << scope[0].get_var() ;
+  os << "=/=(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " ," << scope[i].get_var();
+    os << " ," << scope[i]/*.get_var()*/;
   os << ")" ; //<< events << " " << event_type;
   return os;
 }
@@ -6332,9 +6353,9 @@ int Mistral::ConstraintAllDiff::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
-  os << "alldiff(" << scope[0].get_var() ;
+  os << "alldiff(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " ," << scope[i].get_var();
+    os << " ," << scope[i]/*.get_var()*/;
   os << ")" ;
   return os;
 }
@@ -6630,9 +6651,9 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 }
 
 std::ostream& Mistral::PredicateMin::display(std::ostream& os) const {
-  os << scope.back() << " == min(" << scope[0].get_var();
+  os << scope.back() << " == min(" << scope[0]/*.get_var()*/;
   for(unsigned int i=1; i<scope.size-1; ++i) {
-    os << ", " << scope[i].get_var() ;
+    os << ", " << scope[i]/*.get_var()*/ ;
   }
   os << ")";
   return os;
@@ -6944,9 +6965,9 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
 }
 
 std::ostream& Mistral::PredicateMax::display(std::ostream& os) const {
-  os << scope.back().get_var() << " == max(" << scope[0].get_var();
+  os << scope.back()/*.get_var()*/ << " == max(" << scope[0]/*.get_var()*/;
   for(unsigned int i=1; i<scope.size-1; ++i) {
-    os << ", " << scope[i].get_var() ;
+    os << ", " << scope[i]/*.get_var()*/ ;
   }
   os << ")";
   return os;

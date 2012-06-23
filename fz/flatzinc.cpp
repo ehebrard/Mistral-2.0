@@ -168,7 +168,7 @@ namespace FlatZinc {
 
 
   FlatZincModel::FlatZincModel(Solver &s)
-    : solver(s),
+    : solver(s), heuristic(NULL), policy(NULL), use_rewriting(false),
       intVarCount(-1), boolVarCount(-1), setVarCount(-1), _optVar(-1),
       _solveAnnotations(NULL),
       findall(false)
@@ -374,30 +374,47 @@ namespace FlatZinc {
     policy = solver.restart_factory(r_pol);
   }
 
+  void  
+  FlatZincModel::set_rewriting(const bool on) {
+    use_rewriting = on;
+  }
+  
   void
   FlatZincModel::run(std::ostream& out, const Printer& p) {
     using std::setw;
     using std::setfill;
 
     
+    // std::cout << iv << std::endl;
+    // for(int i=0; i<iv.size; ++i) {
+    //   std::cout << iv[i] << " in " << iv[i].get_domain() << std::endl;
+    // }
+
+
     //exit(1);
 
 #ifdef _DEBUG_FLATZINC
     std::cout << " c run!" << std::endl;
-    std::cout << "first " << solver << std::endl;
+    //std::cout << "first " << solver << std::endl;
 #endif
 
-    //solver.rewrite() ;
+    if(use_rewriting) {
+#ifdef _DEBUG_FLATZINC
+      std::cout << "before rewriting:\n" << solver << std::endl;
+#endif
+
+      solver.rewrite() ;
     
 #ifdef _DEBUG_FLATZINC
-    std::cout << "rewrite " << solver << std::endl;
+      std::cout << "after rewriting:\n" << solver << std::endl;
 #endif
+    }
 
     solver.consolidate();
     
-#ifdef _DEBUG_FLATZINC
-    std::cout << "c mistral representation:\n " << solver << std::endl;
-#endif
+// #ifdef _DEBUG_FLATZINC
+//     std::cout << "c mistral representation:\n " << solver << std::endl;
+// #endif
 
     Outcome result = UNKNOWN;
 
@@ -443,9 +460,51 @@ namespace FlatZinc {
       // }
 
 
+      // int matrix[100];
+
+
+      // //std::cout << iv << std::endl;
+      // for(int i=0; i<100; ++i) {
+      //   Variable x = iv[i].get_var();
+      //   if(x.domain_type == CONST_VAR)
+      //     matrix[i] = x.get_value(); 
+      //   else 
+      //     matrix[i] = -(x.get_id());
+      // }
+
+#ifdef _MONITOR
+      for(int i=0; i<10; ++i) {
+        for(int j=0; j<10; ++j) {
+          solver.monitor_list << " ";
+          Variable x = iv[i*10+j].get_var();
+          if(x.domain_type == CONST_VAR) {
+            //solver.monitor_list << x.get_value();
+            solver.monitor_list << " "; 
+          } else {
+            solver.monitor_list << solver.variables[x.id()];
+          }
+        }
+        solver.monitor_list << "\n";
+      }
+#endif
+
       result = solver.depth_first_search(solver.variables, heuristic, policy);//, goal);
 
-      //result = solver.solve();
+
+      // //std::cout << iv << std::endl;
+      // for(int i=0; i<10; ++i) {
+      //   for(int j=0; j<10; ++j) {
+      //     Variable x = iv[i*10+j].get_var();
+      //     if(x.is_ground())
+      //       std::cout << setw(2) << x.get_value() << "     ";
+      //     else 
+      //       std::cout << setw(2) << x.get_solution_int_value() << " (" << x.id() << ") ";
+
+      //       //std::cout << x << " in " << x.get_domain() << " "; 
+      //   }
+      //   std::cout << std::endl;
+      // }
+      // //result = solver.solve();
       break;
     }
     }
