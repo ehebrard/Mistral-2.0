@@ -670,29 +670,39 @@ namespace FlatZinc {
 
     void p_int_abs(Solver& s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
-      cout << "CAN'T POST A ABS CONSTRAINT" << endl;
-      exit(1);
+      //cout << "CAN'T POST A ABS CONSTRAINT" << endl;
+     // exit(1);
+       /*
+      if( !ce[0]->isIntVar()) {
+        Variable y = getIntVar(s, m, ce[1]);
+         y.assign(s, abs(ce[0]->getInt()), NO_REASON);
+       } else if( !ce[1]->isIntVar()) {
+         Variable x = getIntVar(s, m, ce[0]);
+         int y = ce[1]->getInt();
+         if( y < 0 ) throw unsat();
+         if( x.min(s) <= -y )
+           x.setmin(s, -y, NO_REASON);
+         else
+           x.assign(s, y, NO_REASON);
+         if( x.max(s) >= y)
+           x.setmax(s, y, NO_REASON);
+         else
+           x.assign(s, -y, NO_REASON);
+         for(int i = x.min(s)+1; i < x.max(s); ++i)
+           x.remove(s, i, NO_REASON);
+       } else {
+         post_abs(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0);
+       }
+      */
+     // 	s.add( (getIntVar(s, m, ce[0]) >=0 && (getIntVar(s, m, ce[1]) ==  getIntVar(s,m,ce[0]))) ||
+       // 			(getIntVar(s, m, ce[0]) <0 && (getIntVar(s, m, ce[1]) ==  (-getIntVar(s,m,ce[0])))));
 
-      // if( !ce[0]->isIntVar()) {
-      //   Variable y = getIntVar(s, m, ce[1]);
-      //   y.assign(s, abs(ce[0]->getInt()), NO_REASON);
-      // } else if( !ce[1]->isIntVar()) {
-      //   Variable x = getIntVar(s, m, ce[0]);
-      //   int y = ce[1]->getInt();
-      //   if( y < 0 ) throw unsat();
-      //   if( x.min(s) <= -y )
-      //     x.setmin(s, -y, NO_REASON);
-      //   else
-      //     x.assign(s, y, NO_REASON);
-      //   if( x.max(s) >= y)
-      //     x.setmax(s, y, NO_REASON);
-      //   else
-      //     x.assign(s, -y, NO_REASON);
-      //   for(int i = x.min(s)+1; i < x.max(s); ++i)
-      //     x.remove(s, i, NO_REASON);
-      // } else {
-      //   post_abs(s, getIntVar(s, m, ce[0]), getIntVar(s, m, ce[1]), 0);
-      // }
+    	//abs(a,b) <-->  b >= 0 /\ b >= a /\ b >= -a /\ (b <= a \/ b <= - a);
+
+    	Variable b = getIntVar(s, m, ce[1]);
+    	Variable a = getIntVar(s, m, ce[0]);
+    	s.add( (b >= 0) && (b >= a) && (b >= -a) && ((b <= a) || (b <= - a)));
+
     }
 
     void p_int_times(Solver& s, FlatZincModel& m,
