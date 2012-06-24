@@ -1,0 +1,13 @@
+mzn2fzn Bugs:
+1- All instances : 
+	carseq
+	nsp
+	QCP
+
+2- Killed process:
+  	debruijn_binary_03_08.fzn
+  	debruijn_binary_04_06.fzn
+  	debruijn_binary_04_07.fzn
+	golfers2_golfers_8_8_9.fzn
+
+3- Too much space: rcpsp & rcpsp-max : > 8Gb
