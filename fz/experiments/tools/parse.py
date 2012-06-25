@@ -861,6 +861,7 @@ class Parser:
                 elif self.result[solver][bench] == 'OPTIMAL' : print 'OPT'.rjust(6),
                 elif self.result[solver][bench] == 'SUBOPTIMAL' : print 'subopt'.rjust(6),
                 elif self.result[solver][bench] == 'UNSATISFIABLE' : print 'unsat'.rjust(6),
+                elif self.result[solver][bench] == 'error--------' : print '<error>'.rjust(6),
                 else : print '<> '.rjust(6),
                 if self.printlatex == False:
                     print '|', 
