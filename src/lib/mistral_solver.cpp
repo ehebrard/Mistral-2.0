@@ -358,22 +358,22 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
 
   switch(outcome) {
   case SAT: 
-    os << std::right << std::setw(48) << "SAT" ;
+    os << std::right << std::setw(47) << "SATISFIABLE" ;
     break;
   case OPT: 
-    os << std::right << std::setw(48) << "OPT" ;
+    os << std::right << std::setw(47) << "OPTIMAL" ;
     break;
   case UNSAT: 
-    os << std::right << std::setw(48) << "UNSAT" ;
+    os << std::right << std::setw(47) << "UNSATISFIABLE" ;
     break;
   case UNKNOWN: 
-    os << std::right << std::setw(48) << "UNKNOWN" ;
+    os << std::right << std::setw(47) << "UNKNOWN" ;
     break;
   case LIMITOUT: 
-    // if(objective->is_optimization() && statistics.num_solutions) 
-    //   os << std::right << std::setw(48) << "SUBOPTIMAL" ;
-    // else 
-    os << std::right << std::setw(48) << "LIMITOUT" ;
+    if(num_solutions > 0) 
+      os << std::right << std::setw(47) << "SUBOPTIMAL" ;
+    else 
+      os << std::right << std::setw(47) << "LIMITOUT" ;
     //break;
   }
   os << std::endl
@@ -3145,7 +3145,7 @@ void Mistral::Solver::branch_left() {
 
     exit(1);
   }
-#endif _SAFE
+#endif
 
   //if(decision.var.id() == 16) exit(1);
 

@@ -23,11 +23,18 @@ int main(int argc, char *argv[])
   Solver s;
   double cpu_time = get_run_time() ;
 
+#ifdef _VERBOSE_PARSER
+  std::cout << " c Parse: ";
+#endif
+
   FlatZinc::Printer p;
   FlatZinc::FlatZincModel *fm = 0L;
   fm = parse(args.back(), s, p);
   if( !fm ) return 0;
   double parse_time = get_run_time() - cpu_time;
+#ifdef _VERBOSE_PARSER
+  std::cout << std::endl;
+#endif
   std::cout << " d PARSETIME " << parse_time << std::endl;
 
   map<string, string> options;

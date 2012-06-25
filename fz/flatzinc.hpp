@@ -48,6 +48,8 @@
 
 #include <mistral_solver.hpp>
 
+//#define _VERBOSE_PARSER 100
+
 using namespace Mistral;
 
 typedef Vector<Variable> IntVarArray;

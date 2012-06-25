@@ -551,6 +551,7 @@ namespace Mistral {
 
     virtual Decision branch() = 0;
 
+    virtual std::ostream& display(std::ostream& os) = 0;
   };
 
 
@@ -590,6 +591,12 @@ namespace Mistral {
       return choice.make(var.select());
     }
 
+    virtual std::ostream& display(std::ostream& os) {
+      os << "Branch on the variable ";
+      var.display(os);
+      //os << "Then " << choice ;
+      return os;
+    }
   };
 
 
@@ -644,6 +651,41 @@ namespace Mistral {
       return var;
     }
     //@}
+
+    virtual std::ostream& display(std::ostream& os) {
+      best.display_criterion(os);
+      os << std::endl;
+      Variable *variables = solver->sequence.list_;
+      unsigned int length = solver->sequence.size-1;
+      Variable var = variables[length];
+
+      // VarComparator _best;
+      // VarComparator _current;
+
+      // _best.initialise();
+      // _current.initialise();
+
+      best = var;
+      for(unsigned int i=length; i--;) {
+	current = variables[i];
+	if( current < best ) {
+	  best = current;
+	  var = variables[i];	  
+	}
+      }
+
+      for(unsigned int i=length; i--;) {
+	current = variables[i];
+	os << variables[i] << ": " ;
+	current.display(os) ;
+
+	if(var.id() == variables[i].id()) os << " <<==[CHOICE]" ;
+	os << std::endl;
+      }
+
+      return os;
+    }
+
   };
 
 
@@ -710,7 +752,56 @@ namespace Mistral {
       return bestvars[randint(realsize)];
     }
     //@}
+
+
+    virtual std::ostream& display(std::ostream& os) const {
+      bests[0].display_criterion(os);
+      os << std::endl;
+      Variable *variables = solver->sequence.list_;
+      unsigned int length = solver->sequence.size-1;
+      unsigned int realsize=1, i, j;
+
+      // VarComparator   _bests[RAND+1];
+      // VarComparator _current;
+      // Variable   _bestvars[RAND+1];
+
+      current.initialise();
+      for(i=0; i<RAND; ++i) bests[i].initialise();
+
+      bests[0] = bestvars[0] = variables[length];
+      for(j=length; j--;)
+	{  
+	  current = variables[j];
+	  i = realsize;
+	  while( i && current < bests[i-1] ) {
+	    bests[i] = bests[i-1];
+	    bestvars[i] = bestvars[i-1];
+	    --i;
+	  }
+	  bests[i] = current;
+	  bestvars[i] = variables[j];
+	  
+	  if(realsize<RAND) ++realsize;
+	}
+      
+      for(i=length; i--;) {
+	current = variables[i];
+	os << variables[i] << ": " ;
+	current.display(os) ;
+
+	for(j=0; j<realsize; ++j) {
+	  if(bestvars[j].id() == variables[i].id()) os << " <<==[CHOICE " << (j+1) << "]" ;
+	}
+
+	os << std::endl;
+      }
+
+      return os;
+    }
+
   };
+
+
 
 
   /*! \class GenericWeightedDVO
@@ -822,6 +913,10 @@ namespace Mistral {
     
     Variable select();
 
+    virtual std::ostream& display(std::ostream& os) const {
+      os << "Go by the default sequence: " << solver->sequence.back(); 
+      return os;
+    }
   };
 
 
@@ -851,6 +946,17 @@ namespace Mistral {
     virtual void notify_change(const int idx);
     
     Variable select();
+
+    virtual std::ostream& display(std::ostream& os) const {
+      os << "Go by lexicographic order: " ;
+
+      int i = last;
+      while(i<(int)(order.size) && order[i].is_ground()) { 
+	++i;
+      }
+      os << order[i];
+      return os;
+    }
 
   };
 
@@ -898,6 +1004,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomain() {dom_ = LARGE_VALUE;}
+    void initialise() {dom_ = LARGE_VALUE;}
     //@}
 
     /**@name Parameters*/
@@ -913,7 +1020,12 @@ namespace Mistral {
     inline void operator=( Variable x ) { dom_ = x.get_size(); }
     //@}  
 
-    std::ostream& display(std::ostream& os) {
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with minimum domain size";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
       os << dom_;
       return os;
     }
@@ -934,6 +1046,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainOverDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
+    void initialise() {dom_ = LARGE_VALUE; deg_ = 0;}
     //@}
 
     /**@name Parameters*/
@@ -950,7 +1063,13 @@ namespace Mistral {
     inline void operator=( Variable x ) { dom_ = x.get_size(); deg_ = x.get_degree(); }
     //@}  
 
-    std::ostream& display(std::ostream& os) {
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with minimum (domain size / degree)";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
       os << dom_ << "/" << deg_;
       return os;
     }
@@ -971,6 +1090,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
+    void initialise() {dom_ = LARGE_VALUE; wei_ = 0;}
     //MinDomainOverWeight(void *w) : weight((double*)w) {dom_ = LARGE_VALUE; wei_ = 0;}
     //@}
 
@@ -992,12 +1112,18 @@ namespace Mistral {
     }
     //@}  
 
-    std::ostream& display(std::ostream& os) {
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with minimum (domain size / weight)";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
       os << dom_ << "/" << wei_;
       return os;
     }
   };
 
+  std::ostream& operator<<(std::ostream& os, MinDomainOverWeight& x);
 
   /*! \class MinNeighborDomainOverNeighborWeight
     \brief  Class MinNeighborDomainOverNeighborWeight
@@ -1012,6 +1138,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinNeighborDomainOverNeighborWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
+    void initialise() {dom_ = LARGE_VALUE; wei_ = 0;}
     //@}
 
     /**@name Parameters*/
@@ -1044,11 +1171,18 @@ namespace Mistral {
     }
     //@}  
 
-    std::ostream& display(std::ostream& os) {
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with minimum (Sum of neighrbors' domain sizes / Sum of neighrbors' weights)";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
       os << dom_ << "/" << wei_;
       return os;
     }
   };
+
+  std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight& x);
 
 
   /*! \class MinNeighborDomainOverWeight
@@ -1064,6 +1198,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinNeighborDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
+    void initialise() {dom_ = LARGE_VALUE; wei_ = 0;}
     //@}
 
     /**@name Parameters*/
@@ -1092,11 +1227,18 @@ namespace Mistral {
     }
     //@}  
 
-    std::ostream& display(std::ostream& os) {
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with minimum (Sum of neighrbors' domain sizes / weight)";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
       os << dom_ << "/" << wei_;
       return os;
     }
   };
+
+  std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverWeight& x);
 
 
   /*! \class MaxWeight
@@ -1111,6 +1253,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MaxWeight() {wei_ = 0;}
+    void initialise() {wei_ = 0;}
     //MaxWeight(int *w) : weight(w) {wei_ = 0;}
     //@}
 
@@ -1131,7 +1274,13 @@ namespace Mistral {
     }
     //@}  
 
-    std::ostream& display(std::ostream& os) {
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with maximum weight";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
       os << wei_;
       return os;
     }
@@ -1163,7 +1312,14 @@ namespace Mistral {
       return d;
     }
 
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the minimum value in its domain";
+       return os;
+     }
+
   };
+
+  std::ostream& operator<<(std::ostream& os, MinValue& x);
 
   /*! \class MaxValue
     \brief  Class MaxValue
@@ -1184,7 +1340,14 @@ namespace Mistral {
       return d;
     }
 
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the maximum value in its domain";
+       return os;
+     }
+
   };
+
+  std::ostream& operator<<(std::ostream& os, MaxValue& x);
 
   /*! \class HalfSplit
     \brief  Class HalfSplit
@@ -1205,7 +1368,14 @@ namespace Mistral {
       return d;
     }
 
+     std::ostream& display(std::ostream& os) const {
+       os << "set its upper bound to (min+max)/2";
+       return os;
+     }
+
   };
+
+  std::ostream& operator<<(std::ostream& os, HalfSplit& x);
 
   /*! \class RandomMinMax
     \brief  Class RandomMinMax
@@ -1227,8 +1397,14 @@ namespace Mistral {
       return d;
     }
 
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to its minimum or maximum value at random with equal probability";
+       return os;
+     }
+
   };
 
+  std::ostream& operator<<(std::ostream& os, RandomMinMax& x);
 
   /*! \class MinWeightValue
     \brief  Class MinWeightValue
@@ -1268,8 +1444,14 @@ namespace Mistral {
       return d;
     }
 
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the value with minimum weight in its domain";
+       return os;
+     }
+
   };
 
+  std::ostream& operator<<(std::ostream& os, MinWeightValue& x);
 
 
   /*! \class Guided
@@ -1294,8 +1476,15 @@ namespace Mistral {
       return d;
     }
 
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the value of this variable in the last solution";
+       return os;
+     }
+
   };
 
+  std::ostream& operator<<(std::ostream& os, Guided& x);
 
 
 #define NEG(a) ((2*a))
@@ -1331,9 +1520,16 @@ namespace Mistral {
       Decision d(x, Decision::ASSIGNMENT, (weight[NEG(a)]<weight[POS(a)] ? 1 : 0));
       return d;
     }
-    
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the value with minimum weight in its (Boolean) domain";
+       return os;
+     }
+        
   };
   
+  std::ostream& operator<<(std::ostream& os, BoolMinWeightValue& x);
+
   
   
   class VSIDS : public GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 

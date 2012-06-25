@@ -11,14 +11,11 @@ DATE := $(shell date '+%y-%m-%d')
 clean : 
 	rm -rf $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~
 
-release: 
+archive: 
 	@echo Export Mistral version 2.0.$(DATE)
 	rm -rf Mistral-2.0.$(DATE).bz2
 	rm -rf Mistral-2.0.$(DATE)
 	mkdir Mistral-2.0.$(DATE)
 	git archive master --format=tar | tar -x -C ./Mistral-2.0.$(DATE)
-	mkdir ./Mistral-2.0.$(DATE)/bin
-	mkdir ./Mistral-2.0.$(DATE)/examples/obj
-	mkdir ./Mistral-2.0.$(DATE)/src/obj
 	tar -cvjf Mistral-2.0.$(DATE).bz2 Mistral-2.0.$(DATE)
 	scp Mistral-2.0.$(DATE).bz2 4c60.ucc.ie:/home/ehebrard/tmp/

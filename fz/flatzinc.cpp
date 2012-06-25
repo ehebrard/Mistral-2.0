@@ -49,6 +49,8 @@
 #include <mistral_variable.hpp>
 
 //#define _DEBUG_FLATZINC true
+//#define _VERBOSE_PARSER 100
+      
 
 
 using namespace std;
@@ -190,6 +192,14 @@ namespace FlatZinc {
 
   void
   FlatZincModel::newIntVar(IntVarSpec* vs) {
+
+#ifdef _VERBOSE_PARSER
+      if((intVarCount % _VERBOSE_PARSER) == 0) {
+        std::cout << "i";
+        std::cout.flush();
+      }
+#endif
+
     if (vs->alias) {
       iv[intVarCount++] = iv[vs->i];
     } else {
@@ -202,6 +212,14 @@ namespace FlatZinc {
 
   void
   FlatZincModel::newSetVar(SetVarSpec* vs) {
+
+#ifdef _VERBOSE_PARSER
+      if((setVarCount % _VERBOSE_PARSER) == 0) {
+        std::cout << "s";
+        std::cout.flush();
+      }
+#endif
+
     if (vs->alias) {
       sv[intVarCount++] = sv[vs->i];
     } else if( vs->assigned) {
@@ -267,6 +285,14 @@ namespace FlatZinc {
 
   void
   FlatZincModel::newBoolVar(BoolVarSpec* vs) {
+
+#ifdef _VERBOSE_PARSER
+      if((boolVarCount % _VERBOSE_PARSER) == 0) {
+        std::cout << "b";
+        std::cout.flush();
+      }
+#endif
+
     if (vs->alias) {
       bv[boolVarCount++] = bv[vs->i];
     } else {
@@ -278,6 +304,12 @@ namespace FlatZinc {
   void
   FlatZincModel::postConstraint(const ConExpr& ce, AST::Node* ann) {
     try {
+#ifdef _VERBOSE_PARSER
+      if((solver.constraints.size % _VERBOSE_PARSER) == 0) {
+        std::cout << "c";
+        std::cout.flush();
+      }
+#endif
       registry().post(solver, *this, ce, ann);
     } catch (AST::TypeError& e) {
       throw FlatZinc::Error("Type error", e.what());

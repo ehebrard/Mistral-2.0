@@ -660,7 +660,7 @@ class Parser:
             self.stat[solver] = {}.fromkeys( self.benchmark[solver] )
             self.solved_bench[solver] = Set([])
             self.error_bench[solver] = Set([])
-            self.stat_keyword[solver] = Set([])
+            self.stat_keyword[solver] = Set(['PROOF'])
             self.wrong_certificate[solver] = []
             self.wrong_proof[solver] = []
             outcome = ''
@@ -673,11 +673,14 @@ class Parser:
 
                     outcome = self.raw_data['res'][solver][bench][0]
                 self.result[solver][bench] = outcome
+                self.stat[solver][bench]['PROOF'] = 0
                 if( outcome[-11:] == 'SATISFIABLE' or 
-                    outcome[-11:] == 'SAT' or 
-                    outcome[-11:] == 'OPT' or 
-                    outcome[-11:] == 'LIMITOUT' 
+                    outcome[-11:] == 'UNSATISFIABLE' or 
+                    outcome[-11:] == 'OPTIMAL' 
                     ):
+                    self.stat[solver][bench]['PROOF'] = 1
+                    self.solved_bench[solver].add( bench )
+                elif outcome[-11:] == 'SUBOPTIMAL':
                     self.solved_bench[solver].add( bench )
                 elif outcome != 'UNKNOWN':
                     if len(sta_line) >= 2:
@@ -854,7 +857,11 @@ class Parser:
                 else:
                     for st in self.statistics[solver]:
                         print ' '.rjust(12),
-                print self.result[solver][bench][:-8].rjust(6),
+                if self.result[solver][bench] == 'SATISFIABLE' : print 'SAT'.rjust(6),
+                elif self.result[solver][bench] == 'OPTIMAL' : print 'OPT'.rjust(6),
+                elif self.result[solver][bench] == 'SUBOPTIMAL' : print 'subopt'.rjust(6),
+                elif self.result[solver][bench] == 'UNSATISFIABLE' : print 'unsat'.rjust(6),
+                else : print '<> '.rjust(6),
                 if self.printlatex == False:
                     print '|', 
             if self.printlatex:

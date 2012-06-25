@@ -264,6 +264,42 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverWeight& x) {
   return x.display(os);
 }
 
+std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverWeight& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverNeighborWeight& x) {
+  return x.display(os);
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinValue& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxValue& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::HalfSplit& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RandomMinMax& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinWeightValue& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::Guided& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue& x) {
   return x.display(os);
 }
