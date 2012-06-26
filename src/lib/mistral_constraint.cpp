@@ -26,7 +26,7 @@
 
 
 //#define _DEBUG_GENPROPAG true
-//#define _DEBUG_MUL true
+//#define _DEBUG_MUL (id==7660)
 //#define _DEBUG_MAX (id==288)
 //#define _DEBUG_REWRITE true
 
@@ -3525,12 +3525,16 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
 
 
 #ifdef _DEBUG_MUL
+  if(_DEBUG_MUL) {
+
   std::cout << "revise bounds of " << scope[Z].get_domain() << " = " 
 	    << scope[X].get_domain() << "/" << scope[Y].get_domain() 
 	    << " = [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
 	    << (zero[Z] ? "{0}" : "_") << "|" 
 	    << min_pos[Z] << ".." << max_pos[Z] << "]" 
 	    << std::endl; 
+ 
+  }
 #endif
 
   
@@ -3651,10 +3655,14 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
   } else if(pruning_flag) {
     
 #ifdef _DEBUG_MUL
+  if(_DEBUG_MUL) {
+
     std::cout << "set bounds to " // << scope[Z].get_domain() << " = " 
 	      << "[" << lb_neg << ".." << ub_neg << "|" 
 	      << (!pzero&&zero[Z] ? "{0}" : "_") << "|" 
 	      << lb_pos << ".." << ub_pos << "]" << std::endl; 
+ 
+  }
 #endif
     
     wiped = prune(lb_neg, ub_neg, lb_pos, ub_pos, pzero, Z);
@@ -3670,9 +3678,13 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_multiplication(const i
 
 
 #ifdef _DEBUG_MUL
+  if(_DEBUG_MUL) {
+
   std::cout << "revise bounds of " << scope[Z].get_domain() << " = " 
 	    << scope[X].get_domain() << "*" << scope[Y].get_domain() 
 	    << std::endl; 
+ 
+  }
 #endif
 
   int lb_pos=min_pos[Z], ub_pos=max_pos[Z], lb_neg=min_neg[Z], ub_neg=max_neg[Z], 
@@ -3770,10 +3782,14 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_multiplication(const i
 
   if(pruning_flag) {
 #ifdef _DEBUG_MUL
+  if(_DEBUG_MUL) {
+
   std::cout << "set bounds to " // << scope[Z].get_domain() << " = " 
 	    << "[" << lb_neg << ".." << ub_neg << "|" 
 	    << (zero[Z] ? "{0}" : "_") << "|" 
 	    << lb_pos << ".." << ub_pos << "]" << std::endl; 
+ 
+  }
 #endif
   
     wiped = prune(lb_neg, ub_neg, lb_pos, ub_pos, pzero, Z);
@@ -3877,18 +3893,22 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
 
 
 #ifdef _DEBUG_MUL
-	if(IS_OK(wiped)) {
-	  std::cout << scope[0].get_domain() 
-		    << " * " << scope[1].get_domain() 
-		    << " = " << scope[2].get_domain() << std::endl;
-	} else std::cout << "FAIL!" << std::endl ;
+  if(_DEBUG_MUL) {
 
-	std::cout
-	  << " now in [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
-	  << (zero[Z] ? "{0}" : "_") << "|" 
-	  << min_pos[Z] << ".." << max_pos[Z] << "]" << std::endl;
-
-  std::cout << std::endl; 
+    if(IS_OK(wiped)) {
+      std::cout << scope[0].get_domain() 
+		<< " * " << scope[1].get_domain() 
+		<< " = " << scope[2].get_domain() << std::endl;
+    } else std::cout << "FAIL!" << std::endl ;
+    
+    std::cout
+      << " now in [" << min_neg[Z] << ".." << max_neg[Z] << "|" 
+      << (zero[Z] ? "{0}" : "_") << "|" 
+      << min_pos[Z] << ".." << max_pos[Z] << "]" << std::endl;
+    
+    //std::cout << std::endl; 
+    
+  }
 #endif
 
 
@@ -3902,19 +3922,24 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
   Mistral::PropagationOutcome wiped = CONSISTENT;
   
 #ifdef _DEBUG_MUL
-   std::cout << std::endl << std::endl << scope[0].get_domain() 
+  if(_DEBUG_MUL) {
+
+  std::cout << std::endl << std::endl << "propagate " // << this 
+	    << std::endl << scope[0].get_domain() 
  	    << " * " << scope[1].get_domain() 
      	    << " = " << scope[2].get_domain() << std::endl;
+ 
+  }
 #endif
 
-#ifdef _DEBUG_MUL
-  std::cout << std::endl << std::endl << "propagate " // << this 
-	    << std::endl;
-#endif
+  bool is_ground = true;
+  int evt_idx, i;
 
-  for(int i=0; i<3; ++i) {
+  for(i=0; i<3; ++i) {
     max_pos[i] = scope[i].get_max();
     min_neg[i] = scope[i].get_min();
+
+    is_ground &= (min_neg[i] == max_pos[i]);
 
     zero[i] = scope[i].contain(0);
 
@@ -3931,38 +3956,71 @@ Mistral::PropagationOutcome Mistral::PredicateMul::propagate() {
   }
 
   
+  // #ifdef _DEBUG_MUL
+  //   if(_DEBUG_MUL) {
+  
+  //   std::cout << scope[0]/*.get_var()*/ << " in " << scope[0].get_domain() 
+  // 	    << " * " << scope[1]/*.get_var()*/ << " in " << scope[1].get_domain() 
+  //     	    << " = " << scope[2]/*.get_var()*/ << " in " << scope[2].get_domain() << std::endl;
+  
+  //   }
+  // #endif
+    
+  
+  if(!is_ground) {
+    while(IS_OK(wiped) && !changes.empty()) {
+      
+      evt_idx = changes.pop();
+      
 #ifdef _DEBUG_MUL
-  std::cout << scope[0]/*.get_var()*/ << " in " << scope[0].get_domain() 
-	    << " * " << scope[1]/*.get_var()*/ << " in " << scope[1].get_domain() 
-    	    << " = " << scope[2]/*.get_var()*/ << " in " << scope[2].get_domain() << std::endl;
+      if(_DEBUG_MUL) {
+	
+	std::cout << std::endl << "react to " << scope[evt_idx]/*.get_var()*/ << " in " 
+		  << scope[evt_idx].get_domain() 
+		  << (LB_CHANGED(event_type[evt_idx]) ? " (change on LB) " : "")
+		  << (UB_CHANGED(event_type[evt_idx]) ? " (change on UB) " : "")
+		  << std::endl;
+	
+      }
 #endif
-
-  int evt_idx;
-
-  while(IS_OK(wiped) && !changes.empty()) {
-
-    evt_idx = changes.pop();
-
-#ifdef _DEBUG_MUL
-    std::cout << "react to " << scope[evt_idx]/*.get_var()*/ << " in " 
-	      << scope[evt_idx].get_domain() 
-	      << (LB_CHANGED(event_type[evt_idx]) ? " (change on LB) " : "")
-	      << (UB_CHANGED(event_type[evt_idx]) ? " (change on UB) " : "")
-	      << std::endl;
-#endif
-
-    // x0 * x1 = x2 
-    if(evt_idx == 2) {
-      for(int i=0; IS_OK(wiped) && i<2; ++i)  // once for scope[0], once for scope[1]
-	// we update x0 and x1 :  xi = x2/x1-i
-	wiped = revise_division(2, 1-i, i);
-    } else {
-      // update x[2]
-      wiped = revise_multiplication(evt_idx, 1-evt_idx, 2);
-      // update x[1-evt_idx]
-      if(IS_OK(wiped)) wiped = revise_division(2, evt_idx, 1-evt_idx);
+      
+      // x0 * x1 = x2 
+      if(evt_idx == 2) {
+	for(int i=0; IS_OK(wiped) && i<2; ++i)  // once for scope[0], once for scope[1]
+	  // we update x0 and x1 :  xi = x2/x1-i
+	  wiped = revise_division(2, 1-i, i);
+      } else {
+	// update x[2]
+	wiped = revise_multiplication(evt_idx, 1-evt_idx, 2);
+	// update x[1-evt_idx]
+	if(IS_OK(wiped)) wiped = revise_division(2, evt_idx, 1-evt_idx);
+      }
     }
+
+  } else {
+    
+    if(min_neg[0] * min_neg[1] != min_neg[2]) wiped = 0;
+
   }
+
+#ifdef _DEBUG_MUL
+  if(_DEBUG_MUL) {
+
+    std::cout << std::endl;
+    if(IS_OK(wiped)) {
+      
+      std::cout << "  ===> " << scope[0]/*.get_var()*/ << " in " << scope[0].get_domain() 
+		<< " * " << scope[1]/*.get_var()*/ << " in " << scope[1].get_domain() 
+		<< " = " << scope[2]/*.get_var()*/ << " in " << scope[2].get_domain() << std::endl;
+
+    } else {
+
+      std::cout << "  ===> INCONSISTENT!!" << std::endl;
+
+    }
+ 
+  }
+#endif
   
   return wiped;
 }

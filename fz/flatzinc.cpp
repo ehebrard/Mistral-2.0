@@ -456,9 +456,9 @@ namespace FlatZinc {
     switch (_method) {
     case MINIMIZATION: {
 
-#ifdef _DEBUG_FLATZINC
+      //#ifdef _DEBUG_FLATZINC
       std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
-#endif
+      //#endif
 
       Goal *goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
       result = solver.depth_first_search(solver.variables, heuristic, policy, goal);
@@ -468,9 +468,9 @@ namespace FlatZinc {
     } 
     case MAXIMIZATION: {
 
-#ifdef _DEBUG_FLATZINC
+      //#ifdef _DEBUG_FLATZINC
       std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
-#endif
+      //#endif
 
       Goal *goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
       result = solver.depth_first_search(solver.variables, heuristic, policy, goal);
@@ -479,9 +479,9 @@ namespace FlatZinc {
     }
     case SATISFACTION: {
 
-#ifdef _DEBUG_FLATZINC
+      //#ifdef _DEBUG_FLATZINC
       std::cout << " c Solve " << std::endl;
-#endif
+      //#endif
 
       //Goal *goal = new Goal(Goal::SATISFACTION);
   

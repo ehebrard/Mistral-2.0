@@ -1082,7 +1082,7 @@ Mistral::Outcome Mistral::Solver::search() {
   statistics.objective_value = objective->value();
 
   while(satisfiability == UNKNOWN) {
-    
+
     statistics.num_constraints = posted_constraints.size;
     statistics.num_variables = sequence.size;
     statistics.num_values = 0;
@@ -1243,6 +1243,10 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   else if(!policy)    policy    = new NoRestart();
   if(goal){ delete objective; objective = goal;}
   else if(!objective) objective = new Goal(Goal::SATISFACTION);
+
+
+  // statistics.objective_value = objective->value();
+  // std::cout << objective->objective << " in " << objective->objective.get_domain() << std::endl;
 
   heuristic->initialise(sequence);
 

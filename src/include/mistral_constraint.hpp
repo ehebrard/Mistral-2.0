@@ -1968,15 +1968,15 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    PredicateMul() : GlobalConstraint() {}
+    PredicateMul() : GlobalConstraint() { priority = 1; }
     PredicateMul(Vector< Variable >& scp) 
-      : GlobalConstraint(scp) {}
+      : GlobalConstraint(scp) { priority = 1; }
     // PredicateMul(Variable x, Variable y, Variable z) 
     //   : GlobalConstraint(x,y,z) {}
     PredicateMul(std::vector< Variable >& scp) 
-      : GlobalConstraint(scp) {}
+      : GlobalConstraint(scp) { priority = 1; }
     //virtual Constraint clone() { return Constraint(new PredicateMul(scope[0], scope[1], scope[2])); }
-virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
+    virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual void initialise();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
@@ -2156,7 +2156,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
 
     /**@name Constructors*/
     //@{
-    ConstraintBoolSumEqual() : GlobalConstraint() {}
+    ConstraintBoolSumEqual() : GlobalConstraint() { priority = 1; total = 0; }
     ConstraintBoolSumEqual(Vector< Variable >& scp, const int t);
     ConstraintBoolSumEqual(std::vector< Variable >& scp, const int t);
     virtual Constraint clone() { return Constraint(new ConstraintBoolSumEqual(scope, total)); }
@@ -2201,7 +2201,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
 
     /**@name Constructors*/
     //@{
-    ConstraintBoolSumInterval() : GlobalConstraint() {}
+    ConstraintBoolSumInterval() : GlobalConstraint() { priority = 1; }
     ConstraintBoolSumInterval(Vector< Variable >& scp, const int l, const int u);
     ConstraintBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
     virtual Constraint clone() { return Constraint(new ConstraintBoolSumInterval(scope, lb, ub)); }
@@ -2245,7 +2245,7 @@ virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
 
     /**@name Constructors*/
     //@{
-    PredicateBoolSum() : GlobalConstraint() {}
+    PredicateBoolSum() : GlobalConstraint() { priority = 1; }
     PredicateBoolSum(Vector< Variable >& scp);
     PredicateBoolSum(std::vector< Variable >& scp);
     PredicateBoolSum(Vector< Variable >& scp, Variable tot);
