@@ -38,6 +38,74 @@
 #include <cstring>
 
 
+/*************** TIMING AND MEMORY USAGE ROUTINES, FROM MINISAT ******/
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
+
+bool probe_macosx() { std::cout << " c Run on mac osx" << std::endl; return true; }
+bool probe_linux() { std::cout << " c Run on linux" << std::endl; return true; }
+bool probe_win() { std::cout << " c Run on windows" << std::endl; return true; }
+
+bool probe() {
+#ifdef __APPLE__
+  return probe_macosx();
+#elif defined __linux__
+  return probe_linux();
+#elif defined _WIN32 || defined _WIN64
+  return probe_win();
+#else
+#error "unknown platform"
+#endif
+}
+
+#ifdef _MSC_VER
+#include <ctime>
+
+double cpu_time(void) {
+    return (double)clock() / CLOCKS_PER_SEC; }
+#else
+
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+double Mistral::cpu_time(void) {
+    struct rusage ru;
+    getrusage(RUSAGE_SELF, &ru);
+    return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
+#endif
+
+
+#if defined(__linux__)
+int Mistral::mem_read_stat(int field)
+{
+    char    name[256];
+    pid_t pid = getpid();
+    sprintf(name, "/proc/%d/statm", pid);
+    FILE*   in = fopen(name, "rb");
+    if (in == NULL) return 0;
+    int     value;
+    for (; field >= 0; field--)
+        fscanf(in, "%d", &value);
+    fclose(in);
+    return value;
+}
+uint64_t Mistral::mem_used() { return (uint64_t)mem_read_stat(0) * (uint64_t)getpagesize(); }
+
+
+#elif defined(__FreeBSD__)
+uint64_t Mistral::mem_used(void) {
+    struct rusage ru;
+    getrusage(RUSAGE_SELF, &ru);
+    return ru.ru_maxrss*1024; }
+
+
+#else
+uint64_t Mistral::mem_used() { return 0; }
+#endif
+/*************** TIMING AND MEMORY USAGE ROUTINES, FROM MINISAT ******/
+
 
 // std::string Mistral::event2str(Mistral::Event e) {
 //   //std::cout

@@ -172,6 +172,8 @@ namespace Mistral {
     /// timestamp
     double end_time;
 
+    //unsigned int memory;
+
     /////// STATISTICS FOR SAT SOLVING ///////
     unsigned int      literals;
     unsigned int      small;

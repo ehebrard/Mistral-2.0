@@ -670,7 +670,6 @@ class Parser:
                 for i in range( 0, len(sta_line)-1, 2 ):
                     self.stat[solver][bench][sta_line[i]] = sta_line[i+1]
                     self.stat_keyword[solver].add( sta_line[i] )
-
                     outcome = self.raw_data['res'][solver][bench][0]
                 self.result[solver][bench] = outcome
                 self.stat[solver][bench]['PROOF'] = 0

@@ -29,6 +29,7 @@
 #ifndef _MISTRAL_GLOBAL_HPP
 #define _MISTRAL_GLOBAL_HPP
 
+#include <stdint.h>
 
 #include <string>
 #include <iostream>
@@ -274,6 +275,11 @@ namespace Mistral {
   /**********************************************
    * Timing Memory and Command line utilities 
    *********************************************/
+
+
+double cpu_time(void);
+uint64_t mem_used();
+
 
   double get_run_time();
   unsigned long int get_memory();

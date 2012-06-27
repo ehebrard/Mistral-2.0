@@ -71,10 +71,12 @@ int main(int argc, char *argv[])
   //   std::cout << (*ito).first << " => " << (*ito).second << std::endl;
 
 
+  double cutoff = atof(options["--limit"].c_str()) - parse_time;
+  std::cout << " d CUTOFF " << cutoff << std::endl;
 
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
   s.initialise_random_seed(atoi(options["--seed"].c_str()));
-  s.set_time_limit(atof(options["--limit"].c_str()));
+  s.set_time_limit(cutoff);
   s.parameters.verbosity = atoi(options["--verbose"].c_str());
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));
 

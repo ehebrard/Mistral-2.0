@@ -382,6 +382,8 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::right << std::setw(46) << objective_value  << std::endl
      << std::left << std::setw(46) << " d  TIME"
      << std::right << std::setw(46) << (end_time - start_time)  << std::endl
+     << std::left << std::setw(46) << " d  MEMORY"
+     << std::right << std::setw(46) << mem_used() << std::endl
      << std::left << std::setw(46) << " d  NODES"
      << std::right << std::setw(46) << num_nodes  << std::endl
      << std::left << std::setw(46) << " d  RESTARTS"
@@ -2331,6 +2333,7 @@ bool Mistral::Solver::propagate()
       std::cout.flush();
 #endif
 
+      ++statistics.num_propagations;  
       taboo_constraint = culprit.freeze();
       wiped_idx = culprit.propagate(); 
       taboo_constraint = culprit.defrost();

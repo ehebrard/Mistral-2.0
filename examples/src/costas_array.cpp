@@ -11,6 +11,22 @@ using namespace Mistral;
 int main(int argc, char *argv[])
 {  
 
+  // double time, start = get_run_time();
+  // for(int i=0; i<10000000; ++i) {
+  //   time = get_run_time();
+  // }
+  // std::cout << (get_run_time() - start) << std::endl;
+
+
+  // // double time, start = cpu_time();
+  // // for(int i=0; i<10000000; ++i) {
+  // //   time = cpu_time();
+  // // }
+  // // std::cout << (cpu_time() - start) << std::endl;
+
+  // exit(1);
+
+
   int i, j, N=8;
   if(argc>1) N = atoi(argv[1]);
 
@@ -31,13 +47,13 @@ int main(int argc, char *argv[])
   }
 
 
-  cout << s << endl;
+  //cout << s << endl;
 
 
   s.consolidate();
-  cout << s << endl;
+  //cout << s << endl;
 
-  s.parameters.verbosity = 1;
+  s.parameters.verbosity = 2;
 
   if(s.depth_first_search(X, 
 			  new GenericHeuristic< 
@@ -58,7 +74,7 @@ int main(int argc, char *argv[])
     }
     cout << setw(3) << (X[0].get_solution_int_value() - X[N-1].get_solution_int_value()) << endl << endl;
   }
-  std::cout << s.statistics << std::endl;
+  //std::cout << s.statistics << std::endl;
 }
 
 
