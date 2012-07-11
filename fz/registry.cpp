@@ -677,6 +677,30 @@ namespace FlatZinc {
 
     }
 
+
+    void p_int_div(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+
+    	Variable a = getIntVar(s, m, ce[0]);
+    	Variable b = getIntVar(s, m, ce[1]);
+    	Variable d = getIntVar(s, m, ce[2]);
+
+    	int bnd = b.get_max();
+    	if (b.get_min() > bnd)
+    		bnd = b.get_min();
+    	if (-b.get_min() > bnd)
+    		bnd = (-b.get_min());
+    	if ((-b.get_max())> bnd)
+    		bnd = (-b.get_max());
+
+    	Variable r = Variable (-bnd, bnd);
+
+    	s.add(((a >= 0) && (r >= 0)) || ((a <= 0) && (r <= 0) ));
+    	s.add(a==b*d+r);
+    	s.add(((r >= 0) && (r < b)) || ((r <= 0) && (r > b) ));
+
+    }
+
     void p_int_times(Solver& s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
       // cout << "CAN'T POST A MUL CONSTRAINT" << endl;
@@ -1386,6 +1410,7 @@ namespace FlatZinc {
         registry().add("int_negate", &p_int_negate);
         registry().add("int_min", &p_int_min);
         registry().add("int_max", &p_int_max);
+        registry().add("int_div", &p_int_div);
 
         registry().add("int_in", &p_int_in);
 
