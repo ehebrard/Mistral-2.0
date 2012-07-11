@@ -84,11 +84,13 @@ int main(int argc, char *argv[])
 
   //string restart = options["--heuristic"];
 
-
+s.display(cout);
   fm->run(cout , p);
+cout << "Hello" << endl;
+//  s.display(cout);
   delete fm;
+  cout << "Hello" << endl;
 
- 
- 
+
   return 0;
 }
