@@ -3235,6 +3235,7 @@ void Mistral::Solver::branch_left() {
       if(!consistent)
       {
 	
+    if (objective->type!=Goal::MINIMIZATION && objective->type!=Goal::MAXIMIZATION)
 	if(tmp_sol.size < k) {
 	  std::cerr << "\nError: solution does not satisfies c" << C.id() << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
 	  exit(0);

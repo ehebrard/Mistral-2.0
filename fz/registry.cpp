@@ -1360,9 +1360,16 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-     report_unsupported("reified subset");
+   //  report_unsupported("reified subset");
 
-      //s.add( p == Subset(A,B) );
+   //   A.display(cout);
+
+     // s.add(Subset(A,B));
+      //s.add(p==true);
+
+      s.add( (Intersection(A,B)==A)==p);
+
+
     }
 
     void p_set_superset_re(Solver &s, FlatZincModel& m,
@@ -1371,8 +1378,10 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-     report_unsupported("reified subset");
+//     report_unsupported("reified subset");
 
+
+      s.add( (Intersection(A,B)==B)==p);
       //s.add( p == Subset(B,A) );
     }
 
