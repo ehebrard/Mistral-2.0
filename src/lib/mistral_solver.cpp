@@ -383,7 +383,7 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::left << std::setw(46) << " d  TIME"
      << std::right << std::setw(46) << (end_time - start_time)  << std::endl
      << std::left << std::setw(46) << " d  MEMORY"
-     << std::right << std::setw(46) << mem_used() << std::endl
+     << std::right << std::setw(46) << (mem_used() / 1048576.0) << std::endl
      << std::left << std::setw(46) << " d  NODES"
      << std::right << std::setw(46) << num_nodes  << std::endl
      << std::left << std::setw(46) << " d  RESTARTS"
@@ -1077,6 +1077,9 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
  
 Mistral::Outcome Mistral::Solver::search() {
 
+  //std::cout << heuristic << std::endl;
+  
+
   int initial_level = level; 
 
   Outcome satisfiability = UNKNOWN;
@@ -1104,6 +1107,12 @@ Mistral::Outcome Mistral::Solver::search() {
     //policy->reset(parameters.restart_limit);
 
     //std::cout << "current fails: " << statistics.num_failures << " / limit fails: " << parameters.restart_limit << std::endl;
+
+
+    // display(std::cout, true);
+    // std::cout << std::endl;
+    // heuristic->display(std::cout);
+    // std::cout << std::endl;
 
 
     satisfiability = //(parameters.backjump ? 
@@ -2174,6 +2183,13 @@ bool Mistral::Solver::propagate()
   std::cout << std::endl;
 #endif
 
+  if(!IS_OK(wiped_idx)) {
+
+    std::cout << "FAILED WHEN ENFORCING UPPER BOUND" << std::endl;
+
+  }
+
+
   while(IS_OK(wiped_idx) && !fix_point) {
     
 #ifdef _DEBUG_AC
@@ -2782,27 +2798,62 @@ void Mistral::Solver::debug_print() {
 
 void Mistral::Solver::print_clist(int k) {
   for(Event trig = 0; trig<3; ++trig) 
-     for(int cons = constraint_graph[k].on[trig].size; --cons;) 
+     for(int cons = constraint_graph[k].on[trig].size; --cons>=0;) 
        std::cout << "[" << constraint_graph[k].on[trig][cons].id() << "]";
   std::cout << "\n";
 }
 
-std::ostream& Mistral::Solver::display(std::ostream& os) {
+std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
 
   if(objective) os << objective << std::endl;
 
   os << "Variables:\n";
 
+
+  Variable *scope;
+  int arity;
+
   Vector<Variable> rem_vars;
   for(unsigned int i=0; i<variables.size; ++i) {
-    if(!(domain_types[i] & REMOVED_VAR)) {
+    if(!(domain_types[i] & REMOVED_VAR) 
+       && (current != 1 || sequence.contain(i))
+       && (current != 2 || !(variables[i].is_ground()))) {
 
       os << "  " << variables[i] << " in " << variables[i].get_domain() ; //<< "\n";
     
       os << ": " ;
       for(Event trig = 0; trig<3; ++trig) 
 	for(int cons = constraint_graph[i].on[trig].size; --cons>=0;) {
-	  os << "[" << constraint_graph[i].on[trig][cons].id() << "]";
+	  if(current) {
+	    os << "[" ; 
+	    
+	    scope = constraint_graph[i].on[trig][cons].get_scope();
+	    arity = constraint_graph[i].on[trig][cons].arity();
+	    
+	    int k=0, j=0;
+	    for(; j<arity && k<1; ++j) {
+	      if(!scope[j].is_ground()) {
+		++k;
+		std::cout << scope[j].id() << " " ;
+	      }
+	    }
+	    for(; j<arity && k<2; ++j) {
+	      if(!scope[j].is_ground()) {
+		++k;
+		std::cout << scope[j].id() ; //<< " " ;
+	      }
+	    }
+	    
+	    os
+	      //<< constraint_graph[i].on[trig][cons].symbol() 
+	      //constraint_graph[i].on[trig][cons].id() 
+	      << "]";
+	  } else {
+	    os << "[" << 
+	      //constraint_graph[i].on[trig][cons].symbol() 
+	      constraint_graph[i].on[trig][cons].id() 
+	       << "]";
+	  }
 	}
       os << "\n";
     
@@ -2812,7 +2863,10 @@ std::ostream& Mistral::Solver::display(std::ostream& os) {
 
     }
   }
-  
+
+
+
+  if(!current) {  
   if(!rem_vars.empty()) {
     os << "  (suppressed:" ;
     for(unsigned int i=0; i<rem_vars.size; ++i)
@@ -2826,6 +2880,7 @@ std::ostream& Mistral::Solver::display(std::ostream& os) {
     //os << posted_constraints[i] << std::endl;
 
     os << "  [" << constraints[posted_constraints[i]].id() << "]: " << constraints[posted_constraints[i]] << "\n";
+  }
   }
 
   return os;
@@ -3114,7 +3169,21 @@ void Mistral::Solver::backjump() {
 
 void Mistral::Solver::branch_left() {
 
+
   save();
+
+  //heuristic->check_consistency();
+  
+  // ((GenericHeuristic< 
+  //   GenericWeightedDVO< 
+  //     FailureCountManager, 
+  //     //PruningCountManager, 
+  //     MinDomainOverWeight >,
+  //   //GenericDVO< MinDomainOverDegree >,			    
+  //     MinValue >*)heuristic)->var.manager->check_consistency();
+
+  //heuristic->display(std::cout);
+
   Mistral::Decision decision = heuristic->branch();
 
 

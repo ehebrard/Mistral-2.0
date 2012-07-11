@@ -276,7 +276,7 @@ namespace Mistral {
    * Timing Memory and Command line utilities 
    *********************************************/
 
-
+  bool probe();
 double cpu_time(void);
 uint64_t mem_used();
 

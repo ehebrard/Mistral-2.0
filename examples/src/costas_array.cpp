@@ -57,10 +57,16 @@ int main(int argc, char *argv[])
 
   if(s.depth_first_search(X, 
 			  new GenericHeuristic< 
-			    GenericWeightedDVO< 
+			    GenericNeighborDVO< 
 			      FailureCountManager, 
 			      //PruningCountManager, 
-			      MinDomainOverWeight >,
+
+			      SelfPlusAverage,
+
+			      MinDomainOverWeight 
+			      //MinNeighborDomainOverNeighborWeight
+			      , 1
+			      >,
 			    //GenericDVO< MinDomainOverDegree >,			    
 			    MinValue >(&s), 
 			  new Geometric()) == SAT) {

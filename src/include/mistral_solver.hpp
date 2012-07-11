@@ -676,7 +676,7 @@ namespace Mistral {
     void debug_print();
     void full_print();
     void print_clist(int k) ;
-    virtual std::ostream& display(std::ostream&) ;
+    virtual std::ostream& display(std::ostream&, const int current=0)  ;
     //@}
   };
 

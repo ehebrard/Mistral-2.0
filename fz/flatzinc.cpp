@@ -48,7 +48,7 @@
 
 #include <mistral_variable.hpp>
 
-//#define _DEBUG_FLATZINC true
+#define _DEBUG_FLATZINC true
 //#define _VERBOSE_PARSER 100
       
 
@@ -445,8 +445,11 @@ namespace FlatZinc {
     solver.consolidate();
     
 // #ifdef _DEBUG_FLATZINC
-//     std::cout << "c mistral representation:\n " << solver << std::endl;
+     std::cout << "c mistral representation:\n " << solver << std::endl;
 // #endif
+
+     std::cout << heuristic << std::endl;
+
 
     Outcome result = UNKNOWN;
 

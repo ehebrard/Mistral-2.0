@@ -47,7 +47,7 @@ bool probe_macosx() { std::cout << " c Run on mac osx" << std::endl; return true
 bool probe_linux() { std::cout << " c Run on linux" << std::endl; return true; }
 bool probe_win() { std::cout << " c Run on windows" << std::endl; return true; }
 
-bool probe() {
+bool Mistral::probe() {
 #ifdef __APPLE__
   return probe_macosx();
 #elif defined __linux__
@@ -62,7 +62,7 @@ bool probe() {
 #ifdef _MSC_VER
 #include <ctime>
 
-double cpu_time(void) {
+double Mistral::cpu_time(void) {
     return (double)clock() / CLOCKS_PER_SEC; }
 #else
 
@@ -78,7 +78,8 @@ double Mistral::cpu_time(void) {
 
 
 #if defined(__linux__)
-int Mistral::mem_read_stat(int field)
+#include <stdio.h>
+int mem_read_stat(int field)
 {
     char    name[256];
     pid_t pid = getpid();

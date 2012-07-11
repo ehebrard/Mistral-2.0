@@ -996,7 +996,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "not_equal"; }
+    virtual std::string name() const { return "="; }
     //@}
   };
 
@@ -1049,7 +1049,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "not_equal"; }
+    virtual std::string name() const { return "=/="; }
     //@}
   };
 
@@ -1100,7 +1100,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "are_equal"; }
+    virtual std::string name() const { return "=?="; }
     //@}
   };
 
@@ -1153,7 +1153,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "equal_to"; }
+    virtual std::string name() const { return "=k?"; }
     //@}
   };
 
@@ -1202,7 +1202,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "not"; }
+    virtual std::string name() const { return "not?"; }
     //@}
   };
 
@@ -1245,7 +1245,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "neg"; }
+    virtual std::string name() const { return "neg?"; }
     //@}
   };
 
@@ -1299,7 +1299,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "are_equal"; }
+    virtual std::string name() const { return "in[]?"; }
     //@}
   };
 
@@ -1354,7 +1354,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "are_equal"; }
+    virtual std::string name() const { return "in{}?"; }
     //@}
   };
 
@@ -1409,7 +1409,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "less_than"; }
+    virtual std::string name() const { return "<"; }
     //@}
   };
 
@@ -1460,7 +1460,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "less_than"; }
+    virtual std::string name() const { return "<?"; }
     //@}
   };
 
@@ -1513,7 +1513,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "upper_bound"; }
+    virtual std::string name() const { return "<u?"; }
     //@}
   };
 
@@ -1564,7 +1564,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "lower_bound"; }
+    virtual std::string name() const { return ">l?"; }
     //@}
   };
 
@@ -1612,7 +1612,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "and"; }
+    virtual std::string name() const { return "and?"; }
     //@}
   };
 
@@ -1706,7 +1706,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "and"; }
+    virtual std::string name() const { return "or?"; }
     //@}
   };
 
@@ -1751,7 +1751,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "and"; }
+    virtual std::string name() const { return "or"; }
     //@}
   };
 
@@ -1852,7 +1852,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "offset"; }
+    virtual std::string name() const { return "+k"; }
     //@}
   };
 
@@ -1894,7 +1894,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "plus"; }
+    virtual std::string name() const { return "+="; }
     //@}
   };
 
@@ -1943,7 +1943,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "factor"; }
+    virtual std::string name() const { return "*k"; }
     //@}
   };
 
@@ -2006,7 +2006,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "plus"; }
+    virtual std::string name() const { return "*="; }
     //@}
   };
 
@@ -2059,7 +2059,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "disjunctive"; }
+    virtual std::string name() const { return "<>"; }
     //@}
   };
 
@@ -2133,7 +2133,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "r-disjunctive"; }
+    virtual std::string name() const { return "<>="; }
     //@}
   };
 
@@ -2178,7 +2178,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bool_sum"; }
+    virtual std::string name() const { return "bsum=k"; }
     //@}
   };
 
@@ -2222,7 +2222,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bool_sum"; }
+    virtual std::string name() const { return "bsum[]"; }
     //@}
   };
 
@@ -2268,7 +2268,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bool_sum"; }
+    virtual std::string name() const { return "bsum="; }
     //@}
   };
 
@@ -2308,7 +2308,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "min"; }
+    virtual std::string name() const { return "min="; }
     //@}
   };
 
@@ -2348,7 +2348,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "max"; }
+    virtual std::string name() const { return "max="; }
     //@}
   };
 
@@ -2390,7 +2390,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "sum"; }
+    virtual std::string name() const { return "[x]="; }
     //@}
   };
 
@@ -2457,7 +2457,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "sum"; }
+    virtual std::string name() const { return "sum="; }
     //@}
   };
 
@@ -2499,7 +2499,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "clique_ne"; }
+    virtual std::string name() const { return "{=/=}"; }
     //@}
     
   };

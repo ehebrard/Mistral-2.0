@@ -147,6 +147,8 @@ namespace Mistral {
 
     // returns the unique id of the pointed constraint (equal to its rank in the "constraints" array of the Solver class)
     int id() const ;
+    // returns the symbol of the pointed constraint 
+    std::string symbol() const ;
     // return the priority of the constraint during AC closure (the constraint list will have as many sub-lists as there are priorities)
     int priority() const ;
     // set the context-dependent part of the data field to the value idx
