@@ -673,7 +673,9 @@ namespace FlatZinc {
 
     	Variable b = getIntVar(s, m, ce[1]);
     	Variable a = getIntVar(s, m, ce[0]);
-    	s.add(((a <= 0)  && (b == -a)) || ((a >= 0)  && (b == a)));
+    	// s.add(((a <= 0) <= (b == -a)));  Unsat with (0,0) ??
+    	s.add(((a < 0) <= (b == -a)));
+    	s.add((a >= 0) <= (b == a));
 
     }
 
@@ -695,9 +697,19 @@ namespace FlatZinc {
 
     	Variable r = Variable (-bnd, bnd);
 
-    	s.add(((a >= 0) && (r >= 0)) || ((a <= 0) && (r <= 0) ));
-    	s.add(a==b*d+r);
-    	s.add(((r >= 0) && (r < b)) || ((r <= 0) && (r > b) ));
+    	s.add(a!= 0);
+    	s.add(b!= 0);
+
+    	s.add(((a > 0) <= (r >= 0)));
+    	s.add ((a < 0) <= (r <= 0));
+
+    	s.add(a==((b*d)+r));
+
+    	s.add(((r > 0) <= ( (b>0) <= (r < b)) ));
+    	s.add(((r > 0) <= ( (b<0) <= (r < (-b)) ) ));
+
+    	s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
+    	s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
 
     }
 
