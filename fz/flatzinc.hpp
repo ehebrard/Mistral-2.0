@@ -41,6 +41,7 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <set>
 
 #include "conexpr.hpp"
 #include "ast.hpp"
@@ -49,7 +50,7 @@
 #include <mistral_solver.hpp>
 
 //#define _VERBOSE_PARSER 100
-
+#define _VERIFICATION 1
 using namespace Mistral;
 
 typedef Vector<Variable> IntVarArray;
@@ -68,207 +69,358 @@ typedef Vector<Variable> SetVarArray;
 
 namespace FlatZinc {
 
-  /**
-   * \brief Output support class for %FlatZinc interpreter
-   *
-   */
-  class Printer {
-  private:
-    AST::Array* _output;
-    void printElem(std::ostream& out,
-                   Solver& solver,
-                   AST::Node* ai,
-                   const IntVarArray& iv,
-                   const BoolVarArray& bv,
-                   const SetVarArray& sv
-                   ) const;
+/**
+ * \brief Output support class for %FlatZinc interpreter
+ *
+ */
+class Printer {
+private:
+	AST::Array* _output;
+	void printElem(std::ostream& out,
+			Solver& solver,
+			AST::Node* ai,
+			const IntVarArray& iv,
+			const BoolVarArray& bv,
+			const SetVarArray& sv
+	) const;
 
-  public:
-    Printer(void) : _output(NULL) {}
-    void init(AST::Array* output);
+public:
+	Printer(void) : _output(NULL) {}
+	void init(AST::Array* output);
 
-    void print(std::ostream& out,
-               Solver& solver,
-               const IntVarArray& iv,
-               const BoolVarArray& bv,
-               const SetVarArray& sv
-               ) const;
+	void print(std::ostream& out,
+			Solver& solver,
+			const IntVarArray& iv,
+			const BoolVarArray& bv,
+			const SetVarArray& sv
+	) const;
 
-    ~Printer(void);
-  private:
-    Printer(const Printer&);
-    Printer& operator=(const Printer&);
-  };
-
-  /**
-   * \brief A space that can be initialized with a %FlatZinc model
-   *
-   */
-  class FlatZincModel {
-  public:
-    enum Meth {
-      SATISFACTION, //< Solve as satisfaction problem
-      MINIMIZATION, //< Solve as minimization problem
-      MAXIMIZATION  //< Solve as maximization problem
-    };
-  protected:
-    /// Mistral stuff
-    Solver &solver;
-
-    /// Options
-    BranchingHeuristic *heuristic;
-    RestartPolicy *policy;
-    bool use_rewriting;
-
-    ////
+	~Printer(void);
+private:
+	Printer(const Printer&);
+	Printer& operator=(const Printer&);
+};
 
 
-    /// Number of integer variables
-    int intVarCount;
-    /// Number of Boolean variables
-    int boolVarCount;
-    /// Number of set variables
-    int setVarCount;
+#ifdef _VERIFICATION
+//we need this only for verification
+class SolutionValue
+{
+public:
 
-    /// Index of the integer variable to optimize
-    int _optVar;
+	std::string get_string()
+	{
+		std::string tmp;
+		//	std::cout << " \n type " << type << std::endl;
+		if (type <= 4)
+		{
+			//Int, Bool, String, Atom
+			tmp = val;
+		}
+		else
+		{
+			switch(type)
+			{
+			case 5:
+			{
+				if (ai->isSet())
+				{
+					//tmp = " isSet yess";
+					std::ostringstream  oss;
+					oss.str("");
+					AST::SetLit* s = ai->getSet();
+					if (s->interval) {
+						oss << s->min << ".." << s->max;
+					} else {
+						oss << "{";
+						for (unsigned int i=0; i<s->s.size(); i++) {
+							oss << s->s[i] << (i < s->s.size()-1 ? ", " : "}");
+						}
+					}
+					tmp = oss.str();
+				}
+			}break;
+			case 6:
+			{
+				if (var != NULL)
+				{
+					//					tmp = " boolvar yes";
+					std::ostringstream  oss;
+					//oss.str("");
+					int lb = var->get_solution_min();
+					int ub = var->get_solution_max();
+					if (lb == 1)
+					{
+						oss << "true";
+					}
+					else
+						if (ub == 0)
+						{
+							oss << "false";
+						} else
+						{
+							//					oss << "false..true";
+							oss << "true";
+						}
+					tmp = oss.str();
+				}
+			}break;
+			case 7:
+			{
+				if (var != NULL)
+				{
+					//	tmp = " intvar yes ";
+					std::ostringstream  oss;
+					oss.str("");
+					//	var->display(std::cout);
+					//		var->get_solution_str_value().
+					//						std::cout << "\n the domain is \n " << << std::endl;
+					//						std::cout << "\n and the value is \n " << var->get_solution_int_value() << std::endl;
+					oss << var->get_solution_int_value();
+					tmp =oss.str();
+				}
+			}break;
+			case 8:
+			{
+				if (var != NULL)
+				{
+					//	tmp = " isSetVar yes";
+					std::ostringstream  oss;
+					SetExpression *x = (SetExpression*)(var->expression);
+					std::set<int> lb;
+					std::set<int> ub;
+					for(unsigned int i=0; i<x->elts_ub.size; ++i)
+					{
+						if(x->get_index_var(i).get_solution_min())
+						{
+							lb.insert(x->elts_ub[i]);
+							ub.insert(x->elts_ub[i]);
+						}
+						else if(x->children[i].get_solution_max())
+							ub.insert(x->elts_ub[i]);
+					}
+					oss << "{";
+					for( std::set<int>::const_iterator i = ub.begin(); i != ub.end(); ++i)
+					{
+						if( i != ub.begin() ) oss << ", ";
+						oss << *i;
+					}
+					oss << "}";
+					tmp =oss.str();
+				}
+			}break;
+			case 9:
+			{
+				//	tmp = "array ";
+				int size =a.size();
+				std::ostringstream  oss;
+				oss << "[";
+				for (int i = 0; i < size; i++)
+				{
+					oss  << a[i].get_string();
+					if (i< (size -1))
+						oss << ", ";
+				}
+				oss << "]";
+				tmp= oss.str();
+			}break;
+			}
+		}
+		return tmp;
+	}
+	void set_var(Variable * _var){var=_var;}
+	void set_type(unsigned int _type){type= _type;}
+	void set_val (std::string _val) {val= _val;}
+	void set_ai (AST::Node* _ai){ai =_ai;}
+	void set_a (std::vector<SolutionValue> _a){a = _a;}
 
-    /// Whether to solve as satisfaction or optimization problem
-    Meth _method;
+private:
+	Variable * var ;
+	unsigned int type;
+	std::string val;
+	AST::Node* ai;
+	std::vector<SolutionValue> a;
+};
+#endif
 
-    /// Annotations on the solve item
-    AST::Array* _solveAnnotations;
-  public:
-    /// The integer variables
-    IntVarArray iv;
-    /// Indicates whether an integer variable is introduced by mzn2fzn
-    std::vector<bool> iv_introduced;
-    /// Indicates whether an integer variable aliases a Boolean variable
-    std::vector<int> iv_boolalias;
-    /// The Boolean variables
-    BoolVarArray bv;
-    /// Indicates whether a Boolean variable is introduced by mzn2fzn
-    std::vector<bool> bv_introduced;
-    /// The Set variables
-    SetVarArray sv;
-    /// Indicates whether a set variable is introduced by mzn2fzn
-    std::vector<bool> sv_introduced;
+/**
+ * \brief A space that can be initialized with a %FlatZinc model
+ *
+ */
+class FlatZincModel {
+public:
+	enum Meth {
+		SATISFACTION, //< Solve as satisfaction problem
+		MINIMIZATION, //< Solve as minimization problem
+		MAXIMIZATION  //< Solve as maximization problem
+	};
+protected:
+	/// Mistral stuff
+	Solver &solver;
 
-    /// vars fixed to true and false, in case they are encountered often
-    //Variable vartrue(1,1);
-    //Variable varfalse(0,0);
-    //std::map<int, Variable> constants;
+	/// Options
+	BranchingHeuristic *heuristic;
+	RestartPolicy *policy;
+	bool use_rewriting;
 
-    /// Construct empty space
-    FlatZincModel(Solver& s);
-
-    /// Destructor
-    ~FlatZincModel(void);
-
-    /// Initialize space with given number of variables
-    void init(int intVars, int boolVars, int setVars);
-
-    /// Create new integer variable from specification
-    void newIntVar(IntVarSpec* vs);
-    /// Link integer variable \a iv to Boolean variable \a bv
-    void aliasBool2Int(int iv, int bv);
-    /// Return linked Boolean variable for integer variable \a iv
-    int aliasBool2Int(int iv);
-    /// Create new Boolean variable from specification
-    void newBoolVar(BoolVarSpec* vs);
-    /// Create new set variable from specification
-    void newSetVar(SetVarSpec* vs);
-
-    /// Post a constraint specified by \a ce
-    void postConstraint(const ConExpr& ce, AST::Node* annotation);
-
-    /// Post the solve item
-    void solve(AST::Array* annotation);
-    /// Post that integer variable \a var should be minimized
-    void minimize(int var, AST::Array* annotation);
-    /// Post that integer variable \a var should be maximized
-    void maximize(int var, AST::Array* annotation);
-
-    /// setup parameters from the command line
-    void set_parameters(SolverParameters& p);
-
-    /// setup parameters from the command line
-    void set_strategy(std::string var_o, std::string val_o, std::string r_pol);
-
-    /// setup the rewriting step
-    void set_rewriting(const bool on);
+	////
 
 
-    /// Run the search
-    void run(std::ostream& out, const Printer& p);
+	/// Number of integer variables
+	int intVarCount;
+	/// Number of Boolean variables
+	int boolVarCount;
+	/// Number of set variables
+	int setVarCount;
 
-    /// Produce output on \a out using \a p
-    void print(std::ostream& out, const Printer& p) const;
+	/// Index of the integer variable to optimize
+	int _optVar;
 
-    /**
-     * \brief Remove all variables not needed for output
-     *
-     * After calling this function, no new constraints can be posted through
-     * FlatZinc variable references, and the createBranchers method must
-     * not be called again.
-     *
-     */
-    void shrinkArrays(Printer& p);
+	/// Whether to solve as satisfaction or optimization problem
+	Meth _method;
 
-    /// Return whether to solve a satisfaction or optimization problem
-    Meth method(void) const;
+	/// Annotations on the solve item
+	AST::Array* _solveAnnotations;
+public:
 
-    /// Return index of variable used for optimization
-    int optVar(void) const;
 
-    /**
-     * \brief Create branchers corresponding to the solve item annotations
-     *
-     * If \a ignoreUnknown is true, unknown solve item annotations will be
-     * ignored, otherwise a warning is written to \a err.
-     */
-    void createBranchers(AST::Node* ann, bool ignoreUnknown,
-                         std::ostream& err = std::cerr);
+	/// The integer variables
+	IntVarArray iv;
+	/// Indicates whether an integer variable is introduced by mzn2fzn
+	std::vector<bool> iv_introduced;
+	/// Indicates whether an integer variable aliases a Boolean variable
+	std::vector<int> iv_boolalias;
+	/// The Boolean variables
+	BoolVarArray bv;
+	/// Indicates whether a Boolean variable is introduced by mzn2fzn
+	std::vector<bool> bv_introduced;
+	/// The Set variables
+	SetVarArray sv;
+	/// Indicates whether a set variable is introduced by mzn2fzn
+	std::vector<bool> sv_introduced;
 
-    /// Return the solve item annotations
-    AST::Array* solveAnnotations(void) const;
+	/// vars fixed to true and false, in case they are encountered often
+	//Variable vartrue(1,1);
+	//Variable varfalse(0,0);
+	//std::map<int, Variable> constants;
 
-    /// Implement optimization
-    //void constrain();
+	/// Construct empty space
+	FlatZincModel(Solver& s);
 
-    /// options
-    bool findall; // find all solutions
-  };
+	/// Destructor
+	~FlatZincModel(void);
 
-  /// %Exception class for %FlatZinc errors
-  class Error {
-  private:
-    const std::string msg;
-  public:
-    Error(const std::string& where, const std::string& what)
-    : msg(where+": "+what) {}
-    const std::string& toString(void) const { return msg; }
-  };
+	/// Initialize space with given number of variables
+	void init(int intVars, int boolVars, int setVars);
 
-  /**
-   * \brief Parse FlatZinc file \a fileName into \a fzs and return it.
-   *
-   * Creates a new empty FlatZincSpace if \a fzs is NULL.
-   */
-  FlatZincModel* parse(const std::string& fileName,
-                       Solver& solver,
-                       Printer& p, std::ostream& err = std::cerr,
-                       FlatZincModel* fzs=NULL);
+	/// Create new integer variable from specification
+	void newIntVar(IntVarSpec* vs);
+	/// Link integer variable \a iv to Boolean variable \a bv
+	void aliasBool2Int(int iv, int bv);
+	/// Return linked Boolean variable for integer variable \a iv
+	int aliasBool2Int(int iv);
+	/// Create new Boolean variable from specification
+	void newBoolVar(BoolVarSpec* vs);
+	/// Create new set variable from specification
+	void newSetVar(SetVarSpec* vs);
 
-  /**
-   * \brief Parse FlatZinc from \a is into \a fzs and return it.
-   *
-   * Creates a new empty FlatZincSpace if \a fzs is NULL.
-   */
-  FlatZincModel* parse(std::istream& is,
-                       Solver& solver,
-                       Printer& p, std::ostream& err = std::cerr,
-                       FlatZincModel* fzs=NULL);
+	/// Post a constraint specified by \a ce
+	void postConstraint(const ConExpr& ce, AST::Node* annotation);
+
+	/// Post the solve item
+	void solve(AST::Array* annotation);
+	/// Post that integer variable \a var should be minimized
+	void minimize(int var, AST::Array* annotation);
+	/// Post that integer variable \a var should be maximized
+	void maximize(int var, AST::Array* annotation);
+
+	/// setup parameters from the command line
+	void set_parameters(SolverParameters& p);
+
+	/// setup parameters from the command line
+	void set_strategy(std::string var_o, std::string val_o, std::string r_pol);
+
+	/// setup the rewriting step
+	void set_rewriting(const bool on);
+
+
+	/// Run the search
+	void run(std::ostream& out, const Printer& p);
+
+	/// Produce output on \a out using \a p
+	void print(std::ostream& out, const Printer& p) const;
+
+	/**
+	 * \brief Remove all variables not needed for output
+	 *
+	 * After calling this function, no new constraints can be posted through
+	 * FlatZinc variable references, and the createBranchers method must
+	 * not be called again.
+	 *
+	 */
+	void shrinkArrays(Printer& p);
+
+	/// Return whether to solve a satisfaction or optimization problem
+	Meth method(void) const;
+
+	/// Return index of variable used for optimization
+	int optVar(void) const;
+
+	/**
+	 * \brief Create branchers corresponding to the solve item annotations
+	 *
+	 * If \a ignoreUnknown is true, unknown solve item annotations will be
+	 * ignored, otherwise a warning is written to \a err.
+	 */
+	void createBranchers(AST::Node* ann, bool ignoreUnknown,
+			std::ostream& err = std::cerr);
+
+	/// Return the solve item annotations
+	AST::Array* solveAnnotations(void) const;
+
+	/// Implement optimization
+	//void constrain();
+
+	/// options
+	bool findall; // find all solutions
+
+#ifdef _VERIFICATION
+	//Verification
+	std::vector<std::pair<std::string, std::vector<SolutionValue > > > verif_constraints;
+	std::ostringstream oss;
+	SolutionValue node2SolutionValue(AST::Node * ai );
+#endif
+};
+
+/// %Exception class for %FlatZinc errors
+class Error {
+private:
+	const std::string msg;
+public:
+	Error(const std::string& where, const std::string& what)
+	: msg(where+": "+what) {}
+	const std::string& toString(void) const { return msg; }
+};
+
+/**
+ * \brief Parse FlatZinc file \a fileName into \a fzs and return it.
+ *
+ * Creates a new empty FlatZincSpace if \a fzs is NULL.
+ */
+FlatZincModel* parse(const std::string& fileName,
+		Solver& solver,
+		Printer& p, std::ostream& err = std::cerr,
+		FlatZincModel* fzs=NULL);
+
+/**
+ * \brief Parse FlatZinc from \a is into \a fzs and return it.
+ *
+ * Creates a new empty FlatZincSpace if \a fzs is NULL.
+ */
+FlatZincModel* parse(std::istream& is,
+		Solver& solver,
+		Printer& p, std::ostream& err = std::cerr,
+		FlatZincModel* fzs=NULL);
 
 }
 

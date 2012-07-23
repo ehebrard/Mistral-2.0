@@ -5,8 +5,41 @@
 #include <iomanip>
 
 #include "flatzinc.hpp"
-
+#include <set>
+#include <map>
 using namespace std;
+#include <typeinfo>
+
+#ifdef _VERIFICATION
+void write_solution(FlatZinc::FlatZincModel *fm, string filename)
+{
+	//	cout << "set size " << fm->verif_constraints.size() << filename <<endl;
+	ofstream myfile;
+	filename.insert(0,"sol_" );
+	myfile.open (filename.c_str());
+
+	for (unsigned int i = 0; i < fm->verif_constraints.size() ; i++)
+	{
+		if (fm->verif_constraints[i].first != "int_in")
+		{
+			myfile << "constraint " << fm->verif_constraints[i].first << "(" ;
+			int size = fm->verif_constraints[i].second.size();
+			for (unsigned int j = 0; j <size ; j++)
+			{
+
+				myfile << fm->verif_constraints[i].second[j].get_string() ;
+				if (j< (size -1))
+					myfile << " , ";
+			}
+			myfile << ");" << endl;
+		}
+	}
+	myfile <<"solve satisfy;" << endl;
+	myfile.close();
+	std::cout <<" c DONE" << endl;
+}
+#endif
+
 
 int main(int argc, char *argv[])
 {
@@ -82,16 +115,14 @@ int main(int argc, char *argv[])
 	s.set_time_limit(cutoff);
 	s.parameters.verbosity = atoi(options["--verbose"].c_str());
 	fm->set_rewriting(atoi(options["--rewrite"].c_str()));
-
-
-
 	//string restart = options["--heuristic"];
 
-
 	fm->run(cout , p);
+
+#ifdef _VERIFICATION
+	write_solution(fm, args.back());
+#endif
+
 	delete fm;
-
-
-
 	return 0;
 }
