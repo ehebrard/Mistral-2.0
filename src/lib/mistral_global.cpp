@@ -79,15 +79,11 @@ double Mistral::cpu_time(void) {
 
 #if defined(__linux__)
 #include <stdio.h>
-<<<<<<< HEAD
-int mem_read_stat(int field)
-=======
 int Mistral::mem_read_stat(int field)
->>>>>>> 249f23cb8f055faa6774d745a45dc14409e34b14
 {
     char    name[256];
     pid_t pid = getpid();
-   sprintf(name, "/proc/%d/statm", pid);
+    sprintf(name, "/proc/%d/statm", pid);
     FILE*   in = fopen(name, "rb");
     if (in == NULL) return 0;
     int     value;
