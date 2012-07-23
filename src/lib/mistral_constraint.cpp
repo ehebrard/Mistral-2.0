@@ -5140,6 +5140,54 @@ Mistral::PredicateWeightedSum::~PredicateWeightedSum()
 
 
 
+
+Mistral::PropagationOutcome Mistral::PredicateWeightedSum::rewrite() {
+
+#ifdef _DEBUG_REWRITE
+      std::cout << "REWRITE SUM " ;
+      display(std::cout);
+      std::cout << std::endl;
+#endif
+
+  RewritingOutcome r_evt = NO_EVENT; 
+
+
+  std::cout << scope.size << " " << wpos << " " << wneg << " " << lower_bound << " " << upper_bound << std::endl;
+
+  // check if it can be rewritten as an ADD predicate
+  if(scope.size == 3 && wpos == 1 && wneg == 1 && lower_bound == 0 && upper_bound == 0 ) {
+
+    std::cout <<  "RELAX" << std::endl;
+
+
+    r_evt = SUPPRESSED;
+    relax();
+    get_solver()->add(Constraint(new PredicateAdd(scope[1], scope[2], scope[0])));
+  }
+
+
+  else if(scope.size == 2 && wpos == 1 && wneg == 1) {
+    if(lower_bound == upper_bound) {
+      r_evt = SUPPRESSED;
+      relax();
+      if(lower_bound == 0) {
+	get_solver()->add(Constraint(new ConstraintEqual(scope[0], scope[1])));
+      } else {
+	get_solver()->add(Constraint(new PredicateOffset(scope[1], scope[0], lower_bound)));
+      } 
+    } else {
+      if(upper_bound == INFTY) {
+	r_evt = SUPPRESSED;
+	relax();
+	get_solver()->add(Constraint(new ConstraintLess(scope[1], scope[0], -lower_bound)));
+      }
+    }
+  }
+  
+  return r_evt;
+}
+
+
 //#define _DEBUG_WEIGHTEDSUM true
 
 Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate() 

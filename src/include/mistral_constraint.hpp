@@ -730,6 +730,44 @@ namespace Mistral {
     void trigger();
   };
 
+
+  // class Contradiction : public ConstraintImplementation {
+
+  // public:
+  
+  //   Contradiction() : ConstraintImplementation() {}
+  //   //void initialise();
+  //   virtual int get_type() {return 0;}
+  //   virtual int postponed() {return 0;}
+  //   virtual int idempotent() { return 1;}
+  //   virtual ~Contradiction() {}
+
+  //   virtual Constraint clone() { return Constraint(new Contradiction()); }
+  //   virtual void initialise_vars(Solver *s) {}
+
+  //   virtual void desactivate(const int var) {}
+  //   virtual void consolidate() {}
+  //   virtual void consolidate_var(const int idx) {}
+
+  //   virtual int check(const int* sol) const { return 1; }
+
+  //   virtual PropagationOutcome checker_propagate() { return FAILURE(0); }
+  //   virtual PropagationOutcome bound_checker_propagate() { return FAILURE(0); }
+  //   virtual PropagationOutcome propagate() { return FAILURE(0); }
+  //   virtual PropagationOutcome propagate(const int changed_idx, const Event evt) { return FAILURE(0); }
+  //   virtual PropagationOutcome bound_propagate() { return FAILURE(0); }
+  //   virtual PropagationOutcome bound_propagate(const int changed_idx, const Event evt) { return FAILURE(0); }
+  //   virtual PropagationOutcome checker_propagate(const int changed_idx, const Event evt)  { return FAILURE(0); }
+  //   virtual PropagationOutcome bound_checker_propagate(const int changed_idx, const Event evt) { return FAILURE(0); }
+
+
+
+  //   std::ostream& display(std::ostream& os) const { os << "False"; return os; }  
+  // };
+
+
+
+
   class GlobalConstraint : public ConstraintImplementation {
 
   public:
@@ -2441,6 +2479,7 @@ namespace Mistral {
 			 const int L=0, const int U=0);
     virtual ~PredicateWeightedSum();
     virtual Constraint clone() { return Constraint(new PredicateWeightedSum(scope, weight)); }
+    virtual bool rewritable() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -2451,7 +2490,7 @@ namespace Mistral {
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
-    //virtual RewritingOutcome rewrite();
+    virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/

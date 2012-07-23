@@ -673,8 +673,8 @@ namespace FlatZinc {
 
     	Variable b = getIntVar(s, m, ce[1]);
     	Variable a = getIntVar(s, m, ce[0]);
-
     	s.add((a <= 0)  && ((b + a) == 0));
+    	//s.add(((a <= 0)  && (b == -a)) || ((a >= 0)  && (b == a)));
 
     }
 

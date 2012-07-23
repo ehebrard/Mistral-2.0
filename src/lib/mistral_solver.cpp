@@ -810,6 +810,8 @@ Mistral::Solver::Solver()
 
   usrand(parameters.seed);
 
+  wiped_idx = CONSISTENT;
+
   save();
 }
 
@@ -960,17 +962,10 @@ int Mistral::Solver::declare(Variable x) {
 // }
 
 void Mistral::Solver::add(Constraint c) { 
-  //std::cout << "add " << c << std::endl;
 
   if(c.id() < 0) {
 
     c.initialise(this);
-
-    // for(unsigned int i=0; i<c->scope.size; ++i) {
-    //   c->scope[i].initialise(this, false);
-    // }
-
-    // c->initialise();
 
     // get a name for the constraint and add it to the list
     c.set_id(constraints.size); 
@@ -1867,11 +1862,15 @@ bool Mistral::Solver::rewrite()
 
 
 #ifdef _DEBUG_REWRITE
-    std::cout << "\n====================END REWRITING======================\n" ;
+  std::cout << "\n====================END REWRITING======================\n" ;
 #endif
 
-
-  return IS_OK(wiped_idx);
+  
+  bool consistent = IS_OK(wiped_idx);
+  wiped_idx = CONSISTENT;
+  return consistent;
+    
+  //return IS_OK(wiped_idx);
 
 }
 
@@ -1888,7 +1887,7 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
   bool fix_point;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
-  wiped_idx = CONSISTENT;
+  //wiped_idx = CONSISTENT;
   if(trigger_self) c.trigger();
   
   fix_point = (active_variables.empty() && active_constraints.empty());
@@ -1962,8 +1961,9 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
   active_variables.clear();
 
   // std::cout << wiped_idx << std::endl;
-    
-  return wiped_idx;
+  PropagationOutcome consistent = wiped_idx;
+  wiped_idx = CONSISTENT;
+  return consistent;
 }
 
 Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c, 
@@ -1972,7 +1972,7 @@ Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c,
   bool fix_point;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
-  wiped_idx = CONSISTENT;
+  //wiped_idx = CONSISTENT;
   if(trigger_self) c.trigger();
   
   fix_point = (active_variables.empty() && active_constraints.empty());
@@ -2035,7 +2035,10 @@ Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c,
   active_constraints.clear();
   active_variables.clear();
     
-  return wiped_idx;
+  //return wiped_idx;
+  PropagationOutcome consistent = wiped_idx;
+  wiped_idx = CONSISTENT;
+  return consistent;
 }
 
 Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint c, 
@@ -2053,7 +2056,7 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
   Triplet < int, Event, ConstraintImplementation* > var_evt;
   //VarEvent var_evt;
 
-  wiped_idx = CONSISTENT;
+  //wiped_idx = CONSISTENT;
   if(trigger_self) c.trigger();
 
   fix_point =  (active_variables.empty() && active_constraints.empty());
@@ -2143,7 +2146,10 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
     
   // std::cout << wiped_idx << std::endl;
 
-  return wiped_idx;
+  //return wiped_idx;
+  PropagationOutcome consistent = wiped_idx;
+  wiped_idx = CONSISTENT;
+  return consistent;
 }
 
 
@@ -2166,15 +2172,15 @@ bool Mistral::Solver::propagate()
   int trig, cons;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
-  wiped_idx = CONSISTENT;
+  //wiped_idx = CONSISTENT;
   culprit.clear();
 
   ++statistics.num_filterings;  
 
   // TODO, we shouldn't have to do that
-  if(objective && objective->enforce())
+  if(IS_OK(wiped_idx) && objective && objective->enforce())
     wiped_idx = objective->objective.id();
-
+  
   fix_point =  (active_variables.empty() && active_constraints.empty());
 
 
@@ -2183,11 +2189,11 @@ bool Mistral::Solver::propagate()
   std::cout << std::endl;
 #endif
 
-  if(!IS_OK(wiped_idx)) {
+  // if(!IS_OK(wiped_idx)) {
 
-    std::cout << "FAILED WHEN ENFORCING UPPER BOUND" << std::endl;
+  //   std::cout << "FAILED WHEN ENFORCING UPPER BOUND" << std::endl;
 
-  }
+  // }
 
 
   while(IS_OK(wiped_idx) && !fix_point) {
@@ -2383,7 +2389,7 @@ bool Mistral::Solver::propagate()
 #endif 
   
   if(IS_OK(wiped_idx)) {
-    notify_success();   
+    notify_success();
     return true;
   } else {
     ++statistics.num_failures;
@@ -2391,10 +2397,15 @@ bool Mistral::Solver::propagate()
     //std::cout << "solver: notify failure" << std::endl;
 
     notify_failure();
+    wiped_idx = CONSISTENT;
     return false;
   }
 }
 
+
+void Mistral::Solver::fail() {
+  wiped_idx = FAILURE(0);
+}
 
 // bool Mistral::Solver::rewrite() 
 // {
@@ -3245,7 +3256,7 @@ void Mistral::Solver::branch_left() {
 
  Mistral::Outcome Mistral::Solver::satisfied() {    
 #ifdef _DEBUG_SEARCH
-  std::cout << "c";
+  std::cout << " c";
   for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
   std::cout << " SAT!" << std::endl; 
 #endif
@@ -3350,7 +3361,7 @@ void Mistral::Solver::branch_left() {
 
  Mistral::Outcome Mistral::Solver::exhausted() {    
 #ifdef _DEBUG_SEARCH
-  std::cout << "c UNSAT!" << std::endl; 
+   std::cout << " c UNSAT!" << std::endl; 
 #endif
 
   return objective->notify_exhausted();
@@ -4033,6 +4044,26 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
     } else if(branching == "guided") {
       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+    } 
+  }  else if(var_ordering == "neighbor") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinValue > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MaxValue > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, HalfSplit > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, RandomMinMax > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+    } else if(branching == "minweight") {
+      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinWeightValue > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, Guided > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
     } 
   }						
   return heu;

@@ -92,16 +92,26 @@ void Mistral::Constraint::relax() {
 }
 
 void Mistral::Constraint::initialise(Solver *s) {
-  propagator->solver = s;
-  propagator->initialise_vars(s);
-  propagator->initialise();
+  if(propagator) {
+    propagator->solver = s;
+    propagator->initialise_vars(s);
+    propagator->initialise();
+  } else {
+    std::cerr << "Should raise a contradiction!" << std::endl;
+  }
 }
 
 int Mistral::Constraint::priority() const {
   return (global() ? ((GlobalConstraint*)propagator)->priority : 2);
 }
 
-void Mistral::Constraint::post(Solver* solver) { propagator->initial_post(solver); }
+void Mistral::Constraint::post(Solver* solver) { 
+  if(propagator) {
+    propagator->initial_post(solver); 
+  } else {
+    std::cerr << "Should raise a contradiction!" << std::endl;
+  }
+}
 
 void Mistral::Constraint::awaken() { 
   if(binary()) {

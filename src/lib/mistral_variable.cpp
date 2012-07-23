@@ -2567,9 +2567,14 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
   }
   else {
     if(spin) {
-      children[0].set_max(offset);
+      
+      std::cout << "HERE" << std::endl;
+
+      if(children[0].set_max(offset) == FAIL_EVENT) 
+	{ s->fail(); }
     } else {     
-      children[0].set_min(offset);
+      if(children[0].set_min(offset) == FAIL_EVENT)
+	{ s->fail(); }
     }
   }
 }
@@ -2807,8 +2812,11 @@ void Mistral::LexExpression::extract_constraint(Solver *s) {
     s->add( new ConstraintLex(scp) );
   }
 
-  children[2*arity].set_domain(0);
-  if(strict) children[3*arity].set_domain(1);
+  if(children[2*arity].set_domain(0) == FAIL_EVENT)
+    { s->fail(); }
+  if(strict) 
+    if(children[3*arity].set_domain(1) == FAIL_EVENT)
+      { s->fail(); }
 }
 
 void Mistral::LexExpression::extract_variable(Solver *s) {
@@ -3230,8 +3238,10 @@ const char* Mistral::ElementExpression::get_name() const {
 
 void Mistral::ElementExpression::extract_predicate(Solver *s) {
   int arity = children.size-2;
-  children[arity].set_min(offset);
-  children[arity].set_max(arity-1+offset);
+  if(children[arity].set_min(offset) == FAIL_EVENT)
+    { s->fail(); }
+  if(children[arity].set_max(arity-1+offset) == FAIL_EVENT)
+    { s->fail(); }
   s->add(Constraint(new PredicateElement(children, offset)));
 }
 
@@ -4040,12 +4050,12 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
   } else if(size == (ub-lb+1)) {
     // interval 
     
-    children[0].set_min(lb);
-    children[0].set_max(ub);
+    if(children[0].set_min(lb) == FAIL_EVENT) { s->fail(); }
+    if(children[0].set_max(ub) == FAIL_EVENT) { s->fail(); }
   } else {
     // set
 
-    children[0].set_domain(values);
+    if(children[0].set_domain(values) == FAIL_EVENT) { s->fail(); }
   }   
 
 }

@@ -1171,7 +1171,12 @@ namespace Mistral {
       Event trig;
       bool is_in;
 
+      std::cout << "NEIGHBORHOOD " << neighborhood << std::endl;
+
       if(!neighborhood) {
+
+	std::cout << "NEIGHBORHOOD" << std::endl;
+
 	neighborhood = new Vector< Variable >[GenericDVOI< Aggregator< VarComparator > >::solver->variables.size];
 	std::fill(neighborhood, neighborhood+GenericDVOI< Aggregator< VarComparator > >::solver->variables.size, NULL);
 	for(i=seq.size; --i>=0;) {
@@ -1191,7 +1196,7 @@ namespace Mistral {
 		}
 	    }
 	  }
-	  //std::cout << seq[i] << ": " << neighborhood[self_idx] << std::endl;
+	  std::cout << seq[i] << ": " << neighborhood[self_idx] << std::endl;
 	}
       }
 
@@ -1421,16 +1426,33 @@ namespace Mistral {
     // inline MinDomainOverDegree& operator-( const MinDomainOverDegree& x ) const { MinDomainOverDegree d; d.dom_=(dom_ - x.dom_); d.deg_=(deg_ - x.deg_); return d; }
     // inline MinDomainOverDegree& operator/( const MinDomainOverDegree& x ) const { MinDomainOverDegree d; d.dom_=(dom_ / x.dom_); d.deg_=(deg_ / x.deg_); return d; }
 
-    inline MinDomainOverDegree& operator*=( const int x ) { dom_ *= x; deg_ *= x; return *this; }
-    inline MinDomainOverDegree& operator+=( const int x ) { dom_ += x; deg_ += x; return *this; }
-    inline MinDomainOverDegree& operator-=( const int x ) { dom_ -= x; deg_ -= x; return *this; }
-    inline MinDomainOverDegree& operator/=( const int x ) { dom_ /= x; deg_ /= x; return *this; }
+  
+
+    inline MinDomainOverDegree& operator*=( const int x ) { dom_ *= x; return *this; }
+    inline MinDomainOverDegree& operator+=( const int x ) { dom_ += x * deg_; return *this; }
+    inline MinDomainOverDegree& operator-=( const int x ) { dom_ -= x * deg_; return *this; }
+    inline MinDomainOverDegree& operator/=( const int x ) { deg_ *= x; return *this; }
 
 
     inline MinDomainOverDegree& operator*=( const MinDomainOverDegree& x ) { dom_ *= x.dom_; deg_ *= x.deg_; return *this; }
-    inline MinDomainOverDegree& operator+=( const MinDomainOverDegree& x ) { dom_ += x.dom_; deg_ += x.deg_; return *this; }
-    inline MinDomainOverDegree& operator-=( const MinDomainOverDegree& x ) { dom_ -= x.dom_; deg_ -= x.deg_; return *this; }
+    inline MinDomainOverDegree& operator+=( const MinDomainOverDegree& x ) { 
+      dom_ = (dom_ * x.deg_ + x.dom_ * deg_); 
+      deg_ *= x.deg_; return *this; }
+    inline MinDomainOverDegree& operator-=( const MinDomainOverDegree& x ) { 
+      dom_ = (dom_ * x.deg_ - x.dom_ * deg_); 
+      deg_ *= x.deg_; return *this; }
     inline MinDomainOverDegree& operator/=( const MinDomainOverDegree& x ) { dom_ /= x.dom_; deg_ /= x.deg_; return *this; }
+
+    // inline MinDomainOverDegree& operator*=( const int x ) { dom_ *= x; deg_ *= x; return *this; }
+    // inline MinDomainOverDegree& operator+=( const int x ) { dom_ += x; deg_ += x; return *this; }
+    // inline MinDomainOverDegree& operator-=( const int x ) { dom_ -= x; deg_ -= x; return *this; }
+    // inline MinDomainOverDegree& operator/=( const int x ) { dom_ /= x; deg_ /= x; return *this; }
+
+
+    // inline MinDomainOverDegree& operator*=( const MinDomainOverDegree& x ) { dom_ *= x.dom_; deg_ *= x.deg_; return *this; }
+    // inline MinDomainOverDegree& operator+=( const MinDomainOverDegree& x ) { dom_ += x.dom_; deg_ += x.deg_; return *this; }
+    // inline MinDomainOverDegree& operator-=( const MinDomainOverDegree& x ) { dom_ -= x.dom_; deg_ -= x.deg_; return *this; }
+    // inline MinDomainOverDegree& operator/=( const MinDomainOverDegree& x ) { dom_ /= x.dom_; deg_ /= x.deg_; return *this; }
 
     inline void operator=( const MinDomainOverDegree& x ) { dom_ = x.dom_; deg_ = x.deg_; }
     inline void operator=( const Variable x ) { dom_ = x.get_size(); deg_ = x.get_degree(); }
@@ -1486,16 +1508,29 @@ namespace Mistral {
     // inline MinDomainOverWeight& operator/( const MinDomainOverWeight& x ) const { MinDomainOverWeight d; d.dom_=(dom_ / x.dom_); d.wei_=(wei_ / x.wei_); return d; }
 
 
+    inline void reduce() {
+      while(dom_>100000 || !(dom_&1)) {
+	dom_ /=2;
+	wei_ /=2;
+      }
+    }
 
-    inline MinDomainOverWeight& operator*=( const int x ) { dom_ *= x; wei_ *= x; return *this; }
-    inline MinDomainOverWeight& operator+=( const int x ) { dom_ += x; wei_ += x; return *this; }
-    inline MinDomainOverWeight& operator-=( const int x ) { dom_ -= x; wei_ -= x; return *this; }
-    inline MinDomainOverWeight& operator/=( const int x ) { dom_ /= x; wei_ /= x; return *this; }
+
+    inline MinDomainOverWeight& operator*=( const int x ) { dom_ *= x; return *this; }
+    inline MinDomainOverWeight& operator+=( const int x ) { dom_ += x * wei_; return *this; }
+    inline MinDomainOverWeight& operator-=( const int x ) { dom_ -= x * wei_; return *this; }
+    inline MinDomainOverWeight& operator/=( const int x ) { wei_ *= x; return *this; }
 
 
     inline MinDomainOverWeight& operator*=( const MinDomainOverWeight& x ) { dom_ *= x.dom_; wei_ *= x.wei_; return *this; }
-    inline MinDomainOverWeight& operator+=( const MinDomainOverWeight& x ) { dom_ += x.dom_; wei_ += x.wei_; return *this; }
-    inline MinDomainOverWeight& operator-=( const MinDomainOverWeight& x ) { dom_ -= x.dom_; wei_ -= x.wei_; return *this; }
+    inline MinDomainOverWeight& operator+=( const MinDomainOverWeight& x ) { 
+      dom_ = (dom_ * x.wei_ + x.dom_ * wei_); 
+      wei_ *= x.wei_; 
+      reduce();
+      return *this; }
+    inline MinDomainOverWeight& operator-=( const MinDomainOverWeight& x ) { 
+      dom_ = (dom_ * x.wei_ - x.dom_ * wei_); 
+      wei_ *= x.wei_; return *this; }
     inline MinDomainOverWeight& operator/=( const MinDomainOverWeight& x ) { dom_ /= x.dom_; wei_ /= x.wei_; return *this; }
 
 
@@ -1609,26 +1644,60 @@ namespace Mistral {
     inline bool operator<( const SelfPlusAverage<VarComparator> & x ) const { return crit < x.crit; }
     inline void operator=( const SelfPlusAverage<VarComparator>& x ) { crit = x.crit; }
     inline void operator=( const Variable x ) { 
+
+
+
       crit.weight = weight;
       crit = x;
+
+
+      // std::cout << "\n => ";
+      // crit.display(std::cout);
+      // std::cout << std::endl;
+      // std::cout << "scan neighborhood" << std::endl;
+
+
 
       VarComparator crit_neighbor, aux;
       crit_neighbor.weight = weight;
       aux.weight = weight;
 
       int idx = x.id();
+
       int n = map[idx].size;
-      int i = n;
+
+      int i = n-1;
       Variable y = map[idx][i];
       crit_neighbor = y;
+
+      // std::cout << "   ---> ";
+      // crit_neighbor.display(std::cout);
+      // std::cout << std::endl;
+
       while(--i>=0) {
   	y = map[idx][i];
 	aux = y;
 	crit_neighbor += aux;
+
+	// std::cout << "      + ";
+	// aux.display(std::cout);
+	// std::cout << " = " ;
+	// crit_neighbor.display(std::cout);
+	// std::cout << std::endl;
       } 
       crit_neighbor /= n;
+
+      // std::cout << "   ---> ";
+      //  crit_neighbor.display(std::cout);
+      // std::cout << std::endl;
       
       crit += crit_neighbor;
+
+
+      // std::cout << "   ---> " ;
+      //  crit.display(std::cout);
+      // std::cout << std::endl;
+
 
       //std::cout << x << ": " << dom_ << "/" << wei_ << std::endl;
 

@@ -2226,7 +2226,7 @@ template < int N, class T >
     } 
     inline bool contain(const int elt) const 
     {
-      return index_[elt]<size;
+      return index_[elt]<(unsigned int)size;
     } 
   
     inline bool empty()const 

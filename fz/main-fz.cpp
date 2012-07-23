@@ -84,11 +84,12 @@ int main(int argc, char *argv[])
 
   //string restart = options["--heuristic"];
 
-
+  //s.display(cout);
+  
   fm->run(cout , p);
-  delete fm;
 
- 
- 
+  //  s.display(cout);
+  delete fm;
+  
   return 0;
 }

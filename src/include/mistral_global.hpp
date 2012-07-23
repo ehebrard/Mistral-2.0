@@ -278,6 +278,9 @@ namespace Mistral {
 
   bool probe();
 double cpu_time(void);
+#if defined(__linux__)
+int mem_read_stat(int );
+#endif
 uint64_t mem_used();
 
 

@@ -431,15 +431,15 @@ namespace FlatZinc {
 #endif
 
     if(use_rewriting) {
-#ifdef _DEBUG_FLATZINC
+      //#ifdef _DEBUG_FLATZINC
       std::cout << "before rewriting:\n" << solver << std::endl;
-#endif
+      //#endif
 
       solver.rewrite() ;
     
-#ifdef _DEBUG_FLATZINC
+      //#ifdef _DEBUG_FLATZINC
       std::cout << "after rewriting:\n" << solver << std::endl;
-#endif
+      //#endif
     }
 
     solver.consolidate();

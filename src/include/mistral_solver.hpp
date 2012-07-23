@@ -555,6 +555,9 @@ namespace Mistral {
     PropagationOutcome checker_propagate(Constraint c, const bool t=true);
     PropagationOutcome bound_checker_propagate(Constraint c, const bool t=true);
     bool propagate(); 
+    
+    void fail();
+
     bool rewrite(); 
     void consolidate(); 
     void make_non_convex(const int idx);
