@@ -69,7 +69,7 @@ namespace FlatZinc {
     std::map<std::string,poster>::iterator i = r.find(ce.id);
     if (i == r.end()) {
       throw FlatZinc::Error("Registry",
-        std::string("Constraint ")+ce.id+" not found");
+                            std::string("Constraint ")+ce.id+" not found");
     }
     i->second(s, m, ce, ann);
   }
@@ -232,9 +232,9 @@ namespace FlatZinc {
     }
 
     inline Vector<Variable> arg2boolvarargs(Solver& s,
-                                          FlatZincModel& m,
-                                          AST::Node* arg,
-                                          int offset = 0, int siv=-1) {
+                                            FlatZincModel& m,
+                                            AST::Node* arg,
+                                            int offset = 0, int siv=-1) {
       AST::Array* a = arg->getArray();
       if (a->a.size() == 0) {
         Vector<Variable> emptyIa;
@@ -262,8 +262,8 @@ namespace FlatZinc {
     }
 
     Variable getBoolVar(Solver& s,
-                      FlatZincModel& m,
-                      AST::Node* n) {
+                        FlatZincModel& m,
+                        AST::Node* n) {
       Variable x0;
       if (n->isBool()) {
         Variable constvar(n->getBool());
@@ -276,8 +276,8 @@ namespace FlatZinc {
     }
 
     Variable getIntVar(Solver& s,
-                     FlatZincModel& m,
-                     AST::Node* n) {
+                       FlatZincModel& m,
+                       AST::Node* n) {
       Variable x0;
       if (n->isIntVar()) {
         x0 = m.iv[n->getIntVar()];
@@ -398,8 +398,8 @@ namespace FlatZinc {
         s.add( getIntVar(s, m, ce1) >= ce0->getInt()-c );
 
 #ifdef _DEBUG_FLATZINC
-         Variable x = getIntVar(s, m, ce1);
-          std::cout << x << " in " << x.get_domain() << " >= " << (ce0->getInt()-c) << std::endl; 
+        Variable x = getIntVar(s, m, ce1);
+        std::cout << x << " in " << x.get_domain() << " >= " << (ce0->getInt()-c) << std::endl; 
 #endif
 
       }
@@ -425,27 +425,27 @@ namespace FlatZinc {
     /* Comparisons */
     void p_int_eq_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-     if (ce[0]->isIntVar()) {
+      if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
           s.add( (getIntVar(s, m, ce[0]) == getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
         } else {
           s.add( (getIntVar(s, m, ce[0]) == ce[1]->getInt()) == getBoolVar(s, m, ce[2]) ); 
         }
-     } else {
-       s.add( (getIntVar(s, m, ce[1]) == ce[0]->getInt()) == getBoolVar(s, m, ce[2]) ); 
-     }
+      } else {
+        s.add( (getIntVar(s, m, ce[1]) == ce[0]->getInt()) == getBoolVar(s, m, ce[2]) ); 
+      }
     }
     void p_int_ne_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-     if (ce[0]->isIntVar()) {
+      if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
           s.add( (getIntVar(s, m, ce[0]) != getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
         } else {
           s.add( (getIntVar(s, m, ce[0]) != ce[1]->getInt()) == getBoolVar(s, m, ce[2]) ); 
         }
-     } else {
-       s.add( (getIntVar(s, m, ce[1]) != ce[0]->getInt()) == getBoolVar(s, m, ce[2]) ); 
-     }
+      } else {
+        s.add( (getIntVar(s, m, ce[1]) != ce[0]->getInt()) == getBoolVar(s, m, ce[2]) ); 
+      }
     }
     void p_int_ge_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
@@ -666,55 +666,50 @@ namespace FlatZinc {
       } else {
         s.add((getIntVar(s, m, ce[0]) - getIntVar(s, m, ce[1])) == getIntVar(s, m, ce[2]));
       }
-     }
+    }
 
     void p_int_abs(Solver& s, FlatZincModel& m,
-                     const ConExpr& ce, AST::Node* ann) {
+                   const ConExpr& ce, AST::Node* ann) {
 
-    	Variable b = getIntVar(s, m, ce[1]);
-    	Variable a = getIntVar(s, m, ce[0]);
-<<<<<<< HEAD
-    	s.add((a <= 0)  && ((b + a) == 0));
-    	//s.add(((a <= 0)  && (b == -a)) || ((a >= 0)  && (b == a)));
-=======
-    	// s.add(((a <= 0) <= (b == -a)));  Unsat with (0,0) ??
-    	s.add(((a < 0) <= (b == -a)));
-    	s.add((a >= 0) <= (b == a));
+      Variable b = getIntVar(s, m, ce[1]);
+      Variable a = getIntVar(s, m, ce[0]);
+      // s.add(((a <= 0) <= (b == -a)));  Unsat with (0,0) ??
+      s.add(((a < 0) <= (b == -a)));
+      s.add((a >= 0) <= (b == a));
 
     }
 
 
     void p_int_div(Solver& s, FlatZincModel& m,
-                     const ConExpr& ce, AST::Node* ann) {
+                   const ConExpr& ce, AST::Node* ann) {
 
-    	Variable a = getIntVar(s, m, ce[0]);
-    	Variable b = getIntVar(s, m, ce[1]);
-    	Variable d = getIntVar(s, m, ce[2]);
+      Variable a = getIntVar(s, m, ce[0]);
+      Variable b = getIntVar(s, m, ce[1]);
+      Variable d = getIntVar(s, m, ce[2]);
 
-    	int bnd = b.get_max();
-    	if (b.get_min() > bnd)
-    		bnd = b.get_min();
-    	if (-b.get_min() > bnd)
-    		bnd = (-b.get_min());
-    	if ((-b.get_max())> bnd)
-    		bnd = (-b.get_max());
+      int bnd = b.get_max();
+      if (b.get_min() > bnd)
+        bnd = b.get_min();
+      if (-b.get_min() > bnd)
+        bnd = (-b.get_min());
+      if ((-b.get_max())> bnd)
+        bnd = (-b.get_max());
 
-    	Variable r = Variable (-bnd, bnd);
+      Variable r = Variable (-bnd, bnd);
 
-    	s.add(a!= 0);
-    	s.add(b!= 0);
+      s.add(a!= 0);
+      s.add(b!= 0);
 
-    	s.add(((a > 0) <= (r >= 0)));
-    	s.add ((a < 0) <= (r <= 0));
+      s.add(((a > 0) <= (r >= 0)));
+      s.add ((a < 0) <= (r <= 0));
 
-    	s.add(a==((b*d)+r));
+      s.add(a==((b*d)+r));
 
-    	s.add(((r > 0) <= ( (b>0) <= (r < b)) ));
-    	s.add(((r > 0) <= ( (b<0) <= (r < (-b)) ) ));
+      s.add(((r > 0) <= ( (b>0) <= (r < b)) ));
+      s.add(((r > 0) <= ( (b<0) <= (r < (-b)) ) ));
 
-    	s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
-    	s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
->>>>>>> 04a5dcedc9df1e9e2076ac5736ad59da00688465
+      s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
+      s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
 
     }
 
@@ -903,10 +898,10 @@ namespace FlatZinc {
                           const ConExpr& ce, AST::Node* ann) {
       
 
-       Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
-       Variable r = getBoolVar(s, m, ce[1]);
+      Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
+      Variable r = getBoolVar(s, m, ce[1]);
 
-       s.add((BoolSum(bv) == bv.size) == r);
+      s.add((BoolSum(bv) == bv.size) == r);
 
       // vec<Lit> up;
       // up.push( safeLit(s, r) );
@@ -1000,7 +995,7 @@ namespace FlatZinc {
 
     void p_bool_clause(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-     cout << "CAN'T POST A CLAUSE" << endl;
+      cout << "CAN'T POST A CLAUSE" << endl;
       exit(1);
 
       // vector<Variable> x0 = arg2boolvarargs(s, m, ce[0]);
@@ -1045,10 +1040,10 @@ namespace FlatZinc {
     void p_bool_eq(Solver& s, FlatZincModel& m,
                    const ConExpr& ce, AST::Node* ann) {
 
-       Variable a = getBoolVar(s, m, ce[0]);
-       Variable b = getBoolVar(s, m, ce[1]);
+      Variable a = getBoolVar(s, m, ce[0]);
+      Variable b = getBoolVar(s, m, ce[1]);
 
-       s.add(a == b);
+      s.add(a == b);
 
       // vec<Lit> ps1, ps2;
       // ps1.push(~safeLit(s, a));
@@ -1128,12 +1123,12 @@ namespace FlatZinc {
 
     void p_bool_gt(Solver& s, FlatZincModel& m,
                    const ConExpr& ce, AST::Node* ann) {
-       Variable a = getBoolVar(s, m, ce[0]);
-       Variable b = getBoolVar(s, m, ce[1]);
+      Variable a = getBoolVar(s, m, ce[0]);
+      Variable b = getBoolVar(s, m, ce[1]);
       
-       s.add(a > b);
+      s.add(a > b);
 
-       // if( s.value(safeLit(s, a)) == l_False )
+      // if( s.value(safeLit(s, a)) == l_False )
       //   throw unsat();
       // if( s.value(~safeLit(s, b)) == l_False )
       //   throw unsat();
@@ -1264,7 +1259,7 @@ namespace FlatZinc {
     }
 
     void p_set_eq(Solver& s, FlatZincModel& m,
-                    const ConExpr& ce, AST::Node* ann) {
+                  const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       
@@ -1272,7 +1267,7 @@ namespace FlatZinc {
     }
 
     void p_set_ne(Solver& s, FlatZincModel& m,
-                    const ConExpr& ce, AST::Node* ann) {
+                  const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       
@@ -1322,13 +1317,13 @@ namespace FlatZinc {
 
     void p_set_in_re(Solver &s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
-       Variable x = getIntVar(s, m, ce[0]);
-       Variable A = getSetVar(s, m, ce[1]);
-       Variable b = getBoolVar(s, m, ce[2]);
+      Variable x = getIntVar(s, m, ce[0]);
+      Variable A = getSetVar(s, m, ce[1]);
+      Variable b = getBoolVar(s, m, ce[2]);
 
-       //report_unsupported("reified Member");
+      //report_unsupported("reified Member");
 
-       s.add( b == Member(x,A) );
+      s.add( b == Member(x,A) );
     }
 
     void p_set_isect(Solver &s, FlatZincModel& m,
@@ -1372,16 +1367,16 @@ namespace FlatZinc {
     }
 
     void p_set_subset_re(Solver &s, FlatZincModel& m,
-                      const ConExpr& ce, AST::Node* ann) {
+                         const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-   //  report_unsupported("reified subset");
+      //  report_unsupported("reified subset");
 
-   //   A.display(cout);
+      //   A.display(cout);
 
-     // s.add(Subset(A,B));
+      // s.add(Subset(A,B));
       //s.add(p==true);
 
       s.add( (Intersection(A,B)==A)==p);
@@ -1395,7 +1390,7 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-//     report_unsupported("reified subset");
+      //     report_unsupported("reified subset");
 
 
       s.add( (Intersection(A,B)==B)==p);
