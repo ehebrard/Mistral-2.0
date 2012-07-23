@@ -20,3 +20,5 @@ Killed process:
 	golfers2_golfers_7_7_7
 
 Too much space/time: rcpsp, rcpsp-max & evilshop
+
+Empty file : cc_base_mzn_rnd_test.09.fzn

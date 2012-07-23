@@ -673,8 +673,48 @@ namespace FlatZinc {
 
     	Variable b = getIntVar(s, m, ce[1]);
     	Variable a = getIntVar(s, m, ce[0]);
+<<<<<<< HEAD
     	s.add((a <= 0)  && ((b + a) == 0));
     	//s.add(((a <= 0)  && (b == -a)) || ((a >= 0)  && (b == a)));
+=======
+    	// s.add(((a <= 0) <= (b == -a)));  Unsat with (0,0) ??
+    	s.add(((a < 0) <= (b == -a)));
+    	s.add((a >= 0) <= (b == a));
+
+    }
+
+
+    void p_int_div(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+
+    	Variable a = getIntVar(s, m, ce[0]);
+    	Variable b = getIntVar(s, m, ce[1]);
+    	Variable d = getIntVar(s, m, ce[2]);
+
+    	int bnd = b.get_max();
+    	if (b.get_min() > bnd)
+    		bnd = b.get_min();
+    	if (-b.get_min() > bnd)
+    		bnd = (-b.get_min());
+    	if ((-b.get_max())> bnd)
+    		bnd = (-b.get_max());
+
+    	Variable r = Variable (-bnd, bnd);
+
+    	s.add(a!= 0);
+    	s.add(b!= 0);
+
+    	s.add(((a > 0) <= (r >= 0)));
+    	s.add ((a < 0) <= (r <= 0));
+
+    	s.add(a==((b*d)+r));
+
+    	s.add(((r > 0) <= ( (b>0) <= (r < b)) ));
+    	s.add(((r > 0) <= ( (b<0) <= (r < (-b)) ) ));
+
+    	s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
+    	s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
+>>>>>>> 04a5dcedc9df1e9e2076ac5736ad59da00688465
 
     }
 
@@ -1337,9 +1377,16 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-     report_unsupported("reified subset");
+   //  report_unsupported("reified subset");
 
-      //s.add( p == Subset(A,B) );
+   //   A.display(cout);
+
+     // s.add(Subset(A,B));
+      //s.add(p==true);
+
+      s.add( (Intersection(A,B)==A)==p);
+
+
     }
 
     void p_set_superset_re(Solver &s, FlatZincModel& m,
@@ -1348,8 +1395,10 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-     report_unsupported("reified subset");
+//     report_unsupported("reified subset");
 
+
+      s.add( (Intersection(A,B)==B)==p);
       //s.add( p == Subset(B,A) );
     }
 
@@ -1387,6 +1436,7 @@ namespace FlatZinc {
         registry().add("int_negate", &p_int_negate);
         registry().add("int_min", &p_int_min);
         registry().add("int_max", &p_int_max);
+        registry().add("int_div", &p_int_div);
 
         registry().add("int_in", &p_int_in);
 

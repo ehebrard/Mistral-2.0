@@ -3316,10 +3316,10 @@ void Mistral::Solver::branch_left() {
       {
 	
 	if(tmp_sol.size < k) {
-	  std::cerr << "\nError: solution does not satisfies c" << C.id() << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
+	  std::cerr << "\nError: solution does not satisfy c" << C.id() << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
 	  exit(0);
 	} else {
-	  std::cerr << "\nError: solution does not satisfies c" << C.id() << ": " << C ;
+	  std::cerr << "\nError: solution does not satisfy c" << C.id() << ": " << C ;
 	  for(j=0; j<k; ++j) {
 	    std::cerr << " " << scope[j].get_domain();
 	  }
