@@ -1312,7 +1312,7 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[1]);
       
       //report_unsupported("Member");
-      s.add( Member(x,A) );
+      s.add( Member(x,A));
     }
 
     void p_set_in_re(Solver &s, FlatZincModel& m,

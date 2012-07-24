@@ -9,5 +9,9 @@ constraint wa != 2;
 solve satisfy;
 output ["wa=", show(wa), "\n"];
 
-4- How to verify OPTIMAL solutions?
+3- How to verify OPTIMAL solutions?
 
+4- Encoding variables like :
+ variable {1,4,6} x;
+
+5-set_in and set_le bugs
