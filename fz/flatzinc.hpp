@@ -389,6 +389,12 @@ public:
 	std::vector<std::pair<std::string, std::vector<SolutionValue > > > verif_constraints;
 	std::ostringstream oss;
 	SolutionValue node2SolutionValue(AST::Node * ai );
+	bool finished()
+	{
+		Mistral::Outcome outcome = solver.statistics.outcome;
+		//std::cout << outcome;
+		return ((outcome == SAT) || (outcome == OPT) || ((outcome == LIMITOUT) && (solver.statistics.num_solutions >0)));
+	}
 #endif
 };
 
