@@ -1,7 +1,6 @@
 TODO list:
 
-1-handling constraints with constants
-2-the output[] doesn't work with mzn files. e.g. 
+1-the output[] doesn't work with mzn files. e.g. 
  
 int: nc = 3;
 var 1..nc: wa;
@@ -9,9 +8,6 @@ constraint wa != 2;
 solve satisfy;
 output ["wa=", show(wa), "\n"];
 
-3- How to verify OPTIMAL solutions?
+2- How to verify OPTIMAL solutions?
 
-4- Encoding variables like :
- variable {1,4,6} x;
-
-5-set_in and set_le bugs
+3-Verification bugs
