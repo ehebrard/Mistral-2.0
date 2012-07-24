@@ -1,0 +1,13 @@
+TODO list:
+
+1-handling constraints with constants
+2-the output[] doesn't work with mzn files. e.g. 
+ 
+int: nc = 3;
+var 1..nc: wa;
+constraint wa != 2;
+solve satisfy;
+output ["wa=", show(wa), "\n"];
+
+4- How to verify OPTIMAL solutions?
+
