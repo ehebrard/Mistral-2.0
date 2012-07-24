@@ -48,7 +48,7 @@
 
 #include <mistral_variable.hpp>
 
-#define _DEBUG_FLATZINC true
+//#define _DEBUG_FLATZINC true
 //#define _VERBOSE_PARSER 100
 
 
@@ -560,30 +560,6 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 	//std::cout << "first " << solver << std::endl;
 #endif
 
-<<<<<<< HEAD
-    if(use_rewriting) {
-      //#ifdef _DEBUG_FLATZINC
-      std::cout << "before rewriting:\n" << solver << std::endl;
-      //#endif
-
-      solver.rewrite() ;
-    
-      //#ifdef _DEBUG_FLATZINC
-      std::cout << "after rewriting:\n" << solver << std::endl;
-      //#endif
-    }
-
-    solver.consolidate();
-    
-// #ifdef _DEBUG_FLATZINC
-     std::cout << "c mistral representation:\n " << solver << std::endl;
-// #endif
-
-     std::cout << heuristic << std::endl;
-
-
-    Outcome result = UNKNOWN;
-=======
 	if(use_rewriting) {
 #ifdef _DEBUG_FLATZINC
 		std::cout << "before rewriting:\n" << solver << std::endl;
@@ -603,7 +579,6 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 	// #endif
 
 	Outcome result = UNKNOWN;
->>>>>>> b85adca0d72ba24ce4f707270d1376177b901f58
 
 	//solver.parameters.verbosity = 0;
 
