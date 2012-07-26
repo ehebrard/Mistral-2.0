@@ -68,7 +68,7 @@ namespace Mistral {
     virtual ~VariableImplementation() {}
 
     bool is_initialised() const { 
-      return id>-1;
+      return id!=-1;
     }
 
     virtual int get_solution_int_value() const ;//{ return solver->last_solution_lb[id] } ; 
@@ -1499,6 +1499,8 @@ namespace Mistral {
     int next(const int v) const ;
     /// Return the smallest value currently in the domain that is strictly greater than "v"
     int prev(const int v) const ;
+    // /// Whether or not the Variable is currently a constant
+    // bool is_constant() const ;
     /// Whether or not the Variable is currently an interval
     bool is_range() const ;
     /// Whether or not the Variable is bound to a ground value

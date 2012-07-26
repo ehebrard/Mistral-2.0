@@ -201,6 +201,11 @@ void Mistral::GlobalConstraint::initialise_vars(Solver *s) {
 }
 
 void Mistral::ConstraintImplementation::initial_post(Solver *s) {
+
+  //std::cout << "initial post of: " << this << std::endl;
+
+  //std::cout << on << std::endl;
+
   solver = s;
   // for each of its variables
   self = new Constraint[on.size];
@@ -215,16 +220,23 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
     
     //index[i] = on[i]->post(self[i]);
-    if(_scope[i].domain_type != CONST_VAR) {
-      un_relax_from(i);
+    //if(_scope[i].domain_type != CONST_VAR) {
+    //if(!(_scope[i].is_constant())) {
+    if(!(_scope[i].is_ground())) {
       
       //std::cout << "yes" << std::endl;
+
+      un_relax_from(i);
+      
+      
     }  
-     else {
-    
-       desactivate(i);
-  
-     } 
+    else {
+      
+      //std::cout << "no" << std::endl;
+
+      desactivate(i);
+       
+    } 
 
     // else {
 

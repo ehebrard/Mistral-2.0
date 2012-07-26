@@ -1424,7 +1424,7 @@ int main(int argc, char *argv[])
   tests.push_back(new SubsetTest());
   tests.push_back(new MemberTest());
   tests.push_back(new RewriteTest1());
-  tests.push_back(new OpshopTest());
+  //tests.push_back(new OpshopTest());
   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
   tests.push_back(new Pigeons(N+2)); 

@@ -5247,7 +5247,7 @@ template < int N, class T >
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >* x) {
-    return (x ? x->display(os) : os);
+    return (x ? x->display(os) : (os << "nill"));
   }
 
   template < class MAIN_TYPE, class AUX_TYPE > 

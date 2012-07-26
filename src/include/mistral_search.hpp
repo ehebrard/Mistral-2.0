@@ -817,7 +817,7 @@ namespace Mistral {
       std::vector< Identifiable< VarComparator > > all_vars;
       for(unsigned int i=0; i<=length; ++i) {
       	Identifiable<VarComparator> vc;
-	if(weights) vc.criterion.weight = weights;
+	//if(weights) vc.criterion.weight = weights;
       	vc = variables[i];
       	vc.id = i;
       	all_vars.push_back(vc);
@@ -874,6 +874,7 @@ namespace Mistral {
     //@{
     GenericDVO() : GenericDVOI< VarComparator >() {}
     GenericDVO(Solver* s) : GenericDVOI< VarComparator >(s) {}
+    virtual void initialise(Solver *s) { GenericDVOI< VarComparator >::initialise(s); }
     //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
     virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
    

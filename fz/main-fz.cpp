@@ -102,12 +102,14 @@ int main(int argc, char *argv[])
 
   map<string,string>::iterator ito;
 
+  double cutoff = atof(options["--limit"].c_str()) - parse_time;
+  std::cout << " d CUTOFF " << cutoff << std::endl;
+
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
   s.initialise_random_seed(atoi(options["--seed"].c_str()));
   s.set_time_limit(cutoff);
   s.parameters.verbosity = atoi(options["--verbose"].c_str());
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));
-  //string restart = options["--heuristic"];
 
   fm->run(cout , p);
 
@@ -117,5 +119,4 @@ int main(int argc, char *argv[])
 
   delete fm;
   return 0;
-
 }

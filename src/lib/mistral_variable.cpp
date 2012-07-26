@@ -181,7 +181,7 @@ Mistral::Variable Mistral::Variable::get_var() {
  
   if(domain_type == CONST_VAR || !variable->solver) {
     return *this;
-  }
+  } else if(variable->id == -2) return expression->_self.get_var();
   return ((Solver*)(variable->solver))->variables[variable->id];
 }
 
@@ -264,17 +264,33 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
       // std::cout << *this << std::endl;
 
       if(top && !expression->children.empty()) {
+
+	//std::cout << "-> constraint!" << std::endl;
+
 	expression->extract_constraint(s);
       } else {
+
+	//std::cout << "-> predicate! (extract var)" << std::endl;
+
 	expression->extract_variable(s);
+
+
 
 	// SELF CHANGE
 	Variable X = expression->_self;
-	expression->id = (X.domain_type == CONST_VAR ? s->variables.size-1 : X.id());
+	//expression->id = (X.domain_type == CONST_VAR ? s->variables.size-1 : X.id());
+	expression->id = (X.domain_type == CONST_VAR ? -2 : X.id());
+
+	//expression->id = X.id();
 	expression->solver = s;	
 
 
+	//std::cout << " extracted " << X << " -> predicate " << std::endl;
+
 	expression->extract_predicate(s);//);
+
+	//std::cout << "done" << std::endl;
+
       }
       s->expression_store.add(expression);
     }
@@ -735,9 +751,44 @@ int Mistral::Variable::get_min_pos() const {
     return answer;
   }
 
-// bool Mistral::Variable::is_ground(const Expression *x) const {
-//   return x->self.is_ground();
-// }
+// // bool Mistral::Variable::is_ground(const Expression *x) const {
+// //   return x->self.is_ground();
+// // }
+//   bool Mistral::Variable::is_constant() const {
+
+// #ifdef _PROFILING_PRIMITIVE
+//     PROFILING_HEAD
+// #endif
+
+//       bool answer = true;
+
+//     // std::cout << (int*)(variable)
+//     // 	      << std::endl
+//     // 	      << domain_type << " == " 
+//     // 	      << BITSET_VAR << "? "
+//     // 	      << LIST_VAR << "? "
+//     // 	      << RANGE_VAR << "? "
+//     // 	      << CONST_VAR << "? " << std::endl;
+
+
+//     //std::cout << domain2str(domain_type) << std::endl;
+
+//     if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_ground();
+//     else if(domain_type ==    LIST_VAR) answer = list_domain->is_ground();
+//     else if(domain_type ==   RANGE_VAR) answer = range_domain->is_ground();
+//     //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_ground();
+//     else if(domain_type ==   CONST_VAR) answer = true;
+//     else if(domain_type ==   EXPRESSION) answer = expression->get_self().is_ground();
+//     else  answer = (*bool_domain != 3);
+
+// #ifdef _PROFILING_PRIMITIVE
+//     PROFILING_FOOT(_m_is_ground_)
+// #endif
+
+//     return answer;
+//   }
+
+
   bool Mistral::Variable::is_ground() const {
 
 #ifdef _PROFILING_PRIMITIVE
@@ -754,6 +805,8 @@ int Mistral::Variable::get_min_pos() const {
     // 	      << RANGE_VAR << "? "
     // 	      << CONST_VAR << "? " << std::endl;
 
+
+    //std::cout << domain2str(domain_type) << std::endl;
 
     if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_ground();
     else if(domain_type ==    LIST_VAR) answer = list_domain->is_ground();
@@ -1707,8 +1760,8 @@ void Mistral::MulExpression::extract_variable(Solver *s) {
   int z[4], lb = INFTY, ub = -INFTY, i = 4, j, k = 0, b[4];
 
 
-  // std::cout << children[0].get_domain() << " x "
-  // 	    << children[1].get_domain() << std::endl;
+  // std::cout << "extract variable for " << children[0].get_domain() << " x "
+  //  	    << children[1].get_domain() << std::endl;
 
 
 
@@ -1744,8 +1797,8 @@ void Mistral::MulExpression::extract_variable(Solver *s) {
   }
 
   // std::cout << children[0].get_domain() << " x "
-  // 	    << children[1].get_domain() << " = ["
-  // 	    << lb << ".." << ub << "]" << std::endl;
+  //  	    << children[1].get_domain() << " = ["
+  //  	    << lb << ".." << ub << "]" << std::endl;
 
 
   // exit(1);
@@ -1763,6 +1816,10 @@ const char* Mistral::MulExpression::get_name() const {
 }
 
 void Mistral::MulExpression::extract_predicate(Solver *s) {
+
+  //std::cout << "extract predicate " << children[0] << " * " << children[1] << " = " << children[2] << std::endl;
+
+
   s->add(Constraint(new PredicateMul(children)));
 }
 
@@ -1919,6 +1976,11 @@ void Mistral::FactorExpression::extract_predicate(Solver *s) {
 }
 
 Mistral::Variable Mistral::Variable::operator*(Variable x) {
+
+  // std::cout << "ADD " ;
+  // display(std::cout);
+  // std::cout << " * " << x << std::endl;
+
   Variable exp(new MulExpression(*this,x));
   return exp;
 }
@@ -2568,7 +2630,7 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
   else {
     if(spin) {
       
-      std::cout << "HERE" << std::endl;
+      //std::cout << "HERE" << std::endl;
 
       if(children[0].set_max(offset) == FAIL_EVENT) 
 	{ s->fail(); }
