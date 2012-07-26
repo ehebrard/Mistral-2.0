@@ -2029,7 +2029,7 @@ void Mistral::SubExpression::extract_variable(Solver *s) {
  
 }
 
-  void Mistral::SubExpresson::extract_predicate(Solver *s) {
+  void Mistral::SubExpression::extract_predicate(Solver *s) {
     VarArray tmp;
     for(int i=3; i;) tmp.add(children[--i]);
 
@@ -2309,10 +2309,15 @@ void Mistral::EqualExpression::extract_constraint(Solver *s) {
     }
     else
 
-      // #endif     
+      // #endif
 
-      if(children.size==2) s->add(Constraint(new ConstraintEqual(children), (BINARY|IDEMPOTENT)));
-      else (children[0].set_domain(value) == FAIL_EVENT) s->fail();
+      if(children.size==2)
+    	  s->add(Constraint(new ConstraintEqual(children), (BINARY|IDEMPOTENT)));
+      else
+    	  {
+    	  children[0].set_domain(value) == FAIL_EVENT;
+    	  s->fail();
+    	  }
 
     //#ifdef _COMPLETE
  

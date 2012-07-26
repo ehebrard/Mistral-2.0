@@ -541,6 +541,8 @@ namespace FlatZinc {
       //   case NONE: assert(0); break;
       //   }
       // }
+    	  report_unsupported("p_int_lin");
+
     }
 
     void p_int_lin_eq(Solver& s, FlatZincModel& m,
@@ -737,8 +739,8 @@ namespace FlatZinc {
 
     void p_int_negate(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      cout << "CAN'T POST A NEG CONSTRAINT" << endl;
-      exit(1);
+
+  	  report_unsupported("p_int_negate");
 
       // if( !ce[0]->isIntVar() ) {
       //   if( !ce[1]->isIntVar() ) {
@@ -818,8 +820,8 @@ namespace FlatZinc {
     /* cumulative */
     void p_cumulative(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
-      cout << "CAN'T POST A CUMULATIVE CONSTRAINT" << endl;
-      exit(1);
+
+    	  report_unsupported("p_cumulative");
       // vector<Variable> start = arg2intvarargs(s, m, ce[0]);
       // vector<Variable> dur = arg2intvarargs(s, m, ce[1]);
       // vector<Variable> req = arg2intvarargs(s, m, ce[2]);
@@ -853,7 +855,7 @@ namespace FlatZinc {
         s.add(Member(x,sd));
         //s.add()
 
-        Variable y = getIntVar(s, m, ce[0]);
+    //    Variable y = getIntVar(s, m, ce[0]);
       } // else if (ce[0]->isSetVar()) {
 
       // } else if (ce[0]->isSetVar()) {
@@ -995,9 +997,8 @@ namespace FlatZinc {
 
     void p_bool_clause(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-     cout << "CAN'T POST A CLAUSE" << endl;
-      exit(1);
 
+  	  report_unsupported("p_bool_clause");
       // vector<Variable> x0 = arg2boolvarargs(s, m, ce[0]);
       // vector<Variable> x1 = arg2boolvarargs(s, m, ce[1]);
 
@@ -1011,8 +1012,7 @@ namespace FlatZinc {
 
     void p_bool_clause_reif(Solver& s, FlatZincModel& m,
                             const ConExpr& ce, AST::Node* ann) {
-      cout << "CAN'T POST A REIFIED CLAUSE" << endl;
-      exit(1);
+    	report_unsupported("p_bool_clause_reif");
 
       // vector<Variable> x0 = arg2boolvarargs(s, m, ce[0]);
       // vector<Variable> x1 = arg2boolvarargs(s, m, ce[1]);
@@ -1245,7 +1245,7 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
-      
+      report_unsupported("p_set_diff");
       //s.add(SetDiff(A,B,C));
     }
 
@@ -1254,7 +1254,7 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
-      
+      report_unsupported("p_set_symdiff");
       //s.add(SetSymDiff(A,B,C));
     }
 
@@ -1287,9 +1287,7 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
-
-      std::cerr << "NOT IMPLEMENTED!!" << std::endl;
-      exit(1);
+      report_unsupported("p_set_eq_re");
 
       //s.add( b == SetEqual(A,B) );
     }
@@ -1300,8 +1298,7 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
 
-      std::cerr << "NOT IMPLEMENTED!!" << std::endl;
-      exit(1);
+      report_unsupported("p_set_ne_re");
       
       //s.add( b == SetNotEqual(A,B) );
     }
