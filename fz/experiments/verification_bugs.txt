@@ -1,0 +1,153 @@
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff10.fzn:423: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff11.fzn:507: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff16.fzn:283: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff17.fzn:380: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff18.fzn:472: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff19.fzn:302: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff1.fzn:277: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff20.fzn:401: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff21.fzn:501: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff22.fzn:662: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff23.fzn:728: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff24.fzn:794: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff25.fzn:860: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff26.fzn:926: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff27.fzn:992: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff28.fzn:1058: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff29.fzn:1124: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff2.fzn:416: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff30.fzn:1190: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff31.fzn:1256: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff35.fzn:266: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff36.fzn:331: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff37.fzn:398: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff38.fzn:464: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff39.fzn:530: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff3.fzn:553: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff40.fzn:596: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff43.fzn:1577: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff44.fzn:1652: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff47.fzn:302: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff48.fzn:377: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff49.fzn:452: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff4.fzn:2018: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff50.fzn:527: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff54.fzn:320: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff55.fzn:425: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff56.fzn:532: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff57.fzn:637: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff58.fzn:744: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff59.fzn:782: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff5.fzn:2102: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff60.fzn:859: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff61.fzn:937: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff62.fzn:1016: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff63.fzn:1093: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff64.fzn:1172: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff65.fzn:1250: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff66.fzn:1328: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff67.fzn:1406: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff68.fzn:1484: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff6.fzn:2186: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff70.fzn:1562: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff71.fzn:1640: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff72.fzn:393: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff73.fzn:470: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff74.fzn:548: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff75.fzn:626: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff76.fzn:704: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff77.fzn:572: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff78.fzn:630: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff79.fzn:686: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff7.fzn:2270: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff80.fzn:742: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff81.fzn:800: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff82.fzn:857: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff83.fzn:172: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff84.fzn:231: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff85.fzn:287: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff86.fzn:344: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff87.fzn:402: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff88.fzn:457: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff89.fzn:515: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff8.fzn:253: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_fastfood_ff9.fzn:337: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_steiner-triples_07.fzn:51: warning: model inconsistency detected before search.
+=====UNSATISFIABLE=====
+% verif/sol_steiner-triples_09.fzn:145: warning: model inconsistency detected before search.
+DONE

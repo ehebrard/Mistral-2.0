@@ -13,30 +13,38 @@ using namespace std;
 #ifdef _VERIFICATION
 void write_solution(FlatZinc::FlatZincModel *fm, string filename)
 {
-  //	cout << "set size " << fm->verif_constraints.size() << filename <<endl;
-  ofstream myfile;
-  filename.insert(0,"sol_" );
-  myfile.open (filename.c_str());
-
-  for (unsigned int i = 0; i < fm->verif_constraints.size() ; i++)
-    {
-      if (fm->verif_constraints[i].first != "int_in")
+	if (fm->finished())
 	{
-	  myfile << "constraint " << fm->verif_constraints[i].first << "(" ;
-	  int size = fm->verif_constraints[i].second.size();
-	  for (unsigned int j = 0; j <size ; j++)
-	    {
+		//cout << fm->verif_constraints.size() << filename <<endl;
+		unsigned int __size=filename.size();
+				for (__size; __size>0; __size--)
+					if (filename[__size-1] == '/')
+					break;
+		filename.insert(__size,"sol_" );
 
-	      myfile << fm->verif_constraints[i].second[j].get_string() ;
-	      if (j< (size -1))
-		myfile << " , ";
-	    }
-	  myfile << ");" << endl;
+		ofstream myfile;
+		myfile.open (filename.c_str());
+
+		//cout << filename <<endl;
+		for (unsigned int i = 0; i < fm->verif_constraints.size() ; i++)
+		{
+			if (fm->verif_constraints[i].first != "int_in")
+			{
+				myfile << "constraint " << fm->verif_constraints[i].first << "(" ;
+				int size = fm->verif_constraints[i].second.size();
+				for (unsigned int j = 0; j <size ; j++)
+				{
+					myfile << fm->verif_constraints[i].second[j].get_string() ;
+					if (j< (size -1))
+						myfile << " , ";
+				}
+				myfile << ");" << endl;
+			}
+		}
+		myfile <<"solve satisfy;" << endl;
+		myfile.close();
+		std::cout <<" c DONE" << endl;
 	}
-    }
-  myfile <<"solve satisfy;" << endl;
-  myfile.close();
-  std::cout <<" c DONE" << endl;
 }
 #endif
 
@@ -107,6 +115,9 @@ int main(int argc, char *argv[])
 
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
   s.initialise_random_seed(atoi(options["--seed"].c_str()));
+  double cutoff = atof(options["--limit"].c_str()) - parse_time;
+  if (cutoff <0) cutoff = 2;
+  std::cout << " d CUTOFF " << cutoff << std::endl;
   s.set_time_limit(cutoff);
   s.parameters.verbosity = atoi(options["--verbose"].c_str());
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));

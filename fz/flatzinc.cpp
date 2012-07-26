@@ -95,9 +95,18 @@ Variable vs2var(IntVarSpec* vs) {
 			Variable y(sl->min, sl->max);
 			x = y;
 		} else {
+			set<int> __tmp_set;
+			int size = sl->s.size();
+			for (int i=0; i<size;i++)
+				__tmp_set.insert(sl->s[i]);
+			//	cout << "myset contains:";
+			//	for (set<int>::iterator  it=__tmp_set.begin(); it!=__tmp_set.end(); it++)
+			//	cout << " " << *it;
+			//	cout << endl;
 			Vector<int> values;
-			for (int i=sl->s.size(); i-->0;)
-				values.add(sl->s[i]);
+			for (set<int>::iterator it=__tmp_set.begin(); it!=__tmp_set.end(); it++)
+				values.add(*it);
+
 			Variable y(values);
 			x = y;
 		}
