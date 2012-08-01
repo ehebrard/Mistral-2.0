@@ -120,6 +120,9 @@ int main(int argc, char *argv[])
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));
 
   fm->run(cout , p);
+   if (fm->finished())
+	  fm->print(cout , p);
+
 
 #ifdef _VERIFICATION
   write_solution(fm, args.back());

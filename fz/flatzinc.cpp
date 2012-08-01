@@ -681,6 +681,21 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 	}
 
 
+#ifdef _DEBUG_VERIFICATION
+	if ((result == SAT) || (result == OPT) || ((result == LIMITOUT) && (solver.statistics.num_solutions >0)))
+	{
+		cout<< " \n \n \n solver variables :  " << solver.variables.size ;
+		int __size = solver.variables.size;
+		for ( int i = 0; i < __size ; i++)
+		{
+			cout<< "  " << endl;
+			std::cout << solver.variables[i].get_solution_int_value() << " (" << solver.variables[i].id() << ") ";
+			std::cout << solver.variables[i] << " in " << solver.variables[i].get_domain() << " ";
+		}
+	}
+#endif
+
+
 	//std::cout << solver.statistics << std::endl;
 
 
@@ -752,13 +767,16 @@ Printer::printElem(std::ostream& out,
 	if (ai->isInt(k)) {
 		out << k;
 	} else if (ai->isIntVar()) {
-		int lb = iv[ai->getIntVar()].get_solution_min();
+/*		int lb = iv[ai->getIntVar()].get_solution_min();
 		int ub = iv[ai->getIntVar()].get_solution_max();
 		if( lb == ub )
 			out << lb;
 		else
 			out << lb << ".." << ub;
+*/
+		out << iv[ai->getIntVar()].get_solution_int_value();
 	} else if (ai->isBoolVar()) {
+		/*
 		int lb = bv[ai->getBoolVar()].get_solution_min();
 		int ub = bv[ai->getBoolVar()].get_solution_max();
 		if (lb == 1) {
@@ -768,6 +786,14 @@ Printer::printElem(std::ostream& out,
 		} else {
 			out << "false..true";
 		}
+		*/
+		int lb = bv[ai->getBoolVar()].get_solution_int_value();
+		if (lb == 1)
+		{
+			out << "true";
+		}
+		else
+			out << "false";
 	} else if( ai->isSetVar()) {
 		SetExpression *x = (SetExpression*)(sv[ai->getSetVar()].expression);
 		set<int> lb;

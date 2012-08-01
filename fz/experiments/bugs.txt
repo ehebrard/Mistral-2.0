@@ -1,0 +1,4 @@
+data/all1/cc_base_mzn_rnd_test.01.fzn
+data/all1/cc_base_mzn_rnd_test.12.fzn
+data/all1/cc_base_mzn_rnd_test.11.fzn
+data/all1/cc_base_mzn_rnd_test.02.fzn

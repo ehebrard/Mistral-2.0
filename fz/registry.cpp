@@ -702,8 +702,9 @@ namespace FlatZinc {
     	s.add(a!= 0);
     	s.add(b!= 0);
 
-    	s.add(((a > 0) <= (r >= 0)));
-    	s.add ((a < 0) <= (r <= 0));
+    	//s.add(((a > 0) <= (r >= 0)));
+    	//s.add ((a < 0) <= (r <= 0));
+    	s.add(((a*r) >= 0));
 
     	s.add(a==((b*d)+r));
 

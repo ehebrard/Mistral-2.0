@@ -50,7 +50,8 @@
 #include <mistral_solver.hpp>
 
 //#define _VERBOSE_PARSER 100
-#define _VERIFICATION
+//#define _VERIFICATION
+//#define _DEBUG_VERIFICATION
 using namespace Mistral;
 
 typedef Vector<Variable> IntVarArray;
@@ -383,18 +384,18 @@ public:
 
 	/// options
 	bool findall; // find all solutions
-
-#ifdef _VERIFICATION
-	//Verification
-	std::vector<std::pair<std::string, std::vector<SolutionValue > > > verif_constraints;
-	std::ostringstream oss;
-	SolutionValue node2SolutionValue(AST::Node * ai );
 	bool finished()
 	{
 		Mistral::Outcome outcome = solver.statistics.outcome;
 		//std::cout << outcome;
 		return ((outcome == SAT) || (outcome == OPT) || ((outcome == LIMITOUT) && (solver.statistics.num_solutions >0)));
 	}
+#ifdef _VERIFICATION
+	//Verification
+	std::vector<std::pair<std::string, std::vector<SolutionValue > > > verif_constraints;
+	std::ostringstream oss;
+	SolutionValue node2SolutionValue(AST::Node * ai );
+
 #endif
 };
 
