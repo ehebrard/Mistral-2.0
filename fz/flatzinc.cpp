@@ -385,7 +385,7 @@ FlatZincModel::node2SolutionValue(AST::Node * ai ) {
 						{
 							//		cout<<"isBoolVar ";
 							v.set_type(6);
-							Variable *_var =  & (bv[ai->getIntVar()]) ;
+							Variable *_var =  & (bv[ai->getBoolVar()]) ;
 							v.set_var( _var);
 						}
 						else
