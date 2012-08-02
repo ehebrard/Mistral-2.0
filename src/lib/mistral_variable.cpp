@@ -2315,8 +2315,8 @@ void Mistral::EqualExpression::extract_constraint(Solver *s) {
     	  s->add(Constraint(new ConstraintEqual(children), (BINARY|IDEMPOTENT)));
       else
     	  {
-    	  children[0].set_domain(value) == FAIL_EVENT;
-    	  s->fail();
+	    if(children[0].set_domain(value) == FAIL_EVENT)
+	      s->fail();
     	  }
 
     //#ifdef _COMPLETE

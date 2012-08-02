@@ -583,9 +583,9 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 
 	solver.consolidate();
 
-	// #ifdef _DEBUG_FLATZINC
-	//     std::cout << "c mistral representation:\n " << solver << std::endl;
-	// #endif
+// #ifdef _DEBUG_FLATZINC
+//         std::cout << "c mistral representation:\n " << solver << std::endl;
+// #endif
 
 	Outcome result = UNKNOWN;
 
