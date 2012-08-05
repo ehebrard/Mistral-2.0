@@ -379,6 +379,8 @@ public:
 	/// Return the solve item annotations
 	AST::Array* solveAnnotations(void) const;
 
+	bool getAnnotations(AST::Call* , Vector<Variable> &, std::string& , std::string& );
+
 	/// Implement optimization
 	//void constrain();
 

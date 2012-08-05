@@ -470,6 +470,56 @@ void flattenAnnotations(AST::Array* ann, std::vector<AST::Node*>& out) {
 	}
 }
 
+
+bool FlatZincModel::getAnnotations( AST::Call*  c , Vector<Variable> &__vars, std::string & _varHeuristic , std::string & _valHeuristic)
+{
+
+	if (c->isCall("int_search") || c->isCall("bool_search"))
+	{
+	if (c->args->isArray())
+	{
+	//	cout<< "c array size : "<< c->args->getArray()->a.size() ;
+		if (c->args->getArray()->a[0]->isArray())
+		{
+			AST::Array * __varsArray = c->args->getArray()->a[0]->getArray();
+			//cout<< " c number of branching variables : "<< __varsArray->a.size() << endl;
+
+			for (unsigned int j=0; j< __varsArray->a.size(); j++ )
+			{
+				if (__varsArray->a[j]->isIntVar())
+					__vars.push_back(iv[__varsArray->a[j]->getIntVar()]);
+				else if (__varsArray->a[j]->isSetVar())
+					__vars.push_back( sv[__varsArray->a[j]->getSetVar()]);
+				else if (__varsArray->a[j]->isBoolVar())
+					__vars.push_back( bv[__varsArray->a[j]->getBoolVar()]);
+				else
+					return false;
+			}
+		}
+
+		else return false;
+
+		//test if atom ?
+		std::ostringstream __tmpStream;
+		c->args->getArray()->a[1]->print(__tmpStream);
+		_varHeuristic = __tmpStream.str();
+		__tmpStream.str("");
+		c->args->getArray()->a[2]->print(__tmpStream);
+		_valHeuristic = __tmpStream.str();
+
+	}
+	else
+		return false;
+	}
+	else
+		return false;
+
+
+
+	return true;
+}
+
+
 void
 FlatZincModel::createBranchers(AST::Node* ann, bool ignoreUnknown,
 		std::ostream& err) {
@@ -497,6 +547,7 @@ FlatZincModel::minimize(int var, AST::Array* ann) {
 	_optVar = var;
 	_solveAnnotations = ann;
 	// Branch on optimization variable to ensure that it is given a value.
+	/*
 	AST::Array* args = new AST::Array(4);
 	args->a[0] = new AST::Array(new AST::IntVar(_optVar));
 	args->a[1] = new AST::Atom("input_order");
@@ -507,6 +558,8 @@ FlatZincModel::minimize(int var, AST::Array* ann) {
 		ann = new AST::Array(c);
 	else
 		ann->a.push_back(c);
+	*/
+
 }
 
 void
@@ -515,6 +568,7 @@ FlatZincModel::maximize(int var, AST::Array* ann) {
 	_optVar = var;
 	_solveAnnotations = ann;
 	// Branch on optimization variable to ensure that it is given a value.
+	/*
 	AST::Array* args = new AST::Array(4);
 	args->a[0] = new AST::Array(new AST::IntVar(_optVar));
 	args->a[1] = new AST::Atom("input_order");
@@ -525,6 +579,7 @@ FlatZincModel::maximize(int var, AST::Array* ann) {
 		ann = new AST::Array(c);
 	else
 		ann->a.push_back(c);
+	 */
 }
 
 FlatZincModel::~FlatZincModel(void) {
@@ -591,6 +646,71 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 
 	//solver.parameters.verbosity = 0;
 
+/*search annotations :
+ * __search_strategies: the number of search strategies.
+ * __search_strategies is equal to 0 when no specific search strategy has been specified. With bool_search or int_search, it's egual to 1 and >1 with seq_search.
+ */
+
+	int __search_strategies = 0;
+	Vector<Variable> banching_variables;
+			std::string var_heuristic;
+			std::string val_heuristic;
+
+	if (_solveAnnotations!= NULL)
+	{
+		__search_strategies = 1;
+		cout << " c annotations size : " << _solveAnnotations->a.size() << endl;
+
+		if (_solveAnnotations->a[0]->isCall("seq_search")) {
+			cout << " c SEQ_SEARCH " << endl ;
+
+			AST::Call* c = _solveAnnotations->a[0]->getCall();
+				if (c->args->isArray())
+				{
+					__search_strategies =c->args->getArray()->a.size();
+					cout << " c Total number of search strategies:" << __search_strategies  << endl;
+
+					for (unsigned j = 0; j< __search_strategies; j++)
+					{
+						Vector<Variable> __banching_variables;
+						std::string __var_heuristic;
+						std::string __val_heuristic;
+
+						if (getAnnotations(c->args->getArray()->a[j]->getCall(),__banching_variables, __var_heuristic ,__val_heuristic))
+							{
+							cout << " c Search strategy number "<< j+1 << endl;
+
+							cout << " c var heuristic : "<< __var_heuristic << endl;
+							cout << " c val heuristic : "<< __val_heuristic << endl;
+							cout << " c _variables size : "<< __banching_variables.size  << endl;
+						//	cout << " c branching variables : \n "<< __banching_variables  << endl;
+
+							}
+						else
+							cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
+					}
+					cout << " c seq_search is not yet supported." << endl;
+				}
+				else
+					cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
+		}
+		else
+		{
+			cout << " c Total number of search strategies:" << __search_strategies  << endl;
+			if (getAnnotations(_solveAnnotations->getArray()->a[0]->getCall(), banching_variables, var_heuristic ,val_heuristic ))
+			{
+	cout << " c var heuristic : "<< var_heuristic  << endl;
+	cout << " c val heuristic : "<< val_heuristic  << endl;
+	cout << " c number of banching variables : "<< banching_variables.size  << endl;
+	//cout << " c branching variables : \n "<< banching_variables  << endl;
+
+	}
+	else
+		cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
+		}
+	}
+	else
+		cout << " c No specific annotation. The solver will use the default search strategy." << endl;
 
 	switch (_method) {
 	case MINIMIZATION: {
@@ -600,6 +720,9 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 		//#endif
 
 		Goal *goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
+	//	if (__search_strategies == 1)
+	//		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
+	//	else
 		result = solver.depth_first_search(solver.variables, heuristic, policy, goal);
 
 		//result = solver.minimize(iv[_optVar]);
@@ -612,6 +735,9 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 		//#endif
 
 		Goal *goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
+	//	if (__search_strategies == 1)
+	//		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
+	//	else
 		result = solver.depth_first_search(solver.variables, heuristic, policy, goal);
 		//result = solver.maximize(iv[_optVar]);
 		break;
@@ -658,7 +784,9 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 			solver.monitor_list << "\n";
 		}
 #endif
-
+		//if (__search_strategies == 1)
+		//		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
+		//	else
 		result = solver.depth_first_search(solver.variables, heuristic, policy);//, goal);
 
 
