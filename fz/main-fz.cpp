@@ -51,13 +51,18 @@ void write_solution(FlatZinc::FlatZincModel *fm, string filename)
 
 int main(int argc, char *argv[])
 {
-
+#ifdef _FLATZINC_OUTPUT
+	cout << "%";
+#endif
   cout << " c Mistral-fzn" << endl;
 
   list<string> args(argv+1, argv+argc);
 
   if(args.empty())
     {
+	#ifdef _FLATZINC_OUTPUT
+	  cout << "%";
+	#endif
       cout << "usage: mistral-fz [options] input.fzn";
       return 1;
     }
@@ -77,6 +82,9 @@ int main(int argc, char *argv[])
 #ifdef _VERBOSE_PARSER
   std::cout << std::endl;
 #endif
+#ifdef _FLATZINC_OUTPUT
+	cout << "%";
+#endif
   std::cout << " d PARSETIME " << parse_time << std::endl;
 
   map<string, string> options;
@@ -87,7 +95,7 @@ int main(int argc, char *argv[])
   options["--restart"] = "luby";
   options["--seed"] = "123456";
   options["--limit"] = "10";
-  options["--verbose"] = "1";
+  options["--verbose"] = "0";
   options["--rewrite"] = "0";
 
 
@@ -111,7 +119,10 @@ int main(int argc, char *argv[])
   map<string,string>::iterator ito;
 
   double cutoff = atof(options["--limit"].c_str()) - parse_time;
-  std::cout << " d CUTOFF " << cutoff << std::endl;
+#ifdef _FLATZINC_OUTPUT
+	cout << "%";
+#endif
+	std::cout << " d CUTOFF " << cutoff << std::endl;
 
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
   s.initialise_random_seed(atoi(options["--seed"].c_str()));

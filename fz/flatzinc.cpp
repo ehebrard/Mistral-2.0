@@ -590,7 +590,7 @@ FlatZincModel::~FlatZincModel(void) {
 
 void
 FlatZincModel::set_parameters(SolverParameters& p) {
-	std::cout << "hello!" << std::endl;
+
 }
 
 
@@ -646,11 +646,17 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 
 	//solver.parameters.verbosity = 0;
 
+
+
+#ifdef _FLATZINC_OUTPUT
+	cout << "%";
+#endif
+
+cout << " c search annotations are not yet supported." << endl;
+
 /*search annotations :
  * __search_strategies: the number of search strategies.
  * __search_strategies is equal to 0 when no specific search strategy has been specified. With bool_search or int_search, it's egual to 1 and >1 with seq_search.
- */
-
 	int __search_strategies = 0;
 	Vector<Variable> banching_variables;
 			std::string var_heuristic;
@@ -711,11 +717,15 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 	}
 	else
 		cout << " c No specific annotation. The solver will use the default search strategy." << endl;
+*/
 
 	switch (_method) {
 	case MINIMIZATION: {
 
 		//#ifdef _DEBUG_FLATZINC
+	#ifdef _FLATZINC_OUTPUT
+		cout << "%";
+	#endif
 		std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
 		//#endif
 
@@ -731,7 +741,10 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 	case MAXIMIZATION: {
 
 		//#ifdef _DEBUG_FLATZINC
-		std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
+	#ifdef _FLATZINC_OUTPUT
+		cout << "%";
+	#endif
+	std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
 		//#endif
 
 		Goal *goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
@@ -745,6 +758,9 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 	case SATISFACTION: {
 
 		//#ifdef _DEBUG_FLATZINC
+	#ifdef _FLATZINC_OUTPUT
+		cout << "%";
+	#endif
 		std::cout << " c Solve " << std::endl;
 		//#endif
 
@@ -875,7 +891,84 @@ FlatZincModel::optVar(void) const {
 
 void
 FlatZincModel::print(std::ostream& out, const Printer& p) const {
+
+#ifdef _FLATZINC_OUTPUT
+	 std::cout << "% c +" << std::setw(90) << std::setfill('=')
+	  			      //=============================================================================
+	  				      << "+" << std::endl << std::setfill(' ')
+	  				      << "% c |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl
+	  				      << "% c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
+
+
+	 std::cout << "% c +" << std::setw(90) << std::setfill('=')
+	    //"=============================================================================
+	     << "+" << std::endl << std::setfill(' ')
+	     << std::left << std::setw(46) << "% s  ";
+
+	  switch(solver.statistics.outcome) {
+	  case SAT:
+		  std::cout << std::right << std::setw(47) << "SATISFIABLE" ;
+	    break;
+	  case OPT:
+		  std::cout << std::right << std::setw(47) << "OPTIMAL" ;
+	    break;
+	  case UNSAT:
+		  std::cout << std::right << std::setw(47) << "UNSATISFIABLE" ;
+	    break;
+	  case UNKNOWN:
+		  std::cout << std::right << std::setw(47) << "UNKNOWN" ;
+	    break;
+	  case LIMITOUT:
+	    if(solver.statistics.num_solutions > 0)
+	    	 std::cout << std::right << std::setw(47) << "SUBOPTIMAL" ;
+	    else
+	    	 std::cout << std::right << std::setw(47) << "LIMITOUT" ;
+	    //break;
+	  }
+	  std::cout << std::endl
+	     << std::left << std::setw(46) << "% v  0" << std::endl
+	     << std::left << std::setw(46) << "% d  OBJECTIVE"
+	     << std::right << std::setw(46) << solver.statistics.objective_value  << std::endl
+	     << std::left << std::setw(46) << "% d  TIME"
+	     << std::right << std::setw(46) << (solver.statistics.end_time - solver.statistics.start_time)  << std::endl
+	     << std::left << std::setw(46) << "% d  MEMORY"
+	     << std::right << std::setw(46) << (Mistral::mem_used() / 1048576.0) << std::endl
+	     << std::left << std::setw(46) << "% d  NODES"
+	     << std::right << std::setw(46) << solver.statistics.num_nodes  << std::endl
+	     << std::left << std::setw(46) << "% d  RESTARTS"
+	     << std::right << std::setw(46) << solver.statistics.num_restarts << std::endl
+	     << std::left << std::setw(46) << "% d  FAILURES"
+	     << std::right << std::setw(46) << solver.statistics.num_failures << std::endl
+	     << std::left << std::setw(46) << "% d  BACKTRACKS"
+	     << std::right << std::setw(46) << solver.statistics.num_backtracks << std::endl
+	     << std::left << std::setw(46) << "% d  PROPAGATIONS"
+	     << std::right << std::setw(46) << solver.statistics.num_propagations << std::endl
+	     << std::left << std::setw(46) << "% d  FILTERINGS"
+	     << std::right << std::setw(46) << solver.statistics.num_filterings << std::endl
+	     << "% c +" << std::setw(90) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
+	  //<< " c +=============================================================================+" << std::endl;
+
 	p.print(out, solver, iv, bv, sv);
+	Mistral::Outcome outcome = solver.statistics.outcome;
+			//std::cout << outcome;
+	if ((outcome == SAT))
+			out<<"----------";
+	else if (outcome == OPT)
+		out<<"----------\n==========";
+	else if ((outcome == UNSAT))
+		out<<"=====UNSATISFIABLE=====";
+	else if ((outcome == UNKNOWN) || (outcome == LIMITOUT))
+		out<<"=====UNKNOWN=====";
+
+	/* Two missing details:
+	 1-		We need to print "==========" if we already explored all the search space and we found at least one solution.
+	 2- 	Also we need to check whether the objective of an optimization problem is unbounded. In this case, we should print "=====UNBOUNDED=====";
+	 */
+
+	out<< std::endl;
+#endif
+
+
 }
 
 void
