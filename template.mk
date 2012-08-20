@@ -37,7 +37,16 @@ PLIBOBJ = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
 #  make all      : to compile the examples.
 #------------------------------------------------------------
 
-all: lib $(BINS)
+
+default: flatzinc
+
+flatzinc: fz/mistral-fz
+	cp fz/mistral-fz ./fzn-mistral
+
+fz/mistral-fz: 
+	cd fz; make
+
+all: lib $(BINS) flatzinc
 
 # The library
 lib: $(PLIBOBJ) $(PUTIOBJ)

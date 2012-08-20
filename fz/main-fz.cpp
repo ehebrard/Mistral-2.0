@@ -56,6 +56,25 @@ int main(int argc, char *argv[])
 #endif
   cout << " c Mistral-fzn" << endl;
 
+  map<string, string> options;
+
+  // default value
+  options["--var_heuristic"] = "dom/wdeg";
+  options["--val_heuristic"] = "guided";
+  options["--restart"] = "luby";
+  options["--seed"] = "123456";
+  options["--limit"] = "10";
+  options["--verbose"] = "0";
+  options["--rewrite"] = "0";
+
+
+  options["a"] = "0";
+  options["p"] = "1";
+  options["f"] = "1";
+  
+
+
+
   list<string> args(argv+1, argv+argc);
 
   if(args.empty())
@@ -63,7 +82,13 @@ int main(int argc, char *argv[])
 	#ifdef _FLATZINC_OUTPUT
 	  cout << "%";
 	#endif
-      cout << "usage: mistral-fz [options] input.fzn";
+      cout << " usage: mistral-fz [options] input.fzn\n% options are:\n";
+
+      map<string, string>::iterator it;
+      for(it=options.begin(); it!=options.end(); ++it) {
+	cout << "%  " << it->first << endl;
+      }
+      cout << endl;
       return 1;
     }
 
@@ -92,17 +117,7 @@ int main(int argc, char *argv[])
 #endif
   std::cout << " d PARSETIME " << parse_time << std::endl;
 
-  map<string, string> options;
-
-  // default value
-  options["--var_heuristic"] = "dom/wdeg";
-  options["--val_heuristic"] = "guided";
-  options["--restart"] = "luby";
-  options["--seed"] = "123456";
-  options["--limit"] = "10";
-  options["--verbose"] = "0";
-  options["--rewrite"] = "0";
-
+ 
 
   string option_name = "error";
   //string option_value = "error";
@@ -110,16 +125,28 @@ int main(int argc, char *argv[])
   list<string>::iterator it;
   list<string>::iterator the_end = args.end();
   --the_end;
+  int phase = 0;
   for(it=args.begin(); it!=the_end; ++it)
     {
-      if((*it)[0] == '-') option_name = (*it);
-      else
-	{
-	  //option_value = (*it);
-	  options[option_name] = (*it);
-	  //std::cout << option_name << " <- " << (*it) << std::endl;
+      if((*it)[0] == '-') {
+	if(phase) {
+	  options[option_name] = "1";
+	  //std::cout << "1" << std::endl;
 	}
+	option_name = (*it);
+	//std::cout << option_name << " <- ";
+	phase = 1;
+      } else {
+	//option_value = (*it);
+	options[option_name] = (*it);
+	//std::cout << (*it) << std::endl;
+	phase = 0;
+      }
     }
+  if(phase) {
+    options[option_name] = "1";
+    //std::cout << "1" << std::endl;
+  }
 
   map<string,string>::iterator ito;
 
