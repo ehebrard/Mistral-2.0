@@ -48,6 +48,7 @@
 #include "varspec.hpp"
 
 #include <mistral_solver.hpp>
+#include <mistral_search.hpp>
 
 //#define _VERBOSE_PARSER 100
 //#define _VERIFICATION
@@ -70,6 +71,7 @@ typedef Vector<Variable> SetVarArray;
  */
 
 namespace FlatZinc {
+
 
 /**
  * \brief Output support class for %FlatZinc interpreter
@@ -349,8 +351,9 @@ public:
 	/// Run the search
 	void run(std::ostream& out, const Printer& p);
 
-	/// Produce output on \a out using \a p
-	void print(std::ostream& out, const Printer& p) const;
+  /// Produce output on \a out using \a p
+  void print_final(std::ostream& out, const Printer& p) const;
+  void print_solution(std::ostream& out, const Printer& p) const;
 
 	/**
 	 * \brief Remove all variables not needed for output
@@ -431,6 +434,36 @@ FlatZincModel* parse(std::istream& is,
 		Solver& solver,
 		Printer& p, std::ostream& err = std::cerr,
 		FlatZincModel* fzs=NULL);
+
+
+  /*! \class SolutionListener
+    \brief SolutionListener Class
+
+    * Called whenever the solver solutions *
+    
+    This is used to implement procedures triggered by solutions
+  */
+  class SolutionPrinter : public SolutionListener {
+
+  public:
+
+    Printer *p_;
+    FlatZincModel *fm_;
+    Mistral::Solver *solver_;
+
+    // SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) : p_(p), fm_(fm), solver_(s) {
+    //   solver->add((SolutionPrinter*)this);
+    // }
+
+    SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s);
+    
+    virtual void notify_solution() ;
+    //{
+    //   fm_->print(std::cout, *p_);
+    // };
+    
+    std::ostream& display(std::ostream& os) { os << "Flatzinc solution-printer"; return os; }    
+  };
 
 }
 

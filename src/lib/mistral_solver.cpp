@@ -3296,10 +3296,6 @@ void Mistral::Solver::branch_left() {
 
   unsigned int i, j, k;
 
-  for(i=0; i<solution_triggers.size; ++i) {
-    solution_triggers[i]->notify_solution();
-  }
-
 
   if(parameters.checked) {
 
@@ -3383,6 +3379,10 @@ void Mistral::Solver::branch_left() {
   Outcome result = objective->notify_solution(this);
 
   statistics.objective_value = objective->value();
+
+  for(i=0; i<solution_triggers.size; ++i) {
+    solution_triggers[i]->notify_solution();
+  }
   
   return result;
   
@@ -4173,7 +4173,7 @@ void Mistral::Solver::check_constraint_graph_integrity() {
 
 	  scope = c.get_scope();
 	  
-	  if(scope[c.index()].id() != i) {
+	  if(scope[c.index()].id() != (int)i) {
 
 	    std::cout << "Warning: incorrect variable indexing: " 
 		      << scope[c.index()] << "'s " << c

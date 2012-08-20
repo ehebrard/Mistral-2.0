@@ -521,7 +521,7 @@ namespace Mistral {
 			<< " is ground and active!!" << std::endl;
 	      print_active();
 	      std::cout << " :: ";
-	      for(int j=0; j<on.size; ++j)
+	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
 	      exit(1);
@@ -535,7 +535,7 @@ namespace Mistral {
 			<< " is not ground and not active!!" << std::endl;
 	      print_active();
 	      std::cout << " :: ";
-	      for(int j=0; j<on.size; ++j)
+	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
 	      exit(1);
@@ -1644,7 +1644,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 			<< " is ground and active!!" << std::endl;
 	      print_active();
 	      std::cout << " :: ";
-	      for(int j=0; j<on.size; ++j)
+	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
 	      exit(1);
@@ -1658,7 +1658,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 			<< " is not ground and not active!!" << std::endl;
 	      print_active();
 	      std::cout << " :: ";
-	      for(int j=0; j<on.size; ++j)
+	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
 	      exit(1);

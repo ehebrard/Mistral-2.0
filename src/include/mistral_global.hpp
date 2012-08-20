@@ -73,7 +73,7 @@ namespace Mistral {
   //#define _DEBUG_MIN true
   //#define _DEBUG_MIN ((id==23))
   //#define _DEBUG_MAX true
-  //#define _DEBUG_MAX ((id==23))
+  //#define _DEBUG_MAX ((id==368))
   
 
   
@@ -227,6 +227,7 @@ namespace Mistral {
 #define LB_CHANGED(e)     (bool)((e)&LB_C)
 #define UB_CHANGED(e)     (bool)((e)&UB_C)
 #define ASSIGNED(e)       (bool)((e)&VALUE_C)
+#define FAILED(e)         (bool)((e)&FAIL_EVENT)
 
 
   std::string int2str(const int x);

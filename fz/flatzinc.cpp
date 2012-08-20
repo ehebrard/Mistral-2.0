@@ -49,7 +49,7 @@
 #include <mistral_variable.hpp>
 
 //#define _DEBUG_FLATZINC true
-//#define _VERBOSE_PARSER 100
+//#define _VERBOSE_PARSER 1
 
 
 
@@ -890,75 +890,71 @@ FlatZincModel::optVar(void) const {
 }
 
 void
-FlatZincModel::print(std::ostream& out, const Printer& p) const {
+FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
 
 #ifdef _FLATZINC_OUTPUT
-	 std::cout << "% c +" << std::setw(90) << std::setfill('=')
-	  			      //=============================================================================
-	  				      << "+" << std::endl << std::setfill(' ')
-	  				      << "% c |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl
-	  				      << "% c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
+	 // std::cout << "% c +" << std::setw(90) << std::setfill('=')
+	 //  			      //=============================================================================
+	 //  				      << "+" << std::endl << std::setfill(' ')
+	 //  				      << "% c |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl
+	 //  				      << "% c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
 
 
-	 std::cout << "% c +" << std::setw(90) << std::setfill('=')
-	    //"=============================================================================
-	     << "+" << std::endl << std::setfill(' ')
-	     << std::left << std::setw(46) << "% s  ";
+	 // std::cout << "% c +" << std::setw(90) << std::setfill('=')
+	 //    //"=============================================================================
+	 //     << "+" << std::endl << std::setfill(' ')
+	 //     << std::left << std::setw(46) << "% s  ";
 
-	  switch(solver.statistics.outcome) {
-	  case SAT:
-		  std::cout << std::right << std::setw(47) << "SATISFIABLE" ;
-	    break;
-	  case OPT:
-		  std::cout << std::right << std::setw(47) << "OPTIMAL" ;
-	    break;
-	  case UNSAT:
-		  std::cout << std::right << std::setw(47) << "UNSATISFIABLE" ;
-	    break;
-	  case UNKNOWN:
-		  std::cout << std::right << std::setw(47) << "UNKNOWN" ;
-	    break;
-	  case LIMITOUT:
-	    if(solver.statistics.num_solutions > 0)
-	    	 std::cout << std::right << std::setw(47) << "SUBOPTIMAL" ;
-	    else
-	    	 std::cout << std::right << std::setw(47) << "LIMITOUT" ;
-	    //break;
-	  }
-	  std::cout << std::endl
-	     << std::left << std::setw(46) << "% v  0" << std::endl
-	     << std::left << std::setw(46) << "% d  OBJECTIVE"
-	     << std::right << std::setw(46) << solver.statistics.objective_value  << std::endl
-	     << std::left << std::setw(46) << "% d  TIME"
-	     << std::right << std::setw(46) << (solver.statistics.end_time - solver.statistics.start_time)  << std::endl
-	     << std::left << std::setw(46) << "% d  MEMORY"
-	     << std::right << std::setw(46) << (Mistral::mem_used() / 1048576.0) << std::endl
-	     << std::left << std::setw(46) << "% d  NODES"
-	     << std::right << std::setw(46) << solver.statistics.num_nodes  << std::endl
-	     << std::left << std::setw(46) << "% d  RESTARTS"
-	     << std::right << std::setw(46) << solver.statistics.num_restarts << std::endl
-	     << std::left << std::setw(46) << "% d  FAILURES"
-	     << std::right << std::setw(46) << solver.statistics.num_failures << std::endl
-	     << std::left << std::setw(46) << "% d  BACKTRACKS"
-	     << std::right << std::setw(46) << solver.statistics.num_backtracks << std::endl
-	     << std::left << std::setw(46) << "% d  PROPAGATIONS"
-	     << std::right << std::setw(46) << solver.statistics.num_propagations << std::endl
-	     << std::left << std::setw(46) << "% d  FILTERINGS"
-	     << std::right << std::setw(46) << solver.statistics.num_filterings << std::endl
-	     << "% c +" << std::setw(90) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
-	  //<< " c +=============================================================================+" << std::endl;
+	 //  switch(solver.statistics.outcome) {
+	 //  case SAT:
+	 //          std::cout << std::right << std::setw(47) << "SATISFIABLE" ;
+	 //    break;
+	 //  case OPT:
+	 //          std::cout << std::right << std::setw(47) << "OPTIMAL" ;
+	 //    break;
+	 //  case UNSAT:
+	 //          std::cout << std::right << std::setw(47) << "UNSATISFIABLE" ;
+	 //    break;
+	 //  case UNKNOWN:
+	 //          std::cout << std::right << std::setw(47) << "UNKNOWN" ;
+	 //    break;
+	 //  case LIMITOUT:
+	 //    if(solver.statistics.num_solutions > 0)
+	 //    	 std::cout << std::right << std::setw(47) << "SUBOPTIMAL" ;
+	 //    else
+	 //    	 std::cout << std::right << std::setw(47) << "LIMITOUT" ;
+	 //    //break;
+	 //  }
+	 //  std::cout << std::endl
+	 //     << std::left << std::setw(46) << "% v  0" << std::endl
+	 //     << std::left << std::setw(46) << "% d  OBJECTIVE"
+	 //     << std::right << std::setw(46) << solver.statistics.objective_value  << std::endl
+	 //     << std::left << std::setw(46) << "% d  TIME"
+	 //     << std::right << std::setw(46) << (solver.statistics.end_time - solver.statistics.start_time)  << std::endl
+	 //     << std::left << std::setw(46) << "% d  MEMORY"
+	 //     << std::right << std::setw(46) << (Mistral::mem_used() / 1048576.0) << std::endl
+	 //     << std::left << std::setw(46) << "% d  NODES"
+	 //     << std::right << std::setw(46) << solver.statistics.num_nodes  << std::endl
+	 //     << std::left << std::setw(46) << "% d  RESTARTS"
+	 //     << std::right << std::setw(46) << solver.statistics.num_restarts << std::endl
+	 //     << std::left << std::setw(46) << "% d  FAILURES"
+	 //     << std::right << std::setw(46) << solver.statistics.num_failures << std::endl
+	 //     << std::left << std::setw(46) << "% d  BACKTRACKS"
+	 //     << std::right << std::setw(46) << solver.statistics.num_backtracks << std::endl
+	 //     << std::left << std::setw(46) << "% d  PROPAGATIONS"
+	 //     << std::right << std::setw(46) << solver.statistics.num_propagations << std::endl
+	 //     << std::left << std::setw(46) << "% d  FILTERINGS"
+	 //     << std::right << std::setw(46) << solver.statistics.num_filterings << std::endl
+	 //     << "% c +" << std::setw(90) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
+	 //  //<< " c +=============================================================================+" << std::endl;
 
-	p.print(out, solver, iv, bv, sv);
+          //p.print(out, solver, iv, bv, sv);
 	Mistral::Outcome outcome = solver.statistics.outcome;
 			//std::cout << outcome;
-	if ((outcome == SAT))
-			out<<"----------";
-	else if (outcome == OPT)
-		out<<"----------\n==========";
+	if ((outcome == SAT) || (outcome == OPT))
+          out<<"==========";
 	else if ((outcome == UNSAT))
-		out<<"=====UNSATISFIABLE=====";
-	else if ((outcome == UNKNOWN) || (outcome == LIMITOUT))
-		out<<"=====UNKNOWN=====";
+          out<<"=====UNSATISFIABLE=====";
 
 	/* Two missing details:
 	 1-		We need to print "==========" if we already explored all the search space and we found at least one solution.
@@ -970,6 +966,24 @@ FlatZincModel::print(std::ostream& out, const Printer& p) const {
 
 
 }
+
+
+void
+FlatZincModel::print_solution(std::ostream& out, const Printer& p) const {
+
+#ifdef _FLATZINC_OUTPUT
+
+  if(solver.statistics.num_solutions) {
+    p.print(out, solver, iv, bv, sv);
+  }
+  out << "----------" << std::endl;
+
+#endif
+
+
+}
+
+
 
 void
 Printer::init(AST::Array* output) {
@@ -1094,5 +1108,15 @@ Printer::~Printer(void) {
 }
 
 }
+
+
+FlatZinc::SolutionPrinter::SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) 
+  : p_(p), fm_(fm), solver_(s) {
+  //solver_->add((SolutionListener*)this);
+}
+
+void FlatZinc::SolutionPrinter::notify_solution() {
+  fm_->print_solution(std::cout, *p_);
+};
 
 // STATISTICS: flatzinc-any

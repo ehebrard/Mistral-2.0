@@ -153,7 +153,7 @@ namespace FlatZinc {
           d.add(elt);
         //d = setrange(sl->min, sl->max);
       } else {
-        for (int i=0; i<sl->s.size(); i++ )
+        for (unsigned int i=0; i<sl->s.size(); i++ )
           d.add(sl->s[i]);
       }
       return d;
@@ -848,7 +848,7 @@ namespace FlatZinc {
         Vector< int > d = arg2intvec(s,ce[1]); // arg2intargs(ce[1]);
        
         BitSet sd(d[0], d.back(), BitSet::empt);
-        for(int i=0; i<d.size; ++i) {
+        for(unsigned int i=0; i<d.size; ++i) {
           sd.add(d[i]);
         }
 

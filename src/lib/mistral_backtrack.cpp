@@ -301,9 +301,11 @@ void Mistral::Constraint::restore() {
     ((TernaryConstraint*)propagator)->restore(data);
   } else {
 
-    GlobalConstraint *c = (GlobalConstraint*)propagator;
+
 
 #ifdef _DEBUG_BACKTRACK
+    GlobalConstraint *c = (GlobalConstraint*)propagator;
+
       std::cout << "c ";
       int lvl=c->solver->level;
       while(--lvl>=0) std::cout << " ";

@@ -841,7 +841,7 @@ namespace Mistral {
 
       os << "]";
 
-      for(int i=n; i<all_vars.size(); ++i) {
+      for(unsigned int i=n; i<all_vars.size(); ++i) {
 	os << " " << variables[all_vars[i].id].id() << ":";
       	all_vars[i].display(os);
       }
@@ -1166,17 +1166,17 @@ namespace Mistral {
     //virtual void initialise(Solver *s) { manager->initialise(s); }
     virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) 
     {
-      int i, j, k, cons, arity, self_idx, neighbor_idx;
+      int i, j, k, cons, self_idx;
       Constraint constraint;
       Variable *scope;
       Event trig;
       bool is_in;
 
-      std::cout << "NEIGHBORHOOD " << neighborhood << std::endl;
+      //std::cout << "NEIGHBORHOOD " << neighborhood << std::endl;
 
       if(!neighborhood) {
 
-	std::cout << "NEIGHBORHOOD" << std::endl;
+	//std::cout << "NEIGHBORHOOD" << std::endl;
 
 	neighborhood = new Vector< Variable >[GenericDVOI< Aggregator< VarComparator > >::solver->variables.size];
 	std::fill(neighborhood, neighborhood+GenericDVOI< Aggregator< VarComparator > >::solver->variables.size, NULL);
@@ -1197,7 +1197,7 @@ namespace Mistral {
 		}
 	    }
 	  }
-	  std::cout << seq[i] << ": " << neighborhood[self_idx] << std::endl;
+	  //std::cout << seq[i] << ": " << neighborhood[self_idx] << std::endl;
 	}
       }
 

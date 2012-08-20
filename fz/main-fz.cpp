@@ -13,38 +13,38 @@ using namespace std;
 #ifdef _VERIFICATION
 void write_solution(FlatZinc::FlatZincModel *fm, string filename)
 {
-	if (fm->finished())
+  if (fm->finished())
+    {
+      //cout << fm->verif_constraints.size() << filename <<endl;
+      unsigned int __size=filename.size();
+      for (__size; __size>0; __size--)
+	if (filename[__size-1] == '/')
+	  break;
+      filename.insert(__size,"sol_" );
+
+      ofstream myfile;
+      myfile.open (filename.c_str());
+
+      //cout << filename <<endl;
+      for (unsigned int i = 0; i < fm->verif_constraints.size() ; i++)
 	{
-		//cout << fm->verif_constraints.size() << filename <<endl;
-		unsigned int __size=filename.size();
-				for (__size; __size>0; __size--)
-					if (filename[__size-1] == '/')
-					break;
-		filename.insert(__size,"sol_" );
-
-		ofstream myfile;
-		myfile.open (filename.c_str());
-
-		//cout << filename <<endl;
-		for (unsigned int i = 0; i < fm->verif_constraints.size() ; i++)
+	  if (fm->verif_constraints[i].first != "int_in")
+	    {
+	      myfile << "constraint " << fm->verif_constraints[i].first << "(" ;
+	      int size = fm->verif_constraints[i].second.size();
+	      for (unsigned int j = 0; j <size ; j++)
 		{
-			if (fm->verif_constraints[i].first != "int_in")
-			{
-				myfile << "constraint " << fm->verif_constraints[i].first << "(" ;
-				int size = fm->verif_constraints[i].second.size();
-				for (unsigned int j = 0; j <size ; j++)
-				{
-					myfile << fm->verif_constraints[i].second[j].get_string() ;
-					if (j< (size -1))
-						myfile << " , ";
-				}
-				myfile << ");" << endl;
-			}
+		  myfile << fm->verif_constraints[i].second[j].get_string() ;
+		  if (j< (size -1))
+		    myfile << " , ";
 		}
-		myfile <<"solve satisfy;" << endl;
-		myfile.close();
-		std::cout <<" c DONE" << endl;
+	      myfile << ");" << endl;
+	    }
 	}
+      myfile <<"solve satisfy;" << endl;
+      myfile.close();
+      std::cout <<" c DONE" << endl;
+    }
 }
 #endif
 
@@ -76,7 +76,12 @@ int main(int argc, char *argv[])
 
   FlatZinc::Printer p;
   FlatZinc::FlatZincModel *fm = 0L;
+
+  //FlatZinc::SolutionPrinter *sp = 
+
   fm = parse(args.back(), s, p);
+  s.add(new FlatZinc::SolutionPrinter(&p, fm, &s));
+
   if( !fm ) return 0;
   double parse_time = get_run_time() - cpu_time;
 #ifdef _VERBOSE_PARSER
@@ -91,7 +96,7 @@ int main(int argc, char *argv[])
 
   // default value
   options["--var_heuristic"] = "dom/wdeg";
-  options["--val_heuristic"] = "randminmax";
+  options["--val_heuristic"] = "guided";
   options["--restart"] = "luby";
   options["--seed"] = "123456";
   options["--limit"] = "10";
@@ -131,8 +136,9 @@ int main(int argc, char *argv[])
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));
 
   fm->run(cout , p);
-   if (fm->finished())
-	  fm->print(cout , p);
+  
+  //if (fm->finished())
+  fm->print_final(cout , p);
 
 
 #ifdef _VERIFICATION
