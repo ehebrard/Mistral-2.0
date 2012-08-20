@@ -52,7 +52,30 @@ namespace Mistral {
   typedef unsigned int Value;
 
   typedef Array<Lit> Clause;
+
+
+  //#define _DEBUG_BACKTRACK true
+  //#define _DEBUG_RELAX true
+  //#define _DEBUG_HISTORY true  
+  //#define _DEBUG_GENPROPAG true
+  //#define _DEBUG_MUL (id==7660)
+  //#define _DEBUG_MAX (id==288)
+  //#define _DEBUG_REWRITE true
+  //#define _DEBUG_DISJUNCTIVE true
+  //#define _DEBUG_RDISJUNCTIVE true
+  //#define _DEBUG_LEX true
+  //#define _DEBUG_ADD true
+  //#define _DEBUG_DIV true
+  //#define _DEBUG_WEIGHTEDSUM true
+  //#define _DEBUG_ELEMENT true
+  //#define _DEBUG_ELEMENT ((id==0))
+  //#define _DEBUG_CLIQUENOTEQUAL true
+  //#define _DEBUG_MIN true
+  //#define _DEBUG_MIN ((id==23))
+  //#define _DEBUG_MAX true
+  //#define _DEBUG_MAX ((id==23))
   
+
   
 #define NORESTART 0
 #define GEOMETRIC 1
@@ -96,9 +119,13 @@ namespace Mistral {
   // whether it should be awakwen on its own changes
 #define IDEMPOTENT 0x08000000
 #define ACTIVITY   0x04000000
-  //#define CTYPE      0x07ffffff
-#define CTYPE      0x03ffffff
-#define ITYPE      0xf8000000
+//   //#define CTYPE      0x07ffffff
+// #define CTYPE      0x03ffffff
+// #define ITYPE      0xf8000000
+#define RELAXED    0x02000000
+#define POSTED     0x01000000
+#define CTYPE      0x00ffffff
+#define ITYPE      0xff000000
 
   static const int size_byte[8] = {0,1,1,2,1,2,2,3};
 

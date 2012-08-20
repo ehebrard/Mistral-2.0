@@ -22,7 +22,7 @@
 
 
 /*! \file mistral_backtrack.hpp
-    \brief Header for the reversible structures
+  \brief Header for the reversible structures
 */
 
 
@@ -37,24 +37,24 @@ namespace Mistral {
 
 
   /*!
-  A reversible structure keeps a pointer to an
-  "Environment" (i.e., Solver) that manages the
-  backtracking process.
-  Second, it implements a virtual function restore
-  that "undo" the last change. 
-  Most reversible structures work this way:
-  A Vector<int> trail_ is used to encode the
-  delta-information used to undo. The last
-  integer stored on the trail_ Vector is the
-  value of solver->level when the last change
-  occured. It is used, when changing the object,
-  to decide if one should "save" the current state,
-  or simply replace the current value.
+    A reversible structure keeps a pointer to an
+    "Environment" (i.e., Solver) that manages the
+    backtracking process.
+    Second, it implements a virtual function restore
+    that "undo" the last change. 
+    Most reversible structures work this way:
+    A Vector<int> trail_ is used to encode the
+    delta-information used to undo. The last
+    integer stored on the trail_ Vector is the
+    value of solver->level when the last change
+    occured. It is used, when changing the object,
+    to decide if one should "save" the current state,
+    or simply replace the current value.
 
-  It is still undecided if this process can be 
-  made generic enough so that we can make 
-  restore() a static method.
- */
+    It is still undecided if this process can be 
+    made generic enough so that we can make 
+    restore() a static method.
+  */
 
 
   /*! \class Trigger
@@ -64,14 +64,14 @@ namespace Mistral {
    * Trigger Objects
    ********************************************/
   /**
-  A trigger is list of constraints that should be triggerred on a given event
-  (there will be three lists per variable, one for domain events, one for range events, and one for value events)
+     A trigger is list of constraints that should be triggerred on a given event
+     (there will be three lists per variable, one for domain events, one for range events, and one for value events)
   
-  The difference with vectors is that when a constraint is added to such a list, the index in the vector is returned, 
-  then stored into the constraint object :index: (and linked to the variable :index[var]:) for further reference (i.e., relax itself)
+     The difference with vectors is that when a constraint is added to such a list, the index in the vector is returned, 
+     then stored into the constraint object :index: (and linked to the variable :index[var]:) for further reference (i.e., relax itself)
   
-  Similarly, when removing a constraint, since it is swapped with the last element in the list, the index of this last element 
-  must also be updated (set to the value of the relaxed constraint). A constraint from a trigger of variable will give index -1 to this variable
+     Similarly, when removing a constraint, since it is swapped with the last element in the list, the index of this last element 
+     must also be updated (set to the value of the relaxed constraint). A constraint from a trigger of variable will give index -1 to this variable
   */
   class Constraint;
   class Trigger : public Vector< Constraint > {
@@ -94,7 +94,7 @@ namespace Mistral {
   /**
      This class is mainly used to
      1/ resolve subtypes at runtime without virtual overloading 
-        (there are only three main types of constraints: binary, ternary and global)
+     (there are only three main types of constraints: binary, ternary and global)
 
      2/ manipulate constraints as objects instead of pointers
 
@@ -102,7 +102,7 @@ namespace Mistral {
      The "data" field stores some data about the constraint (mainly its type), but also some
      context dependent information. For instance, as element of a trigger, the field "data" 
      will store the index of that variable in its scope 
-   */
+  */
   template<class T> class ReversibleNum;
   class ReversibleSet;
   class Reversible;
@@ -125,6 +125,8 @@ namespace Mistral {
     
     // return the context-dependent information [TODO: list all types]
     inline int  index()      const { return data&CTYPE; }
+    // return the context-dependent information [TODO: list all types]
+    inline int  info()      const { return data&ITYPE; }
 
     // [context-independent:] whether the constraint should be pushed on the constraint stack on  var event
     inline bool pushed()     const { return (data&PUSHED); }    
@@ -184,6 +186,7 @@ namespace Mistral {
     // to be called after propagation
     ConstraintImplementation *defrost();
 
+
     // returns the arity of the pointed constraint
     int arity() const ;
     // returns the number of active (i.e. non-ground) variables in the constraint's scope
@@ -197,6 +200,18 @@ namespace Mistral {
 
     // relax the constraint from all its active triggers
     void relax();
+
+    // void relax();
+     void notify_assignment();
+    bool is_active();
+
+// int num_active();
+    // Variable* get_scope();
+    // void set_scope(int i, Variable);
+    // int arity();
+
+    void check_active();
+    int rank();
 
     // call the rewriting procedure of the constraint
     RewritingOutcome rewrite();
@@ -221,10 +236,10 @@ namespace Mistral {
 
     std::ostream& display(std::ostream& os) const;
 
-};
+  };
 
 
- /*! \class VarEvent
+  /*! \class VarEvent
     \brief Stores the variable id, the type of change, and the constraint that triggered this event
   */
   /********************************************
@@ -252,11 +267,11 @@ namespace Mistral {
   };
 
 
-    typedef TwoWayStack< VarEvent > VariableQueue;
+  typedef TwoWayStack< VarEvent > VariableQueue;
   //typedef TwoWayStack< Triplet < int, Event, ConstraintImplementation*> > VariableQueue;
 
 
- /*! \class Environment
+  /*! \class Environment
     \brief The minimal structures used to control the backtracking process
   */
   /********************************************
@@ -298,10 +313,10 @@ namespace Mistral {
     inline void save() {
 
       trail_.add(saved_vars.size);
-      trail_.add(saved_cons.size);
       trail_.add(saved_bools.size);
       trail_.add(saved_lists.size);
       trail_.add(saved_ints.size);
+      trail_.add(saved_cons.size);
 
       ++level;
 
@@ -325,7 +340,33 @@ namespace Mistral {
     inline void save(int *r) {saved_bools.add(r);}
     
     inline void save(int r) {saved_vars.add(r);}
-    inline void save(Constraint r) {saved_cons.add(r);}
+    inline void save(Constraint r) {
+
+#ifdef _DEBUG_BACKTRACK
+      
+      for(int i=0; i<level; ++i) std::cout << " ";
+      std::cout << "c save [" << r.id() << "]" ;
+      r.display(std::cout);
+
+      int info = r.info();
+      if(info & ACTIVITY) {
+	std::cout << " (change on activity)";
+      }
+      if(info & RELAXED) {
+	std::cout << " (was relaxed)";
+      }
+      if(info & POSTED) {
+	std::cout << " (was posted)";
+      }
+      
+      std::cout << std::endl;
+
+#endif
+
+      saved_cons.add(r);
+
+
+    }
     //@}
 
   };

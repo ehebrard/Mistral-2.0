@@ -667,7 +667,9 @@ namespace Mistral {
 
     double *get_literal_activity();
 
-    void check_constraints();
+    //void check_constraints();
+
+    void check_constraint_graph_integrity();
 
     void extract_instance_statistics();
 

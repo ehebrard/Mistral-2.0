@@ -28,6 +28,9 @@
 #include <mistral_solver.hpp>
 
 
+#define _DEBUG_BUILD true
+
+
 
 #define PROFILING_HEAD \
 double __t_tag__ = 0;		 \
@@ -45,13 +48,17 @@ if(domain_type != CONST_VAR) {	\
 
 
 
+/**
+Constructors for variable
+*/
 
+// 
 Mistral::Variable::Variable() {
-  domain_type = NULL;
   domain_type = DYN_VAR;
   variable = NULL;
 }
 
+// Constant variable
 Mistral::Variable::Variable(const int value) {
   domain_type = NULL;
   domain_type = CONST_VAR;
@@ -74,16 +81,10 @@ Mistral::Variable::Variable(Expression* exp) {
 int BOOL_DOM = 3;
 
 Mistral::Variable::Variable(Vector< int >& values, const int type) {
-
-  //std::cout << values << std::endl;
-
   if(values.back() - values.front() + 1 == (int)(values.size)) {
     initialise_domain(values.front(), values.back(), type);
   } else {
     initialise_domain(values, type);
-
-    //std::cout << "variable constructor cannot yet take a vector of values as argument!" << std::endl;
-    //exit(1);
   }
 }
 
@@ -121,19 +122,10 @@ void Mistral::Variable::initialise_domain(const int lo, const int up, const int 
 
     int nwords = 1+(up >> BitSet::EXP)-(lo >> BitSet::EXP);
 #ifdef _BIT64
-    // int nwords = ((up>=0 ? ((up+1)/64 + ((up+1)%64)!=0) : 0) + 
-    // 		  (lo<0 ? (-lo/64 + ((lo%64)!=0)) : 0)) ;//((up-lo) / 64);
     if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
     else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
     else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
 #else
-    // int nwords = ((up>=0 ? ((up+1)/32 + ((up+1)%32)!=0) : 0) + 
-    // 		  (lo<0 ? (-lo/32 + ((lo%32)!=0)) : 0)) ;//((up-lo) / 32);
-
-    
-    //std::cout <<lo << "-" << up << " " <<  nwords << std::endl;
-
-    //int nwords = ((up-lo) / 32);
     if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
     else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
     else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
@@ -212,21 +204,25 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
     os << constant_value;
   } else {
     int id = variable->id;
-    if       (domain_type ==  BITSET_VAR) {
-      os << "x" << id // << (VariableBitmap*)displayDomain(os)
-	;
+    
+    if (domain_type ==  BITSET_VAR) {
+      os << "x" ;
     } // else if(domain_type ==    LIST_VAR) {
       //       os << "y" << id;
       //     } 
     else if(domain_type ==   RANGE_VAR) {
-      os << "r" << id;
+      os << "r" ;
     }
-      //     } else if(domain_type == VIRTUAL_VAR) {
-      //       return ((VariableVirtual *)implementation)->display(os);
-      //     }
     else  {
-      os << "b" << id;
+      os << "b" ;
     }
+
+    if(variable->is_initialised()) {
+      os << id ;
+    } else {
+      os << "_";
+    }
+
   }
   return os;
   
@@ -235,7 +231,8 @@ std::ostream& Mistral::Variable::display(std::ostream& os) const {
   //return os;
 }
 
-void Mistral::Variable::initialise(Solver *s, const bool top) {
+void Mistral::Variable::initialise(Solver *s, const int level) {
+
 
   // std::cout << "beg initialise " ;
   // display(std::cout);
@@ -255,7 +252,7 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
      
 
       for(unsigned int i=0; i<expression->children.size; ++i) {
-	expression->children[i].initialise(s, false);
+	expression->children[i].initialise(s, level+1);
       }
 
       // std::cout << "**initialise " << std::endl;
@@ -263,7 +260,7 @@ void Mistral::Variable::initialise(Solver *s, const bool top) {
 
       // std::cout << *this << std::endl;
 
-      if(top && !expression->children.empty()) {
+      if(level == 0 && !expression->children.empty()) {
 
 	//std::cout << "-> constraint!" << std::endl;
 
@@ -1627,7 +1624,7 @@ Mistral::Expression::~Expression() {
 void Mistral::Expression::extract_variable(Solver *s) {
   // SELF CHANGE
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
 
   //solver = s;
@@ -1635,7 +1632,7 @@ void Mistral::Expression::extract_variable(Solver *s) {
 }
 
 // void Mistral::Expression::extract_variable(Solver *s) {
-//   self.initialise(s, false);
+//   self.initialise(s, 1);
 //   self = self.get_var();
 // }
 
@@ -1684,7 +1681,7 @@ void Mistral::AddExpression::extract_variable(Solver *s) {
     Variable aux(lb, ub, DYN_VAR);
     _self = aux;
 
-    _self.initialise(s, false);
+    _self.initialise(s, 1);
     _self = _self.get_var();
     children.add(_self);
   }
@@ -1717,7 +1714,7 @@ void Mistral::OffsetExpression::extract_variable(Solver *s) {
     Variable aux(lb, ub, DYN_VAR);
     _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -1806,7 +1803,7 @@ void Mistral::MulExpression::extract_variable(Solver *s) {
   Variable aux(lb, ub, DYN_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -1923,7 +1920,7 @@ void Mistral::MulExpression::extract_predicate(Solver *s) {
 //   Variable aux(lb_neg, ub_pos, DYN_VAR);
 //   _self = aux;
 
-//   _self.initialise(s, false);
+//   _self.initialise(s, 1);
 //   _self = _self.get_var();
 //   children.add(_self);
 // }
@@ -1962,7 +1959,7 @@ void Mistral::FactorExpression::extract_variable(Solver *s) {
   Variable aux(lb, ub, DYN_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2023,7 +2020,7 @@ void Mistral::SubExpression::extract_variable(Solver *s) {
     Variable aux(lb, ub, DYN_VAR);
     _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
  
@@ -2065,7 +2062,7 @@ void Mistral::NotExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2099,7 +2096,7 @@ void Mistral::NegExpression::extract_variable(Solver *s) {
   Variable aux(-children[0].get_max(), -children[0].get_min(), DYN_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2133,7 +2130,7 @@ void Mistral::AndExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2168,7 +2165,7 @@ void Mistral::OrExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2205,7 +2202,7 @@ Mistral::Variable Mistral::Variable::operator||(Variable x) {
 // //     _self = aux;
 
 // //     children.add(_self);
-// //     _self.initialise(s, false);
+// //     _self.initialise(s, 1);
 // //   }
 
 // //   void Mistral::NeqExpression::extract_predicate(Solver *s) {
@@ -2441,7 +2438,7 @@ void Mistral::EqualExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2468,7 +2465,7 @@ void Mistral::EqualExpression::extract_predicate(Solver *s) {
       while(i<x->elts_ub.size && j<y->elts_ub.size) {
 	scp.clear();
 	Variable b(0,1);
-	b.initialise(s, false);
+	b.initialise(s, 1);
 	aux.add(b);
 	scp.add(children[2]);
 	scp.add(aux.back());
@@ -2561,7 +2558,7 @@ void Mistral::EqualSetExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2650,7 +2647,7 @@ void Mistral::PrecedenceExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2764,7 +2761,7 @@ void Mistral::ReifiedDisjunctiveExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -2948,7 +2945,7 @@ void Mistral::BoolSumExpression::extract_variable(Solver *s) {
   Variable aux(lb, ub, DYN_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   //children.add(_self);
 }
@@ -3077,7 +3074,7 @@ void Mistral::LinearExpression::extract_variable(Solver *s) {
   Variable aux(lower_bound, upper_bound, DYN_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
   weight.add(-1);
@@ -3138,7 +3135,7 @@ void Mistral::MinExpression::extract_variable(Solver *s) {
   Variable aux(lower_bound, upper_bound, DYN_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -3213,7 +3210,7 @@ void Mistral::MaxExpression::extract_variable(Solver *s) {
   Variable aux(lower_bound, upper_bound, DYN_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -3294,7 +3291,7 @@ void Mistral::ElementExpression::extract_variable(Solver *s) {
   Variable aux(values, DYN_VAR);
   _self = aux;
 
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }
@@ -3463,7 +3460,7 @@ void Mistral::ElementSetExpression::initialise_domain() {
 //   Variable aux(new SetExpression(elts_lb, elts_ub, lb, ub));
 //   _self = aux;
 
-//   _self.initialise(s, false);
+//   _self.initialise(s, 1);
 //   //_self = _self.get_var();
 //   //children.add(_self);
 // }
@@ -4131,7 +4128,7 @@ void Mistral::MemberExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
   
-  _self.initialise(s, false);
+  _self.initialise(s, 1);
   _self = _self.get_var();
   children.add(_self);
 }

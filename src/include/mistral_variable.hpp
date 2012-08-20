@@ -34,7 +34,7 @@
 #define _MISTRAL_VARIABLE_HPP
 
 
-//#define _DEBUG_HISTORY true
+
 
 
 //
@@ -1454,7 +1454,7 @@ namespace Mistral {
 
       //std::cout << "after copy: " << domain_type << std::endl;
     }
-    void initialise(Solver *s, const bool top=true);
+    void initialise(Solver *s, const int level=0);
     //    void initialise(Solver *s);
 
     Event setValue( const int val );    

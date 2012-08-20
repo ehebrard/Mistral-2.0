@@ -1003,6 +1003,10 @@ void Mistral::Solver::add(Constraint c) {
   //   posted_constraints.add(c->id);
   // }
 
+  // std::cout << c << ": ";
+  // ((TernaryConstraint*)
+  //c.propagator->print_active();
+  // std::cout << std::endl;
 
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
 
@@ -1343,7 +1347,21 @@ void Mistral::Solver::restore() {
   std::cout << "Restore to level " << previous_level << std::endl;
 #endif
 
+  while( saved_cons.size > previous_level ) {
 
+#ifdef _DEBUG_RESTORE
+    std::cout << "  (c) " << saved_cons.back() << " -> ";
+#endif
+
+    saved_cons.pop().restore();
+
+#ifdef _DEBUG_RESTORE
+    std::cout << "  (c) " << saved_cons.back(0) << std::endl;
+#endif
+
+  }
+
+  previous_level = trail_.pop();
   while( saved_ints.size > previous_level ) {
     
 #ifdef _DEBUG_RESTORE
@@ -1384,21 +1402,6 @@ void Mistral::Solver::restore() {
 
 #ifdef _DEBUG_RESTORE
     std::cout << "  (b) " << saved_bools.back(0) << std::endl;
-#endif
-
-  }
-  
-  previous_level = trail_.pop();
-  while( saved_cons.size > previous_level ) {
-
-#ifdef _DEBUG_RESTORE
-    std::cout << "  (c) " << saved_cons.back() << " -> ";
-#endif
-
-    saved_cons.pop().restore();
-
-#ifdef _DEBUG_RESTORE
-    std::cout << "  (c) " << saved_cons.back(0) << std::endl;
 #endif
 
   }
@@ -2168,6 +2171,10 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 bool Mistral::Solver::propagate() 
 {
 
+#ifdef _DEBUG_AC
+  std::cout << "c start propagation" << std::endl;
+#endif
+
   bool fix_point;
   int trig, cons;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
@@ -2248,6 +2255,18 @@ bool Mistral::Solver::propagate()
 	      --cons>=0;) {
 
 	  culprit = constraint_graph[var_evt.first].on[trig][cons];
+
+
+	  if(ASSIGNED(var_evt.second)) {
+	    culprit.notify_assignment();
+	  }
+
+	  // if(culprit.id() == 11) {
+	  //   std::cout << var_evt.third << " != " << culprit.propagator << " || "
+	  // 	      << culprit.postponed() << " || "
+	  // 	      << std::endl;
+	  // }
+
 	  
 	  // idempotency, if the event was triggered by itself
 	  if(var_evt.third != culprit.propagator) {
@@ -2278,6 +2297,11 @@ bool Mistral::Solver::propagate()
 #endif
 	      ++statistics.num_propagations;  
 	      taboo_constraint = culprit.freeze();
+
+	      // if(culprit.id() == 11) {
+	      // 	std::cout << "PROPAGATE " << culprit << std::endl;
+	      // }
+
 	      wiped_idx = culprit.propagate(var_evt.second); 
 	      taboo_constraint = culprit.defrost();
 #ifdef _DEBUG_AC
@@ -2387,6 +2411,12 @@ bool Mistral::Solver::propagate()
     std::cout << "done" << std::endl;
   }
 #endif 
+
+
+#ifdef _DEBUG_AC
+  std::cout << "c end propagation" << std::endl;
+#endif
+
   
   if(IS_OK(wiped_idx)) {
     notify_success();
@@ -2836,7 +2866,8 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
       for(Event trig = 0; trig<3; ++trig) 
 	for(int cons = constraint_graph[i].on[trig].size; --cons>=0;) {
 	  if(current) {
-	    os << "[" ; 
+	    os << "[" << constraint_graph[i].on[trig][cons].id() 
+	       << constraint_graph[i].on[trig][cons].symbol(); 
 	    
 	    scope = constraint_graph[i].on[trig][cons].get_scope();
 	    arity = constraint_graph[i].on[trig][cons].arity();
@@ -3399,8 +3430,12 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
 {
 
 #ifdef _MONITOR
+  //std::cout << 33 << std::endl;
     monitor_list.display(std::cout);
     std::cout << std::endl;
+
+    //check_constraint_graph_integrity();
+    //std::cout << 44 << std::endl;
 #endif
 
   int status = UNKNOWN;
@@ -3421,8 +3456,16 @@ Mistral::Outcome Mistral::Solver::chronological_dfs()
 
 
 #ifdef _MONITOR
+      //std::cout << 11 << std::endl;
+
     monitor_list.display(std::cout);
     std::cout << std::endl;
+
+    display(std::cout, 2);
+
+    check_constraint_graph_integrity();
+    
+    //std::cout << 22 << std::endl;
 #endif
             
       ++statistics.num_nodes;
@@ -4086,5 +4129,69 @@ void Mistral::Solver::set_time_limit(const double limit) {
   if(limit > 0) {
     parameters.limit = 1;
     parameters.time_limit = limit;
+  }
+}
+
+
+void Mistral::Solver::check_constraint_graph_integrity() {
+  // for each constraint, check if the set of active variables corresponds to unbound vars
+  for(unsigned int i=0; i<constraints.size; ++i) {
+    //if(constraints[i].is_active())
+    constraints[i].check_active();
+  }
+
+  // for each variable, check that
+  // 1/ no constraint is listed twice
+  // 2/ for each constraint in the list for this var:
+  //   a/ the index of the constraint for that var corresponds to the rank of var in its scope
+  //   b/ the constraint has at least 2 unbound vars, or does not enforce nfc1
+  BitSet cons_list(0, constraints.size, BitSet::empt);
+  int trig, cons;
+  Constraint c;
+  Variable *scope;
+  for(unsigned int i=0; i<variables.size; ++i) {
+    cons_list.clear();
+
+    for(trig = _VALUE_; trig<=_DOMAIN_; ++trig) {
+
+	for(cons = constraint_graph[i].on[trig].size; --cons>=0;) {
+
+	  c = constraint_graph[i].on[trig][cons];
+
+	  if(cons_list.contain(c.id())) {
+
+	    std::cout << "Warning: " << c << " is listed at least twice: " 
+		      << std::endl << constraint_graph[i].on[0] 
+		      << std::endl << constraint_graph[i].on[1] 
+		      << std::endl << constraint_graph[i].on[2] << std::endl;
+
+	    exit(1);
+	    
+	  } else {
+	    cons_list.add(c.id());
+	  }
+
+	  scope = c.get_scope();
+	  
+	  if(scope[c.index()].id() != i) {
+
+	    std::cout << "Warning: incorrect variable indexing: " 
+		      << scope[c.index()] << "'s " << c
+		      << " is posted on " << variables[i] << std::endl;
+
+	    exit(1);
+
+	  }
+
+	  if(c.rank() != cons) {
+
+	    std::cout << "Warning: incorrect list indexing: " << c << " is " 
+		      << cons << "th in the list of " << variables[i] 
+		      << ", but indexed " << c.rank() << "th." << std::endl;  
+
+	    exit(1);
+	  }
+	}
+    }
   }
 }

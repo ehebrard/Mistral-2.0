@@ -113,6 +113,16 @@ void Mistral::Constraint::post(Solver* solver) {
   }
 }
 
+
+void Mistral::Constraint::notify_assignment() {
+  if(binary()) {
+    ((BinaryConstraint*)propagator)->notify_assignment(index()); 
+  } else if(ternary())
+    ((TernaryConstraint*)propagator)->notify_assignment(index()); 
+  else
+    ((GlobalConstraint*)propagator)->notify_assignment(index()); 
+}
+
 void Mistral::Constraint::awaken() { 
   if(binary()) {
     //std::cout << "in awaken" << std::endl;
@@ -265,7 +275,7 @@ Mistral::PropagationOutcome Mistral::Constraint::bound_checker_propagate(const E
 }
 
 void Mistral::Constraint::restore() {
-  unsigned int mytype = index();
+  //unsigned int mytype = index();
 
   //if(id() == 36)
   //std::cout << "Restore " << (*this) << " (" << (int*)(propagator) << ")" << std::endl;
@@ -290,10 +300,38 @@ void Mistral::Constraint::restore() {
     //if(mytype&1) ((TernaryConstraint*)propagator)->un_relax();
     ((TernaryConstraint*)propagator)->restore(data);
   } else {
+
+    GlobalConstraint *c = (GlobalConstraint*)propagator;
+
+#ifdef _DEBUG_BACKTRACK
+      std::cout << "c ";
+      int lvl=c->solver->level;
+      while(--lvl>=0) std::cout << " ";
+      std::cout << "[" << std::setw(4) << c->id << "](" << c->name() << "): restore" << std::endl;
+#endif
+
+
+#ifdef _DEBUG_BACKTRACK
+      std::cout << "c ";
+      lvl=c->solver->level;
+      while(--lvl>=0) std::cout << " ";
+      std::cout << "[" << std::setw(4) << c->id << "](" << c->name() << "): reset active(?): " ;
+      c->print_active();
+      std::cout << std::endl;
+
+      std::cout << "posted? " << (data&POSTED) << " / relaxed? " << (data&RELAXED) << std::endl;
+
+#endif
+
+
+
+
     //if(mytype&4) ((GlobalConstraint*)propagator)->re_activate(); 
-    if(mytype&2) ((GlobalConstraint*)propagator)->un_post(); 
-    if(mytype&1) ((GlobalConstraint*)propagator)->un_relax();
+    if(data&POSTED) ((GlobalConstraint*)propagator)->un_post(); 
+    if(data&RELAXED) ((GlobalConstraint*)propagator)->un_relax();
     //((GlobalConstraint*)propagator)->restore(data);
+
+
   }
 }
 
@@ -319,6 +357,26 @@ std::ostream& Mistral::Constraint::display(std::ostream& os) const {
   //   << "[" << id() << "]";
   return os;
 }
+
+bool Mistral::Constraint::is_active() {
+  return propagator->is_active();
+}
+
+void Mistral::Constraint::check_active() {
+  if(global()) {
+    ((GlobalConstraint*)propagator)->check_active();
+  } else if(binary()) {
+    ((BinaryConstraint*)propagator)->check_active();
+  } else if(ternary()) {
+    ((TernaryConstraint*)propagator)->check_active();
+  }
+}
+
+int Mistral::Constraint::rank() {
+  int rank = (data&CTYPE);
+  return propagator->index[rank];
+}
+
 
 void Mistral::Environment::_restore_() {
   

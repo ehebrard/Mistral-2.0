@@ -181,7 +181,7 @@ public:
   virtual void run();
 };
 
-const int CostasAllDiffAllSolutions::num_sol[] = {0,0,0,0,0,0,116,200,444,760,2160,0,0};
+const int CostasAllDiffAllSolutions::num_sol[] = {0,0,0,4,12,40,116,200,444,760,2160,0,0};
 
 
 class CostasNotEqualAllSolutions : public UnitTest {
@@ -198,7 +198,7 @@ public:
   virtual void run();
 };
 
-const int CostasNotEqualAllSolutions::num_sol[] = {0,0,0,0,0,0,116,200,444,760,2160,0,0};
+const int CostasNotEqualAllSolutions::num_sol[] = {0,0,0,2,12,40,116,200,444,760,2160,0,0};
 
 class Reset : public UnitTest {
 
@@ -1424,7 +1424,7 @@ int main(int argc, char *argv[])
   tests.push_back(new SubsetTest());
   tests.push_back(new MemberTest());
   tests.push_back(new RewriteTest1());
-  //tests.push_back(new OpshopTest());
+  tests.push_back(new OpshopTest());
   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
   tests.push_back(new Pigeons(N+2)); 
@@ -3353,8 +3353,6 @@ void WeightedSumTest::run1() {
   coefs.add(1);
   coefs.add(1);
 
-
-
   s.add( Sum(X, coefs, -2, 2) );
 
   //std::cout << s << std::endl;
@@ -3364,7 +3362,7 @@ void WeightedSumTest::run1() {
   //cout << "Consolidate\n" << s << endl;  
 
   s.rewrite();
-  
+
   //cout << "Rewrite\n" << s << endl;
 
   s.initialise_search(X,
@@ -3682,12 +3680,12 @@ void ElementTest::run1() {
 
     //std::cout << num_solutions << std::endl;
 
-    //  cout << "[ ";
-    //  for(int i=0; i<4; ++i) {
-    //    std::cout << X[i].get_var().get_solution_str_value() << " " ;
-    //  }
+    // cout << "[ ";
+    // for(int i=0; i<4; ++i) {
+    //   std::cout << X[i].get_var().get_solution_str_value() << " " ;
+    // }
     // cout  << ": X[" << Y.get_var().get_solution_str_value() << "] = " << Z.get_var().get_solution_str_value() 
-    //   	 << " (" << X[Y.get_var().get_solution_int_value()].get_var().get_solution_str_value() << ")" << endl;
+    // 	  << " (" << X[Y.get_var().get_solution_int_value()].get_var().get_solution_str_value() << ")" << endl;
   }
 
   //std::cout << num_solutions << " " << s.statistics.num_backtracks << std::endl;
@@ -4127,6 +4125,7 @@ void OpshopTest::run1() {
   int i=0, j, k, dur=0, lb, opt, bufsize=1000;
   char buf[bufsize];
   std::ifstream infile( "./examples/data/GP03-01.txt", std::ios_base::in );
+  //std::ifstream infile( "./examples/data/tiny.txt", std::ios_base::in );
 	
   do {
     infile.getline( buf, bufsize, '\n' );
@@ -4153,8 +4152,10 @@ void OpshopTest::run1() {
   infile >> nMachines;
 
   int *jobs[nJobs];
-  for(i=0; i<nMachines; ++i)
+  for(i=0; i<nJobs; ++i) {
     jobs[i] = new int[nMachines];
+    std::fill(jobs[i], jobs[i]+nMachines, 0);
+  }
 
   infile.getline( buf, bufsize, '\n' );
 	
@@ -4168,7 +4169,8 @@ void OpshopTest::run1() {
   k = 0;
   for(i=0; i<nJobs; ++i) {
     for(j=0; j<nMachines; ++j) {
-      infile >> jobs[i][j];
+      infile >> k;
+      jobs[i][j] = k;
       dur += jobs[i][j];
     }
   }
@@ -4192,11 +4194,14 @@ void OpshopTest::run1() {
     {
       for(int j=0; j<nMachines-1; ++j)
 	for(int k=j+1; k<nMachines; ++k) {
+
+	  //s.add(Precedence(task[i*nMachines+j], jobs[i][j], task[i*nMachines+k]));
+
 	  s.add(Disjunctive(task[i*nMachines+j], 
-			    task[i*nMachines+k], 
-			    jobs[i][j],
-			    jobs[i][k]
-			    ));
+	  		    task[i*nMachines+k], 
+	  		    jobs[i][j],
+	  		    jobs[i][k]
+	  		    ));
 	}
     }
 
@@ -4225,8 +4230,36 @@ void OpshopTest::run1() {
   //s.specialise();
   //std::cout << s << std::endl;
 
-#ifdef _DEBUG_PRUNING
-  s.monitor(task);
+#ifdef _MONITOR
+  //s.monitor_list << task;
+
+  Variable x;
+
+  s.monitor_list << " t0 ";
+  x = task[0];
+  s.monitor_list << x;
+
+  s.monitor_list << " t1 ";
+  x = task[1];
+  s.monitor_list << x;
+
+  s.monitor_list << " t2 ";
+  x = task[2];
+  s.monitor_list << x;
+
+  s.monitor_list << " t3 ";
+  x = task[3];
+  s.monitor_list << x;
+
+  s.monitor_list << " t4 ";
+  x = task[4];
+  s.monitor_list << x;
+
+  s.monitor_list << " t5 ";
+  x = task[5];
+  s.monitor_list << x;
+
+
 #endif
 
   s.initialise_search(task, 
@@ -4236,6 +4269,10 @@ void OpshopTest::run1() {
   int num_solutions = 0;
   while(s.get_next_solution() == SAT) {
     ++num_solutions;
+    // for(int i=0; i<task.size; ++i) {
+    //   std::cout << task[i].get_solution_int_value() << " ";
+    // }
+    // std::cout << std::endl;
   }
 
 

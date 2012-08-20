@@ -74,7 +74,78 @@
  *GlobalConstraintImplementation:
  */
 
+/**
+   Constraint posting/relaxing
+   ===========================
 
+   * For each variable in their scope, a constraint has a pointer to the list they belong to for that variable [on]
+   - If the constraint should not be called on any modification of this variable, the pointer is null
+   - If the constraint should be called on value events, it points to the value list of the given variable
+   - If the constraint should be called on range events, it points to the range list of the given variable
+   - If the constraint should be called on domain events, it points to the domain list of the given variable
+
+   * Again for each variable in the scope, it keeps its current index in the given list [index]
+   - If the constraint is not currently in the list of var $i, the value of index[$i] should be -1
+   - If the constraint is currently posted in the list of var $i, the value of index[$i] should be its rank in the list
+
+   * For each variable, a version of a MistralPointer to itself is kept. [self]
+   Moreover, pointer info is given the rank of that variable in the scope. 
+   This is this pointer which is added to the list of triggers of a variables (via [on])
+   This is important when propagating: when scanning the list of triggers for a given variable, 
+   it indicates the rank of the variable in the constraint's scope, allowing to use the version of
+   propagate() informed about the caller.
+
+   * A constraint has flag to indicate whether it achieves at least a level of propagation equal to NFC1 [enforce_nfc1]
+   - If it is set to true, then the constraint will be automatically relaxed from its trigger list in the last
+   active variable when there is only one of them
+   - If it is set to false, it is never relaxed
+
+   * The set of "active" variables is kept in a specific, however non-virtual attribute "active"
+
+
+   Automatic relax:
+   ================
+   
+   When the solver process a value event on a variable, it notifies it to all its constraints.
+
+   [notify_assignment]: The variable is removed from the set [active]. If [active] is reduced to a signleton,
+   the constraint is relaxed from the last variable in [active].
+
+   [relax_from($i)]: if the constraint is currently posted on the $ith variable, then:
+   the constraint is relaxed from that variable.
+
+
+   Backtracks:
+   ===========
+
+   The method [save(Constraint c)] indicates that the constraint should be saved.
+   That is, when backtracking upon this level, the restore() method of $c will be called.
+   Some information about what should be undone is passed trough the [data] field of $c.
+
+   1/ First, it contains the index of the variable
+   2/ Second, it can be complemented with the flags [ACTIVITY], [RELAXED] or [POSTED].
+
+   FixedArityConstraints:
+
+   * notify_assignment() changes the value of the set [active], hence it turn on the flag [ACTIVITY]
+   if activity becomes a singleton, the constraint is relaxed from the last remaining variable and the flag [RELAXED] is set before saving.
+
+   * When relaxing the flag [RELAXED] is set
+   
+   * When posting the flag [POSTED] is set
+
+   * Restore: the constrint is posted/relaxed from the corresponding variable according to the flag
+       If the flag [ACTIVITY] was set, then
+              a/ For Binary constraints, activity is set back to {0,1}
+	      b/ For Ternary constraints, activity is reversed using a specific mechanism
+
+   [TODO:] we could have a different save operation for acticity and post/relax
+   The advantage is that the activity set could be reversed by simply adding 
+   the 
+
+
+
+ */
 
 
 namespace Mistral {
@@ -120,6 +191,7 @@ namespace Mistral {
     //int arity;
     //int num_triggers;
     unsigned int type;
+    bool enforce_nfc1;
     //@}
     
 
@@ -137,14 +209,24 @@ namespace Mistral {
     virtual int get_type() = 0;
     virtual int postponed() = 0;
     virtual int idempotent() = 0;
+    //virtual int enforce_nfc1() = 0;
 
     virtual void mark_domain() {}    
 
     virtual void desactivate(const int var) = 0;
 
+    virtual void print_active() = 0;
+
+    bool is_active() {
+      bool active = false;
+      for(unsigned int i=0; !active && i<on.size; ++i) {
+	active = index[i]>=0;
+      }
+      return active;
+    }
 
    void un_post_from(const int var) {
-     //std::cout << "relax [" << id << "] from " << _scope[var] << ": " << on[var] << " -> " ;      
+     //std::cout << "relax [" << id << "] from " << scope[var] << ": " << on[var] << " -> " ;      
       
       on[var]->relax(index[var]);
       index[var] = -1;    
@@ -154,7 +236,7 @@ namespace Mistral {
     
     void un_relax_from(const int var) {
       // std::cout << var << std::endl;
-      // std::cout << " urf post [" << id << "] on " << _scope[var] << ": " ;
+      // std::cout << " urf post [" << id << "] on " << scope[var] << ": " ;
       // std::cout.flush();
       // std::cout << on[var] << " -> " ;      
       
@@ -365,6 +447,14 @@ namespace Mistral {
     //virtual int idempotent() {return 0;}
 
     virtual void desactivate(const int var) { 
+
+
+// #ifdef _DEBUG_RELAX
+//       std::cout // << "[" << std::setw(4) << id << "](" << name() << "): desactivate "
+// 	<< "-"
+// 	<< scope[var] << " " ; //<< std::endl;
+// #endif
+
       int var_elt = (1 << var);
       if(active&var_elt) active ^= var_elt;
     }
@@ -421,22 +511,47 @@ namespace Mistral {
 
     void check_active() {
       for(int i=on.size; i--;) {
-	if(active & (1 << i)) {
-	  if(scope[i].is_ground()) {
-	    std::cout << "Warning: " << scope[i] << " = " << scope[i].get_domain()
-		      << " is ground and active!!" << std::endl;
-	  }
-	} else {
-	  if(!(scope[i].is_ground())) {
-	    std::cout << "Warning: " << scope[i] << " in " << scope[i].get_domain()
-		      << " is not ground and no active!!" << std::endl;
+	if(index[i]>=0) {
+	  if(active & (1 << i)) {
+	    if(scope[i].is_ground()) {
+	      std::cout << "[" << std::setw(4) << id << "] " ;
+	      display(std::cout);
+	      std::cout << std::endl;
+	      std::cout << "Warning: " << scope[i] << " = " << scope[i].get_domain()
+			<< " is ground and active!!" << std::endl;
+	      print_active();
+	      std::cout << " :: ";
+	      for(int j=0; j<on.size; ++j)
+		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
+	      std::cout << " (exit on check_active())" << std::endl;
+	      exit(1);
+	    }
+	  } else {
+	    if(!(scope[i].is_ground())) {
+	      std::cout << "[" << std::setw(4) << id << "] " ;
+	      display(std::cout);
+	      std::cout << std::endl;
+	      std::cout << "Warning: " << scope[i] << " in " << scope[i].get_domain()
+			<< " is not ground and not active!!" << std::endl;
+	      print_active();
+	      std::cout << " :: ";
+	      for(int j=0; j<on.size; ++j)
+		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
+	      std::cout << " (exit on check_active())" << std::endl;
+	      exit(1);
+	    }
 	  }
 	}
       }
     }
       
-    void print_active() {
+    virtual void print_active() {
+      
+
       int k=0, x = (active & (7<<k)) >> k;
+      
+      std::cout << active << " -> " << x << " ";
+      
       while(x) {
 	
 	if(x==7) std::cout << "{" << scope[0] << "," << scope[1] << "," << scope[2] << "}" ;
@@ -453,7 +568,7 @@ namespace Mistral {
 
       }
     }
-
+    
 
     void post_on(const int var) {
 
@@ -461,15 +576,37 @@ namespace Mistral {
       // display(std::cout);
       // std::cout << " on " << scope[var] << std::endl;
 
+//       if(scope[var].is_ground()) {
+// 	active^=(1<<var);
+// 	index[var] = -1;
+//       } else {
+
+// #ifdef _DEBUG_RELAX
+// 	std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[var] << std::endl;
+// #endif
+// 	//std::cout << "(yep)" << std::endl;
+	
+// 	Constraint c = self[var];
+// 	c.data |= POSTED;
+// 	solver->save( c );
+// 	un_relax_from(var);
+//       }
+
+
 
       if(scope[var].is_ground()) {
 	active^=(1<<var);
 	index[var] = -1;
       } else {
 
+#ifdef _DEBUG_RELAX
+	std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[var] << std::endl;
+#endif
 	//std::cout << "(yep)" << std::endl;
-
-	solver->save( self[var] );
+	
+	Constraint c = self[var];
+	c.data |= POSTED;
+	solver->save( c );
 	un_relax_from(var);
       }
     }
@@ -477,14 +614,38 @@ namespace Mistral {
     void post() {
 
       // std::cout << "p post " ;
-      // display(std::cout);
-      // std::cout << std::endl;
+      //  display(std::cout);
+      //  std::cout << std::endl;
 
       active = (1 << ARITY)-1;
-      for(int i=on.size; i--;) {
-	post_on(i);
+      int nb_actives = on.size;
+      int i = nb_actives;
+
+      while(i--) {
+	index[i] = -1;
+	if(scope[i].is_ground()) {
+	  active^=(1<<i);
+	  --nb_actives;
+	}
+      }
+
+      if(!enforce_nfc1 || nb_actives>1) {
+	Constraint c;
+	
+	for(i=on.size; i--;) {
+	  if(!scope[i].is_ground()) {
+
+	    //std::cout << "c *** " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+
+	    c = self[i];
+	    c.data |= POSTED;
+	    solver->save( c );
+	    un_relax_from(i);	  
+	  }
+	}
       }
     }
+
 
     void relax() {
       
@@ -499,14 +660,22 @@ namespace Mistral {
       // std::cout << ")" << std::endl;
 
       for(int i=on.size; i--;) {
-	relax_from(i);
+	if(active & (1 << i)) relax_from(i);
       }    
     }
 
     void relax_from(const int var) {
-      if(active & (1 << var)) {
-      //if(index[var] >= 0) {
-	solver->save( self[var] );
+
+      //if(active & (1 << var)) {
+      if(index[var] >= 0) {
+
+#ifdef _DEBUG_RELAX
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[var] << std::endl;
+#endif
+
+     Constraint c = self[var];
+      c.data |= RELAXED;
+      solver->save( c ); //self[var]|RELAXED );
 	un_post_from(var);
       }
     }    
@@ -547,16 +716,162 @@ namespace Mistral {
     bool find_support(const int revise_idx, const int vli);
     bool find_bound_support(const int revise_idx, const int vli);
 
-   void restore(const int rtype) {
-      int var = rtype&CTYPE;
-      if(index[var]<0) {
-	un_relax_from(var);
-      } else {
-	un_post_from(var);
-      }
-      active = 3;
-    }  
 
+   inline void notify_assignment(const int var) {
+
+#ifdef _DEBUG_RELAX
+     std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << std::endl;
+#endif
+     
+     
+     // if(!(active & (1 << var))) {
+       
+     //   std::cout << "SHOULD NOT NOTIFY TWICE (" << scope[var] << " in " << scope[var].get_domain() << ")" << std::endl;
+       
+     // } else {
+
+     if(active & (1 << var)) {
+       
+       active ^= (1 << var);
+     
+       int last = (active&7)/2;
+       Constraint c = self[last];
+       c.data |= ACTIVITY;
+
+       // print_active();
+       // std::cout << " " << last << std::endl;
+
+       if(enforce_nfc1 && size_byte[active] == 1) {
+	 
+	 if(index[last] >= 0) {
+	   
+#ifdef _DEBUG_RELAX
+	   std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[last] << std::endl;
+#endif
+	   c.data |= RELAXED;
+	   un_post_from(last);
+	 }
+       }
+       
+       solver->save( c ); //self[var]|RELAXED );
+     }
+   }
+
+    void restore(const int rtype) {
+
+#ifdef _DEBUG_BACKTRACK
+      std::cout << "c ";
+      int lvl=solver->level;
+      while(--lvl>=0) std::cout << " ";
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std::endl;
+#endif
+     
+      int var = rtype&CTYPE;
+
+      // if(var<0 || var>1) {
+      //   std::cout << var << std::endl;
+      //   exit(1);
+      // }
+
+      // #ifdef _DEBUG_RELAX
+      //      std::cout << "RESTORE [" << id << "] " ;
+      //      display(std::cout);
+      //      std::cout << " (" << (rtype&2) << " / " << (rtype&CTYPE) << ")" << std::endl;
+      // #endif
+
+      //     if(index[var]<0) {
+
+      // #ifdef _DEBUG_RELAX
+      //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+      // #endif
+
+      //        un_relax_from(var);
+      //      } else {
+
+      // #ifdef _DEBUG_RELAX
+      //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+      // #endif
+
+      //        un_post_from(var);
+      //      }
+      //      active = 3;
+
+      // #ifdef _DEBUG_RELAX
+      //      std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
+      //      print_active();
+      //      std::cout << std::endl;
+      // #endif
+
+
+      if(rtype&RELAXED) {
+
+      	// if(index[var]>=0) {
+
+	//   std::cout << "SHOULD NOT REPOST TWICE!" << std::endl;
+	//   exit(1);
+
+	// }
+
+	if(index[var] < 0) {
+
+#ifdef _DEBUG_BACKTRACK
+	  std::cout << "c ";
+	  lvl=solver->level;
+	  while(--lvl>=0) std::cout << " ";
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+#endif
+	  
+	  un_relax_from(var);
+	} 
+      }
+
+
+      if(rtype&POSTED) {
+
+	// if(index[var]<0) {
+       
+	//   std::cout << "SHOULD NOT RELAX TWICE!" << std::endl;
+	//   exit(1);
+
+	// }
+
+	if(index[var] >= 0) {
+
+#ifdef _DEBUG_BACKTRACK
+	  std::cout << "c ";
+	  lvl=solver->level;
+	  while(--lvl>=0) std::cout << " ";
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+#endif
+
+	  un_post_from(var);
+	}
+      }
+    
+
+      if(rtype&ACTIVITY) active = 3;
+
+#ifdef _DEBUG_BACKTRACK
+      std::cout << "c ";
+      lvl=solver->level;
+      while(--lvl>=0) std::cout << " ";
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
+      print_active();
+      std::cout << std::endl;
+#endif
+
+
+
+      // if(scope[0].is_ground() || scope[1].is_ground()) {
+
+      //   std::cout << "ERROR RESTORE BINARY CONSTRAINT" << std::endl;
+       
+      //   std::cout << scope[0].get_domain() << " " << scope[1].get_domain() << std::endl;
+
+      // }
+
+    }  
+    
     void trigger();
   };
 
@@ -628,7 +943,60 @@ namespace Mistral {
 
     */
 
+   inline void notify_assignment(const int var) {
 
+#ifdef _DEBUG_RELAX
+     std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << std::endl;
+#endif
+     
+     
+     // if(!(active & (1 << var))) {
+       
+     //   std::cout << "SHOULD NOT NOTIFY TWICE (" << scope[var] << " in " << scope[var].get_domain() << ")" << std::endl;
+       
+     // } else {
+
+     if(active & (1 << var)) {
+       
+       int elt = (1 << var);
+       int tmp = active&7;
+       tmp ^= elt;
+       
+
+       //std::cerr << active << " "<< tmp << " "<< last << " "<< elt << std::endl; 
+
+       active <<= 3;
+       active |= tmp;
+
+
+       Constraint c;
+       
+       //solver->save(Constraint(this, type|ACTIVITY));
+       
+       // print_active();
+       // std::cout << " " << last << std::endl;
+
+       if(enforce_nfc1 && size_byte[active] == 1) {
+	 
+	 int last = tmp/2;
+	 c = self[last];
+
+	 if(index[last] >= 0) {
+	   
+#ifdef _DEBUG_RELAX
+	   std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[last] << std::endl;
+#endif
+	   c.data |= (RELAXED|ACTIVITY);
+	   un_post_from(last);
+	 }
+       } else {
+	 c = self[0];
+	 c.data |= ACTIVITY;
+       }
+       
+       solver->save( c ); //self[var]|RELAXED );
+     }
+   }
 
     bool assign(const int var) {
 
@@ -637,10 +1005,20 @@ namespace Mistral {
       // print_active();
       // std::cout << " Assign " << scope[var] << " " ;
       // //}
+
+#ifdef _DEBUG_RELAX
+     std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << std::endl;
+#endif
 	
       bool ret_val = false;
       int elt = (1 << var);
       if(active & elt){
+
+
+#ifdef _DEBUG_RELAX
+     std::cout << "[" << std::setw(4) << id << "](" << name() << "): -> deseactivate" << std::endl;
+#endif
+
 	int tmp = active&7;
 	active <<= 3;
 	active |= tmp;
@@ -648,8 +1026,9 @@ namespace Mistral {
 
 	if(active&448) ret_val = true;
 	solver->save(Constraint(this, type|ACTIVITY));
-
-	// if(active&64) ret_val = true;
+	//solver->save(self[0]|ACTIVITY));
+      
+      // if(active&64) ret_val = true;
 	// else solver->save(Constraint(this, type|ACTIVITY));
       }
 
@@ -663,10 +1042,17 @@ namespace Mistral {
 
 
     void restore(const int rtype) {
-
+      
+#ifdef _DEBUG_BACKTRACK
+            std::cout << "c ";
+      int lvl=solver->level;
+      while(--lvl>=0) std::cout << " ";
+std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std::endl;
+#endif
+      
       // //if(id==36) {
       // //std::cout << std::endl;
-
+      
       // // std::cout << scope[0] << " " << on[0] << std::endl;
       // // std::cout << scope[1] << " " << on[1] << std::endl;
       // // std::cout << scope[2] << " " << on[2] << std::endl;
@@ -675,43 +1061,119 @@ namespace Mistral {
       // //}
 
       if(rtype&ACTIVITY) active >>= 3;	
-      else {
-      int var = rtype&CTYPE;
+      
+      if(rtype&RELAXED) {
+	int var = rtype&CTYPE;
+	
+	// if(index[var]>=0) {
+	  
+	//   std::cout << "SHOULD NOT REPOST TWICE!" << std::endl;
+	//   exit(1);
 
-      //std::cout << var << " " << index[var] << " ";
-
-
-      if(index[var]<0) {
-
+	// }
 	// std::cout << on[var] << " repost " ;
 	// display(std::cout);
 	// //std::cout << std::endl; 
+	
+	if(index[var] < 0) {
 
-	un_relax_from(var);
-
-	// std::cout << " " << on[var] << " ";
-
-      } else {
-	un_post_from(var);
+#ifdef _DEBUG_BACKTRACK
+	  std::cout << "c ";
+	  lvl=solver->level;
+	  while(--lvl>=0) std::cout << " ";
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+#endif
+	
+	  un_relax_from(var);
+	}
       }
+      
+      
+      if(rtype&POSTED) {
+	
+	int var = rtype&CTYPE;
+	
+	// if(index[var]<0) {
+	  
+	//   std::cout << "SHOULD NOT RELAX TWICE!" << std::endl;
+	//   exit(1);
+
+	// }
+	
+	if(index[var] >= 0) {
+
+#ifdef _DEBUG_BACKTRACK
+	  std::cout << "c ";
+	  int lvl=solver->level;
+	  while(--lvl>=0) std::cout << " ";
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+#endif
+	  
+	  un_post_from(var);
+	}
       }
-      // //if(id==36) {
-      // print_active();
-      // std::cout << std::endl ;
+      
+      //       else {
+      //       int var = rtype&CTYPE;
+      
+  //       //std::cout << var << " " << index[var] << " ";
+  
+  
+  //       if(index[var]<0) {
+  
+  // 	// std::cout << on[var] << " repost " ;
+  // 	// display(std::cout);
+  // 	// //std::cout << std::endl; 
+  
+  // #ifdef _DEBUG_RELAX
+  //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+  // #endif
+  
+  // 	un_relax_from(var);
+  
+  // 	// std::cout << " " << on[var] << " ";
 
-      // // std::cout << scope[0] << " " << on[0] << std::endl;
-      // // std::cout << scope[1] << " " << on[1] << std::endl;
-      // // std::cout << scope[2] << " " << on[2] << std::endl;
-      // std::cout << std::endl;
-
-      // //}
-
-    }
+  //       } else {
+  
+  
+  // #ifdef _DEBUG_RELAX
+  //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+  // #endif
+  
+  // 	un_post_from(var);
+  //       }
+  //       }
+  // //if(id==36) {
+  // print_active();
+  // std::cout << std::endl ;
+  
+  // // std::cout << scope[0] << " " << on[0] << std::endl;
+  // // std::cout << scope[1] << " " << on[1] << std::endl;
+  // // std::cout << scope[2] << " " << on[2] << std::endl;
+  // std::cout << std::endl;
+  
+  // //}
+  
+#ifdef _DEBUG_BACKTRACK
+      std::cout << "c ";
+      lvl=solver->level;
+      while(--lvl>=0) std::cout << " ";
+  std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
+  print_active();
+  std::cout << std::endl;
+#endif
+   
+}
 
     void update(const int changed_idx, const Event evt) {
+
       if(ASSIGNED(evt) && assign(changed_idx)) {
 
 	
+#ifdef _DEBUG_RELAX
+     std::cout << "[" << std::setw(4) << id << "](" << name() << "): ff notify assignment of " << scope[changed_idx] << std::endl;
+#endif
+
 	// std::cout << " (" << ((active&7)/2) << ") ";
 	// std::cout.flush();
 	// std::cout << on[((active&7)/2)] << " relax " ;
@@ -803,8 +1265,16 @@ namespace Mistral {
 
     virtual void initialise_vars(Solver*);
 
-   virtual void desactivate(const int var) { 
-     active.remove(var);
+    virtual void desactivate(const int var) { 
+
+// #ifdef _DEBUG_RELAX
+//       std::cout // << "[" << std::setw(4) << id << "](" << name() << "): desactivate "
+// 	<< "-"
+// 	<< scope[var] << " " ; //<< std::endl;
+// #endif
+      
+      //active.remove(var);
+      active.reversible_remove(var);
    }
 
     void trigger();
@@ -839,6 +1309,11 @@ namespace Mistral {
       } else {
 	events.initialise(0, changes.capacity-1, false);
       }
+    }
+
+
+    virtual void print_active() {
+      std::cout << active << std::endl;
     }
 
 
@@ -883,44 +1358,186 @@ namespace Mistral {
     }
 
     inline void un_relax() {
-      for(int n=active.size; --n;) {
-	index[active[n]] = on[active[n]]->post(self[active[n]]);
+
+#ifdef _DEBUG_RELAX
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNRELAX " << std::endl;
+#endif
+
+      int i, n;
+      for(n=active.size; --n>=0;) {
+	i = active[n];
+
+	if(index[i]<0) {
+	  
+#ifdef _DEBUG_RELAX
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[i] << std::endl;
+#endif
+	  
+	  index[i] = on[i]->post(self[i]);
+	}
+	
+// #ifdef _DEBUG_RELAX
+// 	else {
+// 	  std::cout << "SHOULD NOT TRY TO post on " << scope[i] << std::endl;
+// 	}
+// #endif
+	
       }
     }
 
     inline void post() {
 
-      solver->save( Constraint(this, type|2) );
+      // save 
+      solver->save( Constraint(this, type|POSTED) );
+      //solver->save( Constraint(this, type|2) );
     
       active.fill();
       for(int i=on.size; --i;) {
 	if(scope[i].is_ground()) {
 	  active.reversible_remove(i);
 	  index[i] = -1;
-	} else index[i] = on[i]->post(self[i]);
+	} else {
+
+#ifdef _DEBUG_RELAX
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[i] << std::endl;
+#endif
+
+	  index[i] = on[i]->post(self[i]);
+	}
       }
     }
 
     inline void un_post() {
-      for(int i=on.size; --i;) {
-	if(index[i]>=0) {
-	  un_post_from(i);
+
+// #ifdef _DEBUG_RELAX
+// 	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNPOST " << std::endl;
+// #endif
+
+//       for(int i=on.size; --i;) {
+// 	if(index[i]>=0) {
+
+// #ifdef _DEBUG_RELAX
+// 	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[i] << std::endl;
+// #endif
+
+// 	  un_post_from(i);
+// 	  // on[i]->relax(index[i]);
+// 	  // index[i] = -1;
+// 	}
+// #ifdef _DEBUG_RELAX
+// 	else {
+// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[i] << std::endl;
+// 	}
+// #endif
+//       }
+
+
+#ifdef _DEBUG_RELAX
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNPOST " << std::endl;
+#endif
+      
+      int var;
+      for(int i=active.size; --i>=0;) {
+	//if(active.contain(i)) {
+	var = active[i];
+	
+	if(index[var]>=0) {
+	  
+#ifdef _DEBUG_RELAX
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[var] << std::endl;
+#endif
+	  
+	  un_post_from(var);
 	  // on[i]->relax(index[i]);
 	  // index[i] = -1;
 	}
+	
+// #ifdef _DEBUG_RELAX
+// 	else {
+// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[var] << std::endl;
+// 	}
+// #endif
       }
+      
     }
 
     inline void relax() {
-      solver->save( Constraint(this, type|1) );
 
-      for(int i=on.size; --i;) {
-	if(active.contain(i)) {
-	  un_post_from(i);
+#ifdef _DEBUG_RELAX
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): RELAX " << std::endl;
+#endif
+
+      //solver->save( Constraint(this, type|1) );
+      solver->save( Constraint(this, type|RELAXED) );
+
+//       for(int i=on.size; --i;) {
+// 	if(active.contain(i)) {
+	  
+// #ifdef _DEBUG_RELAX
+// 	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[i] << std::endl;
+// #endif
+// 	  if(index[i]>=0) {
+// 	    un_post_from(i);
+// 	    // on[i]->relax(index[i]);
+// 	    // index[i] = -1;
+// 	  }
+// #ifdef _DEBUG_RELAX
+// 	else {
+// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[i] << std::endl;
+// 	}
+// #endif
+// 	}    
+//       }
+
+      int var;
+      for(int i=active.size; --i>=0;) {
+	//if(active.contain(i)) {
+	var = active[i];
+	  
+	if(index[var]>=0) {
+	  
+#ifdef _DEBUG_RELAX
+	std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[var] << std::endl;
+#endif
+
+	  un_post_from(var);
 	  // on[i]->relax(index[i]);
 	  // index[i] = -1;
 	}
+// #ifdef _DEBUG_RELAX
+// 	else {
+// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[i] << std::endl;
+// 	}
+// #endif
+      } 
+    }
+
+
+    inline void relax_from(const int var) {
+      //if(index[var] > -1) {
+
+#ifdef _DEBUG_RELAX
+	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): RELAX FROM "  << std::endl;
+#endif
+
+      if(index[var]>=0) {
+	
+	//solver->save( Constraint(this, type|1) );
+	solver->save( Constraint(this, type|RELAXED) );
+	
+	
+#ifdef _DEBUG_RELAX
+	std::cout << "[" << std::setw(4) << id << "](" << name() << "): g2 relax from " << scope[var] << std::endl;
+#endif
+	
+	un_post_from(var);
+      
       }    
+// #ifdef _DEBUG_RELAX
+// 	else {
+// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[var] << std::endl;
+// 	}
+// #endif
     }
 
     virtual PropagationOutcome checker_propagate() { return GlobalConstraint::propagate(); }
@@ -942,21 +1559,51 @@ namespace Mistral {
     bool find_support(const int vri, const int vli);
     bool find_bound_support(const int vri, const int vli);
 
+    inline void notify_assignment(const int var) {
+      
+#ifdef _DEBUG_RELAX
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << " => ";//<< std::endl;
+#endif
+      
+      // if(!active.contain(var)) {
+      
+      //   std::cout << "SHOULD NOT NOTIFY TWICE (" << scope[var] << " in " << scope[var].get_domain() << ")" << std::endl;
+      
+      //   //exit(1);
+      // } else {
+      
+      if(active.contain(var)) {
+	
+	active.reversible_remove(var);
+       
+	if(enforce_nfc1 && active.size == 1) {
+	  relax_from(active.back());
+	}
+	
+      }
+      
+#ifdef _DEBUG_RELAX
+      print_active();
+      std::cout << std::endl;
+#endif
+      
+    }
+
     inline void notify_other_event(const int var, 
 				   const Mistral::Event evt) {
 
       
 
-      if(ASSIGNED(evt) && active.contain(var)) {
+      // if(ASSIGNED(evt) && active.contain(var)) {
 
-	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
-	// 	  << " is assigned -> " ;
+      // 	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
+      // 	// 	  << " is assigned -> " ;
 	
-	active.reversible_remove(var);
+      // 	active.reversible_remove(var);
 	
-	// std::cout << active << std::endl;
+      // 	// std::cout << active << std::endl;
 
-      }
+      // }
 
       if(events.contain(var)) {
 	event_type[var] |= evt;
@@ -969,19 +1616,56 @@ namespace Mistral {
     inline void notify_first_event(const int var, 
 				   const Mistral::Event evt) {
 
-      if(ASSIGNED(evt) && active.contain(var)) {
+      // if(ASSIGNED(evt) && active.contain(var)) {
 
-	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
-	// 	  << " is assigned -> " ;
+      // 	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
+      // 	// 	  << " is assigned -> " ;
 
-	active.reversible_remove(var);
+      // 	active.reversible_remove(var);
 
-	// std::cout << active << std::endl;
+      // 	// std::cout << active << std::endl;
 
-      }
+      // }
 
       events.set_to(var);
       event_type[var] = evt;
+    }
+
+
+    void check_active() {
+      for(int i=on.size; i--;) {
+	if(index[i]>=0) {
+	  if(active.contain(i)) {
+	    if(scope[i].is_ground()) {
+	      std::cout << "[" << std::setw(4) << id << "] " ;
+	      display(std::cout);
+	      std::cout << std::endl;
+	      std::cout << "Warning: " << scope[i] << " = " << scope[i].get_domain()
+			<< " is ground and active!!" << std::endl;
+	      print_active();
+	      std::cout << " :: ";
+	      for(int j=0; j<on.size; ++j)
+		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
+	      std::cout << " (exit on check_active())" << std::endl;
+	      exit(1);
+	    }
+	  } else {
+	    if(!(scope[i].is_ground())) {
+	      std::cout << "[" << std::setw(4) << id << "] " ;
+	      display(std::cout);
+	      std::cout << std::endl;
+	      std::cout << "Warning: " << scope[i] << " in " << scope[i].get_domain()
+			<< " is not ground and not active!!" << std::endl;
+	      print_active();
+	      std::cout << " :: ";
+	      for(int j=0; j<on.size; ++j)
+		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
+	      std::cout << " (exit on check_active())" << std::endl;
+	      exit(1);
+	    }
+	  }
+	}
+      }
     }
 
 
@@ -2510,6 +3194,8 @@ namespace Mistral {
   class ConstraintCliqueNotEqual : public GlobalConstraint {
 
   public:
+
+    //Vector<int> assigned;
     
     /**@name Constructors*/
     //@{

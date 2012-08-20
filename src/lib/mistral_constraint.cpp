@@ -23,12 +23,10 @@
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
+ 
 
 
-//#define _DEBUG_GENPROPAG true
-//#define _DEBUG_MUL (id==7660)
-//#define _DEBUG_MAX (id==288)
-//#define _DEBUG_REWRITE true
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -122,6 +120,7 @@ Mistral::ConstraintImplementation::ConstraintImplementation() {
   //trigger = NULL;
   self = NULL;
   index = NULL;
+  enforce_nfc1 = true;
 }
 
 // Mistral::ConstraintImplementation::ConstraintImplementation(const int a) {
@@ -193,7 +192,7 @@ bool Mistral::ConstraintImplementation::is_triggered_on(const int i, const int t
 
 void Mistral::GlobalConstraint::initialise_vars(Solver *s) {
   for(unsigned int i=0; i<scope.size; ++i) {
-    scope[i].initialise(s, false);
+    scope[i].initialise(s, 1);
 
     //std::cout << "INITIALISE " << scope[i] << " => " << get_solver()->variables[scope[i].id()] << std::endl;
 
@@ -202,47 +201,109 @@ void Mistral::GlobalConstraint::initialise_vars(Solver *s) {
 
 void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
-  //std::cout << "initial post of: " << this << std::endl;
+// #ifdef _DEBUG_RELAX
+//   std::cout << "[" << std::setw(4) << id << "]: first post on: " ;
+// #endif
 
-  //std::cout << on << std::endl;
+//   solver = s;
+//   // for each of its variables
+//   self = new Constraint[on.size];
+//   index = new int[on.size];
+//   for(unsigned int i=0; i<on.size; ++i) {
+//     //_scope[i].initialise(s, false);
+//     self[i] = Constraint(this, i|type);
+//     //post_on(i);
+    
+//     Constraint c = self[i];
+//     c.data |= POSTED;
+
+//     solver->save( c );
+
+//     index[i] = -1;
+
+//     //index[i] = on[i]->post(self[i]);
+//     //if(_scope[i].domain_type != CONST_VAR) {
+//     //if(!(_scope[i].is_constant())) {
+//     if(!(_scope[i].is_ground())) {
+      
+//       //std::cout << "yes" << std::endl;
+
+// #ifdef _DEBUG_RELAX
+//       std::cout << _scope[i] << " " ;
+// #endif
+
+//       un_relax_from(i);
+      
+      
+//     }  
+//     else {
+      
+//       //std::cout << "no" << std::endl;
+
+//       desactivate(i);
+       
+//     } 
+
+//     // else {
+
+//     //   //std::cout << "no" << std::endl;
+//     // }
+//   }
+
+// #ifdef _DEBUG_RELAX
+//   std::cout << std::endl;
+
+// #endif
+
+//   //mark_domain();
+
+
+#ifdef _DEBUG_RELAX
+  std::cout << "[" << std::setw(4) << id << "]: first post on: " ;
+#endif
 
   solver = s;
   // for each of its variables
   self = new Constraint[on.size];
   index = new int[on.size];
+
+  // First we go through the variables to check whether they are ground.
+  // If so, we "desactivate" the corresponding var index.
+  // Also, if there is only one active variable and the constraint enforces nfc1, we do not post it at all.
+  int nb_actives = on.size;
   for(unsigned int i=0; i<on.size; ++i) {
-    //_scope[i].initialise(s, false);
+    index[i] = -1;
     self[i] = Constraint(this, i|type);
-    //post_on(i);
-    solver->save( self[i] );
-
-    //std::cout << "POST ON " << _scope[i] << "? " ;
-
-    
-    //index[i] = on[i]->post(self[i]);
-    //if(_scope[i].domain_type != CONST_VAR) {
-    //if(!(_scope[i].is_constant())) {
-    if(!(_scope[i].is_ground())) {
-      
-      //std::cout << "yes" << std::endl;
-
-      un_relax_from(i);
-      
-      
-    }  
-    else {
-      
-      //std::cout << "no" << std::endl;
-
+    if(_scope[i].is_ground()) {
+      --nb_actives;
       desactivate(i);
-       
-    } 
-
-    // else {
-
-    //   //std::cout << "no" << std::endl;
-    // }
+    }
   }
+
+  // Now we post the constraint on the active variables (provided that there are at least 2)
+  if(!enforce_nfc1 || nb_actives>1) {
+    Constraint c;
+
+    for(unsigned int i=0; i<on.size; ++i) {
+      if(!(_scope[i].is_ground())) {
+	
+        c = self[i];
+	c.data |= POSTED;
+
+	solver->save( c );
+
+#ifdef _DEBUG_RELAX
+	std::cout << _scope[i] << " " ;
+#endif
+
+	un_relax_from(i);
+      }  
+    }
+  }
+
+#ifdef _DEBUG_RELAX
+  std::cout << std::endl;
+#endif
 
   //mark_domain();
 }
@@ -1296,10 +1357,10 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate(const int cha
 
   //std::cout << "\n propagate changes on " << scope[changed_idx] << " to " << scope[1-changed_idx] << std::endl;
 
-  active^=(1 << changed_idx);
+  //active^=(1 << changed_idx);
   int var = 1-changed_idx;
   PropagationOutcome wiped_idx = (scope[var].remove(scope[changed_idx].get_min()) == FAIL_EVENT ? FAILURE(var) : CONSISTENT);
-  if(IS_OK(wiped_idx)) relax_from(var);
+  //if(IS_OK(wiped_idx)) relax_from(var);
   return wiped_idx;
 }
 
@@ -1784,18 +1845,21 @@ Mistral::ConstraintDisjunctive::ConstraintDisjunctive(Variable x, Variable y, co
   : BinaryConstraint(x,y) { 
   processing_time[0] = p0; 
   processing_time[1] = p1;
+  enforce_nfc1 = false;
 }
 
 Mistral::ConstraintDisjunctive::ConstraintDisjunctive(Vector< Variable >& scp, const int p0, const int p1) 
   : BinaryConstraint(scp) { 
   processing_time[0] = p0; 
   processing_time[1] = p1;
+  enforce_nfc1 = false;
 }
 
 Mistral::ConstraintDisjunctive::ConstraintDisjunctive(std::vector< Variable >& scp, const int p0, const int p1) 
   : BinaryConstraint(scp) { 
   processing_time[0] = p0; 
   processing_time[1] = p1;
+  enforce_nfc1 = false;
 }
 
 void Mistral::ConstraintDisjunctive::initialise() {
@@ -1810,17 +1874,29 @@ void Mistral::ConstraintDisjunctive::initialise() {
   //stress = 0;
 }
 
+
+
 void Mistral::ConstraintDisjunctive::decide(const int choice) {
+
+#ifdef _DEBUG_RELAX
+      std::cout << "[" << std::setw(4) << id << "](" << name() << "): force relax" << std::endl;
+#endif
+
   relax();
+  //active = 0;
 
   if(choice==1) {
 
-    //std::cout << "add precedence " << precedence[1] << std::endl;
+#ifdef _DEBUG_DISJUNCTIVE
+    std::cout << "c add precedence " << precedence[1] << std::endl;
+#endif
 
     get_solver()->add(precedence[1]);
   } else {
 
-    //std::cout << "add precedence " << precedence[0] << std::endl;
+#ifdef _DEBUG_DISJUNCTIVE
+    std::cout << "c add precedence " << precedence[0] << std::endl;
+#endif
 
     get_solver()->add(precedence[0]);
   }
@@ -1851,16 +1927,33 @@ Mistral::PropagationOutcome Mistral::ConstraintDisjunctive::propagate(const int 
 								      const Event evt) {
   int hold = 3;
 
+
+  // if(id == 11) {
+  //   std::cout << "propagate " ;
+  //   display(std::cout);
+  //   std::cout << " because of " << event2str(evt) << " on " << scope[changed_idx] << std::endl;
+  // }
+
+// if(id == 11) 
+//   std::cout << scope[1].get_min() << " + " << processing_time[1] << " ?> " << scope[0].get_max() << std::endl;
+
   // check if prec[1] is violated (x1 + p1 > x0).
   //if(changed_idx && LB_CHANGED(evt))
   if(scope[1].get_min()+processing_time[1] > scope[0].get_max()) {
     hold &= 2;
   }
 
+// if(id == 11) 
+//   std::cout << scope[0].get_min() << " + " << processing_time[0] << " ?> " << scope[1].get_max() << std::endl;
+
   // check if prec[1] is violated (x0 + p0 > x1).
   if(scope[0].get_min()+processing_time[0] > scope[1].get_max()) {
     hold &= 1;
   }
+
+// if(id == 11) {
+//   std::cout << "HOLD: " << hold << std::endl;
+//  }
 
   if(!hold) return FAILURE(0);
   if(hold<3) {
@@ -2051,7 +2144,7 @@ Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
   return CONSISTENT;
 }
 
-//#define _DEBUG_RDISJUNCTIVE true
+
 
 Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate(const int changed_idx, const Event evt) {
   PropagationOutcome wiped = CONSISTENT;
@@ -3059,7 +3152,7 @@ void Mistral::ConstraintLex::initialise() {
 }
 
 
-//#define _DEBUG_LEX true
+
 
 Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
@@ -3277,6 +3370,8 @@ void Mistral::PredicateAdd::initialise() {
 }
 
 Mistral::PropagationOutcome Mistral::PredicateAdd::rewrite() {
+  // TODO: recode that
+  
   Mistral::PropagationOutcome wiped = propagate();
 
   VarArray tmp;
@@ -3305,7 +3400,6 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
   return wiped;
 }
 
-//#define _DEBUG_ADD true
 
 Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_idx, 
 							     const Event evt) {      
@@ -3450,7 +3544,9 @@ void Mistral::PredicateMul::initialise() {
 }
 
 Mistral::PropagationOutcome Mistral::PredicateMul::rewrite() {
-  Mistral::PropagationOutcome wiped = propagate();
+  // TODO: recode that
+  
+Mistral::PropagationOutcome wiped = propagate();
 
   VarArray tmp;
   if(active.size == 2) {
@@ -4074,7 +4170,6 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 // }
 
 
-// #define _DEBUG_DIV true
 
 
 // Mistral::PropagationOutcome Mistral::PredicateDiv::revise_integer_division(const int X, const int Y, const int Z) {
@@ -5164,12 +5259,12 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::rewrite() {
   RewritingOutcome r_evt = NO_EVENT; 
 
 
-  std::cout << scope.size << " " << wpos << " " << wneg << " " << lower_bound << " " << upper_bound << std::endl;
+  //std::cout << scope.size << " " << wpos << " " << wneg << " " << lower_bound << " " << upper_bound << std::endl;
 
   // check if it can be rewritten as an ADD predicate
   if(scope.size == 3 && wpos == 1 && wneg == 1 && lower_bound == 0 && upper_bound == 0 ) {
 
-    std::cout <<  "RELAX" << std::endl;
+    //std::cout <<  "RELAX" << std::endl;
 
 
     r_evt = SUPPRESSED;
@@ -5200,7 +5295,6 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::rewrite() {
 }
 
 
-//#define _DEBUG_WEIGHTEDSUM true
 
 Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate() 
 {
@@ -5639,8 +5733,6 @@ Mistral::PredicateElement::~PredicateElement()
 { 
 }
 
-//#define _DEBUG_ELEMENT true
-//#define _DEBUG_ELEMENT ((id==0))
 
 Mistral::PropagationOutcome Mistral::PredicateElement::propagate() 
 {
@@ -5998,13 +6090,14 @@ Mistral::ConstraintCliqueNotEqual::~ConstraintCliqueNotEqual()
 {
 }
 
-//#define _DEBUG_CLIQUENOTEQUAL true
+
 
 Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate() 
 {
 
   unsigned int i, j, n=active.size, m;
   int active_var, value;
+  Event evt;
 
 #ifdef _DEBUG_CLIQUENOTEQUAL
   std::cout << "propagate " << this << std::endl;
@@ -6046,11 +6139,16 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
       std::cout << "    " << scope[active_var] << "-" << value << " ";
 #endif
 
-      if(scope[active_var].remove(value) == FAIL_EVENT) {
+      evt = scope[active_var].remove(value);
+      if(evt == FAIL_EVENT) {
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	std::cout << "FAIL!" << std::endl;
 #endif
+	//assigned.clear();
 	return FAILURE(active_var);
+      } else if(ASSIGNED(evt)) {
+	//assigned.add(active_var);
+	active.reversible_remove(active_var);
       }
 #ifdef _DEBUG_CLIQUENOTEQUAL
       else std::cout << "OK!" << std::endl;
@@ -6060,6 +6158,9 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 
   /// The following is to ensure idempotency
   m = active.size;
+
+  //std::cout << n << " " << m << std::endl;
+
   while(m < n) {
     for(i=m; i<n; ++i) {
       value = scope[active[i]].get_min();
@@ -6479,8 +6580,6 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
 }
 
 
-//#define _DEBUG_MIN true
-//#define _DEBUG_MIN ((id==23))
 
 Mistral::PredicateMin::PredicateMin(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }
 
@@ -6779,8 +6878,6 @@ std::ostream& Mistral::PredicateMin::display(std::ostream& os) const {
 
 
 
-//#define _DEBUG_MAX true
-//#define _DEBUG_MAX ((id==23))
 
 Mistral::PredicateMax::PredicateMax(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }
 
