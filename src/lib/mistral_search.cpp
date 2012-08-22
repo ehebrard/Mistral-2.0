@@ -45,7 +45,9 @@ Mistral::ConsolidateListener::ConsolidateListener(Mistral::Solver *s)
 }
 
 
-Mistral::ConsolidateListener::~ConsolidateListener() {}
+Mistral::ConsolidateListener::~ConsolidateListener() {
+  //std::cout << "in delete consolidate manager" << std::endl;
+}
 
 void Mistral::ConsolidateListener::notify_add_var() {
   Variable x = solver->variables.back();

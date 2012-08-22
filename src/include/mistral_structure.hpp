@@ -56,17 +56,305 @@ namespace Mistral {
 
 
 
+//   /**********************************************
+//    * Vector
+//    **********************************************/
+//   /*! \class Vector
+//     \brief Simple vector class     
+//   */
+  
+//   template <class DATA_TYPE>
+//   class Vector {
+//   public:
+
+//     /*!@name Parameters*/
+//     //@{
+//     DATA_TYPE* stack_;
+//     unsigned int capacity;
+//     unsigned int size;
+//     //@}
+
+//     /*!@name Constructor*/
+//     //@{
+//     Vector()
+//     {
+//       capacity = 0;
+//       size = 0;
+//       stack_ = NULL;
+//     }
+
+//     Vector(const Vector<DATA_TYPE>& s)
+//     {
+//       capacity = s.size;
+//       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+//       //stack_ = new DATA_TYPE[capacity];
+//       for(size = 0; size<capacity; ++size)
+// 	stack_[size] = s[size];
+//     }
+
+//     Vector(const int n)
+//     {
+//       capacity = n;
+//       size = n;
+//       if( capacity ) {
+// 	stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+// 	//stack_ = new DATA_TYPE[capacity];
+// 	int f = sizeof(DATA_TYPE)/sizeof(int);
+// 	std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+//       }
+//       else stack_ = NULL;
+//     }
+//     //@}
+
+//     /*!@name Destructor*/
+//     //@{  
+//     virtual ~Vector()
+//     {
+// #ifdef _DEBUG_MEMORY
+//       std::cout << "c delete vector: " << size << " " << capacity << " " // ;
+//       // display(std::cout);
+//       // std::cout 
+// 	<< std::endl;
+// #endif
+//       free( stack_ );
+//       //delete [] stack_;
+//     }
+//     //@}
+
+//     /*!@name Initialisation*/
+//     //@{
+//     void initialise(const unsigned int c)
+//     {
+//       size = 0;
+//       capacity = c;
+
+//       //std::cout << "init(c): " << capacity << std::endl;
+
+//       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      
+//       // stack_ = new DATA_TYPE[capacity];
+      
+//       int f = sizeof(DATA_TYPE)/sizeof(int);
+//       std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+
+//       //DATA_TYPE x(0);
+//       //std::fill(stack_, stack_+capacity, x);
+//     }
+
+//     void initialise(const unsigned int s, const unsigned int c)
+//     {
+//       size = s;
+//       capacity = c;
+//       stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+
+//       //std::cout << "init(s,c): " << capacity << std::endl;
+
+//       // stack_ = new DATA_TYPE[capacity];
+      
+//       int f = sizeof(DATA_TYPE)/sizeof(int);
+//       std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      
+//       //DATA_TYPE x(0);
+//       //std::fill(stack_, stack_+capacity, x);
+//     }
+
+//     void extendStack( const unsigned int l=0 )
+//     {
+
+//       //std::cout << "extend stack!! " << this << std::endl;
+
+//       unsigned int increment = (l ? l : (capacity+1) << 1);
+//       capacity += increment;
+
+//       // DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+//       // std::cout << (int*)new_stack << " " << (int*)stack_ << std::endl;
+//       // stack_ = new_stack;
+
+
+//       DATA_TYPE* new_stack = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+//       // for(int i=0; i<capacity-increment; ++i)
+//       // 	new_stack[i] = stack_[i];
+
+//       memcpy(new_stack, stack_, (capacity-increment)*sizeof(DATA_TYPE));
+
+//       //memcpy((int*)new_stack, (int*)stack_, (capacity-increment)*f);
+//       free(stack_); 
+//       stack_ = new_stack;
+
+//       // std::cout << "extend: " << capacity << std::endl;
+     
+//       // DATA_TYPE* new_stack_ = new DATA_TYPE[capacity];
+//       // memcpy(new_stack_, stack_, capacity-increment);
+//       // delete [] stack_; 
+//       // stack_ = new_stack_;
+      
+//       int f = sizeof(DATA_TYPE)/sizeof(int);
+//       std::fill((int*)stack_+(capacity-increment)*f, (int*)stack_+(capacity*f), 0);
+
+
+//       //std::cout << " ==> " << this << std::endl;
+
+//       //DATA_TYPE x(0);
+//       //std::fill(stack_+capacity-increment, stack_+capacity, x);
+//     }
+
+//     void resize( const unsigned int l )
+//     {
+//       if( capacity < l ) {
+// 	capacity = l;
+// 	DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+// 	stack_ = new_stack;
+
+// 	// std::cout << "resize: " << l << std::endl;
+	
+// 	// DATA_TYPE* new_stack_ = new DATA_TYPE[l];
+// 	// memcpy(new_stack_, stack_, capacity);
+// 	// delete [] stack_;
+// 	// stack_ = new_stack_;
+
+// 	// capacity = l;
+//       }
+//       size = l;
+//     }
+//     //@}
+
+//     /*!@name Accessors*/
+//     //@{
+//     inline int empty() const
+//     {
+//       return !size;
+//     }
+  
+//     inline void add(DATA_TYPE x)
+//     {
+//       if( capacity == size ) 
+// 	extendStack();
+//       stack_[size++] = x;
+//     }
+
+//     inline void secure(const DATA_TYPE x) 
+//     {
+//       if( capacity == size ) 
+// 	extendStack();
+//     }
+
+//     inline void fast_add(DATA_TYPE x)
+//     {
+//       stack_[size++] = x;
+//     }
+
+//     inline void push_back(DATA_TYPE x)
+//     {
+//       if( capacity == size ) 
+// 	extendStack();
+//       stack_[size++] = x;
+//     }
+
+//     inline DATA_TYPE pop_until(const unsigned int level)
+//     {
+//       size = level;
+//       return stack_[size];
+//     }
+
+//     inline DATA_TYPE pop()
+//     {
+//       return stack_[--size];
+//     }
+
+//     inline void pop(DATA_TYPE& x)
+//     {
+//       x = stack_[--size];
+//     }
+
+//     inline void clear()
+//     {
+//       size = 0;
+//     }
+
+//     inline void remove(const unsigned int i)
+//     {  
+//       stack_[i] = stack_[--size];
+//     }
+
+//     inline void remove_elt(DATA_TYPE& elt)
+//     {
+//       unsigned int j=size;
+//       while(j && stack_[--j] != elt);
+//       stack_[j] = stack_[--size];
+//     }
+
+//     inline void setBack(const DATA_TYPE& x, const int k=1)
+//     {
+//       stack_[size-k] = x;
+//     }
+
+//     inline DATA_TYPE& front(const int k=0)
+//     {
+//       return stack_[k];
+//     }
+
+//     inline const DATA_TYPE front(const int k=0) const
+//     {
+//       return stack_[k];
+//     }
+
+//     inline DATA_TYPE& back(const int k=1)
+//     {
+//       return stack_[size-k];
+//     }
+
+//     inline const DATA_TYPE back(const int k=1) const
+//     {
+//       return stack_[size-k];
+//     }
+
+//     inline DATA_TYPE& operator[](const int i)
+//     {
+//       return stack_[i];
+//     }
+
+//     inline const DATA_TYPE operator[](const int i) const
+//     {
+//       return stack_[i];
+//     }
+
+//     inline Vector< DATA_TYPE >& operator=(const Vector< DATA_TYPE >& x)
+//     {
+//       initialise(0, x.capacity);
+//       for(unsigned int i=0; i<x.size; ++i)
+// 	add(x[i]);
+//       return *this;
+//     }
+//     //@}
+
+//     /*!@name Printing*/
+//     //@{
+//     std::ostream& display(std::ostream& os) const {
+//       os << "[";
+//       if(size) os << stack_[0] ;
+//       for(unsigned int i=1; i<size; ++i)
+// 	os << " " << stack_[i];
+//       os << "]";
+//       return os;
+//     }
+//     //@}
+
+//   };
+
+
+
   /**********************************************
    * Vector
    **********************************************/
   /*! \class Vector
     \brief Simple vector class     
   */
+  //int global = 0;
   
   template <class DATA_TYPE>
   class Vector {
   public:
-
+    
     /*!@name Parameters*/
     //@{
     DATA_TYPE* stack_;
@@ -86,8 +374,8 @@ namespace Mistral {
     Vector(const Vector<DATA_TYPE>& s)
     {
       capacity = s.size;
-      stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
-      //stack_ = new DATA_TYPE[capacity];
+      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      stack_ = new DATA_TYPE[capacity];
       for(size = 0; size<capacity; ++size)
 	stack_[size] = s[size];
     }
@@ -97,10 +385,11 @@ namespace Mistral {
       capacity = n;
       size = n;
       if( capacity ) {
-	stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
-	//stack_ = new DATA_TYPE[capacity];
-	int f = sizeof(DATA_TYPE)/sizeof(int);
-	std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+	//stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+	stack_ = new DATA_TYPE[capacity];
+	//int f = sizeof(DATA_TYPE)/sizeof(int);
+	//std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+	std::fill(stack_, stack_+capacity, (DATA_TYPE)0);
       }
       else stack_ = NULL;
     }
@@ -110,8 +399,14 @@ namespace Mistral {
     //@{  
     virtual ~Vector()
     {
-      free( stack_ );
-      //delete [] stack_;
+#ifdef _DEBUG_MEMORY
+      std::cout << "c delete vector: " << size << " " << capacity << " " // ;
+      // display(std::cout);
+      // std::cout 
+	<< std::endl;
+#endif
+      //free( stack_ );
+      delete [] stack_;
     }
     //@}
 
@@ -124,12 +419,14 @@ namespace Mistral {
 
       //std::cout << "init(c): " << capacity << std::endl;
 
-      stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
       
-      // stack_ = new DATA_TYPE[capacity];
+      stack_ = new DATA_TYPE[capacity];
       
-      int f = sizeof(DATA_TYPE)/sizeof(int);
-      std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      //int f = sizeof(DATA_TYPE)/sizeof(int);
+      //std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      std::fill(stack_, stack_+capacity, DATA_TYPE());
+      
 
       //DATA_TYPE x(0);
       //std::fill(stack_, stack_+capacity, x);
@@ -139,14 +436,16 @@ namespace Mistral {
     {
       size = s;
       capacity = c;
-      stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      stack_ = new DATA_TYPE[capacity];
 
       //std::cout << "init(s,c): " << capacity << std::endl;
 
       // stack_ = new DATA_TYPE[capacity];
       
-      int f = sizeof(DATA_TYPE)/sizeof(int);
-      std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+      std::fill(stack_, stack_+capacity, DATA_TYPE());
+      // int f = sizeof(DATA_TYPE)/sizeof(int);
+      // std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
       
       //DATA_TYPE x(0);
       //std::fill(stack_, stack_+capacity, x);
@@ -165,14 +464,19 @@ namespace Mistral {
       // stack_ = new_stack;
 
 
-      DATA_TYPE* new_stack = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
-      // for(int i=0; i<capacity-increment; ++i)
-      // 	new_stack[i] = stack_[i];
+      //DATA_TYPE* new_stack = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+      DATA_TYPE* new_stack = new DATA_TYPE[capacity];
+      for(unsigned int i=0; i<capacity-increment; ++i)
+       	new_stack[i] = stack_[i];
 
-      memcpy(new_stack, stack_, (capacity-increment)*sizeof(DATA_TYPE));
+      //memcpy(new_stack, stack_, (capacity-increment)*sizeof(DATA_TYPE));
 
       //memcpy((int*)new_stack, (int*)stack_, (capacity-increment)*f);
-      free(stack_); 
+      //free(stack_); 
+
+      //std::cerr << size << " " << capacity << " " << (int*)stack_ << std::endl;
+
+      delete [] stack_;
       stack_ = new_stack;
 
       // std::cout << "extend: " << capacity << std::endl;
@@ -182,8 +486,9 @@ namespace Mistral {
       // delete [] stack_; 
       // stack_ = new_stack_;
       
-      int f = sizeof(DATA_TYPE)/sizeof(int);
-      std::fill((int*)stack_+(capacity-increment)*f, (int*)stack_+(capacity*f), 0);
+      std::fill(stack_+capacity-increment, stack_+capacity, DATA_TYPE());
+      // int f = sizeof(DATA_TYPE)/sizeof(int);
+      // std::fill((int*)stack_+(capacity-increment)*f, (int*)stack_+(capacity*f), 0);
 
 
       //std::cout << " ==> " << this << std::endl;
@@ -195,18 +500,19 @@ namespace Mistral {
     void resize( const unsigned int l )
     {
       if( capacity < l ) {
-	capacity = l;
-	DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
-	stack_ = new_stack;
+	//capacity = l;
+	// DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
+	// stack_ = new_stack;
 
 	// std::cout << "resize: " << l << std::endl;
 	
-	// DATA_TYPE* new_stack_ = new DATA_TYPE[l];
-	// memcpy(new_stack_, stack_, capacity);
-	// delete [] stack_;
-	// stack_ = new_stack_;
+	DATA_TYPE* new_stack_ = new DATA_TYPE[l];
+	memcpy(new_stack_, stack_, capacity);
+	delete [] stack_;
+	stack_ = new_stack_;
+	std::fill(stack_+capacity, stack_+l, (DATA_TYPE)0);
 
-	// capacity = l;
+	capacity = l;
       }
       size = l;
     }
@@ -314,9 +620,17 @@ namespace Mistral {
 
     inline Vector< DATA_TYPE >& operator=(const Vector< DATA_TYPE >& x)
     {
-      initialise(0, x.capacity);
+      if(!stack_) {
+	initialise(0, x.capacity);
+      } else if(capacity<x.size) {
+	extendStack(x.capacity-capacity);
+      }
+
+      clear();
+
       for(unsigned int i=0; i<x.size; ++i)
 	add(x[i]);
+      
       return *this;
     }
     //@}
@@ -803,6 +1117,14 @@ template < int N, class T >
     //@{  
     virtual ~Vector2()
     {
+
+#ifdef _DEBUG_MEMORY
+      std::cout << "c delete vector: " << size << " " << capacity << " " // ;
+      // display(std::cout);
+      // std::cout 
+	<< std::endl;
+#endif
+
       delete [] stack_;
       //free( stack_ );
     }
@@ -5172,6 +5494,11 @@ template < int N, class T >
     return x.display(os);
   }
 
+  // template < class DATA_TYPE > 
+  // std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >& x) {
+  //   return x.display(os);
+  // }
+
   template < class MAIN_TYPE, class AUX_TYPE > 
   std::ostream& operator<< (std::ostream& os, const BiStack< MAIN_TYPE, AUX_TYPE >& x) {
     return x.display(os);
@@ -5249,6 +5576,11 @@ template < int N, class T >
   std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >* x) {
     return (x ? x->display(os) : (os << "nill"));
   }
+
+  // template < class DATA_TYPE > 
+  // std::ostream& operator<< (std::ostream& os, const Vector< DATA_TYPE >* x) {
+  //   return (x ? x->display(os) : (os << "nill"));
+  // }
 
   template < class MAIN_TYPE, class AUX_TYPE > 
   std::ostream& operator<< (std::ostream& os, const BiStack< MAIN_TYPE, AUX_TYPE >* x) {

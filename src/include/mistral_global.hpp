@@ -74,6 +74,7 @@ namespace Mistral {
   //#define _DEBUG_MIN ((id==23))
   //#define _DEBUG_MAX true
   //#define _DEBUG_MAX ((id==368))
+  //#define _DEBUG_MEMORY true
   
 
   

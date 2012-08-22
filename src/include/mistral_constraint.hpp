@@ -3313,8 +3313,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   std::ostream& operator<< (std::ostream& os, const ConstraintImplementation* x);
 
 
-  std::ostream& operator<< (std::ostream& os, const ConstraintTriggerArray& x);
-  std::ostream& operator<< (std::ostream& os, const ConstraintTriggerArray* x);
+  std::ostream& operator<< (std::ostream& os,  ConstraintTriggerArray& x);
+  std::ostream& operator<< (std::ostream& os,  ConstraintTriggerArray* x);
 
 
 }

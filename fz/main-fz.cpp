@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   options["--val_heuristic"] = "guided";
   options["--restart"] = "luby";
   options["--seed"] = "123456";
-  options["--limit"] = "10";
+  options["--limit"] = "0";
   options["--verbose"] = "0";
   options["--rewrite"] = "0";
 
@@ -102,10 +102,10 @@ int main(int argc, char *argv[])
   FlatZinc::Printer p;
   FlatZinc::FlatZincModel *fm = 0L;
 
-  //FlatZinc::SolutionPrinter *sp = 
 
   fm = parse(args.back(), s, p);
-  s.add(new FlatZinc::SolutionPrinter(&p, fm, &s));
+  FlatZinc::SolutionPrinter *sp = new FlatZinc::SolutionPrinter(&p, fm, &s);
+  s.add(sp);
 
   if( !fm ) return 0;
   double parse_time = get_run_time() - cpu_time;
@@ -150,11 +150,12 @@ int main(int argc, char *argv[])
 
   map<string,string>::iterator ito;
 
-  double cutoff = atof(options["--limit"].c_str()) - parse_time;
+  double total_time = atof(options["--limit"].c_str());
+  double cutoff = (total_time>0 ? total_time - parse_time : 0);
 #ifdef _FLATZINC_OUTPUT
 	cout << "%";
 #endif
-	std::cout << " d CUTOFF " << cutoff << std::endl;
+	if(cutoff>0) std::cout << " d CUTOFF " << cutoff << std::endl;
 
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
   s.initialise_random_seed(atoi(options["--seed"].c_str()));
@@ -173,5 +174,6 @@ int main(int argc, char *argv[])
 #endif
 
   delete fm;
+  delete sp;
   return 0;
 }

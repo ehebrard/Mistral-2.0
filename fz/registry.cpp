@@ -53,7 +53,7 @@ using namespace std;
 namespace FlatZinc {
 
   void report_unsupported(const char* con) {
-    std::cout << con << " is not yet supported!" << std::endl;
+    std::cout << "% " << con << " is not yet supported!" << std::endl;
     exit(1);
   }
 
@@ -106,13 +106,14 @@ namespace FlatZinc {
       return ia;
     }
 
-    inline vector<int> arg2boolargs(AST::Node* arg, int offset = 0) {
+    inline Vector<int> arg2boolargs(AST::Node* arg, int offset = 0) {
       AST::Array* a = arg->getArray();
-      vector<int> ia(a->a.size()+offset);
+      Vector<int> ia(a->a.size()+offset);
       for (int i=offset; i--;)
         ia[i] = 0;
-      for (int i=a->a.size(); i--;)
+      for (int i=a->a.size(); i--;) {
         ia[i+offset] = a->a[i]->getBool();
+      }
       return ia;
     }
 
@@ -552,6 +553,13 @@ namespace FlatZinc {
       int c = ce[2]->getInt();
       s.add( Sum(iv, ia, c, c) );
     }
+    void p_bool_lin_eq(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      Vector<int> ia = arg2intargs(ce[0]);
+      Vector<Variable> iv = arg2boolvarargs(s, m, ce[1]);
+      int c = ce[2]->getInt();
+      s.add( Sum(iv, ia, c, c) );
+    }
     void p_int_lin_eq_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
@@ -578,6 +586,13 @@ namespace FlatZinc {
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
+      int c = ce[2]->getInt();
+      s.add( Sum(iv, ia, -INFTY, c) );
+    }
+    void p_bool_lin_le(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      Vector<int> ia = arg2intargs(ce[0]);
+      Vector<Variable> iv = arg2boolvarargs(s, m, ce[1]);
       int c = ce[2]->getInt();
       s.add( Sum(iv, ia, -INFTY, c) );
     }
@@ -794,6 +809,9 @@ namespace FlatZinc {
       Variable selector = getIntVar(s, m, ce[0]);
       Variable result = getIntVar(s, m, ce[2]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
+
+      s.add(selector > 0);
+      s.add(selector <= iv.size);
       s.add(Element(iv, selector, 1) == result);
     }
     void p_array_set_element(Solver& s, FlatZincModel& m,
@@ -801,14 +819,50 @@ namespace FlatZinc {
       Variable selector = getIntVar(s, m, ce[0]);
       Variable result = getSetVar(s, m, ce[2]);
       Vector<Variable> sv = arg2setvarargs(s, m, ce[1]);
+
+      report_unsupported("p_array_set_element");
+
+      std::cout << selector.get_domain() << std::endl;
+      std::cout << result << std::endl;
+      std::cout << sv << std::endl;
+
+
+      s.add(selector > 0);
+      s.add(selector <= sv.size);
       s.add(ElementSet(sv, selector, 1) == result);
+    }
+    void p_array_var_bool_element(Solver& s, FlatZincModel& m,
+                                  const ConExpr& ce, AST::Node* ann) {
+      Variable selector = getIntVar(s, m, ce[0]);
+      Variable result = getBoolVar(s, m, ce[2]);
+      Vector<Variable> iv = arg2boolvarargs(s, m, ce[1]);
+
+      s.add(selector > 0);
+      s.add(selector <= iv.size);
+      s.add(Element(iv, selector, 1) == result);
     }
     void p_array_bool_element(Solver& s, FlatZincModel& m,
                               const ConExpr& ce, AST::Node* ann) {
       Variable selector = getIntVar(s, m, ce[0]);
-      Variable result = getIntVar(s, m, ce[2]);
-      Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      s.add(Element(iv, selector, 1) == result);
+      Variable result = getBoolVar(s, m, ce[2]);
+      Vector<int> iv = arg2boolargs(ce[1]);
+      Vector<int> good_values;
+
+      std::cout << "possible values: " << selector.get_domain() << std::endl;
+      std::cout << "boolargs: " << iv << std::endl;
+      
+      for(unsigned int i=0; i<iv.size; ++i) {
+        if(iv[i]) good_values.add(i+1);
+      }
+
+      std::cout << "good values: " << good_values << std::endl;
+
+      s.add(selector > 0);
+      s.add(selector <= iv.size);
+      s.add(Member(selector, good_values) == result);
+
+      //exit(1);
+      //s.add(Element(iv, selector, 1) == result);
     }
 
     /* alldiff */
@@ -822,7 +876,7 @@ namespace FlatZinc {
     void p_cumulative(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
 
-    	  report_unsupported("p_cumulative");
+      report_unsupported("p_cumulative");
       // vector<Variable> start = arg2intvarargs(s, m, ce[0]);
       // vector<Variable> dur = arg2intvarargs(s, m, ce[1]);
       // vector<Variable> req = arg2intvarargs(s, m, ce[2]);
@@ -897,14 +951,31 @@ namespace FlatZinc {
     //     return Lit(v.eqi(s,1));
     // }
 
+    void p_array_bool_xor(Solver& s, FlatZincModel& m,
+                          const ConExpr& ce, AST::Node* ann) {
+
+      Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
+      Variable count(0, bv.size/2);
+      Vector<int> coefs(bv.size+1);
+      for(unsigned int i=0; i<bv.size; ++i) coefs[i] = 1;
+      coefs[bv.size] = -2;
+      bv.add(count);
+        
+      if(!bv.empty())
+        s.add(Sum(bv, coefs, 1, 1));
+    
+    }
+
     void p_array_bool_and(Solver& s, FlatZincModel& m,
                           const ConExpr& ce, AST::Node* ann) {
       
-
        Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
        Variable r = getBoolVar(s, m, ce[1]);
 
-       s.add((BoolSum(bv) == bv.size) == r);
+       if(!bv.empty())
+         s.add((BoolSum(bv) == bv.size) == r);
+       else
+         s.add(r == 1);
 
       // vec<Lit> up;
       // up.push( safeLit(s, r) );
@@ -932,11 +1003,16 @@ namespace FlatZinc {
 
       // std::cout << r.get_domain() << std::endl;
 
-      if(r.get_min() == 1 && bv.size == 2) {
-        s.add( bv[0] || bv[1] );
-      } else { 
-        s.add((BoolSum(bv) >= 1) == r);
+      if(!bv.empty()) {
+        if(r.get_min() == 1 && bv.size == 2) {
+          s.add( bv[0] || bv[1] );
+        } else { 
+          s.add((BoolSum(bv) >= 1) == r);
+        }
       }
+      else
+        s.add(r == 0);
+
 
 
       // vec<Lit> up;
@@ -1436,7 +1512,8 @@ namespace FlatZinc {
         registry().add("array_var_int_element", &p_array_int_element);
         registry().add("array_int_element", &p_array_int_element);
         registry().add("array_set_element", &p_array_set_element);
-        registry().add("array_var_bool_element", &p_array_bool_element);
+        registry().add("array_var_set_element", &p_array_set_element);
+        registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
 
         registry().add("all_different_int", &p_all_different);
@@ -1444,6 +1521,7 @@ namespace FlatZinc {
 
         registry().add("bool2int", &p_bool2int);
 
+        registry().add("array_bool_xor", &p_array_bool_xor);
         registry().add("array_bool_and", &p_array_bool_and);
         registry().add("array_bool_or", &p_array_bool_or);
         registry().add("bool_and", &p_bool_and);
@@ -1466,6 +1544,8 @@ namespace FlatZinc {
         registry().add("bool_not", &p_bool_not);
         registry().add("bool_clause", &p_bool_clause);
         registry().add("bool_clause_reif", &p_bool_clause_reif);
+        registry().add("bool_lin_eq", &p_bool_lin_eq);
+        registry().add("bool_lin_le", &p_bool_lin_le);
 
         registry().add("set_card", &p_set_card);
         registry().add("set_eq", &p_set_eq);

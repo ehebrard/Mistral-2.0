@@ -2009,7 +2009,9 @@ namespace Mistral {
     inline Decision make(Variable x) {
       int val = solver->last_solution_lb[x.id()];
       Decision d(x, Decision::ASSIGNMENT, val);
-      if(!x.contain(val)) d.set_value(x.get_min());
+      if(val == -INFTY || !x.contain(val)) 
+	//d.set_value((randint(2) ? x.get_min() : x.get_max()));
+	d.set_value(x.get_min());
       return d;
     }
 

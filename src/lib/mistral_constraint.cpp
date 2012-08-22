@@ -47,11 +47,11 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintIm
 }
 
 
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTriggerArray& x) {
+std::ostream& Mistral::operator<< (std::ostream& os,  Mistral::ConstraintTriggerArray& x) {
   return x.display(os);
 }
 
-std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTriggerArray* x) {
+std::ostream& Mistral::operator<< (std::ostream& os,  Mistral::ConstraintTriggerArray* x) {
   return x->display(os);
 }
 
@@ -98,7 +98,11 @@ void Mistral::ConstraintTriggerArray::initialise(const int size) {
   for(int i=0; i<3; ++i) on[i].initialise(size);
 }
 
-Mistral::ConstraintTriggerArray::~ConstraintTriggerArray() {}
+Mistral::ConstraintTriggerArray::~ConstraintTriggerArray() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete constraint trigger array" << std::endl;
+#endif
+}
 
 std::ostream& Mistral::ConstraintTriggerArray::display(std::ostream& os) const {
   for(int i=2; i>=0; --i) {
@@ -133,6 +137,9 @@ Mistral::ConstraintImplementation::ConstraintImplementation() {
 // // }
 
 Mistral::ConstraintImplementation::~ConstraintImplementation() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete constraint implementation" << std::endl;
+#endif
   delete [] self;
   delete [] index;
   //delete [] trigger;
@@ -1226,6 +1233,9 @@ bool Mistral::GlobalConstraint::find_bound_support(const int vri, const int vli)
 
 
 Mistral::GlobalConstraint::~GlobalConstraint() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete global constraint" << std::endl;
+#endif
   if(changes.list_ == events.list_)
     events.list_ = NULL;
   delete [] event_type;
@@ -3541,6 +3551,8 @@ void Mistral::PredicateMul::initialise() {
   trigger_on(_RANGE_, scope[2]);
 
   GlobalConstraint::initialise();
+
+  enforce_nfc1 = false;
 }
 
 Mistral::PropagationOutcome Mistral::PredicateMul::rewrite() {
@@ -4932,6 +4944,9 @@ void Mistral::ConstraintBoolSumEqual::initialise() {
 
 Mistral::ConstraintBoolSumEqual::~ConstraintBoolSumEqual() 
 {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete boolsumequal constraint" << std::endl;
+#endif
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintBoolSumEqual::propagate() 
@@ -4987,6 +5002,9 @@ void Mistral::ConstraintBoolSumInterval::initialise() {
 
 Mistral::ConstraintBoolSumInterval::~ConstraintBoolSumInterval() 
 {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete boolsuminterval constraint" << std::endl;
+#endif
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate() 
@@ -5060,6 +5078,9 @@ void Mistral::PredicateBoolSum::initialise() {
 
 Mistral::PredicateBoolSum::~PredicateBoolSum() 
 {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete boolsum predicate" << std::endl;
+#endif
 }
 
 Mistral::PropagationOutcome Mistral::PredicateBoolSum::propagate() 
@@ -5240,6 +5261,9 @@ void Mistral::PredicateWeightedSum::initialise() {
 
 Mistral::PredicateWeightedSum::~PredicateWeightedSum() 
 {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete weightedsum constraint" << std::endl;
+#endif
   delete [] lo_bound;
   delete [] up_bound;
   delete [] span;
@@ -5731,6 +5755,9 @@ void Mistral::PredicateElement::initialise() {
 
 Mistral::PredicateElement::~PredicateElement() 
 { 
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete element predicate" << std::endl;
+#endif
 }
 
 
@@ -6088,6 +6115,9 @@ void Mistral::ConstraintCliqueNotEqual::mark_domain() {
 
 Mistral::ConstraintCliqueNotEqual::~ConstraintCliqueNotEqual() 
 {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete cliquenotequal constraint" << std::endl;
+#endif
 }
 
 
@@ -6286,6 +6316,9 @@ void Mistral::ConstraintAllDiff::mark_domain() {
 
 Mistral::ConstraintAllDiff::~ConstraintAllDiff() 
 {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete alldiff constraint" << std::endl;
+#endif
   delete [] bounds;
   delete [] maxsorted;
   delete [] minsorted;
@@ -6583,7 +6616,11 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
 
 Mistral::PredicateMin::PredicateMin(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }
 
-Mistral::PredicateMin::~PredicateMin() {}
+Mistral::PredicateMin::~PredicateMin() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete min predicate" << std::endl;
+#endif
+}
 
 void Mistral::PredicateMin::initialise() {
   ConstraintImplementation::initialise();
@@ -6605,7 +6642,7 @@ void Mistral::PredicateMin::initialise() {
     }
   }
 
-  //enforce_nfc1 = false;
+  enforce_nfc1 = false;
   //set_idempotent(true);
 }
 
@@ -6885,7 +6922,11 @@ std::ostream& Mistral::PredicateMin::display(std::ostream& os) const {
 
 Mistral::PredicateMax::PredicateMax(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }
 
-Mistral::PredicateMax::~PredicateMax() {}
+Mistral::PredicateMax::~PredicateMax() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete max predicate" << std::endl;
+#endif
+}
 
 void Mistral::PredicateMax::initialise() {
   ConstraintImplementation::initialise();
@@ -6917,7 +6958,7 @@ void Mistral::PredicateMax::initialise() {
     }
   }
 
-  //enforce_nfc1 = false;
+  enforce_nfc1 = false;
   //set_idempotent(true);
 }
 

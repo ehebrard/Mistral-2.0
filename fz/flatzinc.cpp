@@ -584,6 +584,18 @@ FlatZincModel::maximize(int var, AST::Array* ann) {
 
 FlatZincModel::~FlatZincModel(void) {
 	delete _solveAnnotations;
+
+        // for(unsigned int i=0; i<iv.size; ++i) {
+        
+        //   int domain_type = iv[i].domain_type;
+        //   if     (domain_type ==  BITSET_VAR) delete iv[i].bitset_domain;
+        //   else if(domain_type ==    LIST_VAR) delete iv[i].list_domain;
+        //   else if(domain_type ==   RANGE_VAR) delete iv[i].range_domain;
+        //   else if(domain_type == VIRTUAL_VAR) delete iv[i].virtual_domain;
+        //   else if(domain_type ==  EXPRESSION) delete iv[i].expression;
+        //   else if(domain_type !=   CONST_VAR) delete iv[i].variable;
+ 
+        // }
 }
 
 
@@ -638,10 +650,10 @@ FlatZincModel::run(std::ostream& out, const Printer& p) {
 
 	solver.consolidate();
 
-// #ifdef _DEBUG_FLATZINC
-//         std::cout << "c mistral representation:\n " << solver << std::endl;
-// #endif
-
+#ifdef _DEBUG_FLATZINC
+        std::cout << "c mistral representation:\n " << solver << std::endl;
+#endif
+        
 	Outcome result = UNKNOWN;
 
 	//solver.parameters.verbosity = 0;
@@ -950,8 +962,11 @@ FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
 
           //p.print(out, solver, iv, bv, sv);
 	Mistral::Outcome outcome = solver.statistics.outcome;
-			//std::cout << outcome;
-	if ((outcome == SAT) || (outcome == OPT))
+			//
+
+        //std::cout << "%% " << outcome2str(outcome) << std::endl;;
+        
+        if ((outcome == SAT) || (outcome == OPT))
           out<<"==========";
 	else if ((outcome == UNSAT))
           out<<"=====UNSATISFIABLE=====";
@@ -1009,7 +1024,7 @@ Printer::printElem(std::ostream& out,
 		else
 			out << lb << ".." << ub;
 */
-		out << iv[ai->getIntVar()].get_solution_int_value();
+          out << iv[ai->getIntVar()].get_solution_int_value();
 	} else if (ai->isBoolVar()) {
 		/*
 		int lb = bv[ai->getBoolVar()].get_solution_min();

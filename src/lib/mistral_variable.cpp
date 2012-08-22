@@ -389,27 +389,54 @@ Mistral::Event Mistral::Variable::setState( const int vals )
 }
 
 int Mistral::Variable::get_solution_int_value() const {
-  return(domain_type == CONST_VAR ? constant_value :
-	 variable->get_solution_int_value());
+  int value = 0;
+  if(is_initialised()) {
+    // return(domain_type == CONST_VAR ? constant_value :
+    // 	   variable->get_solution_int_value());
+    value = variable->get_solution_int_value();
+  } else {
+    value = get_min();
+  }
+  return value;
 }
 
 std::string Mistral::Variable::get_solution_str_value() const {
   std::ostringstream ret_str;
-  if(domain_type == CONST_VAR)
-    ret_str << constant_value ;
-  else
+
+  if(is_initialised()) {
+    // if(domain_type == CONST_VAR)
+    //   ret_str << constant_value ;
+    // else
     ret_str << variable->get_solution_str_value();
+  } else {
+    ret_str << get_min();
+  }
+
   return ret_str.str();
 }
 
 int Mistral::Variable::get_solution_min() const {
-  return(domain_type == CONST_VAR ? constant_value :
-	 variable->get_solution_min());
+  int value = 0;
+  if(is_initialised()) {
+    value = variable->get_solution_min();
+  } else {
+    value = get_min();
+  }
+  return value;
+  // return(domain_type == CONST_VAR ? constant_value :
+  // 	 variable->get_solution_min());
 }
 
 int Mistral::Variable::get_solution_max() const {
-  return(domain_type == CONST_VAR ? constant_value :
-	 variable->get_solution_max());
+  int value = 0;
+  if(is_initialised()) {
+    value = variable->get_solution_max();
+  } else {
+    value = get_max();
+  }
+  return value;
+  // return(domain_type == CONST_VAR ? constant_value :
+  // 	 variable->get_solution_max());
 }
 
   int Mistral::Variable::get_value() const {
@@ -1609,7 +1636,9 @@ Mistral::Expression::Expression(Variable X)
      children.add(X);
   }
 Mistral::Expression::~Expression() {
-
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete expression" << std::endl;
+#endif
   // std::cout << "delete exp subvar: " << self << std::endl;
 
   // int domain_type = self.domain_type;
@@ -1663,7 +1692,11 @@ std::ostream& Mistral::Expression::display(std::ostream& os) const {
 Mistral::AddExpression::AddExpression(Variable X, Variable Y) 
   : Expression(X,Y) {
 }
-Mistral::AddExpression::~AddExpression() {}
+Mistral::AddExpression::~AddExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete add expression" << std::endl;
+#endif
+}
 
 void Mistral::AddExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Add predicate can't be used as a constraint" << std::endl;
@@ -1699,7 +1732,11 @@ Mistral::OffsetExpression::OffsetExpression(Variable X, const int ofs)
   : Expression(X) { 
   offset=ofs; 
 }
-Mistral::OffsetExpression::~OffsetExpression() {}
+Mistral::OffsetExpression::~OffsetExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete offset expression" << std::endl;
+#endif
+}
   
 void Mistral::OffsetExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Offset predicate can't be used as a constraint" << std::endl;
@@ -1745,7 +1782,11 @@ Mistral::Variable Mistral::Variable::operator-(int k) {
 Mistral::MulExpression::MulExpression(Variable X, Variable Y) 
   : Expression(X,Y) {
 }
-Mistral::MulExpression::~MulExpression() {}
+Mistral::MulExpression::~MulExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete mul expression" << std::endl;
+#endif
+}
 
 void Mistral::MulExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Mul predicate can't be used as a constraint" << std::endl;
@@ -1824,7 +1865,11 @@ void Mistral::MulExpression::extract_predicate(Solver *s) {
 // Mistral::DivExpression::DivExpression(Variable X, Variable Y) 
 //   : Expression(X,Y) {
 // }
-// Mistral::DivExpression::~DivExpression() {}
+// Mistral::DivExpression::~DivExpression() {
+//#ifdef _DEBUG_MEMORY
+//  std::cout << "c delete div expression" << std::endl;
+//#endif
+//}
 
 // void Mistral::DivExpression::extract_constraint(Solver *s) {
 //   std::cerr << "Error: Div predicate can't be used as a constraint" << std::endl;
@@ -1944,7 +1989,11 @@ Mistral::FactorExpression::FactorExpression(Variable X, const int fct)
   : Expression(X) { 
   factor=fct; 
 }
-Mistral::FactorExpression::~FactorExpression() {}
+Mistral::FactorExpression::~FactorExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete factor expression" << std::endl;
+#endif
+}
   
 void Mistral::FactorExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Factor predicate can't be used as a constraint" << std::endl;
@@ -2002,7 +2051,11 @@ Mistral::Variable Mistral::Variable::operator*(int k) {
   Mistral::SubExpression::SubExpression(Variable X, Variable Y) 
   : Expression(X,Y) {
 }
-  Mistral::SubExpression::~SubExpression() {}
+  Mistral::SubExpression::~SubExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete sub expression" << std::endl;
+#endif
+}
   
 void Mistral::SubExpression::extract_constraint(Solver *s) {
       std::cerr << "Error: Sub predicate can't be used as a constraint" << std::endl;
@@ -2050,7 +2103,11 @@ Mistral::Variable Mistral::Variable::operator-(Variable x) {
 Mistral::NotExpression::NotExpression(Variable X) 
   : Expression(X) { 
 }
-Mistral::NotExpression::~NotExpression() {}
+Mistral::NotExpression::~NotExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete not expression" << std::endl;
+#endif
+}
   
 void Mistral::NotExpression::extract_constraint(Solver *s) {
   children[0].remove(0);
@@ -2084,7 +2141,11 @@ Mistral::Variable Mistral::Variable::operator!() {
 Mistral::NegExpression::NegExpression(Variable X) 
   : Expression(X) { 
 }
-Mistral::NegExpression::~NegExpression() {}
+Mistral::NegExpression::~NegExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete neg expression" << std::endl;
+#endif
+}
   
 void Mistral::NegExpression::extract_constraint(Solver *s) {
   //children[0].remove(0);
@@ -2116,7 +2177,11 @@ Mistral::Variable Mistral::Variable::operator-() {
 
 Mistral::AndExpression::AndExpression(Variable X, Variable Y) 
   : Expression(X,Y) {}
-Mistral::AndExpression::~AndExpression() {}
+Mistral::AndExpression::~AndExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete and expression" << std::endl;
+#endif
+}
   
 void Mistral::AndExpression::extract_constraint(Solver *s) {
   //s->add(new ConstraintAnd(children));
@@ -2152,7 +2217,11 @@ Mistral::Variable Mistral::Variable::operator&&(Variable x) {
 
 Mistral::OrExpression::OrExpression(Variable X, Variable Y) 
   : Expression(X,Y) {}
-Mistral::OrExpression::~OrExpression() {}
+Mistral::OrExpression::~OrExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete or expression" << std::endl;
+#endif
+}
   
 void Mistral::OrExpression::extract_constraint(Solver *s) {
   s->add(Constraint(new ConstraintOr(children)));
@@ -2222,7 +2291,11 @@ Mistral::EqualExpression::EqualExpression(Variable X, Variable Y, const int sp)
   : Expression(X,Y) { spin=sp; value=NOVAL; }
 Mistral::EqualExpression::EqualExpression(Variable X, const int y, const int sp) 
   : Expression() { children.add(X); value=y; spin=sp; }
-Mistral::EqualExpression::~EqualExpression() {}
+Mistral::EqualExpression::~EqualExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete equal expression" << std::endl;
+#endif
+}
 
 void Mistral::EqualExpression::extract_constraint(Solver *s) {
 
@@ -2542,7 +2615,11 @@ Mistral::EqualSetExpression::EqualSetExpression(Variable X, Variable Y, const in
   : Expression(X,Y) { spin=sp; value=NOVAL; }
 Mistral::EqualSetExpression::EqualSetExpression(Variable X, const int y, const int sp) 
   : Expression() { children.add(X); value=y; spin=sp; }
-Mistral::EqualSetExpression::~EqualSetExpression() {}
+Mistral::EqualSetExpression::~EqualSetExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete set expression" << std::endl;
+#endif
+}
 
 void Mistral::EqualSetExpression::extract_constraint(Solver *s) {
   if(spin) {
@@ -2622,7 +2699,11 @@ Mistral::PrecedenceExpression::PrecedenceExpression(Variable X, Variable Y,
 Mistral::PrecedenceExpression::PrecedenceExpression(Variable X,  
 						    const int of, const int sp) 
   : Expression(X) { spin = sp; offset = of; }
-Mistral::PrecedenceExpression::~PrecedenceExpression() {}
+Mistral::PrecedenceExpression::~PrecedenceExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete precedence expression" << std::endl;
+#endif
+}
   
 void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
   if(children.size==2) {
@@ -2717,7 +2798,11 @@ Mistral::Variable Mistral::Variable::operator>=(const int k) {
 Mistral::DisjunctiveExpression::DisjunctiveExpression(Variable X, Variable Y, 
 						      const int px, const int py) 
   : Expression(X,Y) { processing_time[0] = px; processing_time[1] = py; }
-Mistral::DisjunctiveExpression::~DisjunctiveExpression() {}
+Mistral::DisjunctiveExpression::~DisjunctiveExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete disjunctive expression" << std::endl;
+#endif
+}
   
 void Mistral::DisjunctiveExpression::extract_constraint(Solver *s) {
   s->add(Constraint(new ConstraintDisjunctive(children, processing_time[0], processing_time[1])));
@@ -2750,7 +2835,11 @@ Mistral::ReifiedDisjunctiveExpression::ReifiedDisjunctiveExpression(Variable X, 
 								    const int px, const int py) 
   : Expression(X,Y) { processing_time[0] = px; processing_time[1] = py; }
 
-Mistral::ReifiedDisjunctiveExpression::~ReifiedDisjunctiveExpression() {}
+Mistral::ReifiedDisjunctiveExpression::~ReifiedDisjunctiveExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete reified disjunctive expression" << std::endl;
+#endif
+}
   
 void Mistral::ReifiedDisjunctiveExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: ReifiedDisjunctive constraint can't yet be used as a constraint" << std::endl;
@@ -2787,7 +2876,11 @@ Mistral::Variable Mistral::ReifiedDisjunctive(Variable X, Variable Y,
 Mistral::FreeExpression::FreeExpression(Variable X) 
   : Expression(X) { };
 
-Mistral::FreeExpression::~FreeExpression() {}
+Mistral::FreeExpression::~FreeExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete free expression" << std::endl;
+#endif
+}
   
 const char* Mistral::FreeExpression::get_name() const {
   return "free";
@@ -2803,7 +2896,11 @@ Mistral::Variable Mistral::Free(Variable X)
 Mistral::AllDiffExpression::AllDiffExpression(Vector< Variable >& args, const int ct) 
   : Expression(args) { consistency_level = ct; }
 
-Mistral::AllDiffExpression::~AllDiffExpression() {}
+Mistral::AllDiffExpression::~AllDiffExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete alldiff expression" << std::endl;
+#endif
+}
 
 void Mistral::AllDiffExpression::extract_constraint(Solver *s) { 
 //   Constraint *con = new ConstraintAllDiff(children); 
@@ -2854,7 +2951,11 @@ Mistral::LexExpression::LexExpression(Vector< Variable >& r1, Vector< Variable >
   strict = st_; 
 }
 
-Mistral::LexExpression::~LexExpression() {}
+Mistral::LexExpression::~LexExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete lex expression" << std::endl;
+#endif
+}
 
 void Mistral::LexExpression::extract_constraint(Solver *s) { 
   int arity = (children.size-1)/3;
@@ -2935,7 +3036,11 @@ Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const in
   ub = u;
 }
 
-Mistral::BoolSumExpression::~BoolSumExpression() {}
+Mistral::BoolSumExpression::~BoolSumExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete boolsum expression" << std::endl;
+#endif
+}
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) { 
   s->add(new ConstraintBoolSumInterval(children,lb,ub)); 
@@ -2996,7 +3101,11 @@ Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args,
 //   : Expression(X) { 
 //   weight.add(coef);
 // }
-Mistral::LinearExpression::~LinearExpression() {}
+Mistral::LinearExpression::~LinearExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete linear expression" << std::endl;
+#endif
+}
   
 // -1 -1 -1: - x - y =  z: 
 // -1 -1  1: - x - y = -z: z = y + x
@@ -3010,7 +3119,9 @@ Mistral::LinearExpression::~LinearExpression() {}
 void Mistral::LinearExpression::extract_constraint(Solver *s) {
   // check if we can use an 'Add' or 'Sub' predicate
   int post_add = false;
-  if(children.size == 3 && 
+  if(lower_bound == 0 &&
+     upper_bound == 0 && 
+     children.size == 3 && 
      abs(weight[0]) == 1 &&
      abs(weight[1]) == 1 &&
      abs(weight[2]) == 1
@@ -3115,7 +3226,11 @@ Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >
 Mistral::MinExpression::MinExpression(Vector< Variable >& args) 
   : Expression(args) {}
 
-Mistral::MinExpression::~MinExpression() {}
+Mistral::MinExpression::~MinExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete min expression" << std::endl;
+#endif
+}
 
 void Mistral::MinExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Min predicate can't be used as a constraint" << std::endl;
@@ -3190,7 +3305,11 @@ Mistral::Variable Mistral::Max(Variable X, Variable Y) {
 Mistral::MaxExpression::MaxExpression(Vector< Variable >& args) 
   : Expression(args) {}
 
-Mistral::MaxExpression::~MaxExpression() {}
+Mistral::MaxExpression::~MaxExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete max expression" << std::endl;
+#endif
+}
 
 void Mistral::MaxExpression::extract_constraint(Solver *s) {
   std::cerr << "Error: Max predicate can't be used as a constraint" << std::endl;
@@ -3231,7 +3350,11 @@ Mistral::ElementExpression::ElementExpression(Vector< Variable >& args,
   children.add(X);
 }
 
-Mistral::ElementExpression::~ElementExpression() {}
+Mistral::ElementExpression::~ElementExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete element expression" << std::endl;
+#endif
+}
 
 
 void Mistral::ElementExpression::extract_constraint(Solver *s) {
@@ -3320,7 +3443,11 @@ Mistral::ElementSetExpression::ElementSetExpression(Vector< Variable >& args,
   initialise_elements();
 }
 
-Mistral::ElementSetExpression::~ElementSetExpression() {}
+Mistral::ElementSetExpression::~ElementSetExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete element set expression" << std::endl;
+#endif
+}
 
 
 void Mistral::ElementSetExpression::extract_constraint(Solver *s) {
@@ -3618,7 +3745,11 @@ Mistral::IntersectionExpression::IntersectionExpression(Variable X, Variable Y)
   initialise_elements();
 }
 
-Mistral::IntersectionExpression::~IntersectionExpression() {}
+Mistral::IntersectionExpression::~IntersectionExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete intersection expression" << std::endl;
+#endif
+}
 
 
 void Mistral::IntersectionExpression::extract_constraint(Solver *s) {
@@ -3773,7 +3904,11 @@ void Mistral::SetExpression::initialise_elements() {
 }
 
 
-Mistral::SetExpression::~SetExpression() {}
+Mistral::SetExpression::~SetExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete set expression" << std::endl;
+#endif
+}
 
 const char* Mistral::SetExpression::get_name() const {
   return "set";
@@ -3917,7 +4052,11 @@ Mistral::SubsetExpression::SubsetExpression(Variable X, Variable Y)
   : Expression(X,Y) { 
 }
 
-Mistral::SubsetExpression::~SubsetExpression() {}
+Mistral::SubsetExpression::~SubsetExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete subset expression" << std::endl;
+#endif
+}
 
 void Mistral::SubsetExpression::extract_constraint(Solver *s) { 
   unsigned int i = 0, j = 0;
@@ -4078,7 +4217,11 @@ Mistral::MemberExpression::MemberExpression(Variable X, const Vector<int>& s)
   size = s.size; 
 }
 
-Mistral::MemberExpression::~MemberExpression() {}
+Mistral::MemberExpression::~MemberExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete member expression" << std::endl;
+#endif
+}
 
 void Mistral::MemberExpression::extract_constraint(Solver *s) { 
 
@@ -4254,7 +4397,11 @@ Mistral::Goal::Goal(method t, Variable X) : type(t) {
   upper_bound = objective.get_max()+1; //(type == MINIMIZATION);
 }
 
-Mistral::Goal::~Goal() {}
+Mistral::Goal::~Goal() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete goal" << std::endl;
+#endif
+}
 
 bool Mistral::Goal::enforce() {
   if(type == MINIMIZATION) {

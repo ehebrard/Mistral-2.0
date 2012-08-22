@@ -73,6 +73,11 @@ Mistral::Solution::Solution( Vector< Variable >& vars ) {
   }
 }
 Mistral::Solution::~Solution() {
+
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete solution" << std::endl;
+#endif
+
   values += min_id;
   delete [] values;
 }
@@ -95,7 +100,11 @@ int& Mistral::Solution::operator[](Variable x) {
 Mistral::SolverParameters::SolverParameters() {
   initialise(); 
 }
-Mistral::SolverParameters::~SolverParameters() {}
+Mistral::SolverParameters::~SolverParameters() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete solver parameters" << std::endl;
+#endif
+}
 void Mistral::SolverParameters::initialise() {
   find_all = 0;
   node_limit = 0;
@@ -206,7 +215,11 @@ initialise();
 
 
 }
-Mistral::SolverStatistics::~SolverStatistics() {}
+Mistral::SolverStatistics::~SolverStatistics() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete solver statistics" << std::endl;
+#endif
+}
 void Mistral::SolverStatistics::initialise() {
   objective_value = 0;
   num_variables = 0; 
@@ -579,6 +592,9 @@ void Mistral::ConstraintQueue::initialise(const int min_p,
 }
 
 Mistral::ConstraintQueue::~ConstraintQueue() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete constraint queue" << std::endl;
+#endif
   triggers += min_priority;
   delete [] triggers;
 }
@@ -762,6 +778,7 @@ Mistral::Solver::Solver()
   : monitor_list(this)
 #endif
 { 
+  consolidate_manager = NULL;
   search_started = false;
 
   // search stuf
@@ -1275,12 +1292,17 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
 
 
 Mistral::Solver::~Solver() {
-
-  //std::cout << "delete solver " << std::endl;  
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete solver" << std::endl;
+#endif
 
   delete heuristic;
   delete policy;
   delete objective;
+
+  //std::cout << "c delete consolidate manager" << std::endl;
+
+  delete consolidate_manager;
 
   //std::cout << "delete constraints" << std::endl;
   for(unsigned int i=0; i<constraints.size; ++i) {
@@ -1317,6 +1339,9 @@ Mistral::Solver::~Solver() {
 // #endif
 
   }
+
+
+  
 
 }
 
@@ -1617,14 +1642,15 @@ void Mistral::Solver::consolidate()
     
     // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
     
-    ConsolidateListener *cl = new ConsolidateListener(this);
-    add((VariableListener*)cl);
-    add((ConstraintListener*)cl);
+    //ConsolidateListener *cl 
+    consolidate_manager = new ConsolidateListener(this);
+    add((VariableListener*)consolidate_manager);
+    add((ConstraintListener*)consolidate_manager);
     
     // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
     
     
-    // std::cout << "cl->constraints" << std::endl << cl->constraints << std::endl;
+    // std::cout << "consolidate_manager->constraints" << std::endl << consolidate_manager->constraints << std::endl;
   }
 
   for(; initialised_vars<variables.size; ++initialised_vars) {
@@ -3390,12 +3416,14 @@ void Mistral::Solver::branch_left() {
 }
 
 
- Mistral::Outcome Mistral::Solver::exhausted() {    
+Mistral::Outcome Mistral::Solver::exhausted() {    
 #ifdef _DEBUG_SEARCH
-   std::cout << " c UNSAT!" << std::endl; 
+  std::cout << " c UNSAT!" << std::endl; 
 #endif
-
-  return objective->notify_exhausted();
+  
+  Outcome value = UNSAT;
+  if(statistics.num_solutions) value = objective->notify_exhausted();
+  return value;
 }
 
  bool Mistral::Solver::limits_expired() {
@@ -4113,9 +4141,10 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 }
 
 Mistral::RestartPolicy *Mistral::Solver::restart_factory(std::string rpolicy) {
-  RestartPolicy *pol = new NoRestart();
+  RestartPolicy *pol;
   if(rpolicy == "luby") pol = new Luby(); 
   else if(rpolicy == "geom") pol = new Geometric(); 
+  else pol = new NoRestart();
   return pol;
 }
 

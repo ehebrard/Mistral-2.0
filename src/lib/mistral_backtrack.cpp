@@ -30,6 +30,11 @@
 
 //void Mistral::Environment::save(Mistral::Reversible *r) { saved_objs.add(r); }
 
+Mistral::Constraint::Constraint() {
+  propagator = NULL;
+  data = 0;
+}
+
 Mistral::Constraint::Constraint(ConstraintImplementation* p) { 
   propagator = p; 
   propagator->ConstraintImplementation::initialise();

@@ -77,6 +77,12 @@ namespace Mistral {
   class Trigger : public Vector< Constraint > {
 
   public:
+
+    virtual ~Trigger() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete trigger" << std::endl;
+#endif
+    }
     
     int post(Constraint ct) ;
 
@@ -117,7 +123,7 @@ namespace Mistral {
     ConstraintImplementation* propagator;
     unsigned int data;
     
-    Constraint() {propagator = NULL; data=0;}
+    Constraint(); // {propagator = NULL; data=0;}
     Constraint(ConstraintImplementation* p) ;
     Constraint(ConstraintImplementation* p, const int t) { propagator = p; data = t; }
     void initialise(Solver*);

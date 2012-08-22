@@ -324,6 +324,7 @@ namespace Mistral {
   */
   //typedef Varstack< ConstraintElement > ConstraintStack;
 
+  class ConsolidateListener;
   class SolutionListener;
   class RestartListener;
   class SuccessListener;
@@ -439,6 +440,8 @@ namespace Mistral {
     int wiper_idx;
 
     Vector< Expression* > expression_store;
+
+    ConsolidateListener *consolidate_manager;
 
     Outcome satisfied();
     Outcome exhausted();

@@ -1410,6 +1410,7 @@ namespace Mistral {
     Variable get_var();
     const Variable get_var() const;
     bool is_expression() { return domain_type == EXPRESSION; }
+    bool is_initialised() const { return domain_type != CONST_VAR && variable->is_initialised(); }
 
     Variable operator+(Variable);
     Variable operator+(const int);
