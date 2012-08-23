@@ -340,7 +340,8 @@ namespace FlatZinc {
     void p_alldifferent(Solver& s, FlatZincModel &m,
                         const ConExpr& ce, AST::Node* ann) {
       Vector<Variable> va = arg2intvarargs(s, m, ce[0]);
-      s.add( AllDiff(va, BOUND_CONSISTENCY) );
+      if(va.size)
+        s.add( AllDiff(va, BOUND_CONSISTENCY) );
     }
 
     void p_int_eq(Solver& s, FlatZincModel &m,
@@ -550,111 +551,428 @@ namespace FlatZinc {
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, c, c) );
+      if(ce[2]->isIntVar()) {
+        Variable r = getIntVar(s, m, ce[2]);
+        ia.add(-1);
+        iv.add(r);
+        s.add( Sum(iv, ia, 0, 0) );
+      } else {
+        int c = ce[2]->getInt();
+        if(iv.size)
+          s.add( Sum(iv, ia, c, c) );
+        else if(c != 0)
+          s.fail();
+      }
     }
     void p_bool_lin_eq(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2boolvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, c, c) );
+
+      if(ce[2]->isIntVar()) {
+        Variable r = getIntVar(s, m, ce[2]);
+
+        //std::cout << r << std::endl;
+
+        ia.add(-1);
+        iv.add(r);
+        s.add( Sum(iv, ia, 0, 0) );
+      } else {
+        int c = ce[2]->getInt();
+        if(iv.size)
+          s.add( Sum(iv, ia, c, c) );
+        else if(c != 0)
+          s.fail();
+        //s.add( Sum(iv, ia, c, c) );
+      }
+
+      //std::cout << s << std::endl;
+
     }
     void p_int_lin_eq_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( (Sum(iv, ia) == c) == getBoolVar(s, m, ce[3]) );
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( (Sum(iv, ia) == c) == getBoolVar(s, m, ce[3]) );
+      } else {
+        int c = ce[2]->getInt();
+        //s.add( (Sum(iv, ia) == c) == getBoolVar(s, m, ce[3]) );
+        if(iv.size)
+          s.add( (Sum(iv, ia) == c) == getBoolVar(s, m, ce[3]) );
+        // else if(c != 0)
+        //   s.add( getBoolVar(s, m, ce[3]) == 0 );
+      }
     }
     void p_int_lin_ne(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia) != c );
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( Sum(iv, ia) != c );
+        else 
+          s.add( c != 0 );
+      } else {
+        int c = ce[2]->getInt();
+        if(iv.size)
+          s.add( Sum(iv, ia) != c );
+        else if(c == 0)
+          s.fail();
+      }
+   //s.add( Sum(iv, ia) != c );
     }
     void p_int_lin_ne_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( (Sum(iv, ia) != c) == getBoolVar(s, m, ce[3]) );
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( (Sum(iv, ia) != c) == getBoolVar(s, m, ce[3]) );
+      } else {
+        int c = ce[2]->getInt();
+        if(iv.size)
+          s.add( (Sum(iv, ia) != c) == getBoolVar(s, m, ce[3]) );
+      }
     }
 
     void p_int_lin_le(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, -INFTY, c) );
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( Sum(iv, ia) <= c );
+        else 
+          s.add( c >= 0 );
+      } else {
+        int c = ce[2]->getInt();
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == 1 && ia[1] == -1) {
+            s.add(Constraint(new ConstraintLess(iv, -c)));
+          } else if(ia[0] == -1 && ia[1] == 1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            s.add(Constraint(new ConstraintLess(iv, -c)));
+          } else {
+            s.add( Sum(iv, ia, -INFTY, c) );
+          }
+        } else {
+          if(iv.size)
+            s.add( Sum(iv, ia, -INFTY, c) );
+          else if(c < 0)
+            s.fail();
+        }
+      }
     }
+
     void p_bool_lin_le(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2boolvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, -INFTY, c) );
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( Sum(iv, ia) <= c );
+        else 
+          s.add( c >= 0 );
+      } else {
+        int c = ce[2]->getInt();
+        if(iv.size)
+          s.add( Sum(iv, ia, -INFTY, c) );
+        else if(c < 0)
+          s.fail();
+      }
     }
     void p_int_lin_le_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
       Variable b = getBoolVar(s, m, ce[3]);
 
-      // std::cout << ia << " * " << iv << " <= "<< b << std::endl;
-
-      // for(int i=0; i<iv.size; ++i)
-      //   std::cout << iv[i].get_domain() << std::endl;
-
-      // std::cout << b.get_domain() << std::endl;
-
-
-
-      s.add( (Sum(iv, ia) <= c) == b );
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( (Sum(iv, ia) <= c) == b );
+        else 
+          s.add( (c >= 0) == b );
+      } else {
+        int c = ce[2]->getInt();
+        // check if this is in fact a reified precedence
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == 1 && ia[1] == -1) {
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, -c)));
+          } else if(ia[0] == -1 && ia[1] == 1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, -c)));
+          } else {
+            s.add( (Sum(iv, ia) <= c) == b );
+          }
+        } else {
+          if(iv.size)
+            s.add( (Sum(iv, ia) <= c) == b );
+        }
+      }
     }
+
     void p_int_lin_lt(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, -INFTY, c-1) );
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( Sum(iv, ia) < c );
+        else 
+          s.add( c > 0 );
+      } else {
+        int c = ce[2]->getInt();
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == 1 && ia[1] == -1) {
+            s.add(Constraint(new ConstraintLess(iv, 1-c)));
+          } else if(ia[0] == -1 && ia[1] == 1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            s.add(Constraint(new ConstraintLess(iv, 1-c)));
+          } else {
+            s.add( Sum(iv, ia, -INFTY, c-1) );
+          }
+        } else {
+          if(iv.size)
+            s.add( Sum(iv, ia, -INFTY, c-1) );
+          else if(c <= 0)
+            s.fail();
+        }
+      }
+
+      // int c = ce[2]->getInt();
+      // if(iv.size)
+      //   s.add( Sum(iv, ia, -INFTY, c-1) );
+      // else if(c <= 0)
+      //   s.fail();
     }
     void p_int_lin_lt_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( (Sum(iv, ia) < c) == getBoolVar(s, m, ce[3]) );
+      Variable b = getBoolVar(s, m, ce[3]);
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( (Sum(iv, ia) < c) == b );
+        else 
+          s.add( (c > 0) == b );
+      } else {
+        int c = ce[2]->getInt();
+        // check if this is in fact a reified precedence
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == 1 && ia[1] == -1) {
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, 1-c)));
+          } else if(ia[0] == -1 && ia[1] == 1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, 1-c)));
+          } else {
+            s.add( (Sum(iv, ia) < c) == b );
+          }
+        } else {
+          if(iv.size)
+            s.add( (Sum(iv, ia) < c) == b );
+        }
+      }
+
+      // int c = ce[2]->getInt();
+      // if(iv.size)
+      //   s.add( (Sum(iv, ia) < c) == getBoolVar(s, m, ce[3]) );
     }
     void p_int_lin_ge(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, c, INFTY) );
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( Sum(iv, ia) >= c );
+        else 
+          s.add( c <= 0 );
+      } else {
+        int c = ce[2]->getInt();
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == -1 && ia[1] == 1) {
+            s.add(Constraint(new ConstraintLess(iv, c)));
+          } else if(ia[0] == 1 && ia[1] == -1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            s.add(Constraint(new ConstraintLess(iv, c)));
+          } else {
+            s.add( Sum(iv, ia, c, INFTY) );
+          }
+        } else {
+          if(iv.size)
+            s.add( Sum(iv, ia, c, INFTY) );
+          else if(c > 0)
+            s.fail();
+        }
+      }
+
+      // int c = ce[2]->getInt();
+      // if(iv.size)
+      //   s.add( Sum(iv, ia, c, INFTY) );
+      // else if(c > 0)
+      //   s.fail();
     }
     void p_int_lin_ge_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( (Sum(iv, ia) >= c) == getBoolVar(s, m, ce[3]) );
+      Variable b = getBoolVar(s, m, ce[3]);
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( (Sum(iv, ia) >= c) == b );
+        else 
+          s.add( (c <= 0) == b );
+      } else {
+        int c = ce[2]->getInt();
+        // check if this is in fact a reified precedence
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == -1 && ia[1] == 1) {
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, c)));
+          } else if(ia[0] == 1 && ia[1] == -1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, c)));
+          } else {
+            s.add( (Sum(iv, ia) >= c) == b );
+          }
+        } else {
+          if(iv.size)
+            s.add( (Sum(iv, ia) >= c) == b );
+        }
+      }
+
+      // int c = ce[2]->getInt();
+      // if(iv.size)
+      //   s.add( (Sum(iv, ia) >= c) == getBoolVar(s, m, ce[3]) );
     }
     void p_int_lin_gt(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( Sum(iv, ia, c+1, INFTY) );
+      
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( Sum(iv, ia) > c );
+        else 
+          s.add( c < 0 );
+      } else {
+        int c = ce[2]->getInt();
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == -1 && ia[1] == 1) {
+            s.add(Constraint(new ConstraintLess(iv, c+1)));
+          } else if(ia[0] == 1 && ia[1] == -1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            s.add(Constraint(new ConstraintLess(iv, c+1)));
+          } else {
+            s.add( Sum(iv, ia, c+1, INFTY) );
+          }
+        } else {
+          if(iv.size)
+            s.add( Sum(iv, ia, c+1, INFTY) );
+          else if(c >= 0)
+            s.fail();
+        }
+      }
+
+      // int c = ce[2]->getInt();      
+      // if(iv.size)
+      //   s.add( Sum(iv, ia, c+1, INFTY) );
+      // else if(c >= 0)
+      //   s.fail();
+//s.add( Sum(iv, ia, c+1, INFTY) );
     }
     void p_int_lin_gt_reif(Solver& s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
       Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
-      int c = ce[2]->getInt();
-      s.add( (Sum(iv, ia) > c) == getBoolVar(s, m, ce[3]) );
+            Variable b = getBoolVar(s, m, ce[3]);
+
+      if(ce[2]->isIntVar()) {
+        Variable c = getIntVar(s, m, ce[2]);
+        if(iv.size)
+          s.add( (Sum(iv, ia) > c) == b );
+        else 
+          s.add( (c < 0) == b );
+      } else {
+        int c = ce[2]->getInt();
+        // check if this is in fact a reified precedence
+        if(ia.size == iv.size 
+           && iv.size == 2
+           ) {
+          if(ia[0] == -1 && ia[1] == 1) {
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, c+1)));
+          } else if(ia[0] == 1 && ia[1] == -1) {
+            Variable x = iv[0];
+            iv[0] = iv[1];
+            iv[1] = x;
+            iv.add(b);
+            s.add(Constraint(new PredicateLess(iv, c+1)));
+          } else {
+            s.add( (Sum(iv, ia) > c) == b );
+          }
+        } else {
+          if(iv.size)
+            s.add( (Sum(iv, ia) > c) == b );
+        }
+      }
+
+      // int c = ce[2]->getInt();      
+      // if(iv.size)
+      // s.add( (Sum(iv, ia) > c) == getBoolVar(s, m, ce[3]) );
     }
 
     /* arithmetic constraints */
@@ -735,15 +1053,44 @@ namespace FlatZinc {
                      const ConExpr& ce, AST::Node* ann) {
       // cout << "CAN'T POST A MUL CONSTRAINT" << endl;
       // exit(1);
+
+      Variable x;
+
       if (!ce[0]->isIntVar()) {
-        s.add((getIntVar(s, m, ce[1]) * ce[0]->getInt()) == getIntVar(s, m, ce[2]));
+        if(ce[0]->getInt()) {
+          x = (getIntVar(s, m, ce[1]) * ce[0]->getInt()) == getIntVar(s, m, ce[2]);
+
+          //std::cout << "add " << x << std::endl; 
+
+          s.add(x);
+        } else {
+          x = (getIntVar(s, m, ce[2]) == 0);
+          
+          //std::cout << "add " << x << std::endl; 
+
+          s.add(x);
+        }
       } else if (!ce[1]->isIntVar()) {
-        s.add((getIntVar(s, m, ce[0]) * ce[1]->getInt()) == getIntVar(s, m, ce[2]));
+        if(ce[1]->getInt()) {
+          x = (getIntVar(s, m, ce[0]) * ce[1]->getInt()) == getIntVar(s, m, ce[2]);
+
+          //std::cout << "add " << x << std::endl; 
+
+          s.add(x);
+        } else {
+          x = (getIntVar(s, m, ce[2]) == 0);
+
+          //std::cout << "add " << x << std::endl; 
+
+          s.add(x);
+        }
       } else if (!ce[2]->isIntVar()) {
         s.add((getIntVar(s, m, ce[0]) * getIntVar(s, m, ce[1])) == ce[2]->getInt());
       } else {
         s.add((getIntVar(s, m, ce[0]) * getIntVar(s, m, ce[1])) == getIntVar(s, m, ce[2]));
       }
+
+      //std::cout << s << std::endl;
 
       // Variable x0 = getIntVar(s, m, ce[0]);
       // Variable x1 = getIntVar(s, m, ce[1]);
@@ -848,14 +1195,14 @@ namespace FlatZinc {
       Vector<int> iv = arg2boolargs(ce[1]);
       Vector<int> good_values;
 
-      std::cout << "possible values: " << selector.get_domain() << std::endl;
-      std::cout << "boolargs: " << iv << std::endl;
+      // std::cout << "possible values: " << selector.get_domain() << std::endl;
+      // std::cout << "boolargs: " << iv << std::endl;
       
       for(unsigned int i=0; i<iv.size; ++i) {
         if(iv[i]) good_values.add(i+1);
       }
 
-      std::cout << "good values: " << good_values << std::endl;
+      //std::cout << "good values: " << good_values << std::endl;
 
       s.add(selector > 0);
       s.add(selector <= iv.size);
@@ -869,7 +1216,9 @@ namespace FlatZinc {
     void p_all_different(Solver& s, FlatZincModel& m,
                          const ConExpr& ce, AST::Node* ann) {
       Vector< Variable > iv = arg2intvarargs(s, m, ce[0]);
-      s.add( AllDiff(iv) );
+
+      if(iv.size)
+        s.add( AllDiff(iv) );
     }
 
     /* cumulative */
@@ -1075,8 +1424,17 @@ namespace FlatZinc {
     void p_bool_clause(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
 
-  	  report_unsupported("p_bool_clause");
-      // vector<Variable> x0 = arg2boolvarargs(s, m, ce[0]);
+      //report_unsupported("p_bool_clause");
+      Vector<Variable> pos = arg2boolvarargs(s, m, ce[0]);
+      Vector<Variable> neg = arg2boolvarargs(s, m, ce[1]);
+
+      if(pos.empty())
+        s.add( BoolSum(neg) < neg.size );
+      else if(neg.empty())
+        s.add( BoolSum(pos) > 0 );
+      else 
+        s.add( (BoolSum(pos) > 0) || (BoolSum(neg) < neg.size) );
+
       // vector<Variable> x1 = arg2boolvarargs(s, m, ce[1]);
 
       // vec<Lit> ps;
@@ -1511,13 +1869,13 @@ namespace FlatZinc {
 
         registry().add("array_var_int_element", &p_array_int_element);
         registry().add("array_int_element", &p_array_int_element);
-        registry().add("array_set_element", &p_array_set_element);
+        //registry().add("array_set_element", &p_array_set_element);
         registry().add("array_var_set_element", &p_array_set_element);
         registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
 
         registry().add("all_different_int", &p_all_different);
-        registry().add("cumulative", &p_cumulative);
+        //registry().add("cumulative", &p_cumulative);
 
         registry().add("bool2int", &p_bool2int);
 

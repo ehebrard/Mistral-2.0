@@ -1129,7 +1129,7 @@ Mistral::Outcome Mistral::Solver::search() {
     // std::cout << std::endl;
     // heuristic->display(std::cout);
     // std::cout << std::endl;
-
+    //std::cout << sequence << std::endl;
 
     satisfiability = //(parameters.backjump ? 
       //conflict_directed_backjump() :
@@ -4087,6 +4087,9 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 
 
 Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching) {
+
+  //std::cout << "% c  create heuristic " << var_ordering << " " << branching ; //<< std::endl;
+
   BranchingHeuristic *heu = NULL;
   if(var_ordering == "dom/wdeg") {
     if(branching == "minval") {
@@ -4116,7 +4119,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "guided") {
       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
     } 
-  }  else if(var_ordering == "neighbor") {
+  } else if(var_ordering == "neighbor") {
     if(branching == "minval") {
       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinValue > (this);
       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
@@ -4136,7 +4139,41 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, Guided > (this);
       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
     } 
-  }						
+  } else if(var_ordering == "mindomain") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, MinValue > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, MaxValue > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, HalfSplit > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided > (this);
+      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+    } 
+  } else if(var_ordering == "lexicographic") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic < Lexicographic, MinValue > (this); 
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic < Lexicographic, MaxValue > (this); 
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic < Lexicographic, HalfSplit > (this); 
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic < Lexicographic, RandomMinMax > (this); 
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic < Lexicographic, Guided > (this); 
+    } 
+  }	
+
+  if(!heu) {
+    std::cout << "% c Warning, there is no known heuristic \"" << var_ordering << "/" << branching << "\"" << std::endl;
+  }
+					
   return heu;
 }
 

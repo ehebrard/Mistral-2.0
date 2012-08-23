@@ -3,8 +3,8 @@
 TMPFILE=/tmp/$$.out
 
 FCTS_ROOT=${FCTS_ROOT:-./fcts}
-MZN=${MZN:-./mistral-fz_debug}
-CANON=${CANON:-./solns2dzn -c}
+MZN=${MZN:-./mistral-fz}
+CANON=${CANON:-solns2dzn -c}
 
 test_dir()
 {

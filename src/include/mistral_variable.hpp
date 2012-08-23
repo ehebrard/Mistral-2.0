@@ -2393,7 +2393,7 @@ namespace Mistral {
 
   public:
     
-    enum method { MINIMIZATION, MAXIMIZATION, SATISFACTION, ALLSOLUTIONS };
+    enum method { MINIMIZATION, MAXIMIZATION, SATISFACTION, ENUMERATION };
     method            type;
     int        lower_bound;
     int        upper_bound;
@@ -2407,6 +2407,8 @@ namespace Mistral {
     virtual std::ostream& display(std::ostream& os) const;
 
     bool is_optimization() const;
+    bool is_satisfaction() const;
+    bool is_enumeration() const;
     bool improving(const int val) const;
     //int worst() const;
     //int best() const;

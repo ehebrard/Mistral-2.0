@@ -175,7 +175,8 @@ Mistral::Lexicographic::Lexicographic(Solver *s)
 void Mistral::Lexicographic::initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
   int n = solver->variables.size;
   std::fill(index.stack_, index.stack_+n, -1);
-  for(int i=0; i<seq.size; ++i) {
+  //for(int i=0; i<seq.size; ++i) {
+  for(int i=seq.size; --i>=0;) {
     index[seq[i].id()] = order.size;
     order.add(seq[i]);
   }

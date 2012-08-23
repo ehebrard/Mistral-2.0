@@ -162,6 +162,7 @@ int main(int argc, char *argv[])
   s.set_time_limit(cutoff);
   s.parameters.verbosity = atoi(options["--verbose"].c_str());
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));
+  fm->set_enumeration(atoi(options["-a"].c_str()));
 
   fm->run(cout , p);
   

@@ -257,7 +257,7 @@ public:
 		SATISFACTION, //< Solve as satisfaction problem
 		MINIMIZATION, //< Solve as minimization problem
 		MAXIMIZATION  //< Solve as maximization problem
-	};
+  	};
 protected:
 	/// Mistral stuff
 	Solver &solver;
@@ -266,6 +266,7 @@ protected:
 	BranchingHeuristic *heuristic;
 	RestartPolicy *policy;
 	bool use_rewriting;
+  bool enumerate;
 
 	////
 
@@ -346,6 +347,9 @@ public:
 
 	/// setup the rewriting step
 	void set_rewriting(const bool on);
+
+	/// setup the rewriting step
+  void set_enumeration(const bool on);
 
 
 	/// Run the search

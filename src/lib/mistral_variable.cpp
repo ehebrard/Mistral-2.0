@@ -4438,18 +4438,32 @@ bool Mistral::Goal::is_optimization() const {
   return (type == MINIMIZATION || type == MAXIMIZATION);
 }
 
+bool Mistral::Goal::is_satisfaction() const {
+  return (type == SATISFACTION);
+}
+
+bool Mistral::Goal::is_enumeration() const {
+  return (type == ENUMERATION);
+}
+
 bool Mistral::Goal::improving(const int val) const {
-  return( type == SATISFACTION ? false :
-	  (type == MINIMIZATION ? 
-	   (val < upper_bound) : 
-	   (val > lower_bound)) );
+  bool value = false;
+  if(type == MINIMIZATION) value = val < upper_bound;
+  else if(type == MAXIMIZATION) value = val > lower_bound;
+  return value;
+
+  // return( type == SATISFACTION ? false :
+  // 	  (type == MINIMIZATION ? 
+  // 	   (val < upper_bound) : 
+  // 	   (val > lower_bound)) );
 }
     
 
 Mistral::Outcome Mistral::Goal::notify_exhausted() {
-  if(type == SATISFACTION)
-    return UNSAT;
-  return OPT;
+  Outcome out = OPT;
+  if(type == SATISFACTION) out = UNSAT;
+  //else if(type == ENUMERATION) out = ALL;
+  return out;
 }
 
 std::ostream& Mistral::Goal::display(std::ostream& os) const {
@@ -4457,7 +4471,7 @@ std::ostream& Mistral::Goal::display(std::ostream& os) const {
     os << "minimize " << objective ;
   } else   if(type == MAXIMIZATION) {
     os << "maximize " << objective ;
-  } else if(type == ALLSOLUTIONS) {
+  } else if(type == ENUMERATION) {
     os << "find all solutions" ;
   } else {
     os << "find any solution" ;
@@ -4498,7 +4512,7 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
     // solver->branch_right();
     // return (upper_bound == lower_bound ? OPT : UNKNOWN);
   }
-  else if(type == ALLSOLUTIONS) {
+  else if(type == ENUMERATION) {
     //solver->store_solution();
 
     if(!solver->level) return OPT;

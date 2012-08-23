@@ -2664,24 +2664,26 @@ Mistral::PropagationOutcome Mistral::PredicateFactor::propagate() {
 
   if( IS_FAIL(scope[0].set_min( (factor>0 ? 
 				 scope[1].get_min() : 
-				 scope[1].get_max()) / factor )) ) 
+				 scope[1].get_max()) / factor )) ) {
     wiped = FAILURE(0); 
 
-  else if( IS_FAIL(scope[0].set_max( (factor>0 ? 
+  } else if( IS_FAIL(scope[0].set_max( (factor>0 ? 
 				      scope[1].get_max() :
-				      scope[1].get_min()) / factor )) ) 
+					scope[1].get_min()) / factor )) ) {
     wiped = FAILURE(0); 
 
-  else if( IS_FAIL(scope[1].set_min( (factor>0 ? 
-				      scope[1].get_min() : 
-				      scope[1].get_max()) * factor )) ) 
+  } else if( IS_FAIL(scope[1].set_min( (factor>0 ? 
+					scope[0].get_min() : 
+					scope[0].get_max()) * factor )) ) {
     wiped = FAILURE(1); 
 
-  else if( IS_FAIL(scope[1].set_max( (factor>0 ? 
-				      scope[1].get_max() :
-				      scope[1].get_min()) * factor )) ) 
+  } else if( IS_FAIL(scope[1].set_max( (factor>0 ? 
+					scope[0].get_max() :
+					scope[0].get_min()) * factor )) ) {
     wiped = FAILURE(1);
-  
+
+  }
+
   return wiped;
 }
 
@@ -6638,7 +6640,8 @@ void Mistral::PredicateMin::initialise() {
     if(scope[i].get_min() > scope[n].get_max()) {
       candidates.reversible_remove(i);
       //relax_from(i);
-      un_post_from(i);
+      if(!scope[i].is_ground()) un_post_from(i);
+      //un_post_from(i);
     }
   }
 
@@ -6954,7 +6957,7 @@ void Mistral::PredicateMax::initialise() {
     if(scope[i].get_max() < scope[n].get_min()) {
       candidates.reversible_remove(i);
       //relax_from(i);
-      un_post_from(i);
+      if(!scope[i].is_ground()) un_post_from(i);
     }
   }
 
