@@ -1033,10 +1033,11 @@ void Mistral::Solver::add(Constraint c) {
 
 Mistral::Outcome Mistral::Solver::solve() {
   BranchingHeuristic *heu = new GenericHeuristic <
-    GenericWeightedDVO < 
-      //PruningCountManager, 
-      FailureCountManager, 
-      MinDomainOverWeight >,
+    GenericDVO < 
+      MinDomainOverWeight, 1,
+      //PruningCountManager 
+      FailureCountManager
+      >,
     RandomMinMax 
     > (this); 
   RestartPolicy *pol = new Geometric();
@@ -1047,10 +1048,11 @@ Mistral::Outcome Mistral::Solver::solve() {
 
 Mistral::Outcome Mistral::Solver::minimize(Variable X) {
   BranchingHeuristic *heu = new GenericHeuristic <
-    GenericWeightedDVO < 
-      //PruningCountManager, 
-      FailureCountManager, 
-      MinDomainOverWeight >,
+    GenericDVO < 
+      MinDomainOverWeight, 1,
+      //PruningCountManager 
+      FailureCountManager
+      >,
     RandomMinMax 
     > (this); 
   RestartPolicy *pol = new Geometric();
@@ -1062,10 +1064,11 @@ Mistral::Outcome Mistral::Solver::minimize(Variable X) {
 
 Mistral::Outcome Mistral::Solver::maximize(Variable X) {
   BranchingHeuristic *heu = new GenericHeuristic <
-    GenericWeightedDVO < 
-      //PruningCountManager, 
-      FailureCountManager, 
-      MinDomainOverWeight >,
+    GenericDVO < 
+      MinDomainOverWeight, 1,
+      //PruningCountManager 
+      FailureCountManager
+      >,
     RandomMinMax 
     > (this); 
   RestartPolicy *pol = new Geometric();
@@ -1088,15 +1091,120 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
   //std::cout << "\nINIT LEVEL = " << level << std::endl;
   initialise_search(seq, heu, pol, goal);
 
-  return search();
+  return restart_search();
 }
  
-Mistral::Outcome Mistral::Solver::search() {
 
-  //std::cout << heuristic << std::endl;
-  
+Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& sequences,
+						  Vector< BranchingHeuristic * >& heuristics,
+						  Vector< RestartPolicy * >& policies,
+						  Vector< Goal * >& goals
+						  ) {
+#ifdef _DEBUG_SEARCH
+  std::cout << " c start new sequence search (in " << sequences.size << " phases)" << std::endl;
+#endif
 
-  int initial_level = level; 
+  unsigned int phase = 0;
+  Outcome satisfiability = UNKNOWN, phase_satisfiability = UNKNOWN;
+  Vector< int > phase_level;
+  phase_level.add(level);
+
+  // repeat until
+  while(satisfiability == UNKNOWN) {  
+
+#ifdef _DEBUG_SEARCH
+    std::cout << " c";
+    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+    std::cout << " init phase " << phase << std::endl;
+#endif
+
+    //initialise with the parameters of the current phase
+    initialise_search(sequences[phase], heuristics[phase], policies[phase], goals[phase]);
+ 
+
+#ifdef _DEBUG_SEARCH
+    std::cout << " c";
+    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+    std::cout << " search phase " << phase << ": ";
+#endif
+
+    //search the subset of variables
+    if(objective->has_function()) {
+      objective->set_type(phase < sequences.size-1 ? Goal::SATISFACTION : Goal::OPTIMIZATION);
+    }
+    phase_satisfiability = chronological_dfs(phase_level.back());//search(); //false, (phase < sequences.size-1));
+
+#ifdef _DEBUG_SEARCH
+    std::cout << outcome2str(phase_satisfiability) << std::endl;
+#endif
+
+    if(phase_satisfiability == UNSAT || phase_satisfiability == OPT) 
+      {
+
+	// the current phase is not satisfiable
+	if(phase_level.empty()) 
+	  {
+#ifdef _DEBUG_SEARCH
+	    std::cout << " c";
+	    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+	    std::cout << " UNSAT! " << std::endl;
+#endif
+
+	    // we have exhausted the complete search, returns
+	    satisfiability = UNSAT;
+	  }
+	else
+	  {
+	    // go back to the previous phase
+	    phase_level.pop();
+	    --phase;
+
+#ifdef _DEBUG_SEARCH
+	    std::cout << " c";
+	    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+	    std::cout << " backtrack to phase " << phase << std::endl;
+	    //exit(1);
+#endif
+	    
+	    branch_right();
+
+	  }
+      }
+    else if(phase_satisfiability == SAT)
+      {
+
+	phase_level.add(level);
+	// the current phase has a solution
+	if((int)(++phase) == sequence.size)
+	  {
+
+#ifdef _DEBUG_SEARCH
+	    std::cout << " c";
+	    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+	    std::cout << " SAT! " << std::endl;
+#endif
+
+	    // we have found a complete solution
+	    satisfiability = SAT;
+	  }
+
+#ifdef _DEBUG_SEARCH
+	else{
+	  std::cout << " c";
+	  for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+	  std::cout << " advance to phase " << phase << std::endl;
+	}
+#endif
+
+      }
+  }
+
+  return satisfiability;
+}
+
+Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _restore_) { //const bool _restore_, const bool _exit_on_solution_) {
+
+  //int initial_level = level; 
 
   Outcome satisfiability = UNKNOWN;
 
@@ -1112,65 +1220,36 @@ Mistral::Outcome Mistral::Solver::search() {
     
     if(parameters.verbosity>1) {
       statistics.print_short(std::cout);
-      //if(base) std::cout << " " << base->learnt.size ;
       std::cout << std::endl;
     }
 
-    //std::cout << "before restart: " << decisions << std::endl;
-
     ++statistics.num_restarts;
-
-    //policy->reset(parameters.restart_limit);
-
-    //std::cout << "current fails: " << statistics.num_failures << " / limit fails: " << parameters.restart_limit << std::endl;
-
-
-    // display(std::cout, true);
-    // std::cout << std::endl;
-    // heuristic->display(std::cout);
-    // std::cout << std::endl;
-    //std::cout << sequence << std::endl;
 
     satisfiability = //(parameters.backjump ? 
       //conflict_directed_backjump() :
-      chronological_dfs(); //);
-		      
+      chronological_dfs(root); //_exit_on_solution_); //);
+    
+    // if(_exit_on_solution_ && objective)
+    //   satisfiability = objective->notify_solution(this);
 
     if(satisfiability == LIMITOUT) {
 
       policy->reset(parameters.restart_limit);
     
       if(!limits_expired()) {
-
-	// std::cout << "LIMIT EXPIRED" << std::endl;
-
 	satisfiability = UNKNOWN;
       }
       forget();
     }
 
-    restore(initial_level);
-    //restore(0);
-
-    //std::cout << "after restart "<< decisions << std::endl;
-
-    decisions.clear();
+    if(_restore_) restore(root);
   }
 
   statistics.outcome = satisfiability;
 
-  //std::cout << outcome2str(statistics.outcome) << std::endl;
-
-
   statistics.end_time = get_run_time();
 
   if(parameters.verbosity)  {
-    // switch(satisfiability) {
-    // case UNKNOWN: std::cout << " s  UNKNOWN" << std::endl; break;
-    // case SAT: std::cout << " s  SATISFIABLE" << std::endl; break;
-    // case UNSAT: std::cout << " s  UNSATISFIABLE" << std::endl; break;
-    // case OPT: std::cout << " s  OPTIMAL" << std::endl; break;
-    // }
     std::cout << statistics;
   }
 
@@ -1181,9 +1260,9 @@ Mistral::Outcome Mistral::Solver::get_next_solution()
 {
   Outcome satisfiability = UNSAT;
 
-//   std::cout << "get next solution " << (decisions.size) << " "
-// 	    << search_started << std::endl;
-
+  //   std::cout << "get next solution " << (decisions.size) << " "
+  // 	    << search_started << std::endl;
+  
   if(search_started) {
     if(decisions.size) 
       branch_right();
@@ -1230,6 +1309,9 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
 					RestartPolicy *pol,
 					Goal *goal) 
 {
+
+  //std::cout << "INIT SEARCH!" << std::endl;
+
   consolidate();
 
   if(level < 0) save();
@@ -1237,43 +1319,25 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   active_solver = this;
   signal(SIGINT,Mistral_SIGINT_handler);
 
-  //if(statistics.start_time == 0.0) statistics.start_time = get_run_time();
-
-
-  // std::cout << seq << std::endl;
-
 
   sequence.clear();
-  decisions.clear();
+  //decisions.clear();
   for(unsigned int i=seq.size; i;) {
-
-    // std::cout << (i-1) << std::endl;
-    // std::cout << seq[i-1] << std::endl;
-
     Variable x = seq[--i].get_var();
     if(!x.is_ground() && !sequence.contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) sequence.add(x);
   }
   num_search_variables = sequence.size;
 
-  
-  // for(int i=0; i<sequence.size; ++i) {
-  //   std::cout << sequence[i] << " in " << sequence[i].get_domain() << std::endl;
-  // }
-  // std::cout << std::endl;
-  // // //exit(1);
 
-
-
-  if(heu) { delete heuristic; heuristic = heu; }
+  if(heu) { // delete heuristic
+      ; heuristic = heu; }
   else if(!heuristic) heuristic = new GenericHeuristic< Lexicographic, MinValue >(this);
-  if(pol) { delete policy;    policy    = pol; }
+  if(pol) { // delete policy;
+    policy    = pol; }
   else if(!policy)    policy    = new NoRestart();
-  if(goal){ delete objective; objective = goal;}
+  if(goal){ // delete objective;
+    objective = goal;}
   else if(!objective) objective = new Goal(Goal::SATISFACTION);
-
-
-  // statistics.objective_value = objective->value();
-  // std::cout << objective->objective << " in " << objective->objective.get_domain() << std::endl;
 
   heuristic->initialise(sequence);
 
@@ -1283,14 +1347,12 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   statistics.num_constraints = constraints.size;
   
   if(parameters.verbosity)  std::cout << " c +" << std::setw(90) << std::setfill('=')
-  			      //=============================================================================
   				      << "+" << std::endl << std::setfill(' ') 
   				      << " c |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl 
   				      << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
 }
 
-
-
+  
 Mistral::Solver::~Solver() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete solver" << std::endl;
@@ -1340,9 +1402,6 @@ Mistral::Solver::~Solver() {
 
   }
 
-
-  
-
 }
 
 
@@ -1358,6 +1417,10 @@ Mistral::Solver::~Solver() {
 
 // void Mistral::Solver::save(const int idx) {
 //   saved_vars.add(idx);
+// }
+
+// void Mistral::Solver::() {
+
 // }
 
 void Mistral::Solver::restore() {
@@ -1503,6 +1566,7 @@ void Mistral::Solver::restore() {
 }
 
 void Mistral::Solver::restore(const int lvl) {
+  decisions.size = lvl;
   while(lvl < level) restore();
 }
 
@@ -1644,8 +1708,8 @@ void Mistral::Solver::consolidate()
     
     //ConsolidateListener *cl 
     consolidate_manager = new ConsolidateListener(this);
-    add((VariableListener*)consolidate_manager);
-    add((ConstraintListener*)consolidate_manager);
+    //add((VariableListener*)consolidate_manager);
+    //add((ConstraintListener*)consolidate_manager);
     
     // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
     
@@ -2961,12 +3025,14 @@ void Mistral::Solver::learn_nogood() {
 
 #ifdef _DEBUG_NOGOOD
 #ifdef _DEBUG_SEARCH
-  for(int i=0; i<level; ++i) std::cout << " "; 
-  std::cout << "conflict: " ; 
-  //std::cout << (int*)base << std::endl;
-  //std::cout << (int*)(base->conflict) << std::endl ;
-  print_clause(std::cout, base->conflict);
-  std::cout << std::endl;
+  if(_DEBUG_SEARCH) {
+    for(int i=0; i<level; ++i) std::cout << " "; 
+    std::cout << "conflict: " ; 
+    //std::cout << (int*)base << std::endl;
+    //std::cout << (int*)(base->conflict) << std::endl ;
+    print_clause(std::cout, base->conflict);
+    std::cout << std::endl;
+  }
 #endif
 
   //#ifdef _DEBUG_NOGOOD
@@ -3129,12 +3195,14 @@ void Mistral::Solver::learn_nogood() {
   learnt_clause[0] = NOT(p);    
 
 #ifdef _DEBUG_SEARCH
-  std::cout << " (";
-  for(unsigned int i=0; i<learnt_clause.size; ++i) {
-    std::cout << " " ;//<< learnt_clause[i];
-    print_literal(std::cout, learnt_clause[i]);
+  if(_DEBUG_SEARCH) {
+    std::cout << " (";
+    for(unsigned int i=0; i<learnt_clause.size; ++i) {
+      std::cout << " " ;//<< learnt_clause[i];
+      print_literal(std::cout, learnt_clause[i]);
+    }
+    std::cout << " )" << std::endl;
   }
-  std::cout << " )" << std::endl;
 #endif
         
   //exit(1);
@@ -3186,14 +3254,22 @@ void Mistral::Solver::branch_right() {
 
 
   if(parameters.backjump) {
-    decisions.size += (backtrack_level-level);
+    //decisions.size += (backtrack_level-level);
     Lit p = learnt_clause[0];
     deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NOT(SIGN(p)));
   } else {
     backtrack_level = level-1;
-    deduction = decisions.pop();
+    //deduction = decisions.pop();
+    deduction = decisions.back();
     deduction.invert();
   }
+
+  //decisions.size = backtrack_level;
+
+  // if(backtrack_level == level)
+  //   {
+  //     std::cout << "CA ALORS!" << std::endl;
+  //   }
 
   restore(backtrack_level);  
 
@@ -3205,9 +3281,11 @@ void Mistral::Solver::branch_right() {
   // else {
   
 #ifdef _DEBUG_SEARCH
-  std::cout << "c";
-  for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-  std::cout << deduction << std::endl;
+  if(_DEBUG_SEARCH) {
+    std::cout << "c";
+    for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+    std::cout << deduction << std::endl;
+  }
 #endif
   
   //decisions.back(-1).make();
@@ -3227,9 +3305,11 @@ void Mistral::Solver::backjump() {
   Decision decision = culprit.get_decision();
   
 #ifdef _DEBUG_SEARCH
-  std::cout << "c";
-  for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-  std::cout << decision << std::endl;
+  if(_DEBUG_SEARCH) {
+    std::cout << "c";
+    for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+    std::cout << decision << std::endl;
+  }
 #endif
 
   decision.make();
@@ -3276,9 +3356,11 @@ void Mistral::Solver::branch_left() {
   decisions.add(decision);
 
 #ifdef _DEBUG_SEARCH
-  std::cout << "c";
-  for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-  std::cout << decision << std::endl;
+  if(_DEBUG_SEARCH) {
+    std::cout << "c";
+    for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+    std::cout << decision << std::endl;
+  }
 #endif
 
 #ifdef _SAFE
@@ -3313,9 +3395,11 @@ void Mistral::Solver::branch_left() {
 
  Mistral::Outcome Mistral::Solver::satisfied() {    
 #ifdef _DEBUG_SEARCH
-  std::cout << " c";
-  for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-  std::cout << " SAT!" << std::endl; 
+   if(_DEBUG_SEARCH) {
+     std::cout << " c";
+     for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+     std::cout << " SAT!" << std::endl; 
+   }
 #endif
 
   //std::cout << this << std::endl;
@@ -3335,8 +3419,14 @@ void Mistral::Solver::branch_left() {
 
 
     for(i=0; i<posted_constraints.size; ++i) {
+
+
+      //std::cout << posted_constraints[i] << " / " << constraints.size << std::endl;
+
       all_assigned = true;
       C = constraints[posted_constraints[i]];
+      //C.consolidate();
+
       k=C.arity();
       scope = C.get_scope();
       for(j=0; j<k; ++j) {
@@ -3350,17 +3440,36 @@ void Mistral::Solver::branch_left() {
       }
 
       bool consistent = true;
+
+      // if(C.id() == 48996) {
+      // 	std::cout << "check " << C << "(variables are" << (all_assigned ? " " : " not ") << "all assigned)" << std::endl;
+      // }
+
       if(!all_assigned) {
+
+
+	/// !!! This checks that all values are AC, this is too strong
+	// for(j=0; j<k && consistent; ++j) {
+	//   if(!scope[j].is_ground()) {
+	//     int vali, vnext = scope[j].get_min();
+	//     do {
+	//       vali = vnext;
+	//       if(!C.find_support(j, vali)) consistent = false;
+	//       vnext = scope[j].next(vali);
+	//     } while( consistent && vali<vnext );
+	//   }
+	// }
+
+
+	/// This checks that all bounds are BC
 	for(j=0; j<k && consistent; ++j) {
 	  if(!scope[j].is_ground()) {
-	    int vali, vnext = scope[j].get_min();
-	    do {
-	      vali = vnext;
-	      if(!C.find_support(j, vali)) consistent = false;
-	      vnext = scope[j].next(vali);
-	    } while( consistent && vali<vnext );
+	    if(!C.find_bound_support(j, scope[j].get_min())) consistent = false;
+	    else if(!C.find_bound_support(j, scope[j].get_max())) consistent = false;
 	  }
 	}
+	
+
       } else {
 	consistent = !C.check(tmp_sol.stack_);
       }
@@ -3402,7 +3511,8 @@ void Mistral::Solver::branch_left() {
   ++statistics.num_solutions;
 
   /// notify the objective and return the outcome
-  Outcome result = objective->notify_solution(this);
+  Outcome result = //(_exit_on_solution_ ? SAT : objective->notify_solution(this));
+    objective->notify_solution(this);
 
   statistics.objective_value = objective->value();
 
@@ -3418,7 +3528,9 @@ void Mistral::Solver::branch_left() {
 
 Mistral::Outcome Mistral::Solver::exhausted() {    
 #ifdef _DEBUG_SEARCH
-  std::cout << " c UNSAT!" << std::endl; 
+  if(_DEBUG_SEARCH) {
+    std::cout << " c UNSAT!" << std::endl; 
+  }
 #endif
   
   Outcome value = UNSAT;
@@ -3454,60 +3566,57 @@ Mistral::Outcome Mistral::Solver::exhausted() {
 //   return x.getString();
 // }
 
-Mistral::Outcome Mistral::Solver::chronological_dfs() 
+
+
+/**
+   Searches for an assignment of the variables in sequences 
+
+   Stops when the objecive is satisfied, or when the search tree is exhausted 
+   - SATISFACTION OBJECTIVE: returns 'SAT' when a solution is found, 'UNSAT' if the search tree is exhausted, and 'UNKNOWN' otherwise
+   - OPTIMIZATION OBJECTIVE: returns 'OPT' when the search tree is exhausted and 'UNKNOWN' otherwise
+   - ENUMERATION  OBJECTIVE: returns 'ALL' when the search tree is exhausted and 'UNKNOWN' otherwise [TODO]
+   
+          The argument 'root' controls how deep we can backtrack. i.e., the root of the search tree.
+          It is possible to start the search with the decision stack and trail non empty, and backtrack
+	  on them (if 'root' is set to something lower than their size), or not.
+ */
+Mistral::Outcome Mistral::Solver::chronological_dfs(const int root) 
 {
 
-#ifdef _MONITOR
-  //std::cout << 33 << std::endl;
-    monitor_list.display(std::cout);
-    std::cout << std::endl;
-
-    //check_constraint_graph_integrity();
-    //std::cout << 44 << std::endl;
-#endif
+  //std::cout << "start search rooted at level " << root << std::endl;
 
   int status = UNKNOWN;
   while(status == UNKNOWN) {
-    
-    //std::cout << std::endl ;
 
-    // for(int i=0; i<sequence.size; ++i) {
-    //   std::cout << sequence[i] << ":" << sequence[i].get_domain() << " ";
+    // if(decisions.size != level) {
+    //   std::cout << "decisions.size/level = " << decisions.size << "/" << level << std::endl;
+    //   exit(1);
     // }
-    // std::cout << std::endl;
-          
+
     if(propagate()) {
-    // for(int i=0; i<sequence.size; ++i) {
-    //   std::cout << sequence[i] << ":" << sequence[i].get_domain() << " ";
-    // }
-    // std::cout << std::endl ;
-
 
 #ifdef _MONITOR
-      //std::cout << 11 << std::endl;
-
     monitor_list.display(std::cout);
     std::cout << std::endl;
-
-    display(std::cout, 2);
-
+    //display(std::cout, 2);
     check_constraint_graph_integrity();
-    
-    //std::cout << 22 << std::endl;
 #endif
             
       ++statistics.num_nodes;
-      if( sequence.empty()  ) status = satisfied();
+      if( sequence.empty()  ) //status = satisfied(_exit_on_solution_);
+	status = satisfied();//objective);
       else branch_left();
 
     } else {
 
       if( parameters.backjump ) learn_nogood();
-      if( decisions.empty() ) status = exhausted();
+      //if( decisions.empty() ) status = exhausted(); //objective);
+      if( level == root ) status = exhausted(); //objective);
       else if( limits_expired() ) status = LIMITOUT;
       else branch_right();
 
     }
+
   }
   return status;
 }
@@ -4086,75 +4195,267 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 
 
 
-Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching) {
+// Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching) {
 
-  //std::cout << "% c  create heuristic " << var_ordering << " " << branching ; //<< std::endl;
+//   //std::cout << "% c  create heuristic " << var_ordering << " " << branching ; //<< std::endl;
+
+//   BranchingHeuristic *heu = NULL;
+//   if(var_ordering == "dom/wdeg") {
+//     if(branching == "minval") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinValue > (this); 
+//     } else if(branching == "maxval") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MaxValue > (this); 
+//     } else if(branching == "halfsplit") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+//     } else if(branching == "randminmax") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+//     } else if(branching == "minweight") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+//     } else if(branching == "guided") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, Guided > (this); 
+//     } 
+//   } else if(var_ordering == "dom/activity") {
+//     if(branching == "minval") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+//     } else if(branching == "maxval") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+//     } else if(branching == "halfsplit") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+//     } else if(branching == "randminmax") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+//     } else if(branching == "minweight") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+//     } else if(branching == "guided") {
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+//     } 
+//   } else if(var_ordering == "neighbor") {
+//     if(branching == "minval") {
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinValue > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+//     } else if(branching == "maxval") {
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MaxValue > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+//     } else if(branching == "halfsplit") {
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, HalfSplit > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+//     } else if(branching == "randminmax") {
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, RandomMinMax > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+//     } else if(branching == "minweight") {
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinWeightValue > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+//     } else if(branching == "guided") {
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, Guided > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+//     } 
+//   } else if(var_ordering == "mindomain") {
+//     if(branching == "minval") {
+//       heu = new GenericHeuristic< GenericDVO< MinDomain >, MinValue > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+//     } else if(branching == "maxval") {
+//       heu = new GenericHeuristic< GenericDVO< MinDomain >, MaxValue > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+//     } else if(branching == "halfsplit") {
+//       heu = new GenericHeuristic< GenericDVO< MinDomain >, HalfSplit > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+//     } else if(branching == "randminmax") {
+//       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+//     } else if(branching == "guided") {
+//       heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+//     } 
+//   } else if(var_ordering == "lexicographic") {
+//     if(branching == "minval") {
+//       heu = new GenericHeuristic < Lexicographic, MinValue > (this); 
+//     } else if(branching == "maxval") {
+//       heu = new GenericHeuristic < Lexicographic, MaxValue > (this); 
+//     } else if(branching == "halfsplit") {
+//       heu = new GenericHeuristic < Lexicographic, HalfSplit > (this); 
+//     } else if(branching == "randminmax") {
+//       heu = new GenericHeuristic < Lexicographic, RandomMinMax > (this); 
+//     } else if(branching == "guided") {
+//       heu = new GenericHeuristic < Lexicographic, Guided > (this); 
+//     } 
+//   }	
+
+//   if(!heu) {
+//     std::cout << "% c Warning, there is no known heuristic \"" << var_ordering << "/" << branching << "\"" << std::endl;
+//   }
+					
+//   return heu;
+// }
+
+
+
+Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching, const int randomness) {
 
   BranchingHeuristic *heu = NULL;
   if(var_ordering == "dom/wdeg") {
-    if(branching == "minval") {
-      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinValue > (this); 
-    } else if(branching == "maxval") {
-      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MaxValue > (this); 
-    } else if(branching == "halfsplit") {
-      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, HalfSplit > (this); 
-    } else if(branching == "randminmax") {
-      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
-    } else if(branching == "minweight") {
-      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
-    } else if(branching == "guided") {
-      heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, Guided > (this); 
-    } 
+    if(randomness < 2) {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, Guided > (this); 
+      } 
+    } else if(randomness == 2) {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, Guided > (this); 
+      } 
+    } else if(randomness == 3) {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, Guided > (this); 
+      } 
+    } else {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided > (this); 
+      } 
+    }
   } else if(var_ordering == "dom/activity") {
-    if(branching == "minval") {
-      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
-    } else if(branching == "maxval") {
-      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
-    } else if(branching == "halfsplit") {
-      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
-    } else if(branching == "randminmax") {
-      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
-    } else if(branching == "minweight") {
-      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
-    } else if(branching == "guided") {
-      heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
-    } 
+    if(randomness < 2) {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided > (this); 
+      } 
+    } else if(randomness == 2) {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, Guided > (this); 
+      } 
+    } else if(randomness == 3) {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, Guided > (this); 
+      } 
+    } else {
+      if(branching == "minval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, HalfSplit > (this); 
+      } else if(branching == "randminmax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, Guided > (this); 
+      } 
+    }
   } else if(var_ordering == "neighbor") {
     if(branching == "minval") {
-      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinValue > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinValue > (this);
     } else if(branching == "maxval") {
-      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MaxValue > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MaxValue > (this);
     } else if(branching == "halfsplit") {
-      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, HalfSplit > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, HalfSplit > (this);
     } else if(branching == "randminmax") {
-      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, RandomMinMax > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, RandomMinMax > (this);
     } else if(branching == "minweight") {
-      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinWeightValue > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this);
     } else if(branching == "guided") {
-      heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, Guided > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, Guided > (this);
     } 
   } else if(var_ordering == "mindomain") {
     if(branching == "minval") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, MinValue > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinValue > (this); 
     } else if(branching == "maxval") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, MaxValue > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MaxValue > (this); 
     } else if(branching == "halfsplit") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, HalfSplit > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, HalfSplit > (this); 
     } else if(branching == "randminmax") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
     } else if(branching == "guided") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided > (this);
-      //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+    } 
+  } else if(var_ordering == "maxdegree") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, MinValue > (this);
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, MaxValue > (this);
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, HalfSplit > (this);
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, RandomMinMax > (this);
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, Guided > (this);
+    } 
+  } else if(var_ordering == "dom/deg") {
+    if(branching == "minval") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, MinValue > (this);
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, MaxValue > (this);
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, HalfSplit > (this);
+    } else if(branching == "randminmax") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, RandomMinMax > (this);
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, Guided > (this);
     } 
   } else if(var_ordering == "lexicographic") {
     if(branching == "minval") {
@@ -4168,7 +4469,154 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "guided") {
       heu = new GenericHeuristic < Lexicographic, Guided > (this); 
     } 
-  }	
+  } else if(var_ordering == "input_order") {
+    if(branching == "indomain_min") {
+      heu = new GenericHeuristic < Lexicographic, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < Lexicographic, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < Lexicographic, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < Lexicographic, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < Lexicographic, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < Lexicographic, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < Lexicographic, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < Lexicographic, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < Lexicographic, HalfSplit > (this);
+    }
+  } else if(var_ordering == "first_fail") {
+    if(branching == "indomain_min") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < GenericDVO< MinDomain >, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < GenericDVO< MinDomain >, HalfSplit > (this);
+    }
+  } else if(var_ordering == "anti_first_fail") {
+    if(branching == "indomain_min") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, HalfSplit > (this);
+    }
+  } else if(var_ordering == "smallest") {
+        if(branching == "indomain_min") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < GenericDVO< MinMin >, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < GenericDVO< MinMin >, HalfSplit > (this);
+    }
+  } else if(var_ordering == "occurrence") {
+    if(branching == "indomain_min") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < GenericDVO< MaxDegree >, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < GenericDVO< MaxDegree >, HalfSplit > (this);
+    }
+  } else if(var_ordering == "most_constrained") {
+    if(branching == "indomain_min") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, HalfSplit > (this);
+    }
+  } else if(var_ordering == "max_regret") {
+    if(branching == "indomain_min") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, MinValue > (this); 
+    } else if(branching == "indomain_max") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, MaxValue > (this); 
+    } else if(branching == "indomain_middle") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, MiddleValue > (this); 
+    } else if(branching == "indomain_median") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, MedianValue > (this); 
+    }//  else if(branching == "indomain") {
+    //   heu = new GenericHeuristic < GenericDVO< MaxRegret >, Any? > (this); 
+    // } 
+    else if(branching == "indomain_random") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, RandomValue > (this); 
+    } else if(branching == "indomain_split") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, HalfSplit > (this);
+    } else if(branching == "indomain_reverse_split") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, ReverseSplit > (this);
+    } else if(branching == "indomain_interval") {
+      heu = new GenericHeuristic < GenericDVO< MaxRegret >, HalfSplit > (this);
+    }
+  }
 
   if(!heu) {
     std::cout << "% c Warning, there is no known heuristic \"" << var_ordering << "/" << branching << "\"" << std::endl;

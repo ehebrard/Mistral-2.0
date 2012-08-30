@@ -353,9 +353,9 @@ namespace Mistral {
   // };
 
 
-  template < class VarComparator, class Branching > 
+  template < class VarComparator, class Branching, int RAND > 
   class SchedulingWeightedDegree 
-    : public GenericHeuristic< GenericWeightedDVO< FailureCountManager,  VarComparator >,
+    : public GenericHeuristic< GenericDVO< VarComparator, RAND, FailureCountManager >,
 			       Branching > {
   public:
 
@@ -363,7 +363,7 @@ namespace Mistral {
     int offset;
     
     SchedulingWeightedDegree(Solver *s, Vector< Vector< Variable > >& graph) 
-      : GenericHeuristic< GenericWeightedDVO< FailureCountManager, VarComparator >, 
+      : GenericHeuristic< GenericDVO< VarComparator, RAND, FailureCountManager >, 
 			  Branching >(s) {
 
       int min_idx = graph[0][0].id();
@@ -387,11 +387,10 @@ namespace Mistral {
 	}
       }
       
-      GenericHeuristic< GenericWeightedDVO< FailureCountManager, VarComparator >, 
-			Branching >::var.best.map = neighborhood;
-      GenericHeuristic< GenericWeightedDVO< FailureCountManager, VarComparator >, 
-			Branching >::var.current.map = neighborhood;
-
+      for(unsigned int i=0; i<RAND; ++i) 
+	GenericHeuristic< GenericDVO< VarComparator, RAND, FailureCountManager >, Branching >::var.bests[i].map = neighborhood;
+      GenericHeuristic< GenericDVO< VarComparator, RAND, FailureCountManager >, Branching >::var.current.map = neighborhood;
+  
       //std::cout << graph << std::endl;
       //exit(1);
 

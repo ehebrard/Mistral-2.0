@@ -208,7 +208,7 @@ namespace Mistral {
     
     * Manager doing nothing, used for genericity *
     */
-  class NoManager : public FailureListener, public ConstraintListener {
+  class NoManager {
     
   public:
 
@@ -217,7 +217,7 @@ namespace Mistral {
 
     double *get_weight() { return NULL; }  
 
-    std::ostream& display(std::ostream& os) { return os; }    
+    std::ostream& display(std::ostream& os, const bool b=false) { return os; }    
     // void initialise(Solver* s);
     // void initialise_structures(VarComparator &v);
   };
@@ -693,9 +693,9 @@ namespace Mistral {
 //   return x->display(os);
 // }
 
-
-  // std::ostream& operator<<(std::ostream& os, BranchingHeuristic& x);
-  // std::ostream& operator<<(std::ostream& os, BranchingHeuristic* x);
+  
+  //std::ostream& operator<<(std::ostream& os, BranchingHeuristic& x);
+  //std::ostream& operator<<(std::ostream& os, BranchingHeuristic* x);
 
 
   /**********************************************
@@ -739,12 +739,16 @@ namespace Mistral {
       var.display(os);
       os << " c ";
       choice.display(os);
-      os << std::endl ;
+      os << " " << std::endl ;
       return os;
     }
   };
 
 
+  template < class VarSelector, class ValSelector >
+  std::ostream& operator<<(std::ostream& os, BranchingHeuristic* x) {
+    return x->display(os);
+  }
 
 
 
@@ -780,141 +784,359 @@ namespace Mistral {
 
 
 
-  /**********************************************
-   * Generic variable heuristic
-   **********************************************/
+
+
+  // /**********************************************
+  //  * Generic variable heuristic
+  //  **********************************************/
   
-  template < class VarComparator >
-  class GenericDVOI 
-  {
-  public: 
+  // template < class VarComparator >
+  // class GenericDVOI 
+  // {
+  // public: 
     
-    Solver   *solver;
+  //   Solver   *solver;
 
-    GenericDVOI() { solver = NULL; }
-    GenericDVOI(Solver* s) : solver(s) {}
-    virtual void initialise(Solver *s) { solver = s; }
+  //   GenericDVOI() { solver = NULL; }
+  //   GenericDVOI(Solver* s) : solver(s) {}
+  //   virtual void initialise(Solver *s) { solver = s; }
 
-    virtual ~GenericDVOI() {}
+  //   virtual ~GenericDVOI() {}
     
-    virtual std::ostream& display(std::ostream& os,  const int n, double* weights) {
+  //   virtual std::ostream& display(std::ostream& os,  const int n, double* weights) {
 
-      os << " c Select the " ;
-      if(n>1) os << n << " ";
-      os << "variable" << (n > 1 ? "s " : " ") << "with minimal value of ";
-      VarComparator v;
-      v.display_criterion(os);
-      if(n>1) os << " and pick one uniformly at random" ;
-      os << std::endl;
+  //     os << " c Select the " ;
+  //     if(n>1) os << n << " ";
+  //     os << "variable" << (n > 1 ? "s " : " ") << "with minimal value of ";
+  //     VarComparator v;
+  //     v.display_criterion(os);
+  //     if(n>1) os << " and pick one uniformly at random" ;
+  //     os << std::endl;
 
-      Variable *variables = solver->sequence.list_;
-      unsigned int length = solver->sequence.size-1;
-      Variable var = variables[length];
+  //     Variable *variables = solver->sequence.list_;
+  //     unsigned int length = solver->sequence.size-1;
+  //     Variable var = variables[length];
 
 
-      os << "--> branch in [";
+  //     os << "--> branch in [";
 
-      std::vector< Identifiable< VarComparator > > all_vars;
-      for(unsigned int i=0; i<=length; ++i) {
-      	Identifiable<VarComparator> vc;
-	//if(weights) vc.criterion.weight = weights;
-      	vc = variables[i];
-      	vc.id = i;
-      	all_vars.push_back(vc);
+  //     std::vector< Identifiable< VarComparator > > all_vars;
+  //     for(unsigned int i=0; i<=length; ++i) {
+  //     	Identifiable<VarComparator> vc;
+  // 	//if(weights) vc.criterion.weight = weights;
+  //     	vc = variables[i];
+  //     	vc.id = i;
+  //     	all_vars.push_back(vc);
 
-	os << variables[i] << " in " << variables[i].get_domain() << " ";
+  // 	os << variables[i] << " in " << variables[i].get_domain() << " ";
 
-      }
+  //     }
       
-      os << std::endl;
+  //     os << std::endl;
 
 
-      sort(all_vars.begin(), all_vars.end());
+  //     sort(all_vars.begin(), all_vars.end());
 
-      os << " c [" << variables[all_vars[0].id].id() << ":";
-      all_vars[0].display(os);
+  //     os << " c [" << variables[all_vars[0].id].id() << ":";
+  //     all_vars[0].display(os);
 
-      for(int i=1; i<n; ++i) {
-	os << " " << variables[all_vars[i].id].id() << ":";
-      	all_vars[i].display(os);
-      }
+  //     for(int i=1; i<n; ++i) {
+  // 	os << " " << variables[all_vars[i].id].id() << ":";
+  //     	all_vars[i].display(os);
+  //     }
 
-      os << "]";
+  //     os << "]";
 
-      for(unsigned int i=n; i<all_vars.size(); ++i) {
-	os << " " << variables[all_vars[i].id].id() << ":";
-      	all_vars[i].display(os);
-      }
-      os << std::endl;
+  //     for(unsigned int i=n; i<all_vars.size(); ++i) {
+  // 	os << " " << variables[all_vars[i].id].id() << ":";
+  //     	all_vars[i].display(os);
+  //     }
+  //     os << std::endl;
       
-      return os;
-    }
+  //     return os;
+  //   }
 
-  };
+  // };
 
 
-  /*! \class GenericDVO
-    \brief  Class GenericDVO
+  // /*! \class GenericDVO
+  //   \brief  Class GenericDVO
 
-    Generic (dynamic) variable ordering heuristic. 
-    - A parameterized comparison method is used to select the 'best' variable
-  */
-  template < class VarComparator >
-  class GenericDVO : public GenericDVOI< VarComparator >
-  {
-  public: 
+  //   Generic (dynamic) variable ordering heuristic. 
+  //   - A parameterized comparison method is used to select the 'best' variable
+  // */
+  // template < class VarComparator >
+  // class GenericDVO : public GenericDVOI< VarComparator >
+  // {
+  // public: 
     
-    /**@name Parameters*/
-    //@{ 
-    VarComparator best;
-    VarComparator current;
-    //@}
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   VarComparator best;
+  //   VarComparator current;
+  //   //@}
 
-    /**@name Constructors*/
-    //@{
-    GenericDVO() : GenericDVOI< VarComparator >() {}
-    GenericDVO(Solver* s) : GenericDVOI< VarComparator >(s) {}
-    virtual void initialise(Solver *s) { GenericDVOI< VarComparator >::initialise(s); }
-    //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
-    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
+  //   /**@name Constructors*/
+  //   //@{
+  //   GenericDVO() : GenericDVOI< VarComparator >() {}
+  //   GenericDVO(Solver* s) : GenericDVOI< VarComparator >(s) {}
+  //   virtual void initialise(Solver *s) { GenericDVOI< VarComparator >::initialise(s); }
+  //   //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
+  //   virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
    
-    virtual ~GenericDVO() {}
-    //@}
+  //   virtual ~GenericDVO() {}
+  //   //@}
     
-    /**@name Utils*/
-    //@{ 
-    Variable select()
-    {    
-      Variable *variables = GenericDVOI< VarComparator >::solver->sequence.list_;
-      unsigned int length = GenericDVOI< VarComparator >::solver->sequence.size-1;
-      Variable var = variables[length];
-      best = var;
+  //   /**@name Utils*/
+  //   //@{ 
+  //   Variable select()
+  //   {    
+  //     Variable *variables = GenericDVOI< VarComparator >::solver->sequence.list_;
+  //     unsigned int length = GenericDVOI< VarComparator >::solver->sequence.size-1;
+  //     Variable var = variables[length];
+  //     best = var;
 
-      //std::cout << variables[length] << "*" << std::endl ;
+  //     //std::cout << variables[length] << "*" << std::endl ;
 
-      for(unsigned int i=length; i--;) {
-	current = variables[i];
-	//std::cout << variables[i] ;
+  //     for(unsigned int i=length; i--;) {
+  // 	current = variables[i];
+  // 	//std::cout << variables[i] ;
 
-	if( current < best ) {
-	  best = current;
-	  var = variables[i];
+  // 	if( current < best ) {
+  // 	  best = current;
+  // 	  var = variables[i];
 	  
-	  //std::cout << "*" ;
-	}
-	//std::cout << std::endl;
-      }
-      return var;
-    }
-    //@}
+  // 	  //std::cout << "*" ;
+  // 	}
+  // 	//std::cout << std::endl;
+  //     }
+  //     return var;
+  //   }
+  //   //@}
 
 
-    virtual std::ostream& display(std::ostream& os) {
-      return GenericDVOI< VarComparator >::display(os, 1, NULL);
-    }
+  //   virtual std::ostream& display(std::ostream& os) {
+  //     return GenericDVOI< VarComparator >::display(os, 1, NULL);
+  //   }
 
 
-  };
+  // };
+
+
+  // /*! \class GenericRandomDVO
+  //   \brief  Class GenericRandomDVO
+
+  //   Randomized Generic (dynamic) variable ordering heuristic 
+  //   - A parameterized comparison method is used to select 
+  //     the k 'best' variables, then one of them is randomly selected
+  // */
+  // template < class VarComparator, int RAND >
+  // class GenericRandomDVO : public GenericDVOI< VarComparator >
+  // {
+  // public: 
+
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   //Solver      *solver;
+  //   VarComparator   bests[RAND+1];
+  //   VarComparator current;
+  //   Variable   bestvars[RAND+1];
+  //   //@}
+
+  //   /**@name Constructors*/
+  //   //@{
+  //   GenericRandomDVO() : GenericDVOI< VarComparator >() {}
+  //   GenericRandomDVO(Solver* s) : GenericDVOI< VarComparator >(s) {}
+   
+  //   //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
+  //   //virtual void initialise(Solver *s) { solver = s; }
+  //   virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
+
+  //   virtual ~GenericRandomDVO() {}
+  //   //@}
+
+  //   /**@name Utils*/
+  //   //@{ 
+  //   Variable select()
+  //   {
+  //     Variable *variables = GenericDVOI< VarComparator >::solver->sequence.list_;
+  //     unsigned int length = GenericDVOI< VarComparator >::solver->sequence.size-1;
+  //     unsigned int realsize=1, i, j;
+  //     bests[0] = bestvars[0] = variables[length];
+  //     for(j=length; j--;)
+  // 	{  
+  // 	  current = variables[j];
+  // 	  i = realsize;
+  // 	  while( i && current < bests[i-1] ) {
+  // 	    bests[i] = bests[i-1];
+  // 	    bestvars[i] = bestvars[i-1];
+  // 	    --i;
+  // 	  }
+  // 	  bests[i] = current;
+  // 	  bestvars[i] = variables[j];
+	  
+  // 	  if(realsize<RAND) ++realsize;
+  // 	}
+  //     return bestvars[(realsize>1 ? randint(realsize) : 0)];
+  //   }
+  //   //@}
+
+
+  //   virtual std::ostream& display(std::ostream& os) {
+  //     return GenericDVOI< VarComparator >::display(os, RAND, NULL);
+  //   }
+
+  //   // virtual std::ostream& display(std::ostream& os) const {
+  //   //   bests[0].display_criterion(os);
+  //   //   os << std::endl;
+  //   //   Variable *variables = solver->sequence.list_;
+  //   //   unsigned int length = solver->sequence.size-1;
+  //   //   unsigned int realsize=1, i, j;
+
+  //   //   // VarComparator   _bests[RAND+1];
+  //   //   // VarComparator _current;
+  //   //   // Variable   _bestvars[RAND+1];
+
+  //   //   current.initialise();
+  //   //   for(i=0; i<RAND; ++i) bests[i].initialise();
+
+  //   //   bests[0] = bestvars[0] = variables[length];
+  //   //   for(j=length; j--;)
+  //   // 	{  
+  //   // 	  current = variables[j];
+  //   // 	  i = realsize;
+  //   // 	  while( i && current < bests[i-1] ) {
+  //   // 	    bests[i] = bests[i-1];
+  //   // 	    bestvars[i] = bestvars[i-1];
+  //   // 	    --i;
+  //   // 	  }
+  //   // 	  bests[i] = current;
+  //   // 	  bestvars[i] = variables[j];
+	  
+  //   // 	  if(realsize<RAND) ++realsize;
+  //   // 	}
+      
+  //   //   for(i=length; i--;) {
+  //   // 	current = variables[i];
+  //   // 	os << variables[i] << ": " ;
+  //   // 	current.display(os) ;
+
+  //   // 	for(j=0; j<realsize; ++j) {
+  //   // 	  if(bestvars[j].id() == variables[i].id()) os << " <<==[CHOICE " << (j+1) << "]" ;
+  //   // 	}
+
+  //   // 	os << std::endl;
+  //   //   }
+
+  //   //   return os;
+  //   // }
+
+  // };
+
+
+  // /*! \class GenericWeightedDVO
+  //   \brief  Class GenericWeightedDVO
+
+  //   Generic (dynamic) variable ordering heuristic with a weight function. 
+  //   A 'WeightManager' is used to compute each variable's weight
+  // */
+  // template < class WeightManager, class VarComparator >
+  // class GenericWeightedDVO : public GenericDVO< VarComparator >
+  // {
+  // public: 
+    
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   WeightManager *manager;
+  //   //@}
+
+  //   /**@name Constructors*/
+  //   //@{
+  //   GenericWeightedDVO() : GenericDVO< VarComparator >() { manager=NULL; }
+  //   GenericWeightedDVO(Solver* s) : GenericDVO< VarComparator >(s) {
+  //     initialise_manager();
+  //   }
+  //   virtual ~GenericWeightedDVO() { // manager->close();
+  //     delete manager; }
+  //   //virtual void initialise(Solver *s, void *a=NULL) { 
+  //   virtual void initialise(Solver *s) { 
+  //     GenericDVOI< VarComparator >::initialise(s);
+  //     initialise_manager();
+  //   }
+  //   //virtual void close() { manager->close(); }
+  //   //virtual void initialise() { manager->initialise(); }
+  //   virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
+  //   virtual void initialise_manager() {
+  //     manager = new WeightManager(GenericDVO< VarComparator >::solver);
+  //     //GenericDVO< VarComparator >::solver->add(manager);
+  //     GenericDVO< VarComparator >::best.weight = manager->get_weight();
+  //     GenericDVO< VarComparator >::current.weight = manager->get_weight();
+  //   }
+  //   //@}
+
+  //   virtual std::ostream& display(std::ostream& os) {
+  //     manager->display(os, false);
+  //     return GenericDVOI< VarComparator >::display(os, 1, manager->get_weight());
+  //   }
+    
+  // };
+
+  
+  // /*! \class GenericWeightedRandomDVO
+  //   \brief  Class GenericWeightedRandomDVO
+
+  //   Generic (dynamic) variable ordering heuristic with a weight function. 
+  //   A 'WeightManager' is used to compute each variable's weight.
+  //   This is the randomized version. i.e., the k best variables are computed
+  //   then one of them is randomly selected
+  // */
+  // template < class WeightManager, class VarComparator, int RAND >
+  // class GenericWeightedRandomDVO : public GenericRandomDVO< VarComparator, RAND >
+  // {
+  // public: 
+    
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   WeightManager *manager;
+  //   //@}
+
+  //   /**@name Constructors*/
+  //   //@{
+  //   GenericWeightedRandomDVO() : GenericRandomDVO< VarComparator, RAND >() { manager=NULL; }
+  //   GenericWeightedRandomDVO(Solver* s) : GenericRandomDVO< VarComparator, RAND >(s) {
+  //     initialise_manager();
+  //   }
+  //   virtual ~GenericWeightedRandomDVO() { //manager->close(); 
+  //     delete manager; }
+  //   //virtual void initialise(Solver *s, void *a=NULL) { 
+  //   virtual void initialise(Solver *s) { 
+  //     GenericDVOI< VarComparator >::initialise(s);
+  //     initialise_manager();
+  //   }
+  //   //virtual void initialise(Solver *s) { manager->initialise(s); }
+  //   virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
+  //   virtual void initialise_manager() {
+  //     manager = new WeightManager(GenericRandomDVO< VarComparator, RAND >::solver);
+  //     //GenericRandomDVO< VarComparator >::solver->add(manager);
+  //     if(manager->get_weight()) {
+  // 	GenericRandomDVO< VarComparator, RAND >::current.weight = manager->get_weight();
+  // 	for(int i=0; i<=RAND; ++i)
+  // 	  GenericRandomDVO< VarComparator, RAND >::bests[i].weight = manager->get_weight();
+  //     }
+  //   }
+
+  //   virtual std::ostream& display(std::ostream& os) {
+  //     manager->display(os, false);
+  //     return GenericDVOI< VarComparator >::display(os, RAND, manager->get_weight());
+  //   }
+    
+  //   //@}
+    
+  // };
+
+
+
+
 
 
   /*! \class GenericRandomDVO
@@ -924,37 +1146,48 @@ namespace Mistral {
     - A parameterized comparison method is used to select 
       the k 'best' variables, then one of them is randomly selected
   */
-  template < class VarComparator, int RAND >
-  class GenericRandomDVO : public GenericDVOI< VarComparator >
+  template < class VarComparator, int RAND = 1, class WeightManager = NoManager >
+  class GenericDVO 
   {
   public: 
 
     /**@name Parameters*/
     //@{ 
-    //Solver      *solver;
-    VarComparator   bests[RAND+1];
-    VarComparator current;
-    Variable   bestvars[RAND+1];
+    Solver         *solver;
+    WeightManager *manager;
+    VarComparator  current;
+    VarComparator    bests[RAND+1];
+    Variable      bestvars[RAND+1];
     //@}
 
     /**@name Constructors*/
     //@{
-    GenericRandomDVO() : GenericDVOI< VarComparator >() {}
-    GenericRandomDVO(Solver* s) : GenericDVOI< VarComparator >(s) {}
+    GenericDVO() { solver = NULL; manager = NULL; }
+    GenericDVO(Solver* s) : Solver(s) {}
    
-    //virtual void initialise(Solver *s, void *a=NULL) { solver = s; }
-    //virtual void initialise(Solver *s) { solver = s; }
+    virtual void initialise(Solver *s) { 
+      solver = s; 
+      initialise_manager();
+    }
     virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
+    virtual void initialise_manager() {
+      if(!manager) {
+	manager = new WeightManager(solver);
+	current.initialise(manager->get_weight());
+	for(int i=0; i<=RAND; ++i)
+	  bests[i].initialise(manager->get_weight());
+      }
+    }
 
-    virtual ~GenericRandomDVO() {}
+    virtual ~GenericDVO() {}
     //@}
 
     /**@name Utils*/
     //@{ 
     Variable select()
     {
-      Variable *variables = GenericDVOI< VarComparator >::solver->sequence.list_;
-      unsigned int length = GenericDVOI< VarComparator >::solver->sequence.size-1;
+      Variable *variables = solver->sequence.list_;
+      unsigned int length = solver->sequence.size-1;
       unsigned int realsize=1, i, j;
       bests[0] = bestvars[0] = variables[length];
       for(j=length; j--;)
@@ -976,171 +1209,82 @@ namespace Mistral {
     //@}
 
 
-    virtual std::ostream& display(std::ostream& os) {
-      return GenericDVOI< VarComparator >::display(os, RAND, NULL);
-    }
 
-    // virtual std::ostream& display(std::ostream& os) const {
-    //   bests[0].display_criterion(os);
-    //   os << std::endl;
-    //   Variable *variables = solver->sequence.list_;
-    //   unsigned int length = solver->sequence.size-1;
-    //   unsigned int realsize=1, i, j;
+    virtual std::ostream& display(std::ostream& os) const { //,  const int n, double* weights) {
 
-    //   // VarComparator   _bests[RAND+1];
-    //   // VarComparator _current;
-    //   // Variable   _bestvars[RAND+1];
+      manager->display(os, false);
 
-    //   current.initialise();
-    //   for(i=0; i<RAND; ++i) bests[i].initialise();
+      //double* weights = (manager ? manager->get_weight() : NULL);
+      //int n = RAND;
 
-    //   bests[0] = bestvars[0] = variables[length];
-    //   for(j=length; j--;)
-    // 	{  
-    // 	  current = variables[j];
-    // 	  i = realsize;
-    // 	  while( i && current < bests[i-1] ) {
-    // 	    bests[i] = bests[i-1];
-    // 	    bestvars[i] = bestvars[i-1];
-    // 	    --i;
-    // 	  }
-    // 	  bests[i] = current;
-    // 	  bestvars[i] = variables[j];
+      os << " c Select the " ;
+      if(RAND>1) os << RAND << " ";
+      os << "variable" << (RAND > 1 ? "s " : " ") ;//<< "with minimal value of ";
+      VarComparator v;
+      v.display_criterion(os);
+      if(RAND>1) os << " and pick one uniformly at random" ;
+      os << std::endl;
+
+      if(solver->sequence.size > 1) {
+	Variable *variables = solver->sequence.list_;
+	unsigned int length = solver->sequence.size-1;
+	Variable var = variables[length];
+	
+	
+	os << "--> branch in [";
+	
+	std::vector< Identifiable< VarComparator > > all_vars;
+	for(unsigned int i=0; i<=length; ++i) {
+	  Identifiable<VarComparator> vc;
+	  //if(weights) vc.criterion.weight = weights;
+	  vc = variables[i];
+	  vc.id = i;
+	  all_vars.push_back(vc);
 	  
-    // 	  if(realsize<RAND) ++realsize;
-    // 	}
-      
-    //   for(i=length; i--;) {
-    // 	current = variables[i];
-    // 	os << variables[i] << ": " ;
-    // 	current.display(os) ;
-
-    // 	for(j=0; j<realsize; ++j) {
-    // 	  if(bestvars[j].id() == variables[i].id()) os << " <<==[CHOICE " << (j+1) << "]" ;
-    // 	}
-
-    // 	os << std::endl;
-    //   }
-
-    //   return os;
-    // }
-
-  };
+	  os << variables[i] << " in " << variables[i].get_domain() << " ";
+	  
+	}
+	
+	os << std::endl;
 
 
+	sort(all_vars.begin(), all_vars.end());
+	
+	os << " c [" << variables[all_vars[0].id].id() << ":";
+	all_vars[0].display(os);
+	
+	for(int i=1; i<RAND; ++i) {
+	  os << " " << variables[all_vars[i].id].id() << ":";
+	  all_vars[i].display(os);
+	}
+	
+	os << "]";
 
-
-  /*! \class GenericWeightedDVO
-    \brief  Class GenericWeightedDVO
-
-    Generic (dynamic) variable ordering heuristic with a weight function. 
-    A 'WeightManager' is used to compute each variable's weight
-  */
-  template < class WeightManager, class VarComparator >
-  class GenericWeightedDVO : public GenericDVO< VarComparator >
-  {
-  public: 
-    
-    /**@name Parameters*/
-    //@{ 
-    WeightManager *manager;
-    //@}
-
-    /**@name Constructors*/
-    //@{
-    GenericWeightedDVO() : GenericDVO< VarComparator >() { manager=NULL; }
-    GenericWeightedDVO(Solver* s) : GenericDVO< VarComparator >(s) {
-      initialise_manager();
-    }
-    virtual ~GenericWeightedDVO() { // manager->close();
-      delete manager; }
-    //virtual void initialise(Solver *s, void *a=NULL) { 
-    virtual void initialise(Solver *s) { 
-      GenericDVOI< VarComparator >::initialise(s);
-      initialise_manager();
-    }
-    //virtual void close() { manager->close(); }
-    //virtual void initialise() { manager->initialise(); }
-    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
-    virtual void initialise_manager() {
-      manager = new WeightManager(GenericDVO< VarComparator >::solver);
-      //GenericDVO< VarComparator >::solver->add(manager);
-      GenericDVO< VarComparator >::best.weight = manager->get_weight();
-      GenericDVO< VarComparator >::current.weight = manager->get_weight();
-    }
-    //@}
-
-    virtual std::ostream& display(std::ostream& os) {
-      manager->display(os, false);
-      return GenericDVOI< VarComparator >::display(os, 1, manager->get_weight());
-    }
-    
-  };
-
-  
-  /*! \class GenericWeightedRandomDVO
-    \brief  Class GenericWeightedRandomDVO
-
-    Generic (dynamic) variable ordering heuristic with a weight function. 
-    A 'WeightManager' is used to compute each variable's weight.
-    This is the randomized version. i.e., the k best variables are computed
-    then one of them is randomly selected
-  */
-  template < class WeightManager, class VarComparator, int RAND >
-  class GenericWeightedRandomDVO : public GenericRandomDVO< VarComparator, RAND >
-  {
-  public: 
-    
-    /**@name Parameters*/
-    //@{ 
-    WeightManager *manager;
-    //@}
-
-    /**@name Constructors*/
-    //@{
-    GenericWeightedRandomDVO() : GenericRandomDVO< VarComparator, RAND >() { manager=NULL; }
-    GenericWeightedRandomDVO(Solver* s) : GenericRandomDVO< VarComparator, RAND >(s) {
-      initialise_manager();
-    }
-    virtual ~GenericWeightedRandomDVO() { //manager->close(); 
-      delete manager; }
-    //virtual void initialise(Solver *s, void *a=NULL) { 
-    virtual void initialise(Solver *s) { 
-      GenericDVOI< VarComparator >::initialise(s);
-      initialise_manager();
-    }
-    //virtual void initialise(Solver *s) { manager->initialise(s); }
-    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
-    virtual void initialise_manager() {
-      manager = new WeightManager(GenericRandomDVO< VarComparator, RAND >::solver);
-      //GenericRandomDVO< VarComparator >::solver->add(manager);
-      if(manager->get_weight()) {
-	GenericRandomDVO< VarComparator, RAND >::current.weight = manager->get_weight();
-	for(int i=0; i<=RAND; ++i)
-	  GenericRandomDVO< VarComparator, RAND >::bests[i].weight = manager->get_weight();
+	for(unsigned int i=RAND; i<all_vars.size(); ++i) {
+	  os << " " << variables[all_vars[i].id].id() << ":";
+	  all_vars[i].display(os);
+	}
+	os << std::endl;
       }
+      return os;
     }
 
-    virtual std::ostream& display(std::ostream& os) {
-      manager->display(os, false);
-      return GenericDVOI< VarComparator >::display(os, RAND, manager->get_weight());
-    }
-    
-    //@}
-    
   };
 
 
-  /*! \class GenericWeightedRandomDVO
-    \brief  Class GenericWeightedRandomDVO
+
+
+
+  /*! \class GenericDVO
+    \brief  Class GenericDVO
 
     Generic (dynamic) variable ordering heuristic with a weight function. 
     A 'WeightManager' is used to compute each variable's weight.
     This is the randomized version. i.e., the k best variables are computed
     then one of them is randomly selected
   */
-  template <class WeightManager, template< class T > class Aggregator, class VarComparator, int RAND >
-  class GenericNeighborDVO : public GenericWeightedRandomDVO< WeightManager, Aggregator< VarComparator >, RAND >
+  template <template< class T > class Aggregator, class VarComparator, int RAND = 1, class WeightManager = NoManager >
+  class GenericNeighborDVO : public GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >
   {
   public: 
     
@@ -1152,8 +1296,8 @@ namespace Mistral {
 
     /**@name Constructors*/
     //@{
-    GenericNeighborDVO() : GenericWeightedRandomDVO< WeightManager, Aggregator< VarComparator >, RAND >() { neighborhood=NULL; }
-    GenericNeighborDVO(Solver* s) : GenericWeightedRandomDVO< WeightManager, Aggregator< VarComparator >, RAND >(s) {
+    GenericNeighborDVO() : GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >() { neighborhood=NULL; }
+    GenericNeighborDVO(Solver* s) : GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >(s) {
       neighborhood = NULL;
     }
     virtual ~GenericNeighborDVO() {
@@ -1161,7 +1305,7 @@ namespace Mistral {
     }
     //virtual void initialise(Solver *s, void *a=NULL) { 
     virtual void initialise(Solver *s) { 
-      GenericWeightedRandomDVO< WeightManager, Aggregator< VarComparator >, RAND >::initialise(s);
+      GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::initialise(s);
     }
     //virtual void initialise(Solver *s) { manager->initialise(s); }
     virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) 
@@ -1178,16 +1322,17 @@ namespace Mistral {
 
 	//std::cout << "NEIGHBORHOOD" << std::endl;
 
-	neighborhood = new Vector< Variable >[GenericDVOI< Aggregator< VarComparator > >::solver->variables.size];
-	std::fill(neighborhood, neighborhood+GenericDVOI< Aggregator< VarComparator > >::solver->variables.size, NULL);
+	int n = GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::solver->variables.size;
+	neighborhood = new Vector< Variable >[n];
+	std::fill(neighborhood, neighborhood+n, NULL);
 	for(i=seq.size; --i>=0;) {
 
 	  self_idx = seq[i].id();
 	  for(trig = 0; trig<3; ++trig) {
 	    
-	    for(cons = GenericDVOI< Aggregator< VarComparator > >::solver->constraint_graph[self_idx].on[trig].size; --cons>=0;) {
+	    for(cons = GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::solver->constraint_graph[self_idx].on[trig].size; --cons>=0;) {
 	      
-	      constraint = GenericDVOI< Aggregator< VarComparator > >::solver->constraint_graph[self_idx].on[trig][cons];
+	      constraint = GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::solver->constraint_graph[self_idx].on[trig][cons];
 
 	      for(scope=constraint.get_scope(), j=constraint.arity(); --j>=0;) if(scope[j].id() != seq[i].id()) {
 		  is_in = false;
@@ -1201,9 +1346,9 @@ namespace Mistral {
 	}
       }
 
-      GenericRandomDVO< Aggregator< VarComparator >, RAND >::current.map = neighborhood;
+      GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::current.map = neighborhood;
       for(int i=0; i<=RAND; ++i)
-	GenericRandomDVO< Aggregator< VarComparator >, RAND >::bests[i].map = neighborhood;
+	GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::bests[i].map = neighborhood;
       
     }
 
@@ -1218,13 +1363,14 @@ namespace Mistral {
     // }
 
     virtual std::ostream& display(std::ostream& os) {
-      GenericWeightedRandomDVO< WeightManager, Aggregator< VarComparator >, RAND >::manager->display(os, false);
-      return GenericDVOI< Aggregator< VarComparator > >::display(os, RAND, GenericWeightedRandomDVO< WeightManager, Aggregator< VarComparator >, RAND >::manager->get_weight());
+      //GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::manager->display(os, false);
+      return GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::display(os); //, RAND, GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::manager->get_weight());
     }
     
     //@}
     
   };
+
 
 
   /*! \class NoOrder
@@ -1330,8 +1476,6 @@ namespace Mistral {
 
 
 
-
-
   /*! \class MinDomain
     \brief  Class MinDomain
 
@@ -1344,7 +1488,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomain() {dom_ = LARGE_VALUE;}
-    void initialise() {dom_ = LARGE_VALUE;}
+    void initialise(const double* _w) {dom_ = LARGE_VALUE;}
     //@}
 
     /**@name Parameters*/
@@ -1383,7 +1527,7 @@ namespace Mistral {
     //@}  
 
     std::ostream& display_criterion(std::ostream& os) const {
-      os << " with minimum domain size";
+      os << "with minimum domain size";
       return os;
     }
 
@@ -1394,6 +1538,310 @@ namespace Mistral {
   };
 
   std::ostream& operator<<(std::ostream& os, MinDomain& x);
+  std::ostream& operator<<(std::ostream& os, MinDomain* x);
+
+
+  /*! \class MinMin
+    \brief  Class MinMin
+
+    Order two variables by their minimum value
+  */
+  class MinMin 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinMin() {min_ = LARGE_VALUE;}
+    void initialise(const double* _w) {min_ = LARGE_VALUE;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    int min_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return (double)min_; } 
+    inline bool operator<( const MinMin& x ) const { return min_ < x.min_; }
+
+    inline MinMin& operator*=( const int x ) { min_ *= x; return *this; }
+    inline MinMin& operator+=( const int x ) { min_ += x; return *this; }
+    inline MinMin& operator-=( const int x ) { min_ -= x; return *this; }
+    inline MinMin& operator/=( const int x ) { min_ /= x; return *this; }
+
+    inline MinMin& operator*=( const MinMin& x ) { min_ *= x.min_; return *this; }
+    inline MinMin& operator+=( const MinMin& x ) { min_ += x.min_; return *this; }
+    inline MinMin& operator-=( const MinMin& x ) { min_ -= x.min_; return *this; }
+    inline MinMin& operator/=( const MinMin& x ) { min_ /= x.min_; return *this; }
+
+    inline void operator=( const MinMin& x ) { min_ = x.min_; }
+    inline void operator=( const Variable x ) { min_ = x.get_min(); }
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "with minimum mininimum";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << min_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MinMin& x);
+  std::ostream& operator<<(std::ostream& os, MinMin* x);
+
+
+  /*! \class MaxRegret
+    \brief  Class MaxRegret
+
+    Order two variables by their minimum value
+  */
+  class MaxRegret 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MaxRegret() {reg_ = SMALL_VALUE;}
+    void initialise(const double* _w) {reg_ = SMALL_VALUE;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    int reg_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return (double)reg_; } 
+    inline bool operator<( const MaxRegret& x ) const { return reg_ > x.reg_; }
+
+    inline MaxRegret& operator*=( const int x ) { reg_ *= x; return *this; }
+    inline MaxRegret& operator+=( const int x ) { reg_ += x; return *this; }
+    inline MaxRegret& operator-=( const int x ) { reg_ -= x; return *this; }
+    inline MaxRegret& operator/=( const int x ) { reg_ /= x; return *this; }
+
+    inline MaxRegret& operator*=( const MaxRegret& x ) { reg_ *= x.reg_; return *this; }
+    inline MaxRegret& operator+=( const MaxRegret& x ) { reg_ += x.reg_; return *this; }
+    inline MaxRegret& operator-=( const MaxRegret& x ) { reg_ -= x.reg_; return *this; }
+    inline MaxRegret& operator/=( const MaxRegret& x ) { reg_ /= x.reg_; return *this; }
+
+    inline void operator=( const MaxRegret& x ) { reg_ = x.reg_; }
+    inline void operator=( const Variable x ) { 
+      int min_ = x.get_min(); 
+      int nxt_ = x.next(min_);
+      reg_ = (nxt_ - min_);
+    }
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "with maximum regret";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << reg_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MaxRegret& x);
+  std::ostream& operator<<(std::ostream& os, MaxRegret* x);
+
+
+  /*! \class Anti
+    \brief  Class Anti
+
+    Order two variables by their domain sizes
+  */
+  template<class VarComparator>
+  class Anti 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    Anti() : crit() {}
+    void initialise(const double* _w) {crit.initialise(_w);}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    VarComparator crit;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return 1.0/(double)(crit.value()); } 
+    inline bool operator<( const Anti<VarComparator>& x ) const { return !(crit < x.crit); }
+
+    inline Anti<VarComparator>& operator*=( const int x ) { crit *= x; return *this; }
+    inline Anti<VarComparator>& operator+=( const int x ) { crit += x; return *this; }
+    inline Anti<VarComparator>& operator-=( const int x ) { crit -= x; return *this; }
+    inline Anti<VarComparator>& operator/=( const int x ) { crit /= x; return *this; }
+
+    inline Anti<VarComparator>& operator*=( const Anti<VarComparator>& x ) { crit *= x.crit; return *this; }
+    inline Anti<VarComparator>& operator+=( const Anti<VarComparator>& x ) { crit += x.crit; return *this; }
+    inline Anti<VarComparator>& operator-=( const Anti<VarComparator>& x ) { crit -= x.crit; return *this; }
+    inline Anti<VarComparator>& operator/=( const Anti<VarComparator>& x ) { crit /= x.crit; return *this; }
+
+    inline void operator=( const Anti<VarComparator>& x ) { crit = x.crit; }
+    inline void operator=( const Variable x ) { crit = x; }
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "NOT<";
+      crit.display_criterion(os);
+      os << ">";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << "-" ; //<< crit ;
+      crit.display(os);
+      return os;
+    }
+  };
+
+  template<class VarComparator>
+  std::ostream& operator<<(std::ostream& os, Anti<VarComparator>& x) {
+    return x.display(os);
+  }
+
+  template<class VarComparator>
+  std::ostream& operator<<(std::ostream& os, Anti<VarComparator>* x) {
+    return x.display(os);
+  }
+
+
+
+  /*! \class MaxDegree
+    \brief  Class MaxDegree
+
+    Order two variables by their domain sizes
+  */
+  class MaxDegree 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MaxDegree() {deg_ = LARGE_VALUE;}
+    void initialise(const double* _w) {deg_ = LARGE_VALUE;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    int deg_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return (double)deg_; } 
+    inline bool operator<( const MaxDegree& x ) const { return deg_ < x.deg_; }
+
+    // inline MaxDegree& operator*( const int x ) const { MaxDegree d; d.deg_=(deg_ * x); return d; }
+    // inline MaxDegree& operator+( const int x ) const { MaxDegree d; d.deg_=(deg_ + x); return d; }
+    // inline MaxDegree& operator-( const int x ) const { MaxDegree d; d.deg_=(deg_ - x); return d; }
+    // inline MaxDegree& operator/( const int x ) const { MaxDegree d; d.deg_=(deg_ / x); return d; }
+
+    inline MaxDegree& operator*=( const int x ) { deg_ *= x; return *this; }
+    inline MaxDegree& operator+=( const int x ) { deg_ += x; return *this; }
+    inline MaxDegree& operator-=( const int x ) { deg_ -= x; return *this; }
+    inline MaxDegree& operator/=( const int x ) { deg_ /= x; return *this; }
+
+    // inline MaxDegree& operator*( const MaxDegree& x ) const { MaxDegree d; d.deg_=(deg_ * x.deg_); return d; }
+    // inline MaxDegree& operator+( const MaxDegree& x ) const { MaxDegree d; d.deg_=(deg_ + x.deg_); return d; }
+    // inline MaxDegree& operator-( const MaxDegree& x ) const { MaxDegree d; d.deg_=(deg_ - x.deg_); return d; }
+    // inline MaxDegree& operator/( const MaxDegree& x ) const { MaxDegree d; d.deg_=(deg_ / x.deg_); return d; }
+
+    inline MaxDegree& operator*=( const MaxDegree& x ) { deg_ *= x.deg_; return *this; }
+    inline MaxDegree& operator+=( const MaxDegree& x ) { deg_ += x.deg_; return *this; }
+    inline MaxDegree& operator-=( const MaxDegree& x ) { deg_ -= x.deg_; return *this; }
+    inline MaxDegree& operator/=( const MaxDegree& x ) { deg_ /= x.deg_; return *this; }
+
+    inline void operator=( const MaxDegree& x ) { deg_ = x.deg_; }
+    inline void operator=( const Variable x ) { deg_ = x.get_degree(); }
+
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "with maximum degree";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << deg_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MaxDegree& x);
+
+  std::ostream& operator<<(std::ostream& os, MaxDegree* x);
+
+
+  /*! \class MinDomainMaxDegree
+    \brief  Class MinDomainMaxDegree
+
+    Order two variables by their domain sizes, with ties broken by maximum degree
+  */
+  class MinDomainMaxDegree 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinDomainMaxDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
+    void initialise(const double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    int dom_;
+    int deg_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return (deg_ ? (double)dom_ : (double)dom_ + 1.0/(double)deg_); } 
+    inline bool operator<( const MinDomainMaxDegree& x ) const { return dom_ < x.dom_ || (dom_ == x.dom_ && x.deg_ < deg_); }
+
+
+    inline MinDomainMaxDegree& operator*=( const int x ) { dom_ *= x; return *this; }
+    inline MinDomainMaxDegree& operator+=( const int x ) { dom_ += x * deg_; return *this; }
+    inline MinDomainMaxDegree& operator-=( const int x ) { dom_ -= x * deg_; return *this; }
+    inline MinDomainMaxDegree& operator/=( const int x ) { deg_ *= x; return *this; }
+
+
+    inline MinDomainMaxDegree& operator*=( const MinDomainMaxDegree& x ) { dom_ *= x.dom_; deg_ /= x.deg_; return *this; }
+    inline MinDomainMaxDegree& operator+=( const MinDomainMaxDegree& x ) { dom_ += x.dom_; deg_ -= x.deg_; return *this; }
+    inline MinDomainMaxDegree& operator-=( const MinDomainMaxDegree& x ) { dom_ -= x.dom_; deg_ += x.deg_; return *this; }
+    inline MinDomainMaxDegree& operator/=( const MinDomainMaxDegree& x ) { dom_ *= x.dom_; deg_ /= x.deg_; return *this; }
+
+    inline void operator=( const MinDomainMaxDegree& x ) { dom_ = x.dom_; deg_ = x.deg_; }
+    inline void operator=( const Variable x ) { dom_ = x.get_size(); deg_ = x.get_degree(); }
+    //@}  
+
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "with minimum domain size (ties broken with max degree)";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << dom_ << "+1/" << deg_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MinDomainMaxDegree& x);
+
+  std::ostream& operator<<(std::ostream& os, MinDomainMaxDegree* x);
 
 
   /*! \class MinDomainOverDegree
@@ -1408,7 +1856,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainOverDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
-    void initialise() {dom_ = LARGE_VALUE; deg_ = 0;}
+    void initialise(const double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
     //@}
 
     /**@name Parameters*/
@@ -1461,7 +1909,7 @@ namespace Mistral {
 
 
     std::ostream& display_criterion(std::ostream& os) const {
-      os << " with minimum (domain size / degree)";
+      os << "with minimum (domain size / degree)";
       return os;
     }
 
@@ -1472,6 +1920,8 @@ namespace Mistral {
   };
 
   std::ostream& operator<<(std::ostream& os, MinDomainOverDegree& x);
+
+  std::ostream& operator<<(std::ostream& os, MinDomainOverDegree* x);
 
 
   /*! \class MinDomainOverWeight
@@ -1486,7 +1936,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
-    void initialise() {dom_ = LARGE_VALUE; wei_ = 0;}
+    void initialise(double* _w=NULL) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
     //MinDomainOverWeight(void *w) : weight((double*)w) {dom_ = LARGE_VALUE; wei_ = 0;}
     //@}
 
@@ -1543,7 +1993,7 @@ namespace Mistral {
     //@}  
 
     std::ostream& display_criterion(std::ostream& os) const {
-      os << " with minimum (domain size / weight)";
+      os << "with minimum (domain size / weight)";
       return os;
     }
 
@@ -1554,6 +2004,9 @@ namespace Mistral {
   };
 
   std::ostream& operator<<(std::ostream& os, MinDomainOverWeight& x);
+
+  std::ostream& operator<<(std::ostream& os, MinDomainOverWeight* x);
+
 
   /*! \class MinNeighborDomainOverNeighborWeight
     \brief  Class MinNeighborDomainOverNeighborWeight
@@ -1568,7 +2021,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinNeighborDomainOverNeighborWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
-    void initialise() {dom_ = LARGE_VALUE; wei_ = 0;}
+    void initialise(double* _w=NULL) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
     //@}
 
     /**@name Parameters*/
@@ -1602,7 +2055,7 @@ namespace Mistral {
     //@}  
 
     std::ostream& display_criterion(std::ostream& os) const {
-      os << " with minimum (Sum of neighrbors' domain sizes / Sum of neighrbors' weights)";
+      os << "with minimum (Sum of neighrbors' domain sizes / Sum of neighrbors' weights)";
       return os;
     }
 
@@ -1612,7 +2065,9 @@ namespace Mistral {
     }
   };
 
-  std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight& x);
+  //std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight& x);
+
+  //std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight& x);
 
 
   /*! \class MinNeighborDomainOverNeighborWeight
@@ -1629,7 +2084,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     SelfPlusAverage() { map = NULL; }
-    void initialise() { crit.initialise(); map = NULL; }
+    void initialise(double* _w=NULL) { crit.initialise(_w); map = NULL; weight = _w; }
     //@}
 
     /**@name Parameters*/
@@ -1706,9 +2161,9 @@ namespace Mistral {
     //@}  
 
     std::ostream& display_criterion(std::ostream& os) const {
-      os << " sum of neighbors' " ;
+      os << "with sum of neighbors' " ;
       crit.display_criterion(os);
-      os << " plus self" ;
+      os << "plus self" ;
       return os;
     }
 
@@ -1719,7 +2174,9 @@ namespace Mistral {
     }
   };
 
-  std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight& x);
+  //std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight& x);
+
+  //std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverNeighborWeight* x);
 
 
   /*! \class MinNeighborDomainOverWeight
@@ -1735,7 +2192,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinNeighborDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
-    void initialise() {dom_ = LARGE_VALUE; wei_ = 0;}
+    void initialise(double* _w=NULL) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
     //@}
 
     /**@name Parameters*/
@@ -1775,7 +2232,7 @@ namespace Mistral {
     }
   };
 
-  std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverWeight& x);
+  //std::ostream& operator<<(std::ostream& os, MinNeighborDomainOverWeight& x);
 
 
   /*! \class MaxWeight
@@ -1790,7 +2247,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MaxWeight() {wei_ = 0;}
-    void initialise() {wei_ = 0;}
+    void initialise(double* _w=NULL) {wei_ = 0; weight = _w;}
     //MaxWeight(int *w) : weight(w) {wei_ = 0;}
     //@}
 
@@ -1825,6 +2282,8 @@ namespace Mistral {
 
   std::ostream& operator<<(std::ostream& os, MaxWeight& x);
 
+  std::ostream& operator<<(std::ostream& os, MaxWeight* x);
+
 
   /**********************************************
    * Branching Decisions
@@ -1858,6 +2317,9 @@ namespace Mistral {
 
   std::ostream& operator<<(std::ostream& os, MinValue& x);
 
+  std::ostream& operator<<(std::ostream& os, MinValue* x);
+
+
   /*! \class MaxValue
     \brief  Class MaxValue
 
@@ -1885,6 +2347,85 @@ namespace Mistral {
   };
 
   std::ostream& operator<<(std::ostream& os, MaxValue& x);
+
+  std::ostream& operator<<(std::ostream& os, MaxValue* x);
+
+
+  /*! \class MiddleValue
+    \brief  Class MiddleValue
+
+    Assigns the variable to its maximum value.
+  */
+  class MiddleValue {
+
+  public: 
+    
+    MiddleValue() {}
+    MiddleValue(Solver *s) {}
+    //MiddleValue(Solver *s, void *a) {}
+    virtual ~MiddleValue() {};
+    
+    inline Decision make(Variable x) {
+      int val = (x.get_min()+x.get_max())/2;
+      if(!x.contain(val)) val = x.next(val);
+      Decision d(x, Decision::ASSIGNMENT, val);
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the mean of its bounds";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, MiddleValue& x);
+
+  std::ostream& operator<<(std::ostream& os, MiddleValue* x);
+
+
+ /*! \class MedianValue
+    \brief  Class MedianValue
+
+    Assigns the variable randomly a value in its domain.
+  */
+  class MedianValue {
+
+  public: 
+    
+    MedianValue() {}
+    MedianValue(Solver *s) {}
+    virtual ~MedianValue() {};
+    
+    inline Decision make(Variable x) {
+      int val = x.get_min(); //, rank = randint(x.get_size());
+      Decision d(x, Decision::ASSIGNMENT, INFTY);
+
+      if(x.is_range())
+	d.set_value((x.get_min()+x.get_max())/2);
+      else {
+	int prev_val, rank = x.get_size()/2; // = nxt_val-1;
+	do {
+	  prev_val = val;
+	  val = x.next(prev_val);
+	} while (rank-- && val > prev_val);
+	d.set_value(prev_val);
+      }
+
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to its median value";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, MedianValue& x);
+
+  std::ostream& operator<<(std::ostream& os, MedianValue* x);
+
 
   /*! \class HalfSplit
     \brief  Class HalfSplit
@@ -1914,6 +2455,72 @@ namespace Mistral {
 
   std::ostream& operator<<(std::ostream& os, HalfSplit& x);
 
+  std::ostream& operator<<(std::ostream& os, HalfSplit* x);
+
+
+  /*! \class ReverseSplit
+    \brief  Class ReverseSplit
+
+    Set the upper bound of the variable to (ub+lb)/2.
+  */
+  class ReverseSplit {
+
+  public: 
+    
+    ReverseSplit() {}
+    ReverseSplit(Solver *s) {}
+    //ReverseSplit(Solver *s, void *a) {}
+    virtual ~ReverseSplit() {};
+    
+    inline Decision make(Variable x) {
+      Decision d(x, Decision::LOWERBOUND, (x.get_min()+x.get_max()+1)/2);
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "set its lower bound to (min+max+1)/2";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, ReverseSplit& x);
+
+  std::ostream& operator<<(std::ostream& os, ReverseSplit* x);
+
+
+  /*! \class RandomSplit
+    \brief  Class RandomSplit
+
+    Set the upper bound of the variable to (ub+lb)/2.
+  */
+  class RandomSplit {
+
+  public: 
+    
+    RandomSplit() {}
+    RandomSplit(Solver *s) {}
+    //RandomSplit(Solver *s, void *a) {}
+    virtual ~RandomSplit() {};
+    
+    inline Decision make(Variable x) {
+      int the_min = x.get_min();
+      Decision d(x, Decision::UPPERBOUND, (the_min+randint(x.get_max()-the_min)));
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "set its upper bound to a random value in [min,max]";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, RandomSplit& x);
+
+  std::ostream& operator<<(std::ostream& os, RandomSplit* x);
+
+
   /*! \class RandomMinMax
     \brief  Class RandomMinMax
 
@@ -1942,6 +2549,52 @@ namespace Mistral {
   };
 
   std::ostream& operator<<(std::ostream& os, RandomMinMax& x);
+
+  std::ostream& operator<<(std::ostream& os, RandomMinMax* x);
+
+
+  /*! \class RandomValue
+    \brief  Class RandomValue
+
+    Assigns the variable randomly a value in its domain.
+  */
+  class RandomValue {
+
+  public: 
+    
+    RandomValue() {}
+    RandomValue(Solver *s) {}
+    virtual ~RandomValue() {};
+    
+    inline Decision make(Variable x) {
+      int val = x.get_min(), rank = randint(x.get_size());
+      Decision d(x, Decision::ASSIGNMENT, INFTY);
+
+      if(x.is_range())
+	d.set_value(val+rank);
+      else {
+	int prev_val; // = nxt_val-1;
+	do {
+	  prev_val = val;
+	  val = x.next(prev_val);
+	} while (rank-- && val > prev_val);
+	d.set_value(prev_val);
+      }
+
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to a value at random";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, RandomValue& x);
+
+  std::ostream& operator<<(std::ostream& os, RandomValue* x);
+
 
   /*! \class MinWeightValue
     \brief  Class MinWeightValue
@@ -1990,6 +2643,8 @@ namespace Mistral {
 
   std::ostream& operator<<(std::ostream& os, MinWeightValue& x);
 
+  std::ostream& operator<<(std::ostream& os, MinWeightValue* x);
+
 
   /*! \class Guided
     \brief  Class Guided
@@ -2024,6 +2679,8 @@ namespace Mistral {
   };
 
   std::ostream& operator<<(std::ostream& os, Guided& x);
+
+  std::ostream& operator<<(std::ostream& os, Guided* x);
 
 
 #define NEG(a) ((2*a))
@@ -2069,7 +2726,7 @@ namespace Mistral {
   
   std::ostream& operator<<(std::ostream& os, BoolMinWeightValue& x);
 
-
+  std::ostream& operator<<(std::ostream& os, BoolMinWeightValue* x);
 
 
 
@@ -2082,12 +2739,12 @@ namespace Mistral {
 
   
   
-  class VSIDS : public GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
+  class VSIDS : public GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
 					 //MinValue > {
 					 BoolMinWeightValue > {
   public:
     
-    VSIDS(Solver *s) : GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, 
+    VSIDS(Solver *s) : GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
 					 //MinValue >(s) {
 					 BoolMinWeightValue >(s) {
       choice.weight = s->get_literal_activity();

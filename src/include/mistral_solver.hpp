@@ -587,6 +587,13 @@ namespace Mistral {
 			   BranchingHeuristic *heu=NULL, 
 			   RestartPolicy *pol=NULL,
 			   Goal *goal=NULL);
+    
+    Outcome sequence_search(Vector< Vector< Variable > >& sequences,
+			    Vector< BranchingHeuristic * >& heuristics,
+			    Vector< RestartPolicy * >& policies,
+			    Vector< Goal * >& goals
+			    );
+
     Outcome get_next_solution();
 
     /*!
@@ -607,7 +614,7 @@ namespace Mistral {
 			       RestartPolicy *pol=NULL,
 			       Goal *goal=NULL);
 
-    Outcome search();
+    Outcome restart_search(const int root=0, const bool _restore_=true);
 
     /*!
       Black box search.
@@ -620,7 +627,7 @@ namespace Mistral {
     bool limits_expired();
 
     /// depth first search algorithm
-    Outcome chronological_dfs();
+    Outcome chronological_dfs(const int root=0);
 
     // /// sat search algorithm
     Outcome conflict_directed_backjump();
@@ -629,7 +636,7 @@ namespace Mistral {
     // //@}
 
 
-    BranchingHeuristic *heuristic_factory(std::string var_ordering, std::string branching);
+    BranchingHeuristic *heuristic_factory(std::string var_ordering, std::string branching, const int randomness=1);
     // {
     //   BranchingHeuristic *heu = NULL;
     //   if(var_ordering == "dom/wdeg") {

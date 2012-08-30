@@ -2620,7 +2620,7 @@ void SchedulingSolver::dichotomic_search()
   //   RandomMinMax 
   //   > (this); 
 
-  BranchingHeuristic *heu = new SchedulingWeightedDegree < TaskDomOverBoolWeight, MinValue > (this, disjunct_map);
+  BranchingHeuristic *heu = new SchedulingWeightedDegree < TaskDomOverBoolWeight, MinValue, 1 > (this, disjunct_map);
 
   //BranchingHeuristic *heu = new GenericHeuristic < NoOrder, MinValue > (this);
 
@@ -2685,7 +2685,7 @@ void SchedulingSolver::dichotomic_search()
 #endif
     
 
-    result = search();
+    result = restart_search();
     //result = solve();
     //       if(status == UNKNOWN) {
     // 	solve_and_restart(params->PolicyRestart, params->Base, params->Factor);

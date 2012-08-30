@@ -262,12 +262,20 @@ protected:
 	/// Mistral stuff
 	Solver &solver;
 
-	/// Options
-	BranchingHeuristic *heuristic;
-	RestartPolicy *policy;
-	bool use_rewriting;
-  bool enumerate;
+  // search stuff
+  Vector< Vector< Variable > >  fz_search_sequences;
+  Vector< BranchingHeuristic *> fz_search_heuristics;
+  Vector< RestartPolicy * >     fz_search_policies;
+  Vector< Goal * >              fz_search_goals;
 
+
+	/// Options
+	BranchingHeuristic *_option_heuristic;
+	RestartPolicy *_option_policy;
+	bool _option_rewriting;
+  bool _option_enumerate;
+  bool _option_display_mistral_model;
+  bool _option_annotations;
 	////
 
 
@@ -351,6 +359,15 @@ public:
 	/// setup the rewriting step
   void set_enumeration(const bool on);
 
+	/// setup the rewriting step
+  void set_display_model(const bool on);
+
+	/// setup annotations
+  void set_annotations(const bool on);
+
+
+  /// get annotations from the flatzinc model
+  void get_annotations();
 
 	/// Run the search
 	void run(std::ostream& out, const Printer& p);

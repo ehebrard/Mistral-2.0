@@ -235,6 +235,21 @@ bool Mistral::Constraint::find_support(const int var, const int val) {
   return exist;
 }
 
+bool Mistral::Constraint::find_bound_support(const int var, const int val) {
+  bool exist=false;
+  
+  if(binary()) {
+    exist = ((BinaryConstraint*)propagator)->find_bound_support(var, val);
+  } else if(ternary()) {
+    exist = ((TernaryConstraint*)propagator)->find_bound_support(var, val);
+  } else {
+    exist = (((GlobalConstraint*)propagator)->first_support(var, val) ||
+	     ((GlobalConstraint*)propagator)->find_bound_support(var, val));
+  }
+
+  return exist;
+}
+
 Mistral::PropagationOutcome Mistral::Constraint::rewrite() {
   return propagator->rewrite();
 }

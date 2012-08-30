@@ -1289,8 +1289,14 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     }
 
     virtual void consolidate_var(const int idx) {
+
+      //std::cout << "consolidate " << scope[idx] << "/" << _scope[idx] << " -> ";
+
       scope[idx] = scope[idx].get_var();
       _scope[idx] = _scope[idx].get_var();
+
+      //      std::cout << scope[idx] << "/" << _scope[idx] << std::endl;
+
     }
   
     /// An idempotent constraint should not be called on events triggered by itself.
@@ -1392,7 +1398,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       //solver->save( Constraint(this, type|2) );
     
       active.fill();
-      for(int i=on.size; --i;) {
+      for(int i=on.size; --i>=0;) {
 	if(scope[i].is_ground()) {
 	  active.reversible_remove(i);
 	  index[i] = -1;
@@ -2668,6 +2674,97 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual std::string name() const { return "*k"; }
     //@}
   };
+
+
+ //  /**********************************************
+ //   * Modulo Predicate
+ //   **********************************************/
+ //  /*! \class PredicateMod
+ //    \brief  Binary Modulo predicate (x0 % x1 = y)
+ //  */
+ //  class PredicateMod : public TernaryConstraint
+ //  {
+
+ // public:
+ //    /**@name Constructors*/
+ //    //@{
+ //    PredicateMod() : TernaryConstraint() {}
+ //    PredicateMod(Variable x, Variable y, Variable z)
+ //      : TernaryConstraint(x, y, z) {}
+ //    PredicateMod(Vector< Variable >& scp)
+ //      : TernaryConstraint(scp) {}
+ //    PredicateMod(std::vector< Variable >& scp)
+ //      : TernaryConstraint(scp) {}
+ //    virtual Constraint clone() { return Constraint(new PredicateMod(scope[0], scope[1], scope[2])); }
+ //    virtual void initialise();
+ //    virtual int idempotent() { return 0; }
+ //    virtual ~PredicateMod() {}
+ //    //@}
+    
+ //    /**@name Solving*/
+ //    //@{
+ //    PropagationOutcome filter();
+ //    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != (sol[0] % sol[1])); }
+ //    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+ //    virtual PropagationOutcome propagate();
+ //    virtual RewritingOutcome rewrite();
+ //    //@}
+    
+ //    /**@name Miscellaneous*/
+ //    //@{  
+ //    virtual std::ostream& display(std::ostream&) const ;
+ //    virtual std::string name() const { return "%="; }
+ //    //@}
+
+ //  };
+
+
+ //  /**********************************************
+ //   * Modulo Predicate
+ //   **********************************************/
+ //  /*! \class PredicateMod
+ //    \brief  Binary Modulo predicate (x0 % x1 = y)
+ //  */
+ //  class PredicateModConstant : public BinaryConstraint
+ //  {
+
+ //  public:
+ //   /**@name Parameters*/
+ //    //@{  
+ //    int modulo;
+ //    //@}
+
+ //    /**@name Constructors*/
+ //    //@{
+ //    PredicateModConstant() : BinaryConstraint() {}
+ //    PredicateModConstant(Vector< Variable >& scp, const int mod=2) 
+ //      : BinaryConstraint(scp) { modulo=mod; }
+ //    PredicateModConstant(Variable x, Variable y, const int mod=2) 
+ //      : BinaryConstraint(x,y) { modulo=mod; }
+ //    PredicateModConstant(std::vector< Variable >& scp, const int mod=2) 
+ //      : BinaryConstraint(scp) { modulo=mod; }
+ //    virtual Constraint clone() { return Constraint(new PredicateModConstant(scope[0], scope[1], modulo)); }
+ //    virtual void initialise();
+ //    virtual int idempotent() { return 1;}
+ //    virtual ~PredicateModConstant() {}
+ //    //@}
+
+ //    /**@name Solving*/
+ //    //@{
+ //    virtual int check( const int* sol ) const { 
+ //      return((sol[0] % modulo) != sol[1]);
+ //    }
+ //    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+ //    virtual PropagationOutcome propagate();
+ //    //virtual RewritingOutcome rewrite();
+ //    //@}
+
+ //    /**@name Miscellaneous*/
+ //    //@{  
+ //    virtual std::ostream& display(std::ostream&) const ;
+ //    virtual std::string name() const { return "%k"; }
+ //    //@}
+ //  };
 
 
 

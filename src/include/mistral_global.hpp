@@ -64,9 +64,9 @@ namespace Mistral {
   //#define _DEBUG_DISJUNCTIVE true
   //#define _DEBUG_RDISJUNCTIVE true
   //#define _DEBUG_LEX true
-  //#define _DEBUG_ADD true
+  //#define _DEBUG_ADD (id == 48505)
   //#define _DEBUG_DIV true
-  //#define _DEBUG_WEIGHTEDSUM true
+  //#define _DEBUG_WEIGHTEDSUM (id == 32273)
   //#define _DEBUG_ELEMENT true
   //#define _DEBUG_ELEMENT ((id==0))
   //#define _DEBUG_CLIQUENOTEQUAL true
@@ -75,7 +75,8 @@ namespace Mistral {
   //#define _DEBUG_MAX true
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
-  
+  //#define _DEBUG_SEARCH true
+  //#define _DEBUG_CHECKER true  
 
   
 #define NORESTART 0
@@ -83,6 +84,7 @@ namespace Mistral {
 #define LUBY 2
 
 #define LARGE_VALUE NOVAL/16384
+#define SMALL_VALUE -NOVAL/16384
   //#define INFTY  NOVAL/2
 #define MAXINT NOVAL
 #define MININT -NOVAL
@@ -229,6 +231,17 @@ namespace Mistral {
 #define UB_CHANGED(e)     (bool)((e)&UB_C)
 #define ASSIGNED(e)       (bool)((e)&VALUE_C)
 #define FAILED(e)         (bool)((e)&FAIL_EVENT)
+
+
+
+//   //#define __modulo_fct__(x,m)
+
+// int __modulo_fct__(const int x, const int m) {
+//   int mod = x%m;
+//   if(mod && (mod<0) != (m<0))  mod += m;
+//   return mod;
+// }
+
 
 
   std::string int2str(const int x);

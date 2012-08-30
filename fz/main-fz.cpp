@@ -66,11 +66,12 @@ int main(int argc, char *argv[])
   options["--limit"] = "0";
   options["--verbose"] = "0";
   options["--rewrite"] = "0";
+  options["--display_model"] = "0";
 
 
   options["a"] = "0";
   options["p"] = "1";
-  options["f"] = "1";
+  options["f"] = "0";
   
 
 
@@ -102,8 +103,8 @@ int main(int argc, char *argv[])
   FlatZinc::Printer p;
   FlatZinc::FlatZincModel *fm = 0L;
 
-
   fm = parse(args.back(), s, p);
+
   FlatZinc::SolutionPrinter *sp = new FlatZinc::SolutionPrinter(&p, fm, &s);
   s.add(sp);
 
@@ -153,16 +154,24 @@ int main(int argc, char *argv[])
   double total_time = atof(options["--limit"].c_str());
   double cutoff = (total_time>0 ? total_time - parse_time : 0);
 #ifdef _FLATZINC_OUTPUT
-	cout << "%";
+  cout << "%";
 #endif
-	if(cutoff>0) std::cout << " d CUTOFF " << cutoff << std::endl;
+  if(cutoff>0) std::cout << " d CUTOFF " << cutoff << std::endl;
 
+
+  // set flatzinc model options
   fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
-  s.initialise_random_seed(atoi(options["--seed"].c_str()));
-  s.set_time_limit(cutoff);
-  s.parameters.verbosity = atoi(options["--verbose"].c_str());
   fm->set_rewriting(atoi(options["--rewrite"].c_str()));
   fm->set_enumeration(atoi(options["-a"].c_str()));
+  fm->set_display_model(atoi(options["--display_model"].c_str()));
+  fm->set_annotations(!(atoi(options["-f"].c_str())));
+
+  // set solver options
+  s.initialise_random_seed(atoi(options["--seed"].c_str()));
+  s.parameters.verbosity = atoi(options["--verbose"].c_str());
+  s.set_time_limit(cutoff);
+
+
 
   fm->run(cout , p);
   

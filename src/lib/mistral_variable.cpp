@@ -4386,9 +4386,20 @@ Mistral::Variable Mistral::Member(Variable X, const Vector<int>& s) {
 Mistral::Goal::Goal(method t) : type(t) {
   lower_bound = 0;
   upper_bound = 0;
+  sub_type = NONE; 
 }
 
-Mistral::Goal::Goal(method t, Variable X) : type(t) {
+Mistral::Goal::Goal(method t, Variable X) : sub_type(t) {
+  objective = X;
+  type = OPTIMIZATION;
+
+  // std::cout << "OBJECTIVE=" << objective << " in " << objective.get_domain() << std::endl;
+
+  lower_bound = objective.get_min()-1; //(type == MAXIMIZATION);
+  upper_bound = objective.get_max()+1; //(type == MINIMIZATION);
+}
+
+Mistral::Goal::Goal(method t, method st, Variable X) : type(t), sub_type(st) {
   objective = X;
 
   // std::cout << "OBJECTIVE=" << objective << " in " << objective.get_domain() << std::endl;
@@ -4404,17 +4415,32 @@ Mistral::Goal::~Goal() {
 }
 
 bool Mistral::Goal::enforce() {
-  if(type == MINIMIZATION) {
+  // if(type == OPTIMIZATION) {
+  //   if(sub_type == MINIMIZATION) {
+  //     return IS_FAIL(objective.set_max(upper_bound-1));
+  //   } else { //if(sub_type == MAXIMIZATION) {
+  //     return IS_FAIL(objective.set_min(lower_bound+1));
+  //   }
+  // } else if(sub_type != NONE) {
+  //   if(sub_type == MINIMIZATION) {
+  //     return IS_FAIL(objective.set_max(upper_bound));
+  //   } else { //if(sub_type == MAXIMIZATION) {
+  //     return IS_FAIL(objective.set_min(lower_bound));
+  //   }
+  // }
+
+  if(sub_type == MINIMIZATION) {
     return IS_FAIL(objective.set_max(upper_bound-1));
-  } else if(type == MAXIMIZATION) {
+  } else if(sub_type == MAXIMIZATION) {
     return IS_FAIL(objective.set_min(lower_bound+1));
   }
+
   return false;
 }
 
 
 int Mistral::Goal::value() const {
-  return(type == MINIMIZATION ? upper_bound : lower_bound);
+  return(sub_type == MINIMIZATION ? upper_bound : lower_bound);
   // if(type == MINIMIZATION) {
   //   return upper_bound;
   // } else if(type == MAXIMIZATION) {
@@ -4435,7 +4461,7 @@ int Mistral::Goal::value() const {
 
 
 bool Mistral::Goal::is_optimization() const {
-  return (type == MINIMIZATION || type == MAXIMIZATION);
+  return (type == OPTIMIZATION); //(type == MINIMIZATION || type == MAXIMIZATION);
 }
 
 bool Mistral::Goal::is_satisfaction() const {
@@ -4446,10 +4472,14 @@ bool Mistral::Goal::is_enumeration() const {
   return (type == ENUMERATION);
 }
 
+bool Mistral::Goal::has_function() const {
+  return (sub_type != NONE);
+}
+
 bool Mistral::Goal::improving(const int val) const {
   bool value = false;
-  if(type == MINIMIZATION) value = val < upper_bound;
-  else if(type == MAXIMIZATION) value = val > lower_bound;
+  if(sub_type == MINIMIZATION) value = val < upper_bound;
+  else if(sub_type == MAXIMIZATION) value = val > lower_bound;
   return value;
 
   // return( type == SATISFACTION ? false :
@@ -4467,57 +4497,49 @@ Mistral::Outcome Mistral::Goal::notify_exhausted() {
 }
 
 std::ostream& Mistral::Goal::display(std::ostream& os) const {
-  if(type == MINIMIZATION) {
-    os << "minimize " << objective ;
-  } else   if(type == MAXIMIZATION) {
-    os << "maximize " << objective ;
+  if(type == OPTIMIZATION) {
+    if(sub_type == MINIMIZATION) {
+      os << "minimize " << objective ;
+    } else   if(sub_type == MAXIMIZATION) {
+      os << "maximize " << objective ;
+    }
   } else if(type == ENUMERATION) {
     os << "find all solutions" ;
   } else {
     os << "find any solution" ;
+    if(sub_type == MAXIMIZATION) 
+      os << "(with " << objective << " >= " << lower_bound << ")" ;
+    else if(sub_type == MINIMIZATION) 
+      os << "(with " << objective << " <= " << upper_bound << ")" ;
   }
   return os;
 }
 
 Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
-  if(type == MINIMIZATION) {
-
-    //std::cout << "minimization algorithm: new solution (ub=" ;
-    upper_bound = objective.get_min();
-    //std::cout << upper_bound << ")" << std::endl;
-    
-    //std::cout << objective << " in " << objective.get_domain() << std::endl;
-    
-    if(!solver->level) lower_bound = upper_bound;
-
+  if(type == OPTIMIZATION) {
+    if(sub_type == MINIMIZATION) {
+      upper_bound = objective.get_min();
+      if(!solver->level) lower_bound = upper_bound;
+    } else { //if(sub_type == MAXIMIZATION) {
+      lower_bound = objective.get_max();
+      if(!solver->level) upper_bound = lower_bound;
+    }
+      
     if(upper_bound == lower_bound) return OPT;
-
-
-    //std::cout << solver->level << " " << solver->decisions.size << std::endl;
     solver->branch_right();
     return UNKNOWN; //(upper_bound == lower_bound ? OPT : UNKNOWN);
-  }
-  else if(type == MAXIMIZATION) {
-
-    lower_bound = objective.get_max();
-
-    if(!solver->level) upper_bound = lower_bound;
-    if(upper_bound == lower_bound) return OPT;
-
-
-    //std::cout << solver->level << " " << solver->decisions.size << std::endl;
-    solver->branch_right();
-    return UNKNOWN; //(upper_bound == lower_bound ? OPT : UNKNOWN);
-
-    // solver->branch_right();
-    // return (upper_bound == lower_bound ? OPT : UNKNOWN);
-  }
-  else if(type == ENUMERATION) {
+  } else if(type == ENUMERATION) {
     //solver->store_solution();
 
     if(!solver->level) return OPT;
     solver->branch_right();
     return UNKNOWN;
+  } else if(sub_type == MAXIMIZATION) {
+    lower_bound = objective.get_min()-1;
+    if(!solver->level) upper_bound = lower_bound;
+  } else if(sub_type == MINIMIZATION){
+    upper_bound = objective.get_max()+1;
+    if(!solver->level) lower_bound = upper_bound;
   }
 
   //std::cout << "satisfaction algorithm: new solution" << std::endl;

@@ -5285,6 +5285,102 @@ template < int N, class T >
 
 
 
+
+
+//   class Interval {
+
+//   public:
+  
+//   int min;
+//   int max;
+  
+//   Interval(const int _min, const int _max);
+//   virtual ~Interval();
+
+//   Interval get_union(Interval arg);
+  
+//   bool contain(const int x);
+//   bool empty();
+
+// };
+
+
+
+
+// class PositiveHalfDomain
+// class NegativeHalfDomain : public Interval {
+
+// public:
+  
+//   NegativeHalfDomain();
+//   NegativeHalfDomain(const int _min, const int _max);
+//   virtual ~NegativeHalfDomain();
+
+//   Interval operator*(PositiveHalfDomain arg);
+//   Interval operator*(NegativeHalfDomain arg);
+
+//   Interval anti_mul(PositiveHalfDomain arg);
+//   Interval anti_mul(NegativeHalfDomain arg);
+
+//   Interval operator/(PositiveHalfDomain arg);
+//   Interval operator/(NegativeHalfDomain arg);
+
+//   Interval operator%(const int mod);
+//   Interval operator%(const int mod);
+
+//   // the return value is the interval I such that I%mod = this
+//   Interval anti_modulo(const int mod);
+//   Interval anti_modulo(const int mod);
+  
+// };
+
+// class PositiveHalfDomain : public Interval {
+
+// public:
+  
+//   PositiveHalfDomain();
+//   PositiveHalfDomain(const int _min, const int _max);
+//   virtual ~PositiveHalfDomain();
+
+//   Interval operator*(PositiveHalfDomain arg);
+//   Interval operator*(NegativeHalfDomain arg);
+
+//   Interval anti_mul(PositiveHalfDomain arg);
+//   Interval anti_mul(NegativeHalfDomain arg);
+
+//   Interval operator/(PositiveHalfDomain arg);
+//   Interval operator/(NegativeHalfDomain arg);
+
+//   Interval operator%(const int mod);
+//   Interval operator%(const int mod);
+
+//   // the return value is the interval I such that I%mod = this
+//   Interval anti_modulo(const int mod);
+//   Interval anti_modulo(const int mod);
+  
+// };
+
+
+
+//   class BiInterval {
+
+//   public:
+//     PositiveHalfDomain positive;
+//     NegativeHalfDomain negative;
+//     bool zero;
+
+//     BiInterval();
+//     BiInterval(const int _min, const int _max);
+//     virtual ~BiInterval();
+    
+//     BiInterval operator*(BiInterval arg);
+//     BiInterval anti_mul(BiInterval arg);
+//     BiInterval operator/(BiInterval arg);    
+//     BiInterval operator%(const int mod);
+//     BiInterval anti_modulo(const int mod);
+    
+//   };
+
  
 
 

@@ -684,10 +684,7 @@ vardecl_item:
                 vars[i] = pp->intvars.size();
                 pp->intvars.push_back(varspec(arrayname, ispec));
               }
-
-              std::cout << ($5-1) << std::endl;
-
-              vars[$5-1] = pp->intvars.size();
+              if($5) vars[$5-1] = pp->intvars.size();
               pp->intvars.push_back(varspec($11, ispec));
             }
           }

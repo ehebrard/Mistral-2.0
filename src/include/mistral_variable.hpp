@@ -2393,14 +2393,16 @@ namespace Mistral {
 
   public:
     
-    enum method { MINIMIZATION, MAXIMIZATION, SATISFACTION, ENUMERATION };
+    enum method { OPTIMIZATION, SATISFACTION, ENUMERATION, MAXIMIZATION, MINIMIZATION, NONE };
     method            type;
+    method        sub_type;
     int        lower_bound;
     int        upper_bound;
     Variable     objective;
 
     Goal(method t); 
     Goal(method t, Variable X);
+    Goal(method t, method st, Variable X);
 
     virtual ~Goal();
 
@@ -2409,12 +2411,19 @@ namespace Mistral {
     bool is_optimization() const;
     bool is_satisfaction() const;
     bool is_enumeration() const;
+    bool has_function() const;
     bool improving(const int val) const;
     //int worst() const;
     //int best() const;
     int value() const;
     bool enforce();
+
+    void set_type(method t) {
+      type = t;
+    }
+
     Outcome notify_solution(Solver *solver);
+    ///Outcome notify_bound(Solver *solver);
     Outcome notify_exhausted();
      
   };

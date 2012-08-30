@@ -32,16 +32,47 @@ Mistral::ConsolidateListener::ConsolidateListener(Mistral::Solver *s)
 {
   sequence = &(solver->sequence);
   constraints.initialise(solver->variables.size);
-  int n = solver->variables.size;
-  for(int i=0; i<n; ++i) {
-    Vector< Constraint > neighborhood;
-    neighborhood.initialise(solver->variables[i].get_degree());
-    for(int k=0; k<3; ++k) {
-      for(int j=solver->constraint_graph[i].on[k].size-1; j>=0; --j)
-     	neighborhood.add(solver->constraint_graph[i].on[k][j]);
-    }
-    constraints.add(neighborhood);
+
+
+  // int n = solver->variables.size;
+  // for(int i=0; i<n; ++i) {
+  //   Vector< Constraint > neighborhood;
+  //   neighborhood.initialise(solver->variables[i].get_degree());
+  //   for(int k=0; k<3; ++k) {
+  //     for(int j=solver->constraint_graph[i].on[k].size-1; j>=0; --j)
+  //    	neighborhood.add(solver->constraint_graph[i].on[k][j]);
+  //   }
+  //   constraints.add(neighborhood);
+  // }
+
+  //std::cout << "Variables size: " << solver->variables.size << std::endl;
+
+  Constraint c;
+  Variable *scope;
+  int i, j, arity, n=solver->variables.size;
+
+  for(i=0; i<n; ++i) {
+    constraints[i].initialise(solver->variables[i].get_degree());
   }
+
+  n = solver->constraints.size;
+  for(i=0; i<n; ++i) {
+    c = solver->constraints[i];
+    scope = c.get_scope();
+    arity = c.arity();
+    for(j=0; j<arity; ++j) {
+      if(!scope[j].is_ground()) {
+	//std::cout << " " << scope[j] << std::endl;
+	c.set_index(j);
+	constraints[scope[j].id()].add(c);
+      }
+    }
+  }
+
+  //std::cout << constraints[66] << std::endl;
+
+  solver->add((VariableListener*)this);
+  solver->add((ConstraintListener*)this);
 }
 
 
@@ -69,6 +100,9 @@ void Mistral::ConsolidateListener::notify_post (Constraint c) {};
 void Mistral::ConsolidateListener::notify_relax(Constraint c) {};
 
 void Mistral::ConsolidateListener::notify_add_con(Constraint c) {
+
+  //std::cout << "ADD CON " << c << std::endl;
+
   Variable *scope = c.get_scope();
   int arity = c.arity();
   for(int i=0; i<arity; ++i) {
@@ -79,17 +113,21 @@ void Mistral::ConsolidateListener::notify_add_con(Constraint c) {
 
 void Mistral::ConsolidateListener::notify_change(const int idx) {
 
-  // std::cout << "BEG REACT TO CHANGE ON " << solver->variables[idx] << std::endl;
+  //std::cout << "BEG REACT TO CHANGE ON " << solver->variables[idx] << std::endl;
 
   Variable X = solver->variables[idx];
   int ids = sequence->index(idx);
   if(ids>=0) sequence->list_[ids] = X;
 
-  for(int i=constraints[idx].size-1; i>=0; --i) {
+  //if(idx==66) std::cout << constraints[idx] << std::endl;
+
+  for(int i=constraints[idx].size; --i>=0;) {
+    //std::cout << constraints[idx][i] << std::endl;
     constraints[idx][i].consolidate_var();
+    //std::cout << constraints[idx][i] << std::endl;
   }
 
-  // std::cout << "END REACT TO CHANGE ON " << solver->variables[idx] << std::endl;
+  //std::cout << "END REACT TO CHANGE ON " << solver->variables[idx] << std::endl;
 }
 
 
@@ -418,6 +456,18 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinDomain& x) {
   return x.display(os);
 }
 
+std::ostream& operator<<(std::ostream& os, Mistral::MinMin& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxRegret& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainMaxDegree& x) {
+  return x.display(os);
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverDegree& x) {
   return x.display(os);
 }
@@ -446,7 +496,27 @@ std::ostream& operator<<(std::ostream& os, Mistral::MaxValue& x) {
   return x.display(os);
 }
 
+std::ostream& operator<<(std::ostream& os, Mistral::MiddleValue& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MedianValue& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RandomValue& x) {
+  return x.display(os);
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::HalfSplit& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::ReverseSplit& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RandomSplit& x) {
   return x.display(os);
 }
 
@@ -464,4 +534,90 @@ std::ostream& operator<<(std::ostream& os, Mistral::Guided& x) {
 
 std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue& x) {
   return x.display(os);
+}
+
+
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomain* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinMin* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxRegret* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainMaxDegree* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverDegree* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverNeighborWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MiddleValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MedianValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RandomValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::HalfSplit* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::ReverseSplit* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RandomSplit* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::RandomMinMax* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinWeightValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::Guided* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue* x) {
+  return x->display(os);
 }

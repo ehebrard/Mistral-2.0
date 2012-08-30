@@ -223,6 +223,7 @@ namespace Mistral {
     RewritingOutcome rewrite();
 
     bool find_support(const int var, const int val);
+    bool find_bound_support(const int var, const int val);
     PropagationOutcome propagate();
     PropagationOutcome propagate(const Event evt);
 

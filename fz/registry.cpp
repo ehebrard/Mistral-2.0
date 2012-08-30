@@ -489,7 +489,7 @@ namespace FlatZinc {
       //       post_pb(s, iv, ia, c);
       //     else {
       //       Variable b = getBoolVar(s, m, ce[3]);
-      //       post_pb_iff_re(s, iv, ia, c, b);
+      //       post_pb_iff_reif(s, iv, ia, c, b);
       //     }
       //     break;
       //   case EQ_EXPR:
@@ -519,7 +519,7 @@ namespace FlatZinc {
       //       post_lin_leq(s, iv, ia, -c);
       //     else {
       //       Variable b = getBoolVar(s, m, ce[3]);
-      //       post_lin_leq_iff_re(s, iv, ia, -c, b);
+      //       post_lin_leq_iff_reif(s, iv, ia, -c, b);
       //     }
       //     break;
       //   case EQ_EXPR:
@@ -528,7 +528,7 @@ namespace FlatZinc {
       //       post_lin_eq(s, iv, ia, -c);
       //     else {
       //       Variable b = getBoolVar(s, m, ce[3]);
-      //       post_lin_eq_iff_re(s, iv, ia, -c, b);
+      //       post_lin_eq_iff_reif(s, iv, ia, -c, b);
       //     }
       //     break;
       //   case NEQ_EXPR:
@@ -537,7 +537,7 @@ namespace FlatZinc {
       //       post_lin_neq(s, iv, ia, -c);
       //     else {
       //       Variable b = getBoolVar(s, m, ce[3]);
-      //       post_lin_neq_iff_re(s, iv, ia, -c, b);
+      //       post_lin_neq_iff_reif(s, iv, ia, -c, b);
       //     }
       //     break;
       //   case NONE: assert(0); break;
@@ -1717,7 +1717,35 @@ namespace FlatZinc {
       s.add( A <= B ); // Warning: this is lex leq (not set_le as defined in minizinc)
     }
 
-    void p_set_eq_re(Solver& s, FlatZincModel& m,
+    void p_set_lt(Solver& s, FlatZincModel& m,
+                  const ConExpr& ce, AST::Node* ann) {
+      Variable A = getSetVar(s, m, ce[0]);
+      Variable B = getSetVar(s, m, ce[1]);
+      
+      s.add( A < B ); // Warning: this is lex leq (not set_le as defined in minizinc)
+    }
+
+   void p_set_le_reif(Solver& s, FlatZincModel& m,
+                  const ConExpr& ce, AST::Node* ann) {
+      Variable A = getSetVar(s, m, ce[0]);
+      Variable B = getSetVar(s, m, ce[1]);
+      Variable b = getBoolVar(s, m, ce[2]);
+      report_unsupported("p_set_le_re");
+      
+      //s.add( A <= B ); // Warning: this is lex leq (not set_le as defined in minizinc)
+    }
+
+    void p_set_lt_reif(Solver& s, FlatZincModel& m,
+                  const ConExpr& ce, AST::Node* ann) {
+      Variable A = getSetVar(s, m, ce[0]);
+      Variable B = getSetVar(s, m, ce[1]);
+      Variable b = getBoolVar(s, m, ce[2]);
+      report_unsupported("p_set_lt_re");
+      
+      //s.add( A < B ); // Warning: this is lex leq (not set_le as defined in minizinc)
+    }
+
+    void p_set_eq_reif(Solver& s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
@@ -1727,7 +1755,7 @@ namespace FlatZinc {
       //s.add( b == SetEqual(A,B) );
     }
 
-    void p_set_ne_re(Solver& s, FlatZincModel& m,
+    void p_set_ne_reif(Solver& s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
@@ -1747,7 +1775,7 @@ namespace FlatZinc {
       s.add( Member(x,A));
     }
 
-    void p_set_in_re(Solver &s, FlatZincModel& m,
+    void p_set_in_reif(Solver &s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
        Variable x = getIntVar(s, m, ce[0]);
        Variable A = getSetVar(s, m, ce[1]);
@@ -1798,7 +1826,7 @@ namespace FlatZinc {
       s.add( Subset(B,A) );
     }
 
-    void p_set_subset_re(Solver &s, FlatZincModel& m,
+    void p_set_subset_reif(Solver &s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
@@ -1816,7 +1844,7 @@ namespace FlatZinc {
 
     }
 
-    void p_set_superset_re(Solver &s, FlatZincModel& m,
+    void p_set_superset_reif(Solver &s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
@@ -1869,7 +1897,7 @@ namespace FlatZinc {
 
         registry().add("array_var_int_element", &p_array_int_element);
         registry().add("array_int_element", &p_array_int_element);
-        //registry().add("array_set_element", &p_array_set_element);
+        registry().add("array_set_element", &p_array_set_element);
         registry().add("array_var_set_element", &p_array_set_element);
         registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
@@ -1908,13 +1936,17 @@ namespace FlatZinc {
         registry().add("set_card", &p_set_card);
         registry().add("set_eq", &p_set_eq);
         registry().add("set_ne", &p_set_ne);
-        registry().add("set_eq_reif", &p_set_eq_re);
-        registry().add("set_ne_reif", &p_set_ne_re);
+        registry().add("set_eq_reif", &p_set_eq_reif);
+        registry().add("set_ne_reif", &p_set_ne_reif);
 
         registry().add("set_le", &p_set_le);
+        registry().add("set_le_reif", &p_set_le_reif);
+
+        registry().add("set_lt", &p_set_le);
+        registry().add("set_lt_reif", &p_set_le_reif);
 
         registry().add("set_in", &p_set_in);
-        registry().add("set_in_reif", &p_set_in_re);
+        registry().add("set_in_reif", &p_set_in_reif);
 
         registry().add("set_diff", &p_set_diff);
         registry().add("set_symdiff", &p_set_symdiff);
@@ -1923,8 +1955,8 @@ namespace FlatZinc {
 
         registry().add("set_subset", &p_set_subset);
         registry().add("set_superset", &p_set_superset);
-        registry().add("set_subset_reif", &p_set_subset_re);
-        registry().add("set_superset_reif", &p_set_superset_re);
+        registry().add("set_subset_reif", &p_set_subset_reif);
+        registry().add("set_superset_reif", &p_set_superset_reif);
       }
     };
     IntPoster __int_poster;
