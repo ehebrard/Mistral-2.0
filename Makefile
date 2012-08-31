@@ -18,4 +18,4 @@ archive:
 	mkdir Mistral-2.0.$(DATE)
 	git archive master --format=tar | tar -x -C ./Mistral-2.0.$(DATE)
 	tar -cvjf Mistral-2.0.$(DATE).bz2 Mistral-2.0.$(DATE)
-	scp Mistral-2.0.$(DATE).bz2 4c60.ucc.ie:/home/ehebrard/tmp/
+

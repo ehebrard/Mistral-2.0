@@ -4,11 +4,7 @@ To build (i.e., generate the executable fzn-mistral):
 $ make
 
 Options: 
-fzn-mistral does not take annotations into account, and does not use parallel threads, so the options -a, -f and -p have no use (yet).
-
-
-
-
-
+1- fzn-mistral does not use parallel threads so the option -p has no use (yet). 
+2- Search annotations are not yet supported. However, we need to mention the -f option to ignore these annotations.
 
 
