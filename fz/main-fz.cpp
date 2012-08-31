@@ -102,9 +102,10 @@ int main(int argc, char *argv[])
 
   FlatZinc::Printer p;
   FlatZinc::FlatZincModel *fm = 0L;
-
+	cout << "X";
   fm = parse(args.back(), s, p);
 
+	cout << "Y";
   FlatZinc::SolutionPrinter *sp = new FlatZinc::SolutionPrinter(&p, fm, &s);
   s.add(sp);
 
