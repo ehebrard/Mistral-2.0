@@ -50,7 +50,7 @@
 #include <mistral_solver.hpp>
 #include <mistral_search.hpp>
 
-#define _VERBOSE_PARSER 100
+//#define _VERBOSE_PARSER 100
 //#define _VERIFICATION
 //#define _DEBUG_VERIFICATION
 #define _FLATZINC_OUTPUT

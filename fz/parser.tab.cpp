@@ -329,24 +329,12 @@ namespace FlatZinc {
     }
     ParserState pp(s, err, fzs);
 #endif
-
-	cout << "Y";
-
     yylex_init(&pp.yyscanner);
-
-
-	cout << "Y";
-	yyset_extra(&pp, pp.yyscanner);
+    yyset_extra(&pp, pp.yyscanner);
     // yydebug = 1;
-
-
-	cout << "Y";
-	yyparse(&pp);
-
-	cout << "Y";
+    yyparse(&pp);
     fillPrinter(pp, p);
 
-	cout << "Y";
     if (pp.yyscanner)
       yylex_destroy(pp.yyscanner);
     return pp.hadError ? NULL : pp.fg;
