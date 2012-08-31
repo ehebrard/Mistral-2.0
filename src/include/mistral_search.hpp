@@ -1594,6 +1594,59 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, MinMin& x);
   std::ostream& operator<<(std::ostream& os, MinMin* x);
 
+  /*! \class MaxMax
+      \brief  Class MaxMax
+
+      Order two variables by their maximum value
+    */
+    class MaxMax
+    {
+    public:
+
+      /**@name Constructors*/
+      //@{
+ 	  MaxMax() {max_ = SMALL_VALUE;}
+      void initialise(const double* _w) {max_ = SMALL_VALUE;}
+      //@}
+
+      /**@name Parameters*/
+      //@{
+      int max_;
+      //@}
+
+      /**@name Utils*/
+      //@{
+      inline double value() { return (double)max_; }
+      inline bool operator<( const MaxMax& x ) const { return max_ > x.max_; }
+
+      inline MaxMax& operator*=( const int x ) { max_ *= x; return *this; }
+      inline MaxMax& operator+=( const int x ) { max_ += x; return *this; }
+      inline MaxMax& operator-=( const int x ) { max_ -= x; return *this; }
+      inline MaxMax& operator/=( const int x ) { max_ /= x; return *this; }
+
+      inline MaxMax& operator*=( const MaxMax& x ) { max_ *= x.max_; return *this; }
+      inline MaxMax& operator+=( const MaxMax& x ) { max_ += x.max_; return *this; }
+      inline MaxMax& operator-=( const MaxMax& x ) { max_ -= x.max_; return *this; }
+      inline MaxMax& operator/=( const MaxMax& x ) { max_ /= x.max_; return *this; }
+
+      inline void operator=( const MaxMax& x ) { max_ = x.max_; }
+      inline void operator=( const Variable x ) { max_ = x.get_max(); }
+      //@}
+
+      std::ostream& display_criterion(std::ostream& os) const {
+        os << "with maximum maximum";
+        return os;
+      }
+
+      std::ostream& display(std::ostream& os) const {
+        os << max_;
+        return os;
+      }
+    };
+
+    std::ostream& operator<<(std::ostream& os, MaxMax& x);
+    std::ostream& operator<<(std::ostream& os, MaxMax* x);
+
 
   /*! \class MaxRegret
     \brief  Class MaxRegret

@@ -460,6 +460,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinMin& x) {
   return x.display(os);
 }
 
+std::ostream& operator<<(std::ostream& os, Mistral::MaxMax& x) {
+  return x.display(os);
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::MaxRegret& x) {
   return x.display(os);
 }
@@ -543,6 +547,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinDomain* x) {
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinMin* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MaxMax* x) {
   return x->display(os);
 }
 
