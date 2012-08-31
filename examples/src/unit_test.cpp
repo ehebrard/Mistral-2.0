@@ -53,6 +53,17 @@ public:
 };
 
 
+class RandomIntervalTest : public UnitTest {
+
+public:
+  
+  RandomIntervalTest(const int ql=MEDIUM, const int qt=MEDIUM);
+  ~RandomIntervalTest();
+
+  virtual void run();
+};
+
+
 class RandomDomainRandomSetDomainAndRestore : public UnitTest {
 
 public:
@@ -1444,8 +1455,8 @@ int main(int argc, char *argv[])
   if(argc>1) N=atoi(argv[1]);
 
   
-  tests.push_back(new CheckerTest());
 
+  tests.push_back(new CheckerTest());
   tests.push_back(new LexTest());
   tests.push_back(new IntersectionTest());
   tests.push_back(new CardTest());
@@ -1472,6 +1483,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomRemove());
   tests.push_back(new RandomRevNumAffectations<int>());
   //tests.push_back(new ConstraintArrayTest());
+  tests.push_back(new RandomIntervalTest());
 
 
   //tests[0]->Verbosity = HIGH;
@@ -1570,6 +1582,225 @@ void UnitTest::checkDomainIntegrity(Variable X) {
 	 << ": " << values.size << " vs " << X.get_size() << endl;
     exit(1);
   }
+}
+
+
+
+// int _modulo_fct_(const int x, const int m) {
+//   int mod = x%m;
+//   if(mod && (mod<0) != (m<0))  mod += m;
+//   return mod;
+// }
+
+
+RandomIntervalTest::RandomIntervalTest(const int ql, 
+				       const int qt) 
+  : UnitTest(LOW, ql, qt) {}
+RandomIntervalTest::~RandomIntervalTest() {}
+
+void RandomIntervalTest::run() {
+
+  int n=100000;
+  int m=51;
+
+  if(Verbosity) cout << "Run " << n << " random interval checks ";// << endl;
+
+  int lb, ub, val;
+  bool all_in, min_reached, max_reached;
+  Interval I, J, K;    
+  double dval;
+  for(int count=0; count<n; ++count) {
+
+    if(!(count % (n/10))) {
+      std::cout << ".";
+      std::cout.flush();
+    }
+
+    lb = randint(m)-m/2;
+    ub = lb+randint(m);
+    I = Interval(lb, ub);
+
+    lb = randint(m)-m/2;
+    ub = lb+randint(m);
+    J = Interval(lb, ub);
+
+    K = (I*J);
+
+    // std::cout << "[" << I.min << "," << I.max 
+    // 	      << "] * [" << J.min << "," << J.max << "] = ["
+    // 	      << K.min << "," << K.max << "]\n";
+
+    all_in = true;
+    min_reached = false;
+    max_reached = false;
+    for(int i=I.min; i<=I.max; ++i)
+      for(int j=J.min; j<=J.max; ++j)
+	{
+	  val = i*j;
+	  if(val == K.max) max_reached = true;
+	  if(val == K.min) min_reached = true;
+	  if(val > K.max || val < K.min) all_in =false;
+	  
+	  if(!all_in) {
+	    std::cout << "Error: " << i << "*" << j << " is not in [" << K.min << "," << K.max 
+		      << "] != ([" << I.min << "," << I.max 
+		      << "] * [" << J.min << "," << J.max << "])\n";
+	    exit(1);
+	  }
+	}
+    if(!min_reached) {
+      std::cout << "Error: " << K.min << " is not min([" << I.min << "," << I.max 
+		<< "] * [" << J.min << "," << J.max << "])\n";
+      exit(1);
+    }
+    if(!max_reached) {
+      std::cout << "Error: " << K.max << " is not max([" << I.min << "," << I.max 
+		<< "] * [" << J.min << "," << J.max << "])\n";
+      exit(1);
+    }
+
+
+    K = (I/J);
+
+    // std::cout << "[" << I.min << "," << I.max 
+    // 	      << "] / [" << J.min << "," << J.max << "] = ["
+    // 	      << K.min << "," << K.max << "]\n";
+
+    all_in = true;
+    min_reached = false;
+    max_reached = false;
+    for(int i=I.min; i<=I.max; ++i)
+      for(int j=J.min; j<=J.max; ++j)
+	if(j) {
+	  val = i/j;
+	  if(val == K.max) max_reached = true;
+	  if(val == K.min) min_reached = true;
+	  if(val > K.max || val < K.min) all_in =false;
+	  
+	  if(!all_in) {
+	    std::cout << "Error: " << i << "/" << j << " is not in [" << K.min << "," << K.max 
+		      << "] != ([" << I.min << "," << I.max 
+		      << "] / [" << J.min << "," << J.max << "])\n";
+	    exit(1);
+	  }
+	}
+
+    if(!K.empty()) {
+      if(!min_reached) {
+	std::cout << "Error: " << K.min << " is not min([" << I.min << "," << I.max 
+		  << "] / [" << J.min << "," << J.max << "])\n";
+	exit(1);
+      }
+      if(!max_reached) {
+	std::cout << "Error: " << K.max << " is not max([" << I.min << "," << I.max 
+		  << "] / [" << J.min << "," << J.max << "])\n";
+	exit(1);
+      }
+    }
+
+
+
+    K = (I.anti_mul(J)); // K*J = I
+
+    // std::cout << "[" << I.min << "," << I.max 
+    //  	      << "] // [" << J.min << "," << J.max << "] = ["
+    //  	      << K.min << "," << K.max << "]\n";
+
+    if(!K.empty()) { //[TODO: some knd of check when it is empty]
+      all_in = true;
+      min_reached = false;
+      max_reached = false;
+      for(int i=I.min; i<=I.max; ++i)
+	for(int j=J.min; j<=J.max; ++j) 
+	  if(j) {
+	    //if(i/j || (J.min <= 0 && 0 <= J.max)) {
+	      dval = (double)i/(double)j;
+	      //if(val == I.max) max_reached = true;
+	      //if(val == I.min) min_reached = true;
+	      
+	      //std::cout << i << "//" << j << " <-> " << (double)(K.min-1) << " <=? " << dval << " <=? " << (double)(K.max+1) << std::endl;
+	      
+	      if(dval >= (double)(K.max+1) || dval <= (double)(K.min-1)) all_in = false;
+	      
+	      if(!all_in) {
+		std::cout << "Error: " << i << "//" << j << " is not in [" << K.min << "," << K.max 
+			  << "] != ([" << I.min << "," << I.max 
+			  << "] // [" << J.min << "," << J.max << "])\n";
+		exit(1);
+	      }
+	      //}
+	  }
+      
+      if(K.min > -INFTY) {
+	// we check that K.min-1 is not supported
+	for(int j=J.min; j<=J.max; ++j) {
+	  val = ((K.min-1) * j);
+	  if(I.min <= val && val <= I.max) min_reached = true;
+	}
+	if(min_reached) {
+	  std::cout << "Error: " << K.min-1 << " is a valid min([" << I.min << "," << I.max 
+		    << "] // [" << J.min << "," << J.max << "])\n";
+	  exit(1);
+	}
+      }
+      
+      if(K.max < INFTY) {
+	// we check that K.max+1 is not supported
+	for(int j=J.min; j<=J.max; ++j) {
+	  val = ((K.max+1) * j);
+	  if(I.min <= val && val <= I.max) max_reached = true;
+	}
+	if(max_reached) {
+	  std::cout << "Error: " << K.max+1 << " is a valid max([" << I.min << "," << I.max 
+		    << "] // [" << J.min << "," << J.max << "])\n";
+	  exit(1);
+	}
+      }
+    }
+
+
+
+    for(int modulo=1; modulo<m/2; ++modulo) {
+      K = (I % modulo);
+
+      // std::cout << "[" << I.min << "," << I.max 
+      // 		<< "] % " << modulo << " = ["
+      // 		<< K.min << "," << K.max << "]\n";
+      
+      all_in = true;
+      min_reached = false;
+      max_reached = false;
+      for(int i=I.min; i<=I.max; ++i) {
+	val = __modulo_fct__(i,modulo);
+
+	//std::cout << "[" << K.min << "][" << K.max << "] " << i << "%" << modulo << "=" << val << std::endl;
+
+	if(val == K.max) max_reached = true;
+	if(val == K.min) min_reached = true;
+	if(val > K.max || val < K.min) all_in =false;
+	  
+	if(!all_in) {
+	  std::cout << "Error: " << i << "%" << modulo << " is not in [" << K.min << "," << K.max 
+		    << "] != ([" << I.min << "," << I.max 
+		    << "] % " << modulo << ")\n";
+	  exit(1);
+	}
+      }
+
+      if(!min_reached) {
+	std::cout << "Error: " << K.min << " is not min([" << I.min << "," << I.max 
+		  << "] % " << modulo << ")\n";
+	exit(1);
+      }
+      if(!max_reached) {
+	std::cout << "Error: " << K.max << " is not max([" << I.min << "," << I.max 
+		  << "] % " << modulo << ")\n";
+	exit(1);
+      }
+    }
+  }
+
+  //std::cout << std::endl;
 }
 
 

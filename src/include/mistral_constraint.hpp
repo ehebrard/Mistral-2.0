@@ -2676,95 +2676,96 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
- //  /**********************************************
- //   * Modulo Predicate
- //   **********************************************/
- //  /*! \class PredicateMod
- //    \brief  Binary Modulo predicate (x0 % x1 = y)
- //  */
- //  class PredicateMod : public TernaryConstraint
- //  {
+  /**********************************************
+   * Modulo Predicate
+   **********************************************/
+  /*! \class PredicateMod
+    \brief  Binary Modulo predicate (x0 % x1 = y)
+  */
+  class PredicateMod : public TernaryConstraint
+  {
 
- // public:
- //    /**@name Constructors*/
- //    //@{
- //    PredicateMod() : TernaryConstraint() {}
- //    PredicateMod(Variable x, Variable y, Variable z)
- //      : TernaryConstraint(x, y, z) {}
- //    PredicateMod(Vector< Variable >& scp)
- //      : TernaryConstraint(scp) {}
- //    PredicateMod(std::vector< Variable >& scp)
- //      : TernaryConstraint(scp) {}
- //    virtual Constraint clone() { return Constraint(new PredicateMod(scope[0], scope[1], scope[2])); }
- //    virtual void initialise();
- //    virtual int idempotent() { return 0; }
- //    virtual ~PredicateMod() {}
- //    //@}
+ public:
+    /**@name Constructors*/
+    //@{
+    PredicateMod() : TernaryConstraint() {}
+    PredicateMod(Variable x, Variable y, Variable z)
+      : TernaryConstraint(x, y, z) {}
+    PredicateMod(Vector< Variable >& scp)
+      : TernaryConstraint(scp) {}
+    PredicateMod(std::vector< Variable >& scp)
+      : TernaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateMod(scope[0], scope[1], scope[2])); }
+    virtual void initialise();
+    virtual int idempotent() { return 0; }
+    virtual ~PredicateMod() {}
+    //@}
     
- //    /**@name Solving*/
- //    //@{
- //    PropagationOutcome filter();
- //    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != (sol[0] % sol[1])); }
- //    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
- //    virtual PropagationOutcome propagate();
- //    virtual RewritingOutcome rewrite();
- //    //@}
+    /**@name Solving*/
+    //@{
+    PropagationOutcome filter();
+    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != (sol[0] % sol[1])); }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    virtual RewritingOutcome rewrite();
+    //@}
     
- //    /**@name Miscellaneous*/
- //    //@{  
- //    virtual std::ostream& display(std::ostream&) const ;
- //    virtual std::string name() const { return "%="; }
- //    //@}
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "%="; }
+    //@}
 
- //  };
+  };
 
 
- //  /**********************************************
- //   * Modulo Predicate
- //   **********************************************/
- //  /*! \class PredicateMod
- //    \brief  Binary Modulo predicate (x0 % x1 = y)
- //  */
- //  class PredicateModConstant : public BinaryConstraint
- //  {
+  /**********************************************
+   * Modulo Predicate
+   **********************************************/
+  /*! \class PredicateMod
+    \brief  Binary Modulo predicate (x0 % x1 = y)
+  */
+  class PredicateModConstant : public BinaryConstraint
+  {
 
- //  public:
- //   /**@name Parameters*/
- //    //@{  
- //    int modulo;
- //    //@}
+  public:
+   /**@name Parameters*/
+    //@{  
+    int modulo;
+    //@}
 
- //    /**@name Constructors*/
- //    //@{
- //    PredicateModConstant() : BinaryConstraint() {}
- //    PredicateModConstant(Vector< Variable >& scp, const int mod=2) 
- //      : BinaryConstraint(scp) { modulo=mod; }
- //    PredicateModConstant(Variable x, Variable y, const int mod=2) 
- //      : BinaryConstraint(x,y) { modulo=mod; }
- //    PredicateModConstant(std::vector< Variable >& scp, const int mod=2) 
- //      : BinaryConstraint(scp) { modulo=mod; }
- //    virtual Constraint clone() { return Constraint(new PredicateModConstant(scope[0], scope[1], modulo)); }
- //    virtual void initialise();
- //    virtual int idempotent() { return 1;}
- //    virtual ~PredicateModConstant() {}
- //    //@}
+    /**@name Constructors*/
+    //@{
+    PredicateModConstant() : BinaryConstraint() {}
+    PredicateModConstant(Vector< Variable >& scp, const int mod=2) 
+      : BinaryConstraint(scp) { modulo=mod; }
+    PredicateModConstant(Variable x, Variable y, const int mod=2) 
+      : BinaryConstraint(x,y) { modulo=mod; }
+    PredicateModConstant(std::vector< Variable >& scp, const int mod=2) 
+      : BinaryConstraint(scp) { modulo=mod; }
+    virtual Constraint clone() { return Constraint(new PredicateModConstant(scope[0], scope[1], modulo)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~PredicateModConstant() {}
+    //@}
 
- //    /**@name Solving*/
- //    //@{
- //    virtual int check( const int* sol ) const { 
- //      return((sol[0] % modulo) != sol[1]);
- //    }
- //    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
- //    virtual PropagationOutcome propagate();
- //    //virtual RewritingOutcome rewrite();
- //    //@}
+    /**@name Solving*/
+    //@{
+    PropagationOutcome filter();
+    virtual int check( const int* sol ) const { 
+      return((sol[0] % modulo) != sol[1]);
+    }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
 
- //    /**@name Miscellaneous*/
- //    //@{  
- //    virtual std::ostream& display(std::ostream&) const ;
- //    virtual std::string name() const { return "%k"; }
- //    //@}
- //  };
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "%k"; }
+    //@}
+  };
 
 
 
@@ -3334,7 +3335,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   typedef struct {
     int min, max;		// start, end of interval
     int minrank, maxrank; // rank of min & max in bounds[] of an adcsp
-  } Interval;
+  } AD_Interval;
   
   /*! \class ConstraintAllDiff
     \brief  AllDifferent Constraint.
@@ -3354,9 +3355,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     int *t;		// tree links
     int *d;		// diffs between critical capacities
     int *h;		// hall interval links
-    Interval *iv;
-    Interval **minsorted;
-    Interval **maxsorted;
+    AD_Interval *iv;
+    AD_Interval **minsorted;
+    AD_Interval **maxsorted;
     int *bounds;  // bounds[1..nb] hold set of min & max in the niv intervals
                   // while bounds[0] and bounds[nb+1] allow sentinels
     int nb;

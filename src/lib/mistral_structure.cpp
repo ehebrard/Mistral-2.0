@@ -19,8 +19,10 @@
   The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 */
 
+#include <math.h>
 
 #include <mistral_structure.hpp>
+#include <mistral_global.hpp>
 
 
 
@@ -59,11 +61,11 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet* x)
 
 
 
-// int __modulo_fct__(const int x, const int m) {
-//   int mod = x%m;
-//   if(mod && (mod<0) != (m<0))  mod += m;
-//   return mod;
-// }
+int Mistral::__modulo_fct__(const int x, const int m) {
+  int mod = x%m;
+  if(mod && (mod<0) != (m<0))  mod += m;
+  return mod;
+}
 
 
 // /*
@@ -181,231 +183,455 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet* x)
 //   return value;
 // }
 
+Mistral::Interval::Interval() {min=+INFTY; max=-INFTY;}
+Mistral::Interval::Interval(const BiInterval b) {
+  if(b.positive.empty()) max = (b.zero ? 0 : b.negative.max);
+  else max = b.positive.max;
 
+  if(b.negative.empty()) min = (b.zero ? 0 : b.positive.min);
+  else min = b.negative.min;
+}
+Mistral::Interval::Interval(const int _min, const int _max) {min=_min; max=_max;}
+Mistral::Interval::~Interval() {}
+
+Mistral::Interval Mistral::Interval::get_union(Mistral::Interval dom) {
+
+  //std::cout << "[" << min << "," << max << "] U [" << dom.min << "," << dom.max << "] = [";
+
+  Interval I((min<=dom.min ? min : dom.min), (max>=dom.max ? max : dom.max));
+
+  //std::cout << I.min << "," << I.max << "]\n";
+
+  return I;
+}
   
-// Mistral::Interval::Interval(const int _min, const int _max) {min=_min; max=_max;}
-// Mistral::Interval::~Interval() {}
+bool Mistral::Interval::contain(const int x) const {
+  return (min <= x && x <= max);
+}
 
-// Mistral::Interval Mistral::Interval::get_union(Mistral::Interval dom) {
-//   Interval I((min<=dom.min_ ? min : dom.min), (max>=dom.max ? max : dom.max));
-//   return I;
-// }
+bool Mistral::Interval::empty() const { return min>max; }
+
+// the interval I such that this%mod = I
+Mistral::Interval Mistral::Interval::operator%(const int mod) {
+  // the value of the modulo increase with higher values, unless 
+  // unless they are distant enough to go back to the next cycle
   
-// bool Mistral::Interval::contain(const int x) {
-//   return (min <= x && x <= max);
+  int I_min = __modulo_fct__(min,mod);
+  int I_max = __modulo_fct__(max,mod);
+
+  if(mod>0) { // positive modulo, hence I \in [0, INFTY]
+    if(min + mod - I_min <= max) I_min = 0; // can we reach the next 0?
+    if(max - I_max - 1 >= min) I_max = mod-1; // can we reach the next mod-1?
+  } else { // negtive modulo, hence I \in [-INFTY, 0]
+    if(min - I_min + 1 <= max) I_min = 1+mod;
+    if(max + mod - I_max >= min) I_max = 0;
+  }
+
+  return Interval(I_min, I_max);
+}
+
+
+Mistral::Interval Mistral::Interval::operator*(const Mistral::Interval arg) {
+  BiInterval bi(*this);
+
+  // std::cout << "[" << min << "," << max << "] => [" 
+  // 	    << bi.negative.min << "," << bi.negative.max << "|"
+  // 	    << (bi.zero ? "0|" : ".|")
+  // 	    << bi.positive.min << "," << bi.positive.max << "]\n";
+    
+
+  BiInterval bj(arg);
+
+  // std::cout << "[" << arg.min << "," << arg.max << "] => [" 
+  // 	    << bj.negative.min << "," << bj.negative.max << "|"
+  // 	    << (bj.zero ? "0|" : ".|")
+  // 	    << bj.positive.min << "," << bj.positive.max << "]\n";
+
+
+
+  BiInterval bk = bi*bj;
+  Interval I(bk);
+
+
+  // std::cout << "[" << I.min << "," << I.max << "] <= [" 
+  // 	    << bk.negative.min << "," << bk.negative.max << "|"
+  // 	    << (bk.zero ? "0|" : ".|")
+  // 	    << bk.positive.min << "," << bk.positive.max << "]\n";
+
+
+
+  return I;
+}
+
+Mistral::Interval Mistral::Interval::anti_mul(const Mistral::Interval arg) {
+
+
+  BiInterval bi(*this);
+
+
+  // std::cout << "[" << min << "," << max << "] => [" 
+  // 	    << bi.negative.min << "," << bi.negative.max << "|"
+  // 	    << (bi.zero ? "0|" : ".|")
+  // 	    << bi.positive.min << "," << bi.positive.max << "]\n";
+    
+
+  BiInterval bj(arg);
+
+
+  // std::cout << "[" << arg.min << "," << arg.max << "] => [" 
+  // 	    << bj.negative.min << "," << bj.negative.max << "|"
+  // 	    << (bj.zero ? "0|" : ".|")
+  // 	    << bj.positive.min << "," << bj.positive.max << "]\n";
+
+
+  BiInterval bk = bi.anti_mul(bj);
+  Interval I(bk);
+
+  // std::cout << "[" << I.min << "," << I.max << "] <= [" 
+  // 	    << bk.negative.min << "," << bk.negative.max << "|"
+  // 	    << (bk.zero ? "0|" : ".|")
+  // 	    << bk.positive.min << "," << bk.positive.max << "]\n";
+
+
+  return I;
+}
+
+Mistral::Interval Mistral::Interval::operator/(const Mistral::Interval arg) {
+  BiInterval bi(*this);
+  BiInterval bj(arg);
+  BiInterval bk = bi/bj;
+  return Interval(bk);
+}
+
+// Mistral::Interval Mistral::Interval::operator%(const int mod) {
+//   BiInterval bi(*this);
+//   BiInterval bk = bi%mod;
+//   return Interval(bk);
 // }
 
-// bool Mistral::Interval::empty() { return min>max; }
+
+Mistral::NegativeHalfDomain::NegativeHalfDomain() : Interval(INFTY, -INFTY) {}  
+Mistral::NegativeHalfDomain::NegativeHalfDomain(const int _min, const int _max) : Interval(_min, _max) {}
+Mistral::NegativeHalfDomain::~NegativeHalfDomain() {}
+
+// the interval I such that this*arg = I
+Mistral::Interval Mistral::NegativeHalfDomain::operator*(Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(min*arg.max, max*arg.min);
+}
+Mistral::Interval Mistral::NegativeHalfDomain::operator*(Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(max*arg.max, min*arg.min);
+}
+
+// the interval I such that this*I = arg
+Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval((int)(ceil((double)min/(double)(arg.min))), (int)(floor((double)max/(double)(arg.max))));
+}
+Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval((int)(ceil((double)max/(double)(arg.min))), (int)(floor((double)min/(double)(arg.max))));
+}
+
+// the interval I such that this/arg = I
+Mistral::Interval Mistral::NegativeHalfDomain::operator/(Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+
+  //std::cout << min << "/" << arg.min << " , " << max << "/" << arg.max << std::endl;
+
+  return Interval(min/arg.min, max/arg.max);
+}
+Mistral::Interval Mistral::NegativeHalfDomain::operator/(Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(max/arg.min, min/arg.max);
+}
+
+// the interval I such that I/arg = this
+//Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(Mistral::PositiveHalfDomain arg);
+//Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(Mistral::NegativeHalfDomain arg);
+///----> this->operator*(arg) <----///
 
 
-
-// Interval operator*(interval dom) {
-  
-// }
-
-
-//   Interval operator*(interval dom);
-
-//   Interval anti_mul(Interval dom);
-//   Interval anti_mul(Interval dom);
-
-//   Interval operator/(Interval dom);
-//   Interval operator/(Interval dom);
-
-//   Interval operator%(const int mod);
-//   Interval operator%(const int mod);
-
-  
-// Mistral::NegativeHalfDomain::NegativeHalfDomain(const int _min, const int _max) : Interval(_min, _max) {}
-// Mistral::NegativeHalfDomain::~NegativeHalfDomain() {}
-
-// // the interval I such that this*arg = I
-// Mistral::Interval Mistral::NegativeHalfDomain::operator*(Mistral::PositiveHalfDomain arg) {
-//   return Interval(max*arg.max, min*arg.min);
-// }
-// Mistral::Interval Mistral::NegativeHalfDomain::operator*(Mistral::NegativeHalfDomain arg) {
-//   return Interval(min*arg.min, max*arg.max);
-// }
-
-// // the interval I such that this*I = arg
-// Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(Mistral::PositiveHalfDomain arg) {
-//   return Interval((int)(ceil((double)max/(double)(arg.min))), (int)(floor((double)min/(double)(arg.max))));
-// }
-// Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(Mistral::NegativeHalfDomain arg) {
-//   return Interval((int)(ceil((double)min/(double)(arg.max))), (int)(floor((double)max/(double)(arg.min))));
-// }
-
-// // the interval I such that this/arg = I
-// Mistral::Interval Mistral::NegativeHalfDomain::operator/(Mistral::PositiveHalfDomain arg) {
-//   return Interval(max/arg.min, min/arg.max);
-// }
-// Mistral::Interval Mistral::NegativeHalfDomain::operator/(Mistral::NegativeHalfDomain arg) {
-//   return Interval(min/arg.max, max/arg.min);
-// }
-
-// // the interval I such that I/arg = this
-// //Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(Mistral::PositiveHalfDomain arg);
-// //Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(Mistral::NegativeHalfDomain arg);
-// ///----> this->operator*(arg) <----///
-
-
-// // the interval I such that arg/I = this
-// //Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(Mistral::PositiveHalfDomain arg);
-// //Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(Mistral::NegativeHalfDomain arg);
-// ///----> arg->operator/(this) <----///
+// the interval I such that arg/I = this
+//Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(Mistral::PositiveHalfDomain arg);
+//Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(Mistral::NegativeHalfDomain arg);
+///----> arg->operator/(this) <----///
 
 // // the interval I such that this%mod = I
-// Mistral::Interval Mistral::NegativeHalfDomain::operator%(const int mod);
-// Mistral::Interval Mistral::NegativeHalfDomain::operator%(const int mod);
+// Mistral::Interval Mistral::NegativeHalfDomain::operator%(const int mod) {
+//   // the value of the modulo increase with higher values, unless 
+//   // unless they are distant enough to go back to the next cycle
+  
+//   int I_min = __modulo_fct__(min,mod);
+//   int I_max = __modulo_fct__(max,mod);
 
-// // the interval I such that I%mod = this
-// Mistral::Interval Mistral::NegativeHalfDomain::anti_modulo(const int mod);
-// Mistral::Interval Mistral::NegativeHalfDomain::anti_modulo(const int mod);
+//   if(mod>0) { // positive modulo, hence I \in [0, INFTY]
+//     if(min + mod - I_min <= max) I_min = 0; // can we reach the next 0?
+//     if(max - I_max - 1 >= min) I_max = mod-1; // can we reach the next mod-1?
+//   } else { // negtive modulo, hence I \in [-INFTY, 0]
+//     if(min - I_min + 1 <= max) I_min = 1+mod;
+//     if(max + mod - I_max >= min) I_max = 0
+//   }
+
+//   return Interval(I_min, I_max);
+// }
+
+// the interval I such that I%mod = this
+//Mistral::Interval Mistral::NegativeHalfDomain::anti_modulo(const int mod);
 
 
+Mistral::PositiveHalfDomain::PositiveHalfDomain() : Interval(INFTY, -INFTY) {}
+Mistral::PositiveHalfDomain::PositiveHalfDomain(const int _min, const int _max) : Interval(_min, _max) {}
+Mistral::PositiveHalfDomain::~PositiveHalfDomain() {}
 
-// Mistral::PositiveHalfDomain::PositiveHalfDomain(const int _min, const int _max) : Interval(_min, _max) {}
-// Mistral::PositiveHalfDomain::~PositiveHalfDomain() {}
+Mistral::Interval Mistral::PositiveHalfDomain::operator*(Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(min*arg.min, max*arg.max);
+}
+Mistral::Interval Mistral::PositiveHalfDomain::operator*(Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(max*arg.min, min*arg.max);
+}
 
-// Mistral::Interval Mistral::PositiveHalfDomain::operator*(Mistral::PositiveHalfDomain dom);
-// Mistral::Interval Mistral::PositiveHalfDomain::operator*(Mistral::NegativeHalfDomain dom);
+Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
 
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(Mistral::PositiveHalfDomain dom);
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(Mistral::NegativeHalfDomain dom);
+  // std::cout << "[" << (double)min/(double)(arg.max) << "," << (double)max/(double)(arg.min) << "] => ["
+  // 	    << (int)(ceil((double)min/(double)(arg.max))) << "," << (int)(floor((double)max/(double)(arg.min))) << "]\n";
 
-// Mistral::Interval Mistral::PositiveHalfDomain::operator/(Mistral::PositiveHalfDomain dom);
-// Mistral::Interval Mistral::PositiveHalfDomain::operator/(Mistral::NegativeHalfDomain dom);
+  return Interval((int)(ceil((double)min/(double)(arg.max))), (int)(floor((double)max/(double)(arg.min))));
+}
+Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
 
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_div(Mistral::PositiveHalfDomain dom);
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_div(Mistral::NegativeHalfDomain dom);
+  return Interval((int)(ceil((double)max/(double)(arg.max))), (int)(floor((double)min/(double)(arg.min))));
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::operator/(Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(min/arg.max, max/arg.min);
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::operator/(Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  return Interval(max/arg.max, min/arg.min);
+}
+
+// Mistral::Interval Mistral::PositiveHalfDomain::anti_div(Mistral::PositiveHalfDomain arg);
+// Mistral::Interval Mistral::PositiveHalfDomain::anti_div(Mistral::NegativeHalfDomain arg);
 
 // Mistral::Interval Mistral::PositiveHalfDomain::operator%(const int mod) {
-//   int I_min;
+//   // the value of the modulo increase with higher values, unless 
+//   // unless they are distant enough to go back to the next cycle
   
-//   if(mod>0) {
-//     I_min = min; // this is the case where mod>max, then there is an equality
-//     if(mod<=max) { // otherwise
-//       if(mod>=min) I_min = 0; // if mod >= min and mod mod <= max, then mod%mod = 0
-//       else {
-// 	int remainder = __modulo_fct__(min,mod);
-// 	if((remainder + max - min) >= mod) I_min = 0;
-// 	else I_min = remainder;
-//       }
-//     }
-//   } else {
-//     I_min = mod+1;
-//     if(-mod<=min) {
+//   int I_min = __modulo_fct__(min,mod);
+//   int I_max = __modulo_fct__(max,mod);
 
-//     }
+//   if(mod>0) { // positive modulo, hence I \in [0, INFTY]
+//     if(min + mod - I_min <= max) I_min = 0; // can we reach the next 0?
+//     if(max - I_max - 1 >= min) I_max = mod-1; // can we reach the next mod-1?
+//   } else { // negtive modulo, hence I \in [-INFTY, 0]
+//     if(min - I_min + 1 <= max) I_min = 1+mod;
+//     if(max + mod - I_max >= min) I_max = 0
 //   }
-//   return value;
+
+//   return Interval(I_min, I_max);
 // }
 
-// Mistral::Interval Mistral::PositiveHalfDomain::operator%(const int mod);
+// // // the return value is the interval I such that I%mod = this
+// // // 
+// // Mistral::Interval Mistral::PositiveHalfDomain::anti_modulo(const int mod) {
+// //   int mod_min =  __modulo_fct__(min,mod);
 
-//   // the return value is the interval I such that I%mod = this
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_modulo(const int mod);
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_modulo(const int mod);
+// // }
 
 
 
-// Mistral::BiInterval::BiInterval(const int n_min, const int n_max, const int p_min, const int p_max, const bool z) {
-//   positive.min = p_min;
-//   positive.max = p_max;
-//   negative.min = n_min;
-//   negative.max = n_max;
-//   zero = z;
-// }
-// Mistral::BiInterval::BiInterval(Interval _neg, Interval _pos, const bool z) {
-//   positive.min = _pos.min;
-//   positive.max = _pos.max;
-//   if(positive.min <  1) positive.min =  1;
+Mistral::BiInterval::BiInterval(const int n_min, const int n_max, const int p_min, const int p_max, const bool z) {
+  positive.min = p_min;
+  positive.max = p_max;
+  negative.min = n_min;
+  negative.max = n_max;
+  zero = z;
+}
+Mistral::BiInterval::BiInterval(const Interval _neg, const Interval _pos, const bool z) {
+  positive.min = _pos.min;
+  positive.max = _pos.max;
+  if(positive.min <  1) positive.min =  1;
 
-//   negative.min = _neg.min;
-//   negative.max = _neg.max;
-//   if(negative.max > -1) negative.max = -1;
+  negative.min = _neg.min;
+  negative.max = _neg.max;
+  if(negative.max > -1) negative.max = -1;
 
-//   zero = (z || _pos.contain(0) || _neg.contain(0));
-// }
-// Mistral::BiInterval::BiInterval(const int min, const int max) {
-//   if(min>=0) {
-//     positive.min = min+(min==0);
-//     positive.max = max;
+  zero = (z || _pos.contain(0) || _neg.contain(0));
+}
+Mistral::BiInterval::BiInterval(const Interval I) {
+  initialise(I.min, I.max);  
+}
 
-//     negative.min = +INFTY;
-//     negative.max = -INFTY;
+Mistral::BiInterval::BiInterval(const int min, const int max) {
+  initialise(min, max);  
+}
+
+void Mistral::BiInterval::initialise(const int min, const int max) {
+
+  if(min>=0) {
+    positive.min = min+(min==0);
+    positive.max = max;
+
+    negative.min = +INFTY;
+    negative.max = -INFTY;
     
-//     zero = (min==0);
-//   } else if(max<=0) {
-//     positive.min = +INFTY
-//     positive.max = -INFTY;
+    zero = (min==0);
+  } else if(max<=0) {
+    positive.min = +INFTY;
+    positive.max = -INFTY;
 
-//     negative.min = min;
-//     negative.max = max-(max==0);
+    negative.min = min;
+    negative.max = max-(max==0);
     
-//     zero = (max==0);
-//   } else { // min<0 & max>0
-//     positive.min = 1;
-//     positive.max = max;
+    zero = (max==0);
+  } else { // min<0 & max>0
+    positive.min = 1;
+    positive.max = max;
 
-//     negative.min = min;
-//     negative.max = -1;
+    negative.min = min;
+    negative.max = -1;
 
-//     zero = true;
-//   }
-// }
-// Mistral::BiInterval::~BiInterval() {}
+    zero = true;
+  }
+}
+Mistral::BiInterval::BiInterval() {
+  positive.min = +INFTY;
+  positive.max = -INFTY;
+  
+  positive.min = +INFTY;
+  positive.max = -INFTY;
+  
+  zero = false;
+}
+Mistral::BiInterval::~BiInterval() {}
     
-// Mistral::BiInterval Mistral::BiInterval::operator*(Mistral::BiInterval arg) {
-//   Interval pospos = positive * arg.positive;
-//   Interval negneg = negative * arg.negative;
+Mistral::BiInterval Mistral::BiInterval::operator*(Mistral::BiInterval arg) {
+  Interval pospos = positive * arg.positive;
 
-//   Interval posneg = positive * arg.negative;
-//   Interval negpos = negative * arg.positive;
+  //  std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
 
-//   BiInterval I(posneg.get_union(negpos), pospos.get_union(negneg), zero || arg.zero);
+  Interval negneg = negative * arg.negative;
 
-//   return I;
-// }
-// // the interval I such that this*I = arg     (I = this/arg)
-// Mistral::BiInterval Mistral::BiInterval::anti_mul(Mistral::BiInterval arg) {
-//   BiInterval I();
-//   if(zero && arg.zero) {
-//     // if this and arg can be 0, then I is not constrained
-//     I = BiInterval(-INFTY, INFTY);
-//   } else if(arg == 0) {
-//     I = 0;
-//   } else {
-//     Interval pospos = positive.anti_mul(arg.positive);
-//     Interval negneg = negative.anti_mul(arg.negative);
+  //  std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
 
-//     Interval posneg = positive.anti_mul(arg.negative);
-//     Interval negpos = negative.anti_mul(arg.positive);
 
-//     // if arg cannot be 0, then I cannot be 0
-//     I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), arg.zero);
-//   }
-//   return I;
-// }
-// // the interval I such that this/arg = I
-// Mistral::BiInterval Mistral::BiInterval::operator/(Mistral::BiInterval arg) {
-//   BiInterval I();
-//   if(*this == 0) {
-//     I = 0;
-//   } else {
-//     Interval pospos = positive/(arg.positive);
-//     Interval negneg = negative/(arg.negative);
-//     //Interval neg = posneg.get_union(negpos);
+  Interval posneg = positive * arg.negative;
 
-//     Interval posneg = positive/(arg.negative);
-//     Interval negpos = negative/(arg.positive);
-//     //Interval pos = pospos.get_union(negneg);
+  //  std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+
+  Interval negpos = negative * arg.positive;
+
+  //  std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+
+  BiInterval I(posneg.get_union(negpos), pospos.get_union(negneg), zero || arg.zero);
+
+  return I;
+}
+// the interval I such that this*I = arg     (I = this/arg)
+Mistral::BiInterval Mistral::BiInterval::anti_mul(Mistral::BiInterval arg) {
+  BiInterval I;
+  if(zero && arg.zero) {
+    // if this and arg can be 0, then I is not constrained
+    I = BiInterval(-INFTY, INFTY);
+  } else if(arg == 0) {
+    I = 0;
+  } else {
+    Interval pospos = positive.anti_mul(arg.positive);
+
+    //std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
+
+    Interval negneg = negative.anti_mul(arg.negative);
+
+    //std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
+
+
+    Interval posneg = positive.anti_mul(arg.negative);
+
+    //std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+
+    Interval negpos = negative.anti_mul(arg.positive);
+
+    //std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+
+
+    // if arg cannot be 0, then I cannot be 0
+    I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), zero);
+  }
+  return I;
+}
+// the interval I such that this/arg = I
+Mistral::BiInterval Mistral::BiInterval::operator/(Mistral::BiInterval arg) {
+  BiInterval I;
+  if(!(arg == 0)){
+    if(*this == 0) {
+      I = 0;
+    } else { 
     
-//     // if this can be 0, then I can be 0
-//     I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), zero);
-//   }
-//   return I;
-// }
+      Interval pospos = positive/(arg.positive);
+      
+      //  std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
+      
+      Interval negneg = negative/(arg.negative);
+      
+      //  std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
+      
+      
+      Interval posneg = positive/(arg.negative);
+      
+      //  std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+      
+      Interval negpos = negative/(arg.positive);
+      
+      //  std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+      
+      
+      // if this can be 0, then I can be 0
+      I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), zero);
+    }
+  }
+  return I;
+}
+
+bool Mistral::BiInterval::operator==(const int x) {
+  if(x) {
+    if(x<0) return x == negative.min && x == negative.max;
+    else return x == positive.min && x == positive.max;
+  } 
+  return zero && positive.empty() && negative.empty();
+}
+
+void Mistral::BiInterval::operator=(const int x) {
+  if(x) {
+    if(x<0) {
+      negative.min = x;
+      negative.max = x;
+      positive.min = +INFTY;
+      positive.max = -INFTY;
+      zero = false;
+    } else {
+      positive.min = x;
+      positive.max = x;
+      negative.min = +INFTY;
+      negative.max = -INFTY;
+      zero = false;
+    }
+  } else {
+    positive.min = +INFTY;
+    positive.max = -INFTY;
+    negative.min = +INFTY;
+    negative.max = -INFTY;
+    zero = true;
+  }
+}
+
 // Mistral::BiInterval Mistral::BiInterval::operator%(const int mod) {
 
 // }

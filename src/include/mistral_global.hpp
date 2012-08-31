@@ -77,6 +77,7 @@ namespace Mistral {
   //#define _DEBUG_MEMORY true
   //#define _DEBUG_SEARCH true
   //#define _DEBUG_CHECKER true  
+#define _DEBUG_MOD true  
 
   
 #define NORESTART 0
@@ -234,9 +235,9 @@ namespace Mistral {
 
 
 
-//   //#define __modulo_fct__(x,m)
+  //   //#define __modulo_fct__(x,m)
 
-// int __modulo_fct__(const int x, const int m) {
+  //int __modulo_fct__(const int x, const int m);
 //   int mod = x%m;
 //   if(mod && (mod<0) != (m<0))  mod += m;
 //   return mod;

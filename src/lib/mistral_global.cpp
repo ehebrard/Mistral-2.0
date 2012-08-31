@@ -393,6 +393,13 @@ std::string Mistral::int2str(const int x) {
 }
 
 
+// int __modulo_fct__(const int x, const int m) {
+//   int mod = x%m;
+//   if(mod && (mod<0) != (m<0))  mod += m;
+//   return mod;
+// }
+
+
 // std::string Mistral::toString(const int x)
 // {
 //   std::ostringstream o;

@@ -4533,7 +4533,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic < GenericDVO< Anti<MinDomain> >, HalfSplit > (this);
     }
   } else if(var_ordering == "smallest") {
-        if(branching == "indomain_min") {
+    if(branching == "indomain_min") {
       heu = new GenericHeuristic < GenericDVO< MinMin >, MinValue > (this); 
     } else if(branching == "indomain_max") {
       heu = new GenericHeuristic < GenericDVO< MinMin >, MaxValue > (this); 
@@ -4553,7 +4553,29 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "indomain_interval") {
       heu = new GenericHeuristic < GenericDVO< MinMin >, HalfSplit > (this);
     }
-  } else if(var_ordering == "occurrence") {
+  } // else if(var_ordering == "largest") {
+  //   if(branching == "indomain_min") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, MinValue > (this); 
+  //   } else if(branching == "indomain_max") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, MaxValue > (this); 
+  //   } else if(branching == "indomain_middle") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, MiddleValue > (this); 
+  //   } else if(branching == "indomain_median") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, MedianValue > (this); 
+  //   }//  else if(branching == "indomain") {
+  //   //   heu = new GenericHeuristic < GenericDVO< MaxMax >, Any? > (this); 
+  //   // } 
+  //   else if(branching == "indomain_random") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, RandomValue > (this); 
+  //   } else if(branching == "indomain_split") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, HalfSplit > (this);
+  //   } else if(branching == "indomain_reverse_split") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, ReverseSplit > (this);
+  //   } else if(branching == "indomain_interval") {
+  //     heu = new GenericHeuristic < GenericDVO< MaxMax >, HalfSplit > (this);
+  //   }
+  // } 
+  else if(var_ordering == "occurrence") {
     if(branching == "indomain_min") {
       heu = new GenericHeuristic < GenericDVO< MaxDegree >, MinValue > (this); 
     } else if(branching == "indomain_max") {
