@@ -827,7 +827,7 @@ FlatZincModel::set_annotations(const bool on) {
     } else {
       // follows flatzinc model's annotations
 
-      cout << "sequence search" << std::endl;
+      cout << " c sequence search" << std::endl;
 
       result = solver.sequence_search(fz_search_sequences, 
                                       fz_search_heuristics, 

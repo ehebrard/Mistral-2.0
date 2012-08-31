@@ -1032,8 +1032,24 @@ namespace FlatZinc {
 
     	Variable r = Variable (-bnd, bnd);
 
-    	s.add(a!= 0);
-    	s.add(b!= 0);
+    	Variable abs_b = Variable (-bnd, bnd);
+    	Variable abs_r = Variable (-bnd, bnd);
+
+        	s.add(((b < 0) <= (abs_b == -b)));
+        	s.add((b >= 0) <= (abs_b == b));
+
+        	s.add(((a*r) >= 0));
+        	s.add(r== a - (b*d));
+
+        	s.add(((r < 0) <= (abs_r == -r)));
+        	s.add((r >= 0) <= (abs_r == r));
+
+        	s.add(abs_r < abs_b);
+
+    	//old expression
+    	/*
+   	s.add(a!= 0);
+   	s.add(b!= 0);
 
     	//s.add(((a > 0) <= (r >= 0)));
     	//s.add ((a < 0) <= (r <= 0));
@@ -1046,7 +1062,72 @@ namespace FlatZinc {
 
     	s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
     	s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
+*/
+    }
 
+
+    void p_int_mod(Solver& s, FlatZincModel& m,
+                     const ConExpr& ce, AST::Node* ann) {
+
+    	Variable a = getIntVar(s, m, ce[0]);
+    	Variable b = getIntVar(s, m, ce[1]);
+    	Variable r = getIntVar(s, m, ce[2]);
+
+    	int bnd_a = a.get_max();
+    	if (a.get_min() > bnd_a)
+    		bnd_a = a.get_min();
+    	if (-a.get_min() > bnd_a)
+    		bnd_a = (-a.get_min());
+    	if ((-a.get_max())> bnd_a)
+    		bnd_a = (-a.get_max());
+
+    //	cout << "bnd a " << bnd_a << "\n" ;
+
+
+
+
+    	int bnd_b = b.get_max();
+    	if (b.get_min() > bnd_b)
+    		bnd_b = b.get_min();
+    	if (-b.get_min() > bnd_b)
+    		bnd_b = (-b.get_min());
+    	if ((-b.get_max())> bnd_b)
+    		bnd_b = (-b.get_max());
+    	//cout << "bnd b" << bnd_b << "\n" ;
+
+    	Variable d = Variable (-bnd_a, bnd_a);
+
+    	Variable abs_b = Variable (-bnd_b, bnd_b);
+    	Variable abs_r = Variable (-bnd_b, bnd_b);
+
+        	s.add(((b < 0) <= (abs_b == -b)));
+        	s.add((b >= 0) <= (abs_b == b));
+
+        	s.add(((a*r) >= 0));
+        	s.add(r== a - (b*d));
+
+        	s.add(((r < 0) <= (abs_r == -r)));
+        	s.add((r >= 0) <= (abs_r == r));
+
+        	s.add(abs_r < abs_b);
+
+    	//old expression
+    	/*
+   	s.add(a!= 0);
+   	s.add(b!= 0);
+
+    	//s.add(((a > 0) <= (r >= 0)));
+    	//s.add ((a < 0) <= (r <= 0));
+    	s.add(((a*r) >= 0));
+
+    	s.add(a==((b*d)+r));
+
+    	s.add(((r > 0) <= ( (b>0) <= (r < b)) ));
+    	s.add(((r > 0) <= ( (b<0) <= (r < (-b)) ) ));
+
+    	s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
+    	s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
+*/
     }
 
     void p_int_times(Solver& s, FlatZincModel& m,
@@ -1892,6 +1973,7 @@ namespace FlatZinc {
         registry().add("int_min", &p_int_min);
         registry().add("int_max", &p_int_max);
         registry().add("int_div", &p_int_div);
+        registry().add("int_mod", &p_int_mod);
 
         registry().add("int_in", &p_int_in);
 
