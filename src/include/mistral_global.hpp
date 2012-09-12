@@ -73,11 +73,13 @@ namespace Mistral {
   //#define _DEBUG_MIN true
   //#define _DEBUG_MIN ((id==23))
   //#define _DEBUG_MAX true
+  //#define _DEBUG_MAX (get_solver()->parameters.verbosity == -7)
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
   //#define _DEBUG_SEARCH true
-  //#define _DEBUG_CHECKER true  
-#define _DEBUG_MOD true  
+  //#define _DEBUG_CHECKER (cur_iteration > 39950) 
+  //#define _DEBUG_CHECKER true
+  //#define _DEBUG_MOD true  
 
   
 #define NORESTART 0

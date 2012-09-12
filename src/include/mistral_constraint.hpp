@@ -50,6 +50,11 @@
   event_type[(var)] |= evt; \
   }
 
+#define FILTER3( var, method )				    \
+  event_type[(var)] |= scope[(var)].method ;		     \
+  if(FAILED(event_type[(var)])) wiped = FAILURE(var);			\
+  else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var); 
+
 
 
 /**
@@ -712,7 +717,7 @@ namespace Mistral {
     virtual PropagationOutcome checker_propagate(const int changed_idx, 
 						 const Event evt) { return BinaryConstraint::propagate(changed_idx, evt); }
     virtual PropagationOutcome bound_checker_propagate(const int changed_idx, 
-						       const Event evt) { return BinaryConstraint::propagate(changed_idx, evt); }
+						       const Event evt) { return BinaryConstraint::bound_propagate(changed_idx, evt); }
     bool find_support(const int revise_idx, const int vli);
     bool find_bound_support(const int revise_idx, const int vli);
 
@@ -2704,7 +2709,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     /**@name Solving*/
     //@{
     PropagationOutcome filter();
-    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != (sol[0] % sol[1])); }
+    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != __modulo_fct__(sol[0],sol[1])); }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
     virtual RewritingOutcome rewrite();
@@ -2745,7 +2750,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { modulo=mod; }
     virtual Constraint clone() { return Constraint(new PredicateModConstant(scope[0], scope[1], modulo)); }
     virtual void initialise();
-    virtual int idempotent() { return 1;}
+    virtual int idempotent() { return 0;}
     virtual ~PredicateModConstant() {}
     //@}
 
@@ -2753,7 +2758,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@{
     PropagationOutcome filter();
     virtual int check( const int* sol ) const { 
-      return((sol[0] % modulo) != sol[1]);
+      //return((sol[0] % modulo) != sol[1]);
+      return(__modulo_fct__(sol[0],modulo) != sol[1]);
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
@@ -3121,6 +3127,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     /**@name Solving*/
     //@{
+    void react_to(PropagationOutcome& wiped, const int changed_idx, const Event evt);
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
     //@}
@@ -3135,7 +3142,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
   /**********************************************
    * Max Predicate
-   **********************************************/
+   *********************************************/
   /*! \class PredicateMax
     \brief  Predicate on the maxinum of a set of variables z = (x1 , ... , xn)
   */
@@ -3161,6 +3168,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     /**@name Solving*/
     //@{
+    void react_to(PropagationOutcome& wiped, const int changed_idx, const Event evt);
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
     //@}

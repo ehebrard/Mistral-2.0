@@ -554,9 +554,9 @@ namespace Mistral {
     //void trigger_event(const int var, const Event evt);
 
     /// achieve propagation closure
-    PropagationOutcome propagate(Constraint c, const bool t=true);
-    PropagationOutcome checker_propagate(Constraint c, const bool t=true);
-    PropagationOutcome bound_checker_propagate(Constraint c, const bool t=true);
+    PropagationOutcome propagate(Constraint c, const bool ft=true, const bool ts=false);
+    PropagationOutcome checker_propagate(Constraint c, const bool ft=true, const bool ts=false);
+    PropagationOutcome bound_checker_propagate(Constraint c, const bool ft=true, const bool ts=false);
     bool propagate(); 
     
     void fail();

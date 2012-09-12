@@ -148,6 +148,8 @@ namespace Mistral {
     // [context-independent:] whether the constraint is idempotent (it should not be triggerred on its own changes)
     inline bool idempotent() const { return (data&IDEMPOTENT); }
 
+    //void set_idempotent(const bool flag);
+
     // stop pointing to a constraint
     inline void clear() { propagator = NULL; data = 0; }
     // whether the wrapper actually points to a constraint

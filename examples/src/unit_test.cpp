@@ -19,6 +19,7 @@ using namespace Mistral;
 #define HIGH    3
 #define EXTREME 4
 
+int cur_iteration = 0;
 //
 
 class UnitTest {
@@ -432,6 +433,10 @@ public:
   int arity;
   int domsize;
   int nbool;
+  
+  // whether we force the checker propagator to trigger on its own changes
+  // (should be set to true if the propagator is idempotent, but the checker propagator is not)
+  bool trigger_self;
 
   Solver s1;
   Solver s2;
@@ -452,7 +457,8 @@ public:
 	     const int s,
 	     const int a, 
 	     const int d, 
-	     const int n=0) : name(nm), AC(ac), BC(bc), seed(s), arity(a), domsize(d), nbool(n) {
+	     const int n=0,
+	     const bool t=false) : name(nm), AC(ac), BC(bc), seed(s), arity(a), domsize(d), nbool(n), trigger_self(t) {
     
     VarArray X1(arity-nbool, -domsize/2, +domsize/2);
     VarArray b1(nbool, 0, 1);
@@ -478,7 +484,10 @@ public:
     
     con1 = Constraint(new CON_TYPE(scope1));
     con2 = Constraint(new CON_TYPE(scope2));
+    //con2.set_idempotent(false);
     con3 = Constraint(new CON_TYPE(scope3));
+    //con3.set_idempotent(false);
+
 
     usrand(seed);
   }
@@ -499,15 +508,27 @@ public:
     //s3.rewrite();
     s3.consolidate();
     
+    //con2.set_idempotent(false);
+    //con3.set_idempotent(false);
+
+
+    // std::cout << s1.constraints[0] << (s1.constraints[0].idempotent() ? " is " : " isn't " ) << "idempotent\n";
+    // std::cout << s2.constraints[0] << (s2.constraints[0].idempotent() ? " is " : " isn't " ) << "idempotent\n";
+    // std::cout << s3.constraints[0] << (s3.constraints[0].idempotent() ? " is " : " isn't " ) << "idempotent\n";
+    
+
+    // exit(1);
   }
 
 
   void check(PropagationOutcome wiped1,
 	     PropagationOutcome wiped2,
-	     PropagationOutcome wiped3) {
+	     PropagationOutcome wiped3,
+	     const int iteration) {
 
 
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
     Variable tmp;
 	      std::cout << "=> ";
 	      for(int j=0; j<arity; ++j) {
@@ -527,12 +548,14 @@ public:
 		}	
 	      }
 	      std::cout << std::endl;
+    }
 #endif
 	      
 	      //test if there is a fail
 	      if( AC && BC ) {
 		if(IS_OK(wiped2) && !IS_OK(wiped1)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result propag </= AC)" 
+		  cout << "at iteration " << iteration 
+		       << " Error - inconsistency in propag of \"" << con1 << "\"! (result propag </= AC)" 
 		       << endl << " propagator: fail " << endl ;
 		  std::cout << std::endl << " generic AC: "; 
 		  for(int j=0; j<arity; ++j) {
@@ -542,7 +565,8 @@ public:
 		  exit(1);
 		}
 		if(IS_OK(wiped1) && !IS_OK(wiped3)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
+		  cout << "at iteration " << iteration 
+		       << " Error - inconsistency in propag of \"" << con1 << "\"! (result BC </= propag)" 
 		       << endl << " propagator: " ;
 		  for(int j=0; j<arity; ++j) {
 		    std::cout << scope1[j].get_domain() << " " ;
@@ -552,7 +576,8 @@ public:
 		}
 	      } else if(AC) {
 		if(IS_OK(wiped1) != IS_OK(wiped2)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
+		  cout << "at iteration " << iteration 
+		       << " Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= AC)!" 
 		       << endl << " propagator: " ;
 		  if(IS_OK(wiped1)) {
 		    for(int j=0; j<arity; ++j) {
@@ -571,7 +596,8 @@ public:
 		}
 	      } else if(BC) {
 		if(IS_OK(wiped1) != IS_OK(wiped3)) {
-		  cout << "Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
+		  cout << "at iteration " << iteration 
+		       << " Error - inconsistency in propag of \"" << con1 << "\" (result propag =/= BC)!" 
 		       << endl << " propagator: " ;
 		  if(IS_OK(wiped1)) {
 		    for(int j=0; j<arity; ++j) {
@@ -634,7 +660,8 @@ public:
 		
 		  if( AC && BC ) {
 		    if(!d1.includes(d2)) {
-		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
+		      cout << "at iteration " << iteration 
+			   << " Error - inconsistency in propag of \"" << con1 << "\"! (pruning propag </= AC)" 
 			   << endl << " propagator: " ;
 		      for(int j=0; j<arity; ++j)
 			std::cout << scope1[j].get_var() << " " << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
@@ -646,7 +673,8 @@ public:
 		      exit(1);
 		    }
 		    if(!d3.includes(d1)) {
-		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
+		      cout << "at iteration " << iteration 
+			   << " Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC </= propag)" 
 			   << endl << " propagator: " ;
 		      for(int j=0; j<arity; ++j)
 			std::cout << scope1[j].get_var() << " " << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
@@ -659,7 +687,8 @@ public:
 		    }
 		  } else if(AC) {
 		    if(d1 != d2) {
-		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning AC =/= propag)" 
+		      cout << "at iteration " << iteration 
+			   << " Error - inconsistency in propag of \"" << con1 << "\"! (pruning AC =/= propag)" 
 			   << endl << " propagator: " ;
 		      for(int j=0; j<arity; ++j)
 			std::cout << scope1[j].get_var() << " " << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
@@ -673,7 +702,8 @@ public:
 		  } else if(BC) {
 		    if(d1 != d3) {
 		      cout << d1 << " - " << d3 << std::endl;
-		      cout << "Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC =/= propag)" 
+		      cout << "at iteration " << iteration 
+			   << " Error - inconsistency in propag of \"" << con1 << "\"! (pruning BC =/= propag)" 
 			   << endl << " propagator: " ;
 		      for(int j=0; j<arity; ++j)
 			std::cout << scope1[j].get_var() << " " << scope1[j].get_var().get_domain() << ( i==j ? "* " : " ") ;
@@ -694,8 +724,8 @@ public:
 
     std::cout << ".";
     std::cout.flush();
-    while(n_iterations--) {
-      
+    cur_iteration = 0;
+    while(cur_iteration++ < n_iterations) {      
       int n_reductions = 0;
       
       PropagationOutcome wiped1 = CONSISTENT;
@@ -707,7 +737,9 @@ public:
       if(BC) s3.save();
       
 #ifdef _DEBUG_CHECKER
-      std::cout << std::endl << n_iterations << " check " << name << " " << con1 << std::endl;
+    if(_DEBUG_CHECKER) {
+      //std::cout << "s1.statistics.num_propagations: " << s1.statistics.num_propagations << std::endl;
+      std::cout << std::endl << cur_iteration << " check " << name << " " << con1 << std::endl;
       for(int j=0; j<arity; ++j) {
 	std::cout << scope1[j].get_var().get_domain() << " " ;
       }
@@ -724,6 +756,7 @@ public:
 	}	
       }
       std::cout << std::endl << "initial propagate: " << std::endl;
+    }
 #endif
       
       
@@ -731,17 +764,17 @@ public:
 
 
       //std::cout << "\nspecific propagate" << std::endl;
-      wiped1 = s1.propagate(con1, true);
+      wiped1 = s1.propagate(con1, true, false);
       if(AC && IS_OK(wiped2)) {
 	//std::cout << "\nchecker propagate" << std::endl;
-	wiped2 = s2.checker_propagate(con2, true);
+	wiped2 = s2.checker_propagate(con2, true, trigger_self);
       }
       if(BC && IS_OK(wiped3)) {
 	//std::cout << "\nbound checker propagate" << std::endl;
-	wiped3 = s3.bound_checker_propagate(con3, true);
+	wiped3 = s3.bound_checker_propagate(con3, true, trigger_self);
       }
 
-      check(wiped1, wiped2, wiped3);
+      check(wiped1, wiped2, wiped3, cur_iteration);
 
       while(!finished) {
 	
@@ -764,7 +797,9 @@ public:
 	    ++n_reductions;
 	    
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
 	    std::cout << std::endl << std::endl;;
+    }
 #endif
 	    
 	    if(type) {
@@ -776,7 +811,9 @@ public:
 		scope3[j] = scope3[j].get_var();
 
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
 		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << ">=" << k << std::endl;;
+    }
 #endif
 
 		if( IS_FAIL(scope1[j].get_var().set_min(k)) ) wiped1 = FAILURE(j);
@@ -794,7 +831,9 @@ public:
 		scope3[j] = scope3[j].get_var();
 
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
 		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "<=" << k << std::endl;;
+    }
 #endif
 
 		if( IS_FAIL(scope1[j].get_var().set_max(k)) ) wiped1 = FAILURE(j);
@@ -815,7 +854,9 @@ public:
 		scope3[j] = scope3[j].get_var();
 	    
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
 		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "==" << k << std::endl;;
+    }
 #endif
 	    
 		if( IS_FAIL(scope1[j].get_var().set_domain(k)) ) wiped1 = FAILURE(j);
@@ -833,7 +874,9 @@ public:
 		scope3[j] = scope3[j].get_var();
 	    
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
 		std::cout << scope1[j].get_var() << " in " << scope1[j].get_var().get_domain() << "!=" << k << std::endl;;
+    }
 #endif
 	    
 		if( IS_FAIL(scope1[j].get_var().remove(k)) ) wiped1 = FAILURE(j);
@@ -848,6 +891,7 @@ public:
 	    }
 
 #ifdef _DEBUG_CHECKER
+    if(_DEBUG_CHECKER) {
 	    Variable tmp;
 	    for(int j=0; j<arity; ++j) {
 	      tmp =  scope1[j].get_var();
@@ -856,30 +900,37 @@ public:
 	      //if(tmp.domain_type == BITSET_VAR) std::cout <<((VariableBitmap*)(tmp.variable))->trail_ << " " ;
 	    }
 	    std::cout << std::endl;
+    }
 #endif
 
 	    if( IS_OK(wiped1) ) {
 
 	      //std::cout << "\nspecific propagate" << std::endl;
-	      wiped1 = s1.propagate(con1, false);
+	      wiped1 = s1.propagate(con1, false, false);
 
 	      if(AC && IS_OK(wiped2)) {
 
 		//std::cout << "\nchecker propagate" << std::endl;
-		wiped2 = s2.checker_propagate(con2, false);
+		wiped2 = s2.checker_propagate(con2, true, trigger_self);
 		
 	      }
 
 	      if(BC && IS_OK(wiped3)) {
 		
 		//std::cout << "\nbound checker propagate" << std::endl;
-		wiped3 = s3.bound_checker_propagate(con3, false);
+		wiped3 = s3.bound_checker_propagate(con3, true, trigger_self);
 
 	      }
 	    
-	      check(wiped1, wiped2, wiped3);
+	      check(wiped1, wiped2, wiped3, cur_iteration);
 	      
 	    } else {
+	      s1.active_variables.clear();
+	      s1.active_constraints.clear();
+	      s2.active_variables.clear();
+	      s2.active_constraints.clear();
+	      s3.active_variables.clear();
+	      s3.active_constraints.clear();
 	      finished = true;
 	      break;
 	    }
@@ -889,11 +940,14 @@ public:
     
 
       s1.restore(0);
+      s1.wiped_idx = CONSISTENT;
       if(AC) {
 	s2.restore(0);
+	s2.wiped_idx = CONSISTENT;
       }
       if(BC) {
 	s3.restore(0);
+	s3.wiped_idx = CONSISTENT;
       }
 
     }
@@ -1328,27 +1382,72 @@ public:
     cc13b.run(1000);
 
 
+
    ConChecker< PredicateMin > cc14("min", true,true,12345,5,10,0);
    cc14.init();
-   cc14.run(20);
-  
+   cc14.run(100);
+
 
    ConChecker< PredicateMax > cc15("max", true,true,12345,5,10,0);
    cc15.init();
-   cc15.run(200);
+   cc15.run(100);
+   
 
+
+
+    ConChecker< PredicateModConstant > cc16a("%",true,true,12345,2,30,0,true);
+    ((PredicateModConstant*)(cc16a.con1.propagator))->modulo = 3;
+    ((PredicateModConstant*)(cc16a.con2.propagator))->modulo = 3;
+    ((PredicateModConstant*)(cc16a.con3.propagator))->modulo = 3;
+    cc16a.init();
+    cc16a.run(10000);
     
 
 
-    // ConChecker< PredicateModConstant > cc16a("%", true,false,12345,2,30,0);
-    // ((PredicateModConstant*)(cc16a.con1.propagator))->modulo = 3;
-    // ((PredicateModConstant*)(cc16a.con2.propagator))->modulo = 3;
-    // ((PredicateModConstant*)(cc16a.con3.propagator))->modulo = 3;
-    // cc16a.init();
-    // cc16a.run(100);
+    ConChecker< PredicateModConstant > cc16b("%",true,true,12345,2,30,0,true);
+    ((PredicateModConstant*)(cc16b.con1.propagator))->modulo = 5;
+    ((PredicateModConstant*)(cc16b.con2.propagator))->modulo = 5;
+    ((PredicateModConstant*)(cc16b.con3.propagator))->modulo = 5;
+    cc16b.init();
+    cc16b.run(10000);
 
 
 
+    ConChecker< PredicateModConstant > cc16c("%",true,true,12345,2,30,0,true);
+    ((PredicateModConstant*)(cc16c.con1.propagator))->modulo = 8;
+    ((PredicateModConstant*)(cc16c.con2.propagator))->modulo = 8;
+    ((PredicateModConstant*)(cc16c.con3.propagator))->modulo = 8;
+    cc16c.init();
+    cc16c.run(10000);
+
+
+   ConChecker< PredicateModConstant > cc16na("%",true,true,12345,2,30,0,true);
+    ((PredicateModConstant*)(cc16na.con1.propagator))->modulo = -3;
+    ((PredicateModConstant*)(cc16na.con2.propagator))->modulo = -3;
+    ((PredicateModConstant*)(cc16na.con3.propagator))->modulo = -3;
+    cc16na.init();
+    cc16na.run(10000);
+    
+
+    ConChecker< PredicateModConstant > cc16nb("%",true,true,12345,2,30,0,true);
+    ((PredicateModConstant*)(cc16nb.con1.propagator))->modulo = -5;
+    ((PredicateModConstant*)(cc16nb.con2.propagator))->modulo = -5;
+    ((PredicateModConstant*)(cc16nb.con3.propagator))->modulo = -5;
+    cc16nb.init();
+    cc16nb.run(10000);
+
+
+    ConChecker< PredicateModConstant > cc16nc("%",true,true,12345,2,30,0,true);
+    ((PredicateModConstant*)(cc16nc.con1.propagator))->modulo = -8;
+    ((PredicateModConstant*)(cc16nc.con2.propagator))->modulo = -8;
+    ((PredicateModConstant*)(cc16nc.con3.propagator))->modulo = -8;
+    cc16nc.init();
+    cc16nc.run(10000);
+
+
+    ConChecker< PredicateMod > cc17("%",true,true,12345,3,30,0,true);
+    cc17.init();
+    cc17.run(100);
 
     // ConChecker< PredicateMod > cc17("%", true,false,12345,3,30,0);
     // cc17.init();
@@ -1455,8 +1554,10 @@ int main(int argc, char *argv[])
   if(argc>1) N=atoi(argv[1]);
 
   
-
+  
   tests.push_back(new CheckerTest());
+  
+
   tests.push_back(new LexTest());
   tests.push_back(new IntersectionTest());
   tests.push_back(new CardTest());
@@ -1484,6 +1585,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomRevNumAffectations<int>());
   //tests.push_back(new ConstraintArrayTest());
   tests.push_back(new RandomIntervalTest());
+
 
 
   //tests[0]->Verbosity = HIGH;

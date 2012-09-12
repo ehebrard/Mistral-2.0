@@ -1969,6 +1969,7 @@ bool Mistral::Solver::rewrite()
 
 
 Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c, 
+						       const bool force_trigger,
 						       const bool trigger_self) {
 
   // std::cout << "solver.cpp: specific propagate(" << c << ")" << std::endl;
@@ -1981,9 +1982,16 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
   //wiped_idx = CONSISTENT;
-  if(trigger_self) c.trigger();
+  if(force_trigger) 
+    c.trigger();
   
   fix_point = (active_variables.empty() && active_constraints.empty());
+
+  // std::cout << IS_OK(wiped_idx) << " & " << fix_point << std::endl;
+
+  // std::cout << active_variables << std::endl;
+
+  // std::cout << active_constraints << std::endl;
 
   while(IS_OK(wiped_idx) && !fix_point) {
 
@@ -2008,7 +2016,7 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
       // 		<< c.propagator << std::endl;
 
      
-      if(var_evt.third != c.propagator) {
+      if(trigger_self || var_evt.third != c.propagator) {
 
 	// for each triggered constraint
 	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
@@ -2042,6 +2050,7 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
 
     if(IS_OK(wiped_idx) && !active_constraints.empty()) {
       // propagate postponed constraint
+      ++statistics.num_propagations;  
       culprit = active_constraints.select(constraints);
       taboo_constraint = culprit.freeze();
       wiped_idx = culprit.propagate(); 
@@ -2060,17 +2069,37 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
 }
 
 Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c, 
+							       const bool force_trigger,
 							       const bool trigger_self) {
   int trig, cons;
   bool fix_point;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
 
+
+#ifdef _DEBUG_AC
+  std::cout << "c start (checker) propagation" << std::endl;
+#endif
+
+
   //wiped_idx = CONSISTENT;
-  if(trigger_self) c.trigger();
+  if(force_trigger) 
+    c.trigger();
   
   fix_point = (active_variables.empty() && active_constraints.empty());
 
+
+#ifdef _DEBUG_AC
+  int iteration = 0;
+  std::cout << std::endl;
+#endif
+
   while(IS_OK(wiped_idx) && !fix_point) {
+
+#ifdef _DEBUG_AC
+    std::cout << "c "; 
+    std::cout << "var stack: " << active_variables << std::endl;
+    ++iteration;
+#endif
 
     // empty the var stack first
     while( IS_OK(wiped_idx) && 
@@ -2078,47 +2107,111 @@ Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c,
     
       var_evt = active_variables.pop_front();
 
+#ifdef _DEBUG_AC
+      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+      std::cout << "react to " << event2str(var_evt.second) << " on " << variables[var_evt.first] 
+		<< " in " << variables[var_evt.first].get_domain() ;
+      if(var_evt.third)
+	std::cout << " because of " << var_evt.third ;
+      std::cout << ". var stack: " << active_variables << std::endl;
+#endif 
+
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 	sequence.remove(variables[var_evt.first]);
 	assignment_level[var_evt.first] = level;
       }
      
-      if(var_evt.third != c.propagator) {
+      //std::cout << var_evt.third << " <-> " << c.propagator << std::endl;
+
+      if(trigger_self || var_evt.third != c.propagator) {
+
+	// std::cout << "cons list of " << variables[var_evt.first] << " = " 
+	// 	  << constraint_graph[var_evt.first].on << std::endl;
 
 	// for each triggered constraint
 	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
 	      trig<3; ++trig) {
 
+	  //std::cout << " trig[" << trig << "] = " << constraint_graph[var_evt.first].on[trig] << std::endl;
+
 	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
 		--cons>=0;) {
 
 	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+
+
+	    // if(ASSIGNED(var_evt.second)) {
+	    //   culprit.notify_assignment();
+	    // }
+
+
+#ifdef _DEBUG_AC
+	    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	    std::cout << "  -awake " << culprit << ": "; 
+	    std::cout.flush();
+#endif
+
 	    
 	    if( culprit == c ) {
 
-	      // if the constraints asked to be pushed on the constraint stack we do that
+	      // if the constraint asks to be pushed on the constraint stack we do that
 	      if(culprit.pushed()) {
+#ifdef _DEBUG_AC
+	      std::cout << "pushed on the stack" ;
+#endif
 		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
 					   culprit.index(), var_evt.second);
 	      }
 
 	      // if the constraint is not postponed, we propagate it
 	      if(!culprit.postponed()) {
+#ifdef _DEBUG_AC
+	      if(IS_OK(wiped_idx)) {
+		Variable *scp = culprit.get_scope();
+		int arity = culprit.arity();
+		for(int i=0; i<arity; ++i)
+		  std::cout << scp[i].get_domain() << " ";
+		std::cout << "ok";
+	      } else std::cout << "fail";
+#endif
 		++statistics.num_propagations;  
 		taboo_constraint = culprit.freeze();
+
+		//std::cout << "taboo: " << taboo_constraint << std::endl;
+
 		wiped_idx = culprit.checker_propagate(var_evt.second); 
 		taboo_constraint = culprit.defrost();
 	      }
-	    } 
+	    }
+#ifdef _DEBUG_AC
+	    else {
+	      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	      std::cout << "  -does not propagate " << culprit << " (we propagate " << c << ")" ;
+	    }
+	    std::cout << std::endl; 
+#endif    
+
 	  }
 	}
       }
+#ifdef _DEBUG_AC
+	  else {
+	    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	    std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
+	  }
+#endif
     }
-
+    
     if(IS_OK(wiped_idx) && !active_constraints.empty()) {
       // propagate postponed constraint
       culprit = active_constraints.select(constraints);
       taboo_constraint = culprit.freeze();
+
+	      // if(taboo_constraint)
+	      // 	std::cout << "[constraint]" << std::endl;
+	      // else
+	      // 	std::cout << "[nill]" << std::endl;
+
       wiped_idx = culprit.checker_propagate(); 
       taboo_constraint = culprit.defrost();
     } else if(active_variables.empty()) fix_point = true;
@@ -2127,6 +2220,12 @@ Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c,
   taboo_constraint = NULL;
   active_constraints.clear();
   active_variables.clear();
+
+
+#ifdef _DEBUG_AC
+  std::cout << "c end (checker) propagation\n" << std::endl;
+#endif
+
     
   //return wiped_idx;
   PropagationOutcome consistent = wiped_idx;
@@ -2135,6 +2234,7 @@ Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c,
 }
 
 Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint c, 
+								     const bool force_trigger,
 								     const bool trigger_self) {
 
 
@@ -2150,7 +2250,8 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
   //VarEvent var_evt;
 
   //wiped_idx = CONSISTENT;
-  if(trigger_self) c.trigger();
+  if(force_trigger) 
+    c.trigger();
 
   fix_point =  (active_variables.empty() && active_constraints.empty());
   
@@ -2181,7 +2282,7 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
       // 		<< constraint_graph[var_evt.first].on[2] << "\n"
       // 		<< c.propagator << std::endl;
 
-      if(var_evt.third != c.propagator) {
+      if(trigger_self || var_evt.third != c.propagator) {
 
 	// std::cout << " " << constraint_graph[var_evt.first].on[EVENT_TYPE(var_evt.second)] << std::endl;
 
@@ -2209,6 +2310,12 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 	      if(!culprit.postponed()) {
 		++statistics.num_propagations;  
 		taboo_constraint = culprit.freeze();
+
+	      // if(taboo_constraint)
+	      // 	std::cout << "[constraint]" << std::endl;
+	      // else
+	      // 	std::cout << "[nill]" << std::endl;
+
 		wiped_idx = culprit.bound_checker_propagate(var_evt.second); 
 		taboo_constraint = culprit.defrost();
 	      }
@@ -2225,6 +2332,12 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
       // propagate postponed constraint
       culprit = active_constraints.select(constraints);
       taboo_constraint = culprit.freeze();
+
+
+	      // if(taboo_constraint)
+	      // 	std::cout << "[constraint]" << std::endl;
+	      // else
+	      // 	std::cout << "[nill]" << std::endl;
 
       //std::cout << "solver.cpp: bound checker prop" << std::endl;
 
@@ -2322,7 +2435,6 @@ bool Mistral::Solver::propagate()
       std::cout << ". var stack: " << active_variables << std::endl;
 #endif      
 
-
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 	sequence.remove(variables[var_evt.first]);
 	assignment_level[var_evt.first] = level;
@@ -2350,13 +2462,6 @@ bool Mistral::Solver::propagate()
 	  if(ASSIGNED(var_evt.second)) {
 	    culprit.notify_assignment();
 	  }
-
-	  // if(culprit.id() == 11) {
-	  //   std::cout << var_evt.third << " != " << culprit.propagator << " || "
-	  // 	      << culprit.postponed() << " || "
-	  // 	      << std::endl;
-	  // }
-
 	  
 	  // idempotency, if the event was triggered by itself
 	  if(var_evt.third != culprit.propagator) {

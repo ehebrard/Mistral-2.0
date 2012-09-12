@@ -271,6 +271,18 @@ Mistral::PropagationOutcome Mistral::Constraint::checker_propagate(const Event e
   return propagator->checker_propagate(index(), evt);
 }
 
+// void Mistral::Constraint::set_idempotent(const bool flag) {
+//   std::cout << "SET IDEMPOTENT: to " << flag << " (was " << idempotent() << ")\n";
+//   if(idempotent() != flag) {
+//     data ^= IDEMPOTENT;
+//     if(propagator)
+//       for(unsigned int i=0; i<propagator->on.size; ++i) {
+//      	if(propagator->self[i].data & IDEMPOTENT)
+// 	  propagator->self[i].data ^= IDEMPOTENT;
+//       }
+//     std::cout << "SET IDEMPOTENT: " << propagator->on.size << std::endl;
+//   }
+// }
 
 Mistral::PropagationOutcome Mistral::Constraint::bound_checker_propagate() {
   

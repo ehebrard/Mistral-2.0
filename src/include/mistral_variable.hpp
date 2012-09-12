@@ -402,9 +402,9 @@ namespace Mistral {
       return domain.values.prev( -1 );
     } 
     /// Return the smallest value currently in the domain that is strictly greater than "v"
-    inline int next(const int v) const { return (((domain.size != domain.max - domain.min + 1)) ? domain.values.next(v) : (v < domain.max ? v+1 : v)); }
+    inline int next(const int v) const { return (((domain.size != domain.max - domain.min + 1)) ? domain.values.next(v) : (v < domain.min ? domain.min : (v < domain.max ? v+1 : v))); }
     /// Return the smallest value currently in the domain that is strictly greater than "v"
-    inline int prev(const int v) const { return (((domain.size != domain.max - domain.min + 1)) ? domain.values.prev(v) : (v > domain.min ? v-1 : v)); }
+    inline int prev(const int v) const { return (((domain.size != domain.max - domain.min + 1)) ? domain.values.prev(v) : (v > domain.max ? domain.max : (v > domain.min ? v-1 : v))); }
 
 
     /// Whether or not the Variable is currently an interval
@@ -696,7 +696,7 @@ namespace Mistral {
     //     }
 
     /// Remove all values that belong to the set "s"
-    inline Event removeSet(const BitSet& s) {
+    inline Event remove_set(const BitSet& s) {
       Event setdifference = NO_EVENT;
 
       //       if(type != VIRTUAL_VAR) {
@@ -743,12 +743,24 @@ namespace Mistral {
 	  return NO_EVENT;
 	}
 	save();
+
+	//std::cout << "BEFORE: " << domain << std::endl;
+
 	domain.values.remove_interval(lo, up);
 	domain.size = domain.values.size();
+
+	//std::cout << "AFTER: " << domain << std::endl;
+
       } else {
 	save();
+
+	//std::cout << "BEFORE: " << domain << std::endl;
+
 	domain.values.remove_interval(lo, up);
 	domain.size -= (up-lo+1);
+
+	//std::cout << "AFTER: " << domain << std::endl;
+
       }
 
       solver->trigger_event(id, DOMAIN_EVENT);
@@ -1276,7 +1288,7 @@ namespace Mistral {
     //     }
 
     /// Remove all values that belong to the set "s"
-    inline Event removeSet(const BitSet& s) {
+    inline Event remove_set(const BitSet& s) {
       Event setdifference = NO_EVENT;
       return setdifference; // do nothing more for BOOL or CONSTANT or BITSET or RANGE
     }
@@ -1551,10 +1563,13 @@ namespace Mistral {
     Event set_max(const int up) ;
     /// Remove all values that do not appear in the set "s"
     Event set_domain(const BitSet& s) ;
+    /// Remove all values that do not appear in the interval [lo,up]
+    Event set_domain(const int lo, const int up) ;
     /// Remove all values that do not appear in the current domain of the Variable "x"
     Event set_domain(Variable& x) ;
+    //Event set_domain2(Variable& x) ;
     /// Remove all values that belong to the set "s"
-    Event removeSet(const BitSet& s) ;
+    Event remove_set(const BitSet& s) ;
     /// Remove all values in the interval [l..u]
     Event remove_interval(const int lo, const int up) ;
     //@}

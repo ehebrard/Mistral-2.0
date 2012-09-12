@@ -1286,17 +1286,53 @@ int Mistral::Variable::get_min_pos() const {
     return evt;
   }
 
+  // Mistral::Event Mistral::Variable::set_domain2(Mistral::Variable& x) {
+
+  //   Event evt = NO_EVENT;
+    
+  //   if(x.is_ground()) {
+  //     evt =  set_domain(x.get_min());
+  //   }
+  //   else if(x.is_range()) {
+  //     //evt = (set_min(x.get_min()) | set_max(x.get_max()));
+  //     Event evt_min = set_min(x.get_min());
+  //     Event evt_max = set_max(x.get_max());
+      
+  //     evt = (evt_min | evt_max);
+
+  //     std::cout << event2str(evt_min) << " | " << event2str(evt_max) << " = " << event2str(evt);
+  //   }
+  //   else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
+  //   else if(x.domain_type ==  EXPRESSION) {
+  //     Variable y = x.expression->get_self();
+  //     evt = set_domain(y);
+  //   } else {
+  //     std::cout << "TODO! (set_domain(var))" << std::endl;
+  //     exit(1);
+  //   }
+
+  //   return evt;
+
+  //   //evt = NO_EVENT;
+  // }
+
   Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
 
     Event evt = NO_EVENT;
     
-    //if(x.is_ground()) evt = set_domain(x.get_min());
     if(x.is_ground()) {
       evt =  set_domain(x.get_min());
     }
     else if(x.is_range()) {
-      Event evt = (set_min(x.get_min()) | set_max(x.get_max()));
-      evt = evt;
+      // //evt = (set_min(x.get_min()) | set_max(x.get_max()));
+      // Event evt_min = set_min(x.get_min());
+      // Event evt_max = set_max(x.get_max());
+      
+      // evt = (evt_min | evt_max);
+
+      evt = set_domain(x.get_min(), x.get_max());
+
+      //std::cout << event2str(evt_min) << " | " << event2str(evt_max) << " = " << event2str(evt);
     }
     else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
     else if(x.domain_type ==  EXPRESSION) {
@@ -1312,19 +1348,27 @@ int Mistral::Variable::get_min_pos() const {
     //evt = NO_EVENT;
   }
 
-  Mistral::Event Mistral::Variable::removeSet(const BitSet& s) {
+
+Mistral::Event Mistral::Variable::set_domain(const int lo, const int up) {
+  Event evt = set_min(lo);
+  if(!(FAILED(evt))) 
+    evt |= set_max(up);
+  return evt;
+}
+
+  Mistral::Event Mistral::Variable::remove_set(const BitSet& s) {
 
 #ifdef _PROFILING_PRIMITIVE
     PROFILING_HEAD
 #endif
       Event evt = NO_EVENT;
 
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->removeSet(s);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->removeSet(s);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->removeSet(s);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->removeSet(s);
+    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove_set(s);
+    else if(domain_type ==    LIST_VAR) evt = list_domain->remove_set(s);
+    else if(domain_type ==   RANGE_VAR) evt = range_domain->remove_set(s);
+    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove_set(s);
     else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().removeSet(s);
+    else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove_set(s);
     else {
 
       evt = ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));

@@ -5309,8 +5309,16 @@ template < int N, class T >
     Interval operator/(const Interval);
     Interval anti_mul(const Interval);
     Interval operator%(const int);
+
+    Interval target_modulo(const int, const Interval);
+
+    void operator+=(const int x);
+    void operator-=(const int x);
+
+    std::ostream& display(std::ostream& os) const;
     
   };
+
 
 
 
@@ -5572,6 +5580,7 @@ public:
 
 
 
+  std::ostream& operator<< (std::ostream& os, const Interval& x);
 
   std::ostream& operator<< (std::ostream& os, const MultiSet& x);
 

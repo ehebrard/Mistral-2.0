@@ -1073,6 +1073,11 @@ namespace FlatZinc {
     	Variable b = getIntVar(s, m, ce[1]);
     	Variable r = getIntVar(s, m, ce[2]);
 
+        // % predicate exists in mistral, but does not use the same definition of modulo...
+        
+
+        //Decomposition
+
     	int bnd_a = a.get_max();
     	if (a.get_min() > bnd_a)
     		bnd_a = a.get_min();
@@ -1080,10 +1085,6 @@ namespace FlatZinc {
     		bnd_a = (-a.get_min());
     	if ((-a.get_max())> bnd_a)
     		bnd_a = (-a.get_max());
-
-    //	cout << "bnd a " << bnd_a << "\n" ;
-
-
 
 
     	int bnd_b = b.get_max();
@@ -1111,23 +1112,6 @@ namespace FlatZinc {
 
         	s.add(abs_r < abs_b);
 
-    	//old expression
-    	/*
-   	s.add(a!= 0);
-   	s.add(b!= 0);
-
-    	//s.add(((a > 0) <= (r >= 0)));
-    	//s.add ((a < 0) <= (r <= 0));
-    	s.add(((a*r) >= 0));
-
-    	s.add(a==((b*d)+r));
-
-    	s.add(((r > 0) <= ( (b>0) <= (r < b)) ));
-    	s.add(((r > 0) <= ( (b<0) <= (r < (-b)) ) ));
-
-    	s.add(((r < 0) <= ( (b<0) <= (r > b) ) ));
-    	s.add(((r < 0) <= ( (b>0) <= (r > (-b)) )));
-*/
     }
 
     void p_int_times(Solver& s, FlatZincModel& m,

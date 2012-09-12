@@ -25,6 +25,9 @@
 #include <mistral_global.hpp>
 
 
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Interval& x) {
+  return x.display(os);
+}
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack& x) {
   return x.display(os);
@@ -228,6 +231,122 @@ Mistral::Interval Mistral::Interval::operator%(const int mod) {
   }
 
   return Interval(I_min, I_max);
+}
+
+
+// the interval I such that this%mod = I and such that I is a subinterval of J
+Mistral::Interval Mistral::Interval::target_modulo(const int mod, const Interval J) {
+  // the value of the modulo increase with higher values, unless 
+  // unless they are distant enough to go back to the next cycle
+  
+  int I_min = __modulo_fct__(min,mod);
+  int I_max = __modulo_fct__(max,mod);
+
+  Interval I;
+  I.min = I_min;
+  I.max = I_max;
+
+  if(mod>0) { // positive modulo, hence I \in [0, INFTY]
+    if(min + mod - I_min <= max) I.min = 0; // can we reach the next 0?
+    if(max - I_max - 1 >= min) I.max = mod-1; // can we reach the next mod-1?
+ 
+
+    //std::cout << *this << "%" << mod << " = " << I << " ^ " << J << " => " ;
+
+    // do we need to update I.min?
+    if(J.min > I.min) { 
+      if(
+	 // is it a hollow interval [0..I_max] u [I_min..mod-1]?
+	 max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+	 // is min(J) in the hole?
+	 J.min > I_max && J.min < I_min
+	 ) {
+	I.min = I_min; // then min(I) takes the next available value
+      } else {
+	I.min = J.min;
+      }
+    }
+
+    // do we need to update I.max?
+    if(J.max < I.max) { 
+      if(
+	 // is it a hollow interval [0..I_max] u [I_min..mod-1]?
+	 max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+	 // is max(J) in the hole?
+	 J.max > I_max && J.max < I_min
+	 ) {
+	I.max = I_max; // then max(I) takes the next available value
+      } else {
+	I.max = J.max;
+      }
+    }
+
+    //std::cout << I << std::endl;
+
+
+  } else { // negtive modulo, hence I \in [-INFTY, 0]
+    if(min - I_min + 1 <= max) I.min = 1+mod;
+    if(max + mod - I_max >= min) I.max = 0;
+
+
+    // std::cout << *this << "%" << mod << " = [" << I.min
+    // 	      << ".." << I_max << "] u [" << I_min << ".." << I.max       
+    // 	      << "] ^ " << J << " => " ;
+    // // std::cout << "min-max-1 < mod: " << (min-max-1) << " < " << mod << " ? " << (min-max-1 < mod) << std::endl;
+    
+    // do we need to update I.min?
+    if(J.min > I.min) { 
+      if(
+	 // is it a hollow interval [1+mod..I_max] u [I_min..0]?
+	 (min-max-1 > mod) && I.min == 1+mod && I.max == 0 && 
+	 // is min(J) in the hole?
+	 (J.min > I_max) && J.min < I_min
+	 ) {
+	I.min = I_min; // then min(I) takes the next available value
+      } else {
+	I.min = J.min;
+      }
+    }
+
+
+    // std::cout << "(J.max < I.max): " << J.max << " < " << I.max << ": " 
+    // 	      << (J.max < I.max) << std::endl
+	     
+
+    // do we need to update I.min?
+    if(J.max < I.max) { 
+      if(
+	 // is it a hollow interval [1+mod..I_max] u [I_min..0]?
+	 (min-max-1 > mod) && I.min == 1+mod && I.max == 0 && 
+	 // is min(J) in the hole?
+	 (J.max > I_max) && J.max < I_min
+	 ) {
+	I.max = I_max; // then min(I) takes the next available value
+      } else {
+	I.max = J.max;
+      }
+    }
+    
+    //  std::cout << I << std::endl;
+    
+  }
+  
+  return I; //Interval(I_min, I_max);
+}
+
+std::ostream& Mistral::Interval::display(std::ostream& os) const {
+  os << "[" << min << "," << max << "]" ;
+  return os;
+}
+
+void Mistral::Interval::operator+=(const int x) {
+  min += x;
+  max += x;
+}
+
+void Mistral::Interval::operator-=(const int x) {
+  min -= x;
+  max -= x;
 }
 
 
