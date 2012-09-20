@@ -3843,7 +3843,7 @@ Mistral::PropagationOutcome Mistral::PredicateModConstant::filter() {
   Interval X(scope[0].get_min(), scope[0].get_max());
   //Interval Y(scope[1].get_min(), scope[1].get_max());
 
-  Interval Y = X%modulo;
+  Interval Y = X.operator_modulo(modulo);
   
   if(IS_FAIL(scope[1].set_max(Y.max))) wiped = FAILURE(1);
   else if(IS_FAIL(scope[1].set_min(Y.min))) wiped = FAILURE(1);
@@ -3986,6 +3986,250 @@ std::ostream& Mistral::PredicateModConstant::display(std::ostream& os) const {
 
 
 
+void Mistral::PredicateCModConstant::initialise() {
+  ConstraintImplementation::initialise();
+  trigger_on(_RANGE_, scope[0]);
+  trigger_on(_RANGE_, scope[1]);
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+#ifdef _DEBUG_CMOD
+  if(_DEBUG_CMOD) {
+    std::cout << scope[0] << " % " 
+	      << modulo << " = " 
+	      << scope[1] << std::endl; 
+    std::cout << scope[0].get_domain() << " % " 
+	      << modulo << " = " 
+	      << scope[1].get_domain() << std::endl 
+	      << on[0] << std::endl
+	      << on[1] << std::endl;
+  }
+#endif
+
+  Interval X(scope[0].get_min(), scope[0].get_max());
+  //Interval Y(scope[1].get_min(), scope[1].get_max());
+
+  Interval Y = X%modulo;
+
+
+#ifdef _DEBUG_CMOD
+  if(_DEBUG_CMOD) {
+    std::cout << " => prune " << scope[1] << ": " << scope[1].get_domain() << " <- " << Y << std::endl;
+  }
+#endif
+
+  
+  if(IS_FAIL(scope[1].set_max(Y.max))) wiped = FAILURE(1);
+  else if(IS_FAIL(scope[1].set_min(Y.min))) wiped = FAILURE(1);
+  
+  if(IS_OK(wiped)) {
+    // now we compute forbidden intervals for X
+    // because of Y's lb:
+    int min_y = scope[1].get_min();
+    int max_y = scope[1].get_max();
+
+    int min_x = scope[0].get_min();
+    int max_x = scope[0].get_max();
+    
+    int lb, ub, incr = std::abs(modulo);
+
+
+#ifdef _DEBUG_CMOD
+    if(_DEBUG_CMOD) {
+      std::cout << " => prune " << scope[0] << std::endl;
+    }
+#endif
+    
+    if(IS_OK(wiped)) {
+
+      if(min_y > 0) { // the image of the modulo is positive, so the domain must be positive
+
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[1]  << " in " << scope[1].get_domain() 
+		    << " is positive, hence "<< scope[0] << " must be positive " << std::endl;
+	}
+#endif	  
+	if(IS_FAIL(scope[0].set_min(1))) wiped = FAILURE(0);
+	
+
+	// we know x is positive
+	min_x = scope[0].get_min();
+	lb = min_x - min_x % modulo;
+	ub = lb + min_y - 1;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && lb <= max_x) {
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+	}
+#endif	
+	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    lb += incr;
+	    ub += incr;
+	  }
+	  min_x = scope[0].get_min();
+	  max_x = scope[0].get_max();
+	}
+      } else if(max_y < 0) { // the image of the modulo is negative, so the domain must be negative
+	if(IS_FAIL(scope[0].set_max(-1))) wiped = FAILURE(0);
+	
+
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[1]  << " in " << scope[1].get_domain() 
+		    << " is negative, hence "<< scope[0] << " must be negative " << std::endl;
+	}
+#endif
+
+	// we know x is negative
+	max_x = scope[0].get_max();
+	// pruning because of Y's ub on the negative half of X
+	ub = max_x - max_x % modulo;
+	lb = ub + max_y + 1;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && ub >= min_x) {
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+	}
+#endif	
+	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    lb -= incr;
+	    ub -= incr;
+	  }
+	  min_x = scope[0].get_min();
+	  max_x = scope[0].get_max();
+	}
+      } //else { // min(y) < 0 < max(y)
+	
+      if(max_y < incr-1) {
+
+
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[1]  << " in " << scope[1].get_domain() 
+		    << " < " << incr << ", hence we prune " << scope[0] << std::endl;
+	}
+#endif
+
+	// pruning because of Y's ub on the positive half of X
+	if(min_x > 0) {
+	  ub = min_x - min_x % modulo + incr - 1;
+	} else {
+	  ub = incr-1;
+	}
+	lb = ub - incr + max_y + 2;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && lb <= max_x) {
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+	}
+#endif	
+	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    lb += incr;
+	    ub += incr;
+	  }
+	  min_x = scope[0].get_min();
+	  max_x = scope[0].get_max();
+	}
+      }
+      
+      if(min_y > 1-incr) {
+
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[1]  << " in " << scope[1].get_domain() 
+		    << " > " << -incr << ", hence we prune " << scope[0] << std::endl;
+	}
+#endif
+
+	// pruning because of Y's lb on the negative half of X
+	if(max_x < 0) {
+	  lb = max_x - max_x % modulo - incr + 1;
+	} else {
+	  lb = 1-incr;
+	}
+	ub = lb + incr + min_y - 2;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && ub >= min_x) {
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+	}
+#endif	
+	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    lb -= incr;
+	    ub -= incr;
+	  }
+	  min_x = scope[0].get_min();
+	  max_x = scope[0].get_max();
+	}
+      } 
+    }    
+  }
+  
+  
+
+#ifdef _DEBUG_CMOD
+  if(_DEBUG_CMOD) {
+    std::cout << on[0] << std::endl
+	      << on[1] << std::endl
+	      << scope[0].get_domain() << " % " 
+	      << modulo << " = " 
+	      << scope[1].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
+  }
+#endif
+  
+
+  
+  // if(IS_FAIL(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(IS_FAIL(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(IS_FAIL(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
+  // 					     scope[1].get_min(), 
+  // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
+  // if(IS_FAIL(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
+  // 					     scope[1].get_min(), 
+  // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateCModConstant::propagate() {      
+  return filter();
+}
+
+Mistral::PropagationOutcome Mistral::PredicateCModConstant::propagate(const int changed_idx, const Event evt) {
+  return filter();
+  // Mistral::PropagationOutcome wiped = CONSISTENT;
+
+
+  // if(IS_FAIL(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(IS_FAIL(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(IS_FAIL(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
+  // 					     scope[1].get_min(), 
+  // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
+  // if(IS_FAIL(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
+  // 					     scope[1].get_min(), 
+  // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
+
+  // return wiped;
+}
+
+std::ostream& Mistral::PredicateCModConstant::display(std::ostream& os) const {
+  os << scope[1]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " % " << modulo << ")";
+  return os;
+}
+
+
+
 
 /*
 
@@ -4076,6 +4320,18 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
   int minmin_y =  INFTY;
   int maxmax_y = -INFTY;
 
+
+  IntervalList lb;
+  IntervalList ub;
+
+  IntervalList forbidden_intervals;
+
+  IntervalList last_intervals;
+  IntervalList cur_intervals;
+
+  forbidden_intervals.push(-INFTY, INFTY);
+
+
   while(vnext > modulo) {
     modulo = vnext;
 
@@ -4117,7 +4373,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
 
       if(minmin_y > Y.min) minmin_y = Y.min;
       if(maxmax_y < Y.max) maxmax_y = Y.max;
-    }
+      //    }
   
     if(IS_OK(wiped)) {
       //minmin_x = scope[0].get_min();
@@ -4164,6 +4420,64 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
 	  /*move to the next mod-1 on the right*/ - Mistral::__modulo_fct__(max_x,modulo) + modulo - 1;
 	right_ub.min = right_ub.max + max_y - modulo + 2;
 
+// #ifdef _DEBUG_MOD
+//     if(_DEBUG_MOD) {
+//       std::cout << " compute lb pruning: " << std::endl;
+//     }
+// #endif
+
+	lb.clear();
+	if(!left_lb.empty()) {
+	  Interval I(left_lb.min, left_lb.max);
+	  while(I.min <= scope[0].get_max()) {
+	    lb.push(I);
+	    I += modulo;
+	  }
+	}
+
+// #ifdef _DEBUG_MOD
+//     if(_DEBUG_MOD) {
+//       std::cout << " compute ub pruning: " << std::endl;
+//     }
+// #endif
+
+	ub.clear();
+	if(!left_ub.empty()) {
+	  Interval I(left_ub.min, left_ub.max);
+	  while(I.min <= scope[0].get_max()) {
+	    ub.push(I);
+	    I += modulo;
+	  }
+	}
+
+// #ifdef _DEBUG_MOD
+//     if(_DEBUG_MOD) {
+//       std::cout << " manage interval lists: " << std::endl;
+//     }
+// #endif
+
+#ifdef _DEBUG_MOD
+    if(_DEBUG_MOD) {
+      std::cout << " lb pruning: " << lb << std::endl;
+      std::cout << " ub pruning: " << ub << std::endl;
+    }
+#endif
+
+
+	last_intervals = forbidden_intervals;
+	cur_intervals.clear();
+	lb.union_with(ub, cur_intervals);
+	forbidden_intervals.clear();
+	last_intervals.intersect_with(cur_intervals,forbidden_intervals);
+
+#ifdef _DEBUG_MOD
+    if(_DEBUG_MOD) {
+      std::cout << " all pruning for this round: " << cur_intervals << std::endl;
+      std::cout << " all pruning: " << forbidden_intervals << std::endl;
+    }
+#endif
+
+
 	incr = modulo;
       } else {
 	
@@ -4189,6 +4503,63 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
 	right_ub.min = right_ub.max + max_y + 1;
 
 	incr = -modulo;
+
+// #ifdef _DEBUG_MOD
+//     if(_DEBUG_MOD) {
+//       std::cout << " compute -lb pruning: " << std::endl;
+//     }
+// #endif
+
+	lb.clear();
+	if(!left_lb.empty()) {
+	  Interval I(left_lb.min, left_lb.max);
+	  while(I.min <= scope[0].get_max()) {
+	    lb.push(I);
+	    I -= modulo;
+	  }
+	}
+
+// #ifdef _DEBUG_MOD
+//     if(_DEBUG_MOD) {
+//       std::cout << " compute -ub pruning: " << std::endl;
+//     }
+// #endif
+
+	ub.clear();
+	if(!left_ub.empty()) {
+	  Interval I(left_ub.min, left_ub.max);
+	  while(I.min <= scope[0].get_max()) {
+	    ub.push(I);
+	    I -= modulo;
+	  }
+	}
+
+// #ifdef _DEBUG_MOD
+//     if(_DEBUG_MOD) {
+//       std::cout << " manage interval lists: " << std::endl;
+//     }
+// #endif
+
+#ifdef _DEBUG_MOD
+    if(_DEBUG_MOD) {
+      std::cout << " lb pruning: " << lb << std::endl;
+      std::cout << " ub pruning: " << ub << std::endl;
+    }
+#endif
+
+	last_intervals = forbidden_intervals;
+	cur_intervals.clear();
+	lb.union_with(ub, cur_intervals);
+	forbidden_intervals.clear();
+	last_intervals.intersect_with(cur_intervals,forbidden_intervals);
+
+#ifdef _DEBUG_MOD
+    if(_DEBUG_MOD) {
+      std::cout << " all pruning for this round: " << cur_intervals << std::endl;
+      std::cout << " all pruning: " << forbidden_intervals << std::endl;
+    }
+#endif
+
       }
 
       bool shrink = false;
@@ -4243,7 +4614,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
       if(min_x < minmin_x) minmin_x = min_x;
       if(max_x > maxmax_x) maxmax_x = max_x;
     }
-
+    }
 
 #ifdef _DEBUG_MOD
     if(_DEBUG_MOD) {
@@ -4254,12 +4625,28 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
     vnext = scope[1].next(modulo);
 
   }
+
+
+
   
-  if(IS_OK(wiped) && minmin_x <  INFTY && IS_FAIL(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
+  // if(IS_OK(wiped) && minmin_x <  INFTY && IS_FAIL(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
   if(IS_OK(wiped) && minmin_y <  INFTY && IS_FAIL(scope[2].set_min(minmin_y))) wiped = FAILURE(2);
-  if(IS_OK(wiped) && maxmax_x > -INFTY && IS_FAIL(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
+  // if(IS_OK(wiped) && maxmax_x > -INFTY && IS_FAIL(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
   if(IS_OK(wiped) && maxmax_y > -INFTY && IS_FAIL(scope[2].set_max(maxmax_y))) wiped = FAILURE(2);
     
+#ifdef _DEBUG_MOD
+  if(_DEBUG_MOD) {
+    std::cout << " +++> remove " << forbidden_intervals << " from " << scope[0].get_domain() << " / set domain to [" << minmin_x << "," << maxmax_x << "]\n";
+  }
+#endif
+
+  for(unsigned int i=0; IS_OK(wiped) && i<forbidden_intervals.size; ++i) {
+    if(IS_FAIL(scope[0].remove_interval(forbidden_intervals[i].min, forbidden_intervals[i].max))) wiped = FAILURE(0);
+  }
+
+
+
+
 
   //}
     // if(IS_FAIL(scope[0].set_domain(minmin_x, maxmax_x))) wiped = FAILURE(0);
@@ -4495,6 +4882,443 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateMod::display(std::ostream& os) const {
+  os << scope[2]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " % " << scope[1]/*.get_var()*/ << ")";
+  return os;
+}
+
+
+
+void Mistral::PredicateCMod::initialise() {
+  ConstraintImplementation::initialise();
+
+  trigger_on(_RANGE_, scope[0]);
+  trigger_on(_RANGE_, scope[1]);
+  trigger_on(_RANGE_, scope[2]);
+}
+
+Mistral::PropagationOutcome Mistral::PredicateCMod::rewrite() {
+   Mistral::PropagationOutcome wiped = propagate();
+
+
+
+  // VarArray tmp;
+  // if(active == 3) {
+  //   ConstraintImplementation *con;
+  //   int i=0;
+  //   for(; i<2; ++i)
+  //     if(scope[i].is_ground()) {
+  // 	relax();
+  // 	tmp.add(scope[1-i]);
+  // 	tmp.add(scope[2]);
+  // 	if(scope[i].get_min() == 0) {
+  // 	  con = new ConstraintEqual(tmp);
+  // 	} else {
+  // 	  con = new PredicateOffset(tmp, scope[i].get_min());
+  // 	}
+  // 	get_solver()->add(Constraint(con, con->type));
+  //     }
+  // }
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateCMod::propagate() { 
+  if(IS_FAIL(scope[1].remove(0))) return FAILURE(1);
+  return filter();
+}
+
+Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+
+  //std::cout << "\n ^^^" << std::endl;
+
+#ifdef _DEBUG_CMOD
+  if(_DEBUG_CMOD) {
+    std::cout << scope[0] << " % " 
+	      << scope[1] << " = " 
+	      << scope[2] << std::endl; 
+    std::cout << scope[0].get_domain() << " % " 
+	      << scope[1].get_domain() << " = " 
+	      << scope[2].get_domain() << std::endl 
+	      << on[0] << std::endl
+	      << on[1] << std::endl
+	      << on[2] << std::endl;
+  }
+#endif
+
+
+  int vnext = scope[1].get_min(), modulo = vnext-1;
+  // int minmin_x =  INFTY;
+  // int maxmax_x = -INFTY;
+
+  int minmin_y =  INFTY;
+  int maxmax_y = -INFTY;
+
+  IntervalList pos_ub;
+  IntervalList neg_ub;
+
+  IntervalList llb;
+
+  IntervalList forbidden_intervals;
+
+  IntervalList last_intervals;
+  IntervalList cur_intervals;
+
+  forbidden_intervals.push(-INFTY, INFTY);
+
+  while(vnext > modulo) {
+    modulo = vnext;
+
+
+#ifdef _DEBUG_CMOD
+    if(_DEBUG_CMOD) {
+      std::cout << " -> modulo = " << modulo << std::endl;
+  }
+#endif
+
+    Interval X(scope[0].get_min(), scope[0].get_max());
+    
+    Interval cur_Y(scope[2].get_min(), scope[2].get_max());
+    
+    Interval Y = X.target_c_modulo(modulo, cur_Y);
+    
+    //std::cout << X << "%" << modulo << " ^ " << cur_Y << " = " << Y << std::endl;
+    
+#ifdef _DEBUG_CMOD
+    if(_DEBUG_CMOD) {
+      std::cout << " -> " << X << " % " << modulo << " = " << Y << std::endl;
+    }
+#endif
+    
+    if(scope[2].get_min() > Y.max || scope[2].get_max() < Y.min) {
+      
+      
+#ifdef _DEBUG_CMOD
+      if(_DEBUG_CMOD) {
+	std::cout << " [inconsistent] " << std::endl;
+      }
+#endif
+      
+      if(IS_FAIL(scope[1].remove(modulo))) wiped = FAILURE(1);
+    } else {
+      
+#ifdef _DEBUG_CMOD
+      if(_DEBUG_CMOD) {
+	std::cout << " [ok] " << std::endl;
+      }
+#endif
+            
+      if(minmin_y > Y.min) minmin_y = Y.min;
+      if(maxmax_y < Y.max) maxmax_y = Y.max;
+    }
+  
+    if(IS_OK(wiped)) {
+
+    // because of Y's lb:
+    int min_y = scope[2].get_min();
+    int max_y = scope[2].get_max();
+
+    int min_x = scope[0].get_min();
+    int max_x = scope[0].get_max();
+    
+    int lb, ub, incr = std::abs(modulo);
+
+
+    llb.clear();
+    pos_ub.clear();
+    neg_ub.clear();
+
+    
+    if(IS_OK(wiped)) {
+      
+      if(min_y > 0) { // the image of the modulo is positive, so the domain must be positive
+	
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[2]  << " in " << scope[2].get_domain() 
+		    << " is positive, hence "<< scope[0] << " must be positive " << std::endl;
+	}
+#endif	  
+	
+	//if(IS_FAIL(scope[0].set_min(1))) wiped = FAILURE(0);
+	
+	llb.push(-INFTY, 0);
+	
+	// we know x is positive
+	//min_x = scope[0].get_min();
+	if(min_x <= 0) min_x = 1;
+	lb = min_x - min_x % modulo;
+	ub = lb + min_y - 1;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && lb <= max_x) {
+// #ifdef _DEBUG_CMOD
+// 	    if(_DEBUG_CMOD) {
+// 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+// 	    }
+// #endif	
+	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    llb.push((lb <= 0 ? 1 : lb), ub);
+	    
+	    lb += incr;
+	    ub += incr;
+	  }
+	}
+
+      } else if(max_y < 0) { // the image of the modulo is negative, so the domain must be negative
+	
+	//if(IS_FAIL(scope[0].set_max(0))) wiped = FAILURE(0);
+	  
+#ifdef _DEBUG_CMOD
+	  if(_DEBUG_CMOD) {
+	    std::cout << "   => " << scope[1]  << " in " << scope[1].get_domain() 
+		      << " is negative, hence "<< scope[0] << " must be negative " << std::endl;
+	  }
+#endif
+	
+// 	// we know x is negative
+// 	//max_x = scope[0].get_max();
+// 	if(max_x >= 0) max_x = -1;
+// 	// pruning because of Y's ub on the negative half of X
+// 	ub = max_x - max_x % modulo;
+// 	lb = ub + max_y + 1;
+	
+// 	if(lb<=ub) {
+// 	  while(IS_OK(wiped) && ub >= min_x) {
+// // #ifdef _DEBUG_CMOD
+// // 	    if(_DEBUG_CMOD) {
+// // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+// // 	    }
+// // #endif	
+// 	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+// 	    llb.push(lb, ub));
+// 	    lb -= incr;
+// 	    ub -= incr;
+// 	  }
+// 	  //min_x = scope[0].get_min();
+// 	  //max_x = scope[0].get_max();
+// 	}
+
+	// we know x is negative
+	//max_x = scope[0].get_max();
+	if(max_x >= 0) max_x = -1;
+	// pruning because of Y's ub on the negative half of X
+	ub = min_x - min_x % modulo;
+	lb = ub + max_y + 1;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && lb <= max_x) {
+// #ifdef _DEBUG_CMOD
+// 	    if(_DEBUG_CMOD) {
+// 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+// 	    }
+// #endif	
+	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    llb.push(lb, (ub >= 0 ? -1 : ub));
+	    lb += incr;
+	    ub += incr;
+	  }
+	  //min_x = scope[0].get_min();
+	  //max_x = scope[0].get_max();
+	}
+
+	llb.push(0, INFTY);
+
+      } //else { // min(y) < 0 < max(y)
+      
+      if(max_y >= 0 && max_y < incr-1) {
+	//pos_ub.clear();
+
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[2]  << " in " << scope[2].get_domain() 
+		    << " < " << incr << ", hence we prune " << scope[0] << std::endl;
+	}
+#endif
+	
+	// pruning because of Y's ub on the positive half of X
+	if(min_x > 0) {
+	  ub = min_x - min_x % modulo + incr - 1;
+	} else {
+	  ub = incr-1;
+	}
+	lb = ub - incr + max_y + 2;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && lb <= max_x) {
+// #ifdef _DEBUG_CMOD
+// 	    if(_DEBUG_CMOD) {
+// 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+// 	    }
+// #endif	
+	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    pos_ub.push((lb <= 0 ? 1 : lb),ub);
+	    lb += incr;
+	    ub += incr;
+	  }
+	  //min_x = scope[0].get_min();
+	  //max_x = scope[0].get_max();
+	}
+      }
+      
+      if(min_y <= 0 && min_y > 1-incr) {
+	//neg_ub.clear();
+
+#ifdef _DEBUG_CMOD
+	if(_DEBUG_CMOD) {
+	  std::cout << "   => " << scope[2]  << " in " << scope[2].get_domain() 
+		    << " > " << -incr << ", hence we prune " << scope[0] << std::endl;
+	}
+#endif
+	
+// 	// pruning because of Y's lb on the negative half of X
+// 	if(max_x < 0) {
+// 	  lb = max_x - max_x % modulo - incr + 1;
+// 	} else {
+// 	  lb = 1-incr;
+// 	}
+// 	ub = lb + incr + min_y - 2;
+	
+// 	if(lb<=ub) {
+// 	  while(IS_OK(wiped) && ub >= min_x) {
+// // #ifdef _DEBUG_CMOD
+// // 	    if(_DEBUG_CMOD) {
+// // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+// // 	    }
+// // #endif	
+// 	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+// 	    neg_ub.push(lb,ub));
+// 	    lb -= incr;
+// 	    ub -= incr;
+// 	  }
+// 	  //min_x = scope[0].get_min();
+// 	  //max_x = scope[0].get_max();
+// 	}
+
+	// pruning because of Y's lb on the negative half of X
+	// if(max_x < 0) {
+	//   lb = max_x - max_x % modulo - incr + 1;
+	// } else {
+	//   lb = 1-incr;
+	// }
+	lb = min_x - min_x % modulo - incr + 1;
+	ub = lb + incr + min_y - 2;
+	
+	if(lb<=ub) {
+	  while(IS_OK(wiped) && lb <= 0) {
+#ifdef _DEBUG_CMOD
+	    if(_DEBUG_CMOD) {
+	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
+	    }
+#endif	
+	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    neg_ub.push(lb,(ub >= 0 ? -1 : ub));
+	    lb += incr;
+	    ub += incr;
+	  }
+	  //min_x = scope[0].get_min();
+	  //max_x = scope[0].get_max();
+	}
+      } 
+    }
+    
+    
+    }
+    
+
+
+#ifdef _DEBUG_CMOD
+    if(_DEBUG_CMOD) {
+      std::cout << " lb pruning: " << llb << std::endl;
+      std::cout << " ub pruning: " << neg_ub << " and " << pos_ub << std::endl;
+    }
+#endif
+
+
+    last_intervals = forbidden_intervals;
+    cur_intervals.clear();
+    forbidden_intervals.clear();
+
+    if(!llb.empty()) {
+      if(!pos_ub.empty()) {
+	llb.union_with(pos_ub, cur_intervals);
+	if(!neg_ub.empty()) {
+	  forbidden_intervals = cur_intervals;
+	  neg_ub.union_with(forbidden_intervals, cur_intervals);
+	}
+      } else if(!neg_ub.empty()) {
+	llb.union_with(neg_ub, cur_intervals);
+      } else {
+	cur_intervals = llb;
+      }
+    } else if(!pos_ub.empty()) {
+      if(!neg_ub.empty()) {
+	pos_ub.union_with(neg_ub, cur_intervals);
+      } else {
+	cur_intervals = pos_ub;
+      }
+    } else if(!neg_ub.empty()) {
+      cur_intervals = neg_ub;
+    }
+
+    last_intervals.intersect_with(cur_intervals,forbidden_intervals);
+
+
+#ifdef _DEBUG_CMOD
+    if(_DEBUG_CMOD) {
+      std::cout << " all pruning for this round: " << cur_intervals << std::endl;
+      std::cout << " all pruning: " << forbidden_intervals << std::endl;
+    }
+#endif
+    
+    vnext = scope[1].next(modulo);
+
+  }
+  
+  //if(IS_OK(wiped) && minmin_x <  INFTY && IS_FAIL(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
+  if(IS_OK(wiped) && minmin_y <  INFTY && IS_FAIL(scope[2].set_min(minmin_y))) wiped = FAILURE(2);
+  //if(IS_OK(wiped) && maxmax_x > -INFTY && IS_FAIL(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
+  if(IS_OK(wiped) && maxmax_y > -INFTY && IS_FAIL(scope[2].set_max(maxmax_y))) wiped = FAILURE(2);
+    
+ 
+#ifdef _DEBUG_CMOD
+  if(_DEBUG_CMOD) {
+    std::cout << " +++> remove " << forbidden_intervals << " from " << scope[0].get_domain() << "\n";
+  }
+#endif
+
+  for(unsigned int i=0; IS_OK(wiped) && i<forbidden_intervals.size; ++i) {
+    if(IS_FAIL(scope[0].remove_interval(forbidden_intervals[i].min, forbidden_intervals[i].max))) wiped = FAILURE(0);
+  }
+
+  //}
+    // if(IS_FAIL(scope[0].set_domain(minmin_x, maxmax_x))) wiped = FAILURE(0);
+    // else if(IS_FAIL(scope[2].set_domain(minmin_y, maxmax_y))) wiped = FAILURE(2);
+  
+
+#ifdef _DEBUG_CMOD
+  if(_DEBUG_CMOD) {
+    std::cout << on[0] << std::endl
+	      << on[1] << std::endl
+	      << on[2] << std::endl
+	      << scope[0].get_domain() << " % " 
+	      << scope[1].get_domain() << " = " 
+	      << scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
+  }
+#endif
+  
+
+  //std::cout << " vvv" << std::endl;
+
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateCMod::propagate(const int changed_idx, 
+							      const Event evt) {    
+  return filter();
+}
+
+std::ostream& Mistral::PredicateCMod::display(std::ostream& os) const {
   os << scope[2]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " % " << scope[1]/*.get_var()*/ << ")";
   return os;
 }

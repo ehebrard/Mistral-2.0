@@ -214,8 +214,143 @@ bool Mistral::Interval::contain(const int x) const {
 
 bool Mistral::Interval::empty() const { return min>max; }
 
+Mistral::Interval Mistral::Interval::operator-() const {
+  Interval I(-max, -min);
+  return I;
+}
+
+// the interval I such that this%mod = I
+Mistral::Interval Mistral::Interval::positive_modulo(const int mod) {
+  // the value of the modulo increase with higher values, unless 
+  // unless they are distant enough to go back to the next cycle
+  Interval I;
+
+  I.min = min%mod;
+  I.max = max%mod;
+
+  if(min + mod - I.min <= max) I.min = 0; // can we reach the next 0?
+  if(max - I.max - 1 >= min) I.max = mod-1; // can we reach the next mod-1?
+
+  return I;
+}
+
+// the interval I such that this%mod = I
+Mistral::Interval Mistral::Interval::target_positive_modulo(const int mod, const Interval J) {
+  // the value of the modulo increase with higher values, unless 
+  // unless they are distant enough to go back to the next cycle
+  Interval I;
+
+  //std::cout << "compute pos modulo " << (*this) << " % " << mod << " inter " << J << std::endl; 
+
+  int I_min = I.min = min%mod;
+  int I_max = I.max = max%mod;
+
+  if(min + mod - I_min <= max) I.min = 0; // can we reach the next 0?
+  if(max - I_max - 1 >= min) I.max = mod-1; // can we reach the next mod-1?
+
+
+  //std::cout << "[" << I.min << ".." << I_max << "] u [" << I_min << ".." << I.max << "]" << std::endl;
+
+
+  bool hollow = (max-min+1 < mod && I.min == 0 && I.max == mod-1);
+
+  // do we need to update I.min?
+  if(J.min > I.min) { 
+    if(
+       // is it a hollow interval [0..I_max] u [I_min..mod-1]?
+       //max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+       hollow &&
+       // is min(J) in the hole?
+       J.min > I_max && J.min < I_min
+       ) {
+      I.min = I_min; // then min(I) takes the next available value
+    } else {
+      I.min = J.min;
+    }
+  }
+
+  // std::cout << " max-min+1 < mod = "  
+  // 	    << (max-min+1 < mod)
+  // 	    << "\n I.min == 0 = " 
+  // 	    << (I.min == 0) 
+  // 	    << "\n I.max == mod-1 = " 
+  // 	    << (I.max == mod-1) 
+  // 	    << "\n J.max > I_max = "  
+  // 	    << (J.max > I_max)  
+  // 	    << "\n J.max < I_min = "
+  // 	    << (J.max < I_min) << std::endl;
+
+  // do we need to update I.max?
+  if(J.max < I.max) { 
+    if(
+       // is it a hollow interval [0..I_max] u [I_min..mod-1]?
+       //max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+       hollow &&
+       // is max(J) in the hole?
+       J.max > I_max && J.max < I_min
+       ) {
+      I.max = I_max; // then max(I) takes the next available value
+    } else {
+      I.max = J.max;
+    }
+  }
+
+  // std::cout << " ---> " << I << std::endl;
+
+  return I;
+}
+
+
 // the interval I such that this%mod = I
 Mistral::Interval Mistral::Interval::operator%(const int mod) {
+  int modulo = std::abs(mod);
+  Interval J;
+  if(min>=0) J = positive_modulo(modulo);
+  else if(max < 0) {
+    Interval I(-max, -min);
+    J = -I.positive_modulo(modulo);
+  } else {
+    Interval Ipos(0, max);
+    Interval Ineg(0, -min);
+
+    Interval pos_mod =  Ipos.positive_modulo(modulo);
+    Interval neg_mod = -Ineg.positive_modulo(modulo);
+    
+    J.min = neg_mod.min;
+    J.max = pos_mod.max;
+  }
+
+  return J;
+}
+
+// the interval I such that this%mod = I
+Mistral::Interval Mistral::Interval::target_c_modulo(const int mod, const Interval J) {
+
+  //std::cout << "compute c modulo " << (*this) << " % " << mod << " inter " << J << std::endl; 
+
+  int modulo = std::abs(mod);
+  Interval K;
+  if(min>=0) {
+    K = target_positive_modulo(modulo, J);
+  } else if(max < 0) {
+    Interval I(-max, -min);
+    K = -I.target_positive_modulo(modulo, -J);
+  } else {
+    Interval Ipos(0, max);
+    Interval Ineg(0, -min);
+
+    Interval pos_mod =  Ipos.target_positive_modulo(modulo,  J);
+    Interval neg_mod = -Ineg.target_positive_modulo(modulo, -J);
+    
+    K.min = neg_mod.min;
+    K.max = pos_mod.max;
+  }
+
+  return K;
+}
+
+// the interval I such that this%mod = I
+Mistral::Interval Mistral::Interval::operator_modulo(const int mod) {
   // the value of the modulo increase with higher values, unless 
   // unless they are distant enough to go back to the next cycle
   
@@ -250,14 +385,15 @@ Mistral::Interval Mistral::Interval::target_modulo(const int mod, const Interval
     if(min + mod - I_min <= max) I.min = 0; // can we reach the next 0?
     if(max - I_max - 1 >= min) I.max = mod-1; // can we reach the next mod-1?
  
-
+    bool hollow = (max-min+1 < mod && I.min == 0 && I.max == mod-1);
     //std::cout << *this << "%" << mod << " = " << I << " ^ " << J << " => " ;
 
     // do we need to update I.min?
     if(J.min > I.min) { 
       if(
 	 // is it a hollow interval [0..I_max] u [I_min..mod-1]?
-	 max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+	 //max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+	 hollow &&
 	 // is min(J) in the hole?
 	 J.min > I_max && J.min < I_min
 	 ) {
@@ -271,7 +407,8 @@ Mistral::Interval Mistral::Interval::target_modulo(const int mod, const Interval
     if(J.max < I.max) { 
       if(
 	 // is it a hollow interval [0..I_max] u [I_min..mod-1]?
-	 max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+	 //max-min+1 < mod && I.min == 0 && I.max == mod-1 && 
+	 hollow &&
 	 // is max(J) in the hole?
 	 J.max > I_max && J.max < I_min
 	 ) {
@@ -293,12 +430,15 @@ Mistral::Interval Mistral::Interval::target_modulo(const int mod, const Interval
     // 	      << ".." << I_max << "] u [" << I_min << ".." << I.max       
     // 	      << "] ^ " << J << " => " ;
     // // std::cout << "min-max-1 < mod: " << (min-max-1) << " < " << mod << " ? " << (min-max-1 < mod) << std::endl;
-    
+      
+    bool hollow = ((min-max-1 > mod) && I.min == 1+mod && I.max == 0);
+
     // do we need to update I.min?
     if(J.min > I.min) { 
       if(
 	 // is it a hollow interval [1+mod..I_max] u [I_min..0]?
-	 (min-max-1 > mod) && I.min == 1+mod && I.max == 0 && 
+	 //(min-max-1 > mod) && I.min == 1+mod && I.max == 0 && 
+	 hollow &&
 	 // is min(J) in the hole?
 	 (J.min > I_max) && J.min < I_min
 	 ) {
@@ -317,7 +457,8 @@ Mistral::Interval Mistral::Interval::target_modulo(const int mod, const Interval
     if(J.max < I.max) { 
       if(
 	 // is it a hollow interval [1+mod..I_max] u [I_min..0]?
-	 (min-max-1 > mod) && I.min == 1+mod && I.max == 0 && 
+	 //(min-max-1 > mod) && I.min == 1+mod && I.max == 0 && 
+	 hollow &&
 	 // is min(J) in the hole?
 	 (J.max > I_max) && J.max < I_min
 	 ) {
@@ -756,4 +897,260 @@ void Mistral::BiInterval::operator=(const int x) {
 // }
 
 // Mistral::BiInterval Mistral::BiInterval::anti_modulo(const int mod);
+
+
+Mistral::IntervalList::IntervalList() : Vector<Interval>() {}
+
+Mistral::IntervalList::~IntervalList() {}
+
+//void union_with(IntervalList& I);
+void Mistral::IntervalList::intersect_with(const IntervalList& with, IntervalList& into) const {
+  int current_self = 0;
+  int current_with = 0;
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "intersect\n";
+  }
+#endif
+
+  Interval I, J;
+
+  while(current_self < size && current_with < with.size) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "self:  [" ;
+    for(unsigned int i=current_self; i<size; ++i)
+      std::cout << " " << stack_[i] ;
+    std::cout << "]\nwith: [";
+    for(unsigned int i=current_with; i<with.size; ++i)
+      std::cout << " " << with[i] ;
+    std::cout << "]\ninto: " << into << std::endl;
+  }
+#endif
+
+    
+    // find the next interval with maximum min
+    if(with[current_with].min > stack_[current_self].min) {
+      // we work with 'with[current_with]'
+      // find the first interval in 'self' ending after the current interval in 'with' 
+      while(current_self < size && stack_[current_self].max < with[current_with].min) ++current_self;
+      if(current_self<size) {
+	I = stack_[current_self];
+	J = with[current_with];
+      } else {
+	//I.max = -INFTY;
+	I.min = INFTY;
+      }
+
+    } else {
+      // we work with 'with[current_with]'
+      // find the first interval in 'with' ending after the current interval in 'self' 
+      while(current_with < with.size && with[current_with].max < stack_[current_self].min) ++current_with;
+      if(current_with<with.size) {
+	I = with[current_with];    
+	J = stack_[current_self];
+      } else {
+	//I.max = -INFTY;
+	I.min = INFTY;
+      }
+      
+    }
+
+
+
+    // now we have max(I) >= min(J)
+    // is there an overlap?
+    if(// !I.empty() &&
+       I.min <= J.max) {
+      
+#ifdef _DEBUG_INTERVALS
+      if(_DEBUG_INTERVALS) {
+	std::cout << " -> intersection: " << I << " ^ " << J << std::endl;
+      }
+#endif
+      
+      // put the intersection in 'into'
+      into.add(Interval(std::max(I.min, J.min), 
+			std::min(I.max, J.max)));
+    }
+
+    // increment the pointer(s)
+    if(with[current_with].max >= stack_[current_self].max) ++current_self;
+    else 
+      //if(with[current_with].max <= stack_[current_self].max) 
+      ++current_with;
+  }
+  
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "self:  [" ;
+    for(unsigned int i=current_self; i<size; ++i)
+      std::cout << " " << stack_[i] ;
+    std::cout << "]\nwith: [";
+    for(unsigned int i=current_with; i<with.size; ++i)
+      std::cout << " " << with[i] ;
+    std::cout << "]\ninto: " << into << std::endl << std::endl;
+  }
+#endif
+}
+
+
+void Mistral::IntervalList::union_with(const IntervalList& with, IntervalList& into) const {
+  int current_self = 0;
+  int current_with = 0;
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+  std::cout << "union\n";
+  }
+#endif
+
+  while(current_self < size || current_with < with.size) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "self:  [" ;
+    for(unsigned int i=current_self; i<size; ++i)
+      std::cout << " " << stack_[i] ;
+    std::cout << "]\nwith: [";
+    for(unsigned int i=current_with; i<with.size; ++i)
+      std::cout << " " << with[i] ;
+    std::cout << "]\ninto: " << into << std::endl;
+  }
+#endif
+
+    // which list has the next interval?
+    int next_self = (current_self >= size ? INFTY : stack_[current_self].min);
+    int next_with = (current_with >= with.size ? INFTY : with[current_with].min);
+
+
+    // std::cout << "next_self = " << next_self << std::endl;
+    // std::cout << "next_with = " << next_with << std::endl;
+
+    
+    Interval I;
+    if(next_self < next_with) {
+      I.min = next_self;
+      I.max = stack_[current_self].max;
+      ++current_self;
+    } else {
+      I.min = next_with;
+      I.max = with[current_with].max;
+      ++current_with;
+    }
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "  init I with " << I << std::endl;
+  }
+#endif
+
+    // now find the end
+    bool stop;
+    do {
+      stop = true;
+      if(current_self < size && stack_[current_self].min <= I.max) {
+	
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+	std::cout << "  overlap with " << stack_[current_self] << std::endl;
+  }
+#endif
+
+	if(stack_[current_self].max > I.max) I.max = stack_[current_self].max;
+	++current_self;
+	stop = false;
+      }
+      if(current_with < with.size && with[current_with].min <= I.max) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+	std::cout << "  overlap with " << with[current_with] << std::endl;
+  }
+#endif
+
+	if(with[current_with].max > I.max) I.max = with[current_with].max;
+	++current_with;
+	stop = false;
+      }
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+      std::cout << "  -> " << I << std::endl;
+  }
+#endif
+
+    } while(!stop);
+
+    into.add(I);
+
+
+    // if(next_self < next_with) {
+    //   // the next start of an interval is in self, where is the end?
+
+    //   // go through intervals in with, until the first that is strictly after current_self
+    //   while(current_with < with.size && with[current_with].min <= stack_[current_self].max) ++current_with;
+    //   into.add(Interval(next_self, (current_with ? std::max(stack_[current_self].max, with[current_with-1].max) : stack_[current_self].max)));
+    //   ++current_self;
+    
+    // } else {
+    //   // the next start of an interval is in self, where is the end?
+
+    //   // go through intervals in with, until the first that is strictly after current_self
+    //   while(current_self < size && stack_[current_self].min <= with[current_with].max) ++current_self;
+    //   into.add(Interval(next_with, (current_self ? std::max(stack_[current_with].max, with[current_self-1].max) : with[current_with].max)));
+    //   ++current_with;
+    
+    // }
+  }
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+  std::cout << "self:  [" ;
+  for(unsigned int i=current_self; i<size; ++i)
+    std::cout << " " << stack_[i] ;
+  std::cout << "]\nwith: [";
+  for(unsigned int i=current_with; i<with.size; ++i)
+    std::cout << " " << with[i] ;
+  std::cout << "]\ninto: " << into << std::endl << std::endl;
+  }
+#endif
+}
+
+
+void Mistral::IntervalList::operator=(const IntervalList& l) {
+  clear();
+  for(unsigned int i=0; i<l.size; ++i) add(l[i]);
+}
+
+
+void Mistral::IntervalList::push(const int lb, const int ub) {
+// #ifdef _CHECK_INTERVALS
+//   if()
+// #endif
+
+
+  if(size && stack_[size-1].max >= lb-1)
+    stack_[size-1].max = ub;
+  else {
+    Interval I(lb, ub);
+    add(I);
+  }
+}
+
+
+void Mistral::IntervalList::push(const Interval& I) {
+// #ifdef _CHECK_INTERVALS
+//   if()
+// #endif
+
+
+  if(size && stack_[size-1].max >= I.min-1)
+    stack_[size-1].max = I.max;
+  else {
+    add(I);
+  }
+}
 

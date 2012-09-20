@@ -1073,44 +1073,48 @@ namespace FlatZinc {
     	Variable b = getIntVar(s, m, ce[1]);
     	Variable r = getIntVar(s, m, ce[2]);
 
-        // % predicate exists in mistral, but does not use the same definition of modulo...
+        if(b.is_ground()) {
+          s.add(a % b.get_value() == r);
+        } else {
+          s.add(a % b == r);
+        }
         
 
-        //Decomposition
+        // //Decomposition
 
-    	int bnd_a = a.get_max();
-    	if (a.get_min() > bnd_a)
-    		bnd_a = a.get_min();
-    	if (-a.get_min() > bnd_a)
-    		bnd_a = (-a.get_min());
-    	if ((-a.get_max())> bnd_a)
-    		bnd_a = (-a.get_max());
+    	// int bnd_a = a.get_max();
+    	// if (a.get_min() > bnd_a)
+    	// 	bnd_a = a.get_min();
+    	// if (-a.get_min() > bnd_a)
+    	// 	bnd_a = (-a.get_min());
+    	// if ((-a.get_max())> bnd_a)
+    	// 	bnd_a = (-a.get_max());
 
 
-    	int bnd_b = b.get_max();
-    	if (b.get_min() > bnd_b)
-    		bnd_b = b.get_min();
-    	if (-b.get_min() > bnd_b)
-    		bnd_b = (-b.get_min());
-    	if ((-b.get_max())> bnd_b)
-    		bnd_b = (-b.get_max());
-    	//cout << "bnd b" << bnd_b << "\n" ;
+    	// int bnd_b = b.get_max();
+    	// if (b.get_min() > bnd_b)
+    	// 	bnd_b = b.get_min();
+    	// if (-b.get_min() > bnd_b)
+    	// 	bnd_b = (-b.get_min());
+    	// if ((-b.get_max())> bnd_b)
+    	// 	bnd_b = (-b.get_max());
+    	// //cout << "bnd b" << bnd_b << "\n" ;
 
-    	Variable d = Variable (-bnd_a, bnd_a);
+    	// Variable d = Variable (-bnd_a, bnd_a);
 
-    	Variable abs_b = Variable (-bnd_b, bnd_b);
-    	Variable abs_r = Variable (-bnd_b, bnd_b);
+    	// Variable abs_b = Variable (-bnd_b, bnd_b);
+    	// Variable abs_r = Variable (-bnd_b, bnd_b);
 
-        	s.add(((b < 0) <= (abs_b == -b)));
-        	s.add((b >= 0) <= (abs_b == b));
+        // 	s.add(((b < 0) <= (abs_b == -b)));
+        // 	s.add((b >= 0) <= (abs_b == b));
 
-        	s.add(((a*r) >= 0));
-        	s.add(r== a - (b*d));
+        // 	s.add(((a*r) >= 0));
+        // 	s.add(r== a - (b*d));
 
-        	s.add(((r < 0) <= (abs_r == -r)));
-        	s.add((r >= 0) <= (abs_r == r));
+        // 	s.add(((r < 0) <= (abs_r == -r)));
+        // 	s.add((r >= 0) <= (abs_r == r));
 
-        	s.add(abs_r < abs_b);
+        // 	s.add(abs_r < abs_b);
 
     }
 

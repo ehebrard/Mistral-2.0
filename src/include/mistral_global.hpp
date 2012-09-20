@@ -80,6 +80,8 @@ namespace Mistral {
   //#define _DEBUG_CHECKER (cur_iteration > 39950) 
   //#define _DEBUG_CHECKER true
   //#define _DEBUG_MOD true  
+  //#define _DEBUG_INTERVALS true
+  //#define _DEBUG_CMOD true  
 
   
 #define NORESTART 0

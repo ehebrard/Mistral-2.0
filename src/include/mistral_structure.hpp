@@ -5308,9 +5308,14 @@ template < int N, class T >
     Interval operator*(const Interval);
     Interval operator/(const Interval);
     Interval anti_mul(const Interval);
+    Interval operator-() const;
     Interval operator%(const int);
+    Interval positive_modulo(const int);
+    Interval operator_modulo(const int);
 
+    Interval target_positive_modulo(const int, const Interval);
     Interval target_modulo(const int, const Interval);
+    Interval target_c_modulo(const int, const Interval);
 
     void operator+=(const int x);
     void operator-=(const int x);
@@ -5402,6 +5407,23 @@ public:
     bool operator==(const int x);
     void operator=(const int x);
     
+  };
+
+
+  class IntervalList : public Vector<Interval> {
+    
+  public:
+    IntervalList();
+    virtual ~IntervalList();
+
+    void union_with(const IntervalList& with, IntervalList& into) const;
+    void intersect_with(const IntervalList& with, IntervalList& into) const;
+
+    void operator=(const IntervalList& l);
+
+    void push(const int lb, const int ub);
+    void push(const Interval& I);
+
   };
 
  

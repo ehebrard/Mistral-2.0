@@ -970,6 +970,7 @@ public:
     if(Verbosity) cout << "Run Checker test: "; 
 
 
+
     ConChecker< PredicateLess > cc1a("<=", false,true,12345,3,20,1);
     cc1a.init();
     cc1a.run(1000);
@@ -1400,7 +1401,7 @@ public:
     ((PredicateModConstant*)(cc16a.con2.propagator))->modulo = 3;
     ((PredicateModConstant*)(cc16a.con3.propagator))->modulo = 3;
     cc16a.init();
-    cc16a.run(10000);
+    cc16a.run(1000);
     
 
 
@@ -1409,7 +1410,7 @@ public:
     ((PredicateModConstant*)(cc16b.con2.propagator))->modulo = 5;
     ((PredicateModConstant*)(cc16b.con3.propagator))->modulo = 5;
     cc16b.init();
-    cc16b.run(10000);
+    cc16b.run(1000);
 
 
 
@@ -1418,7 +1419,7 @@ public:
     ((PredicateModConstant*)(cc16c.con2.propagator))->modulo = 8;
     ((PredicateModConstant*)(cc16c.con3.propagator))->modulo = 8;
     cc16c.init();
-    cc16c.run(10000);
+    cc16c.run(1000);
 
 
    ConChecker< PredicateModConstant > cc16na("%",true,true,12345,2,30,0,true);
@@ -1426,7 +1427,7 @@ public:
     ((PredicateModConstant*)(cc16na.con2.propagator))->modulo = -3;
     ((PredicateModConstant*)(cc16na.con3.propagator))->modulo = -3;
     cc16na.init();
-    cc16na.run(10000);
+    cc16na.run(1000);
     
 
     ConChecker< PredicateModConstant > cc16nb("%",true,true,12345,2,30,0,true);
@@ -1434,7 +1435,7 @@ public:
     ((PredicateModConstant*)(cc16nb.con2.propagator))->modulo = -5;
     ((PredicateModConstant*)(cc16nb.con3.propagator))->modulo = -5;
     cc16nb.init();
-    cc16nb.run(10000);
+    cc16nb.run(1000);
 
 
     ConChecker< PredicateModConstant > cc16nc("%",true,true,12345,2,30,0,true);
@@ -1442,16 +1443,69 @@ public:
     ((PredicateModConstant*)(cc16nc.con2.propagator))->modulo = -8;
     ((PredicateModConstant*)(cc16nc.con3.propagator))->modulo = -8;
     cc16nc.init();
-    cc16nc.run(10000);
-
+    cc16nc.run(1000);
+    
 
     ConChecker< PredicateMod > cc17("%",true,true,12345,3,30,0,true);
     cc17.init();
     cc17.run(100);
 
-    // ConChecker< PredicateMod > cc17("%", true,false,12345,3,30,0);
-    // cc17.init();
-    // cc17.run(100);
+
+
+   ConChecker< PredicateCModConstant > cc18a("%",true,true,12345,2,30,0,true);
+    ((PredicateCModConstant*)(cc18a.con1.propagator))->modulo = 3;
+    ((PredicateCModConstant*)(cc18a.con2.propagator))->modulo = 3;
+    ((PredicateCModConstant*)(cc18a.con3.propagator))->modulo = 3;
+    cc18a.init();
+    cc18a.run(10000);
+    
+
+
+    ConChecker< PredicateCModConstant > cc18b("%",true,true,12345,2,30,0,true);
+    ((PredicateCModConstant*)(cc18b.con1.propagator))->modulo = 5;
+    ((PredicateCModConstant*)(cc18b.con2.propagator))->modulo = 5;
+    ((PredicateCModConstant*)(cc18b.con3.propagator))->modulo = 5;
+    cc18b.init();
+    cc18b.run(1000);
+
+
+
+    ConChecker< PredicateCModConstant > cc18c("%",true,true,12345,2,30,0,true);
+    ((PredicateCModConstant*)(cc18c.con1.propagator))->modulo = 8;
+    ((PredicateCModConstant*)(cc18c.con2.propagator))->modulo = 8;
+    ((PredicateCModConstant*)(cc18c.con3.propagator))->modulo = 8;
+    cc18c.init();
+    cc18c.run(1000);
+
+
+   ConChecker< PredicateCModConstant > cc18na("%",true,true,12345,2,30,0,true);
+    ((PredicateCModConstant*)(cc18na.con1.propagator))->modulo = -3;
+    ((PredicateCModConstant*)(cc18na.con2.propagator))->modulo = -3;
+    ((PredicateCModConstant*)(cc18na.con3.propagator))->modulo = -3;
+    cc18na.init();
+    cc18na.run(1000);
+    
+
+    ConChecker< PredicateCModConstant > cc18nb("%",true,true,12345,2,30,0,true);
+    ((PredicateCModConstant*)(cc18nb.con1.propagator))->modulo = -5;
+    ((PredicateCModConstant*)(cc18nb.con2.propagator))->modulo = -5;
+    ((PredicateCModConstant*)(cc18nb.con3.propagator))->modulo = -5;
+    cc18nb.init();
+    cc18nb.run(1000);
+
+
+    ConChecker< PredicateCModConstant > cc18nc("%",true,true,12345,2,30,0,true);
+    ((PredicateCModConstant*)(cc18nc.con1.propagator))->modulo = -8;
+    ((PredicateCModConstant*)(cc18nc.con2.propagator))->modulo = -8;
+    ((PredicateCModConstant*)(cc18nc.con3.propagator))->modulo = -8;
+    cc18nc.init();
+    cc18nc.run(1000);
+    
+
+   ConChecker< PredicateCMod > cc19("%",true,true,12345,3,30,0,true);
+    cc19.init();
+    cc19.run(100);
+
 
    /*
 
@@ -1543,9 +1597,56 @@ int main(int argc, char *argv[])
   // std::cout << "-117 % -17 = " << modulo_fct(-117, -17) << std::endl;
   // std::cout << " 117 % -17 = " << modulo_fct( 117, -17) << std::endl;
 
+  // Interval I, J, K;
+
+  // I = Interval(115, 121);
+  // J = I.operator_modulo(-17);
+  // K = I%(-17);
+  // std::cout << I << "%" << -17 << " = " << J << " or " << K << std::endl;
+  
+  // I = Interval(-121, -115);
+  // J = I.operator_modulo(-17);
+  // K = I%(-17);
+  // std::cout << I << "%" << -17 << " = " << J << " or " << K << std::endl;
+
+  // I = Interval(115, 121);
+  // J = I.operator_modulo(17);
+  // K = I%(17);
+  // std::cout << I << "%" << 17 << " = " << J << " or " << K << std::endl;
+  
+  // I = Interval(-121, -115);
+  // J = I.operator_modulo(17);
+  // K = I%(17);
+  // std::cout << I << "%" << 17 << " = " << J << " or " << K << std::endl;
+
+
+
+  // I = Interval(114, 117);
+  // J = I.operator_modulo(-17);
+  // K = I%(-17);
+  // std::cout << I << "%" << -17 << " = " << J << " or " << K << std::endl;
+
+  // I = Interval(-117, -114);
+  // J = I.operator_modulo(-17);
+  // K = I%(-17);
+  // std::cout << I << "%" << -17 << " = " << J << " or " << K << std::endl;
+
+  // I = Interval(114, 117);
+  // J = I.operator_modulo(17);
+  // K = I%(17);
+  // std::cout << I << "%" << 17 << " = " << J << " or " << K << std::endl;
+
+  // I = Interval(-117, -114);
+  // J = I.operator_modulo(17);
+  // K = I%(17);
+  // std::cout << I << "%" << 17 << " = " << J << " or " << K << std::endl;
+
+
+
+
 
   // exit(1);
-
+   
   usrand(12345);
 
   std::vector<UnitTest*> tests;
@@ -1863,7 +1964,7 @@ void RandomIntervalTest::run() {
 
 
     for(int modulo=1; modulo<m/2; ++modulo) {
-      K = (I % modulo);
+      K = (I.operator_modulo(modulo));
 
       // std::cout << "[" << I.min << "," << I.max 
       // 		<< "] % " << modulo << " = ["
@@ -1874,6 +1975,45 @@ void RandomIntervalTest::run() {
       max_reached = false;
       for(int i=I.min; i<=I.max; ++i) {
 	val = __modulo_fct__(i,modulo);
+
+	//std::cout << "[" << K.min << "][" << K.max << "] " << i << "%" << modulo << "=" << val << std::endl;
+
+	if(val == K.max) max_reached = true;
+	if(val == K.min) min_reached = true;
+	if(val > K.max || val < K.min) all_in =false;
+	  
+	if(!all_in) {
+	  std::cout << "Error: " << i << "%" << modulo << " is not in [" << K.min << "," << K.max 
+		    << "] != ([" << I.min << "," << I.max 
+		    << "] % " << modulo << ")\n";
+	  exit(1);
+	}
+      }
+
+      if(!min_reached) {
+	std::cout << "Error: " << K.min << " is not min([" << I.min << "," << I.max 
+		  << "] % " << modulo << ")\n";
+	exit(1);
+      }
+      if(!max_reached) {
+	std::cout << "Error: " << K.max << " is not max([" << I.min << "," << I.max 
+		  << "] % " << modulo << ")\n";
+	exit(1);
+      }
+    }
+
+    for(int modulo=1; modulo<m/2; ++modulo) {
+      K = (I%modulo);
+
+      // std::cout << "[" << I.min << "," << I.max 
+      // 		<< "] % " << modulo << " = ["
+      // 		<< K.min << "," << K.max << "]\n";
+      
+      all_in = true;
+      min_reached = false;
+      max_reached = false;
+      for(int i=I.min; i<=I.max; ++i) {
+	val = i%modulo;
 
 	//std::cout << "[" << K.min << "][" << K.max << "] " << i << "%" << modulo << "=" << val << std::endl;
 

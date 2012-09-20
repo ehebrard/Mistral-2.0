@@ -1906,6 +1906,98 @@ void Mistral::MulExpression::extract_predicate(Solver *s) {
 }
 
 
+Mistral::ModExpression::ModExpression(Variable X, Variable Y) 
+  : Expression(X,Y) {
+}
+Mistral::ModExpression::~ModExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete mod expression" << std::endl;
+#endif
+}
+
+void Mistral::ModExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Mod predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::ModExpression::extract_variable(Solver *s) {
+  int maxmod = children[1].get_max();
+  int minmod = children[1].get_min();
+  int maxabs = (std::abs(maxmod) > std::abs(minmod) ? 
+		std::abs(maxmod) : std::abs(minmod) );
+
+
+  Variable aux((children[0].get_min() <= 0 ? 1-maxabs : 0), 
+	       (children[0].get_max() >= 0 ? maxabs-1 : 0), 
+	       DYN_VAR);
+  _self = aux;
+
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+const char* Mistral::ModExpression::get_name() const {
+  return "mod";
+}
+
+void Mistral::ModExpression::extract_predicate(Solver *s) {
+
+  //std::cout << "extract predicate " << children[0] << " * " << children[1] << " = " << children[2] << std::endl;
+
+
+  s->add(Constraint(new PredicateCMod(children)));
+}
+
+
+
+Mistral::ModConstantExpression::ModConstantExpression(Variable X, const int mod) 
+  : Expression(X) { 
+  modulo=mod; 
+}
+Mistral::ModConstantExpression::~ModConstantExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete factor expression" << std::endl;
+#endif
+}
+  
+void Mistral::ModConstantExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: ModConstant predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::ModConstantExpression::extract_variable(Solver *s) {
+  Interval I(children[0].get_min(), children[0].get_max());
+  Interval J = I%modulo;
+
+  Variable aux(J.min, J.max, DYN_VAR);
+  _self = aux;
+  
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+const char* Mistral::ModConstantExpression::get_name() const {
+  return "modulo";
+}
+
+void Mistral::ModConstantExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(new PredicateCModConstant(children, modulo)));
+}
+
+Mistral::Variable Mistral::Variable::operator%(Variable x) {
+  Variable exp(new ModExpression(*this,x));
+  return exp;
+}
+
+Mistral::Variable Mistral::Variable::operator%(int k) {
+  Variable exp(new ModConstantExpression(*this,k));
+  return exp;
+}
+
+
+
 // Mistral::DivExpression::DivExpression(Variable X, Variable Y) 
 //   : Expression(X,Y) {
 // }

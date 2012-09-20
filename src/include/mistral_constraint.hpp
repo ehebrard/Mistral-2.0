@@ -2724,6 +2724,50 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
+
+  /**********************************************
+   * CModulo Predicate
+   **********************************************/
+  /*! \class PredicateCMod
+    \brief  Binary CModulo predicate (x0 % x1 = y)
+  */
+  class PredicateCMod : public TernaryConstraint
+  {
+
+ public:
+    /**@name Constructors*/
+    //@{
+    PredicateCMod() : TernaryConstraint() {}
+    PredicateCMod(Variable x, Variable y, Variable z)
+      : TernaryConstraint(x, y, z) {}
+    PredicateCMod(Vector< Variable >& scp)
+      : TernaryConstraint(scp) {}
+    PredicateCMod(std::vector< Variable >& scp)
+      : TernaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateCMod(scope[0], scope[1], scope[2])); }
+    virtual void initialise();
+    virtual int idempotent() { return 0; }
+    virtual ~PredicateCMod() {}
+    //@}
+    
+    /**@name Solving*/
+    //@{
+    PropagationOutcome filter();
+    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != sol[0] %sol[1]); }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    virtual RewritingOutcome rewrite();
+    //@}
+    
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "%="; }
+    //@}
+
+  };
+
+
   /**********************************************
    * Modulo Predicate
    **********************************************/
@@ -2760,6 +2804,57 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int check( const int* sol ) const { 
       //return((sol[0] % modulo) != sol[1]);
       return(__modulo_fct__(sol[0],modulo) != sol[1]);
+    }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "%k"; }
+    //@}
+  };
+
+
+
+  /**********************************************
+   * CModulo Predicate
+   **********************************************/
+  /*! \class PredicateCMod
+    \brief  Binary CModulo predicate (x0 % x1 = y)
+  */
+  class PredicateCModConstant : public BinaryConstraint
+  {
+
+  public:
+   /**@name Parameters*/
+    //@{  
+    int modulo;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateCModConstant() : BinaryConstraint() {}
+    PredicateCModConstant(Vector< Variable >& scp, const int mod=2) 
+      : BinaryConstraint(scp) { modulo=mod; }
+    PredicateCModConstant(Variable x, Variable y, const int mod=2) 
+      : BinaryConstraint(x,y) { modulo=mod; }
+    PredicateCModConstant(std::vector< Variable >& scp, const int mod=2) 
+      : BinaryConstraint(scp) { modulo=mod; }
+    virtual Constraint clone() { return Constraint(new PredicateCModConstant(scope[0], scope[1], modulo)); }
+    virtual void initialise();
+    virtual int idempotent() { return 0;}
+    virtual ~PredicateCModConstant() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    PropagationOutcome filter();
+    virtual int check( const int* sol ) const { 
+      //return((sol[0] % modulo) != sol[1]);
+      return(sol[0] % modulo != sol[1]);
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();

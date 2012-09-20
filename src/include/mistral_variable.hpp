@@ -1432,6 +1432,8 @@ namespace Mistral {
     Variable operator*(const int);
     Variable operator/(Variable);
     //    Variable operator/(const int);
+    Variable operator%(Variable);
+    Variable operator%(const int);
     Variable operator&&(Variable);
     Variable operator||(Variable);
     //    Variable operator^(Variable);
@@ -1818,6 +1820,20 @@ namespace Mistral {
 
   };
 
+  class ModExpression : public Expression {
+
+  public:
+
+    ModExpression(Variable X, Variable Y);
+    virtual ~ModExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
   // class DivExpression : public Expression {
 
   // public:
@@ -1856,6 +1872,22 @@ namespace Mistral {
 
     FactorExpression(Variable X, const int ofs);
     virtual ~FactorExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  class ModConstantExpression : public Expression {
+
+  public:
+
+    int modulo;
+
+    ModConstantExpression(Variable X, const int ofs);
+    virtual ~ModConstantExpression();
 
     virtual void extract_constraint(Solver*);
     virtual void extract_variable(Solver*);
