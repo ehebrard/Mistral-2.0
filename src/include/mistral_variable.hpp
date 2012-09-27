@@ -390,14 +390,14 @@ namespace Mistral {
     /// Returns the minimum value in [1..infty] \\inter domain, min if there are none
     inline int get_min_pos() const {
       if( domain.min > 0 ) return domain.min;
-      if( domain.max < 1 ) return domain.min;
+      if( domain.max < 1 ) return INFTY;
       if( domain.values.fast_contain(1) ) return 1;
       return domain.values.next( 1 );
     }
     /// Returns the maximum value in [-infty..-1] \\inter domain, max if there are none
     inline int get_max_neg() const  {
       if( domain.max < 0 ) return domain.max;
-      if( domain.min > -1 ) return domain.max;
+      if( domain.min > -1 ) return -INFTY;
       if( domain.values.fast_contain(-1) ) return -1;
       return domain.values.prev( -1 );
     } 
@@ -448,6 +448,8 @@ namespace Mistral {
     inline void intersect_to( BitSet& s ) const { s.intersect_with(domain.values); }
     /// Do the union of its domain with a set s
     inline void union_to( BitSet& s ) const { s.union_with(domain.values); }
+    /// Do the union of the negation of its domain with a set s
+    void put_negation_in( BitSet& s ) const { domain.values.negate(s); } //s.union_with(domain.values); }
     //@}
 
     /*!@name Domain handling methods*/
@@ -1107,13 +1109,13 @@ namespace Mistral {
     /// Returns the minimum value in [1..infty] \\inter domain, min if there are none
     inline int get_min_pos() const {
       if( min > 0 ) return min;
-      if( max < 1 ) return min;
+      if( max < 1 ) return INFTY;
       return 1;
     }
     /// Returns the maximum value in [-infty..-1] \\inter domain, max if there are none
     inline int get_max_neg() const  {
       if( max < 0 ) return max;
-      if( min > -1 ) return max;
+      if( min > -1 ) return -INFTY;
       return -1;
     } 
     /// Return the smallest value currently in the domain that is strictly greater than "v"
@@ -1165,6 +1167,10 @@ namespace Mistral {
     /// Do the union of its domain with a set s
     inline void union_to( BitSet& s ) const { // s.fill(min,max);
       s.fill(min,max);
+    }
+    /// Do the union of the negation of its domain with a set s
+    void put_negation_in( BitSet& s ) const {
+      s.fill(-max,-min);
     }
     //@}
 
@@ -1294,11 +1300,11 @@ namespace Mistral {
     }
 
     /// Remove all values in the interval [l..u]
-    inline Event remove_interval(const int lo, const int up) {
-      if(lo <= min) return set_min(up+1);
-      if(up >= max) return set_max(lo-1);
-      return NO_EVENT; 
-    }
+    Event remove_interval(const int lo, const int up);//  {
+    //   if(lo <= min) return set_min(up+1);
+    //   if(up >= max) return set_max(lo-1);
+    //   return NO_EVENT; 
+    // }
     //@}
 
 
@@ -1431,7 +1437,7 @@ namespace Mistral {
     Variable operator*(Variable);
     Variable operator*(const int);
     Variable operator/(Variable);
-    //    Variable operator/(const int);
+    Variable operator/(const int);
     Variable operator%(Variable);
     Variable operator%(const int);
     Variable operator&&(Variable);
@@ -1442,6 +1448,7 @@ namespace Mistral {
     Variable operator==(const int);
     Variable operator!=(Variable);
     Variable operator!=(const int);
+    Variable operator!=(const int[2]);
     Variable operator<(Variable);
     Variable operator<=(Variable);
     Variable operator>(Variable);
@@ -1550,6 +1557,8 @@ namespace Mistral {
     void intersect_to( BitSet& s ) const ;
     /// Do the union of its domain with a set s
     void union_to( BitSet& s ) const ;
+    /// Do the union of the negation of its domain with a set s
+    void put_negation_in( BitSet& s ) const ;
     //@}
 
     /*!@name Domain changing methods*/
@@ -1569,6 +1578,9 @@ namespace Mistral {
     Event set_domain(const int lo, const int up) ;
     /// Remove all values that do not appear in the current domain of the Variable "x"
     Event set_domain(Variable& x) ;
+
+    Event set_domain(const Interval& I) ;
+    Event set_domain(const BiInterval& I) ;
     //Event set_domain2(Variable& x) ;
     /// Remove all values that belong to the set "s"
     Event remove_set(const BitSet& s) ;
@@ -1834,19 +1846,51 @@ namespace Mistral {
 
   };
 
-  // class DivExpression : public Expression {
+  class AbsExpression : public Expression {
 
-  // public:
+  public:
 
-  //   DivExpression(Variable X, Variable Y);
-  //   virtual ~DivExpression();
+    AbsExpression(Variable X);
+    virtual ~AbsExpression();
 
-  //   virtual void extract_constraint(Solver*);
-  //   virtual void extract_variable(Solver*);
-  //   virtual void extract_predicate(Solver*);
-  //   virtual const char* get_name() const;
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
 
-  // };
+  };
+
+  Variable Abs(Variable X);
+
+  class DivExpression : public Expression {
+
+  public:
+
+    DivExpression(Variable X, Variable Y);
+    virtual ~DivExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  class QuotientExpression : public Expression {
+
+  public:
+
+    int quotient;
+
+    QuotientExpression(Variable X, const int quo);
+    virtual ~QuotientExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
 
   class OffsetExpression : public Expression {
 
@@ -2382,15 +2426,17 @@ namespace Mistral {
 
   public:
 
+    int spin;
+
     int lb;
     int ub;
     int size;
     BitSet values;
 
-    MemberExpression(Variable X, Variable Y);
-    MemberExpression(Variable X, const int lo, const int up);
-    MemberExpression(Variable X, const BitSet& s);
-    MemberExpression(Variable X, const Vector<int>& s);
+    MemberExpression(Variable X, Variable Y, const int spin=1);
+    MemberExpression(Variable X, const int lo, const int up, const int spin=1);
+    MemberExpression(Variable X, const BitSet& s, const int spin=1);
+    MemberExpression(Variable X, const Vector<int>& s, const int spin=1);
     virtual ~MemberExpression();
 
     virtual void extract_constraint(Solver*);

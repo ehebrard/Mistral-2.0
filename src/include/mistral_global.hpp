@@ -81,7 +81,10 @@ namespace Mistral {
   //#define _DEBUG_CHECKER true
   //#define _DEBUG_MOD true  
   //#define _DEBUG_INTERVALS true
+  //#define _DEBUG_INTERVAL_DIV true
   //#define _DEBUG_CMOD true  
+  //#define _DEBUG_ABS true  
+  //#define _DEBUG_DIV true  
 
   
 #define NORESTART 0

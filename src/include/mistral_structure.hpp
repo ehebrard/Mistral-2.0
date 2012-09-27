@@ -4459,7 +4459,7 @@ template < int N, class T >
     /*!
       Changes every value to its arythmetic negation
     */
-    inline void negate( Bitset<WORD_TYPE,FLOAT_TYPE>& s )
+    inline void negate( Bitset<WORD_TYPE,FLOAT_TYPE>& s ) const
     {
       int i = (pos_words > -s.neg_words ? -s.neg_words : pos_words);
       int j = (neg_words < -s.pos_words ? -s.pos_words : neg_words);
@@ -5327,9 +5327,9 @@ template < int N, class T >
 
 
 
-
+  class Variable;
   class PositiveHalfDomain;
-class NegativeHalfDomain : public Interval {
+  class NegativeHalfDomain : public Interval {
 
 public:
   
@@ -5337,14 +5337,31 @@ public:
   NegativeHalfDomain(const int _min, const int _max);
   virtual ~NegativeHalfDomain();
 
-  Interval operator*(PositiveHalfDomain arg);
-  Interval operator*(NegativeHalfDomain arg);
 
-  Interval anti_mul(PositiveHalfDomain arg);
-  Interval anti_mul(NegativeHalfDomain arg);
+  Interval operator*(const PositiveHalfDomain arg);
+  Interval operator*(const NegativeHalfDomain arg);
+  Interval operator*(const int arg);
 
-  Interval operator/(PositiveHalfDomain arg);
-  Interval operator/(NegativeHalfDomain arg);
+  Interval anti_mul(const PositiveHalfDomain arg);
+  Interval anti_mul(const NegativeHalfDomain arg);
+  Interval anti_mul(const int arg);
+
+  Interval operator/(const PositiveHalfDomain arg);
+  Interval operator/(const NegativeHalfDomain arg);
+  Interval operator/(const int arg);
+  Interval divided_by(const PositiveHalfDomain arg, const Variable target);
+  Interval divided_by(const NegativeHalfDomain arg, const Variable target);
+
+  Interval anti_div_X(const PositiveHalfDomain arg);
+  Interval anti_div_X(const NegativeHalfDomain arg);
+  Interval anti_div_X_pos(const int arg);
+  Interval anti_div_X_neg(const int arg);
+
+  Interval anti_div_Y(const PositiveHalfDomain arg);
+  Interval anti_div_Y(const NegativeHalfDomain arg);
+  Interval anti_div_Y_pos(const int arg);
+  Interval anti_div_Y_neg(const int arg);
+
 
   // Interval operator%(const int mod);
   // Interval operator%(const int mod);
@@ -5352,8 +5369,12 @@ public:
   // // the return value is the interval I such that I%mod = this
   // Interval anti_modulo(const int mod);
   // Interval anti_modulo(const int mod);
+
+  //void operator=(const Interval I) {min = I.min; max = I.max;}
+    //Interval operator-() { return Interval(-max, -min); }
   
 };
+
 
 class PositiveHalfDomain : public Interval {
 
@@ -5363,26 +5384,43 @@ public:
   PositiveHalfDomain(const int _min, const int _max);
   virtual ~PositiveHalfDomain();
 
-  Interval operator*(PositiveHalfDomain arg);
-  Interval operator*(NegativeHalfDomain arg);
+  Interval operator*(const PositiveHalfDomain arg);
+  Interval operator*(const NegativeHalfDomain arg);
+  Interval operator*(const int arg);
 
-  Interval anti_mul(PositiveHalfDomain arg);
-  Interval anti_mul(NegativeHalfDomain arg);
+  Interval anti_mul(const PositiveHalfDomain arg);
+  Interval anti_mul(const NegativeHalfDomain arg);
+  Interval anti_mul(const int arg);
 
-  Interval operator/(PositiveHalfDomain arg);
-  Interval operator/(NegativeHalfDomain arg);
+  Interval operator/(const PositiveHalfDomain arg);
+  Interval operator/(const NegativeHalfDomain arg);
+  Interval divided_by(const PositiveHalfDomain arg, const Variable target, const bool pos=true);
+  Interval divided_by(const NegativeHalfDomain arg, const Variable target);
+  Interval operator/(const int arg);
 
+  Interval anti_div_X(const PositiveHalfDomain arg);
+  Interval anti_div_X(const NegativeHalfDomain arg);
+  Interval anti_div_X_pos(const int arg);
+  Interval anti_div_X_neg(const int arg);
+
+  Interval anti_div_Y(const PositiveHalfDomain arg);
+  Interval anti_div_Y(const NegativeHalfDomain arg);
+  Interval anti_div_Y_pos(const int arg);
+  Interval anti_div_Y_neg(const int arg);
   // Interval operator%(const int mod);
   // Interval operator%(const int mod);
 
   // // the return value is the interval I such that I%mod = this
   // Interval anti_modulo(const int mod);
   // Interval anti_modulo(const int mod);
-  
+
+
+  //void operator=(const Interval I) {min = I.min; max = I.max;}
+  //Interval operator-() { return Interval(-max, -min); }
 };
 
 
-
+  class Variable;
   class BiInterval {
 
   public:
@@ -5391,21 +5429,43 @@ public:
     bool zero;
 
     BiInterval();
+    BiInterval(const Variable x);
     BiInterval(const int _min, const int _max);
     BiInterval(const Interval I);
     BiInterval(const Interval neg, const Interval pos, const bool z);
+    BiInterval(const Interval neg, const Interval pos, const Interval z);
     BiInterval(const int n_min, const int n_max, const int p_min, const int p_max, const bool z);
     void initialise(const int _min, const int _max);
     virtual ~BiInterval();
     
-    BiInterval operator*(BiInterval arg);
-    BiInterval anti_mul(BiInterval arg);
-    BiInterval operator/(BiInterval arg);    
+
+    int get_min() const;
+    int get_max() const;
+
+    int get_min_abs() const;
+    int get_max_abs() const;
+
+    int is_hollow() const;
+    //Interval get_hole() const;
+
+    BiInterval operator*(const BiInterval arg);
+    BiInterval anti_mul(const BiInterval arg);
+    BiInterval operator/(const BiInterval arg);
+    BiInterval divided_by(const BiInterval arg, const Variable target);
+    BiInterval anti_div_X(const BiInterval arg);
+    BiInterval anti_div_Y(const BiInterval arg);
+
+    BiInterval operator*(const int arg);
+    BiInterval operator/(const int arg);
+    BiInterval anti_div_X(const int arg);
+    BiInterval anti_div_Y(const int arg);
     // BiInterval operator%(const int mod);
     // BiInterval anti_modulo(const int mod);
 
-    bool operator==(const int x);
+    bool operator==(const int x) const;
     void operator=(const int x);
+
+    std::ostream& display(std::ostream& os) const;
     
   };
 
@@ -5602,7 +5662,9 @@ public:
 
 
 
-  std::ostream& operator<< (std::ostream& os, const Interval& x);
+  std::ostream& operator<< (std::ostream& os, const Interval& x);  
+
+  std::ostream& operator<< (std::ostream& os, const BiInterval& x);
 
   std::ostream& operator<< (std::ostream& os, const MultiSet& x);
 

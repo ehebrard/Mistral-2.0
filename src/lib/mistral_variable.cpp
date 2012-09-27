@@ -515,7 +515,7 @@ std::string Mistral::Variable::get_domain() const {
     buf << "[0,1]";
   } 
   else if(domain_type ==   EXPRESSION) {
-    buf << "*" << expression->get_self().get_domain();
+    buf << expression->get_self().get_domain();
   } else {
     if(*bool_domain == 3) buf << "[0,1]";
     else if(*bool_domain == 2) buf << "1";
@@ -1122,12 +1122,12 @@ int Mistral::Variable::get_min_pos() const {
 
   }
 
-  void Mistral::Variable::union_to( BitSet& s ) const {
+void Mistral::Variable::union_to( BitSet& s ) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
-
+    
     if     (domain_type ==  BITSET_VAR) bitset_domain->union_to(s);
     else if(domain_type ==    LIST_VAR) list_domain->union_to(s);
     else if(domain_type ==   RANGE_VAR) range_domain->union_to(s);
@@ -1145,6 +1145,39 @@ int Mistral::Variable::get_min_pos() const {
 
 #ifdef _PROFILING_PRIMITIVE
     PROFILING_FOOT(_m_union_to_)
+#endif
+
+  }
+
+
+void Mistral::Variable::put_negation_in( BitSet& s ) const {
+  
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    
+    if(is_ground()) s.add(-get_value());
+    else if(domain_type ==  BITSET_VAR) bitset_domain->put_negation_in(s);
+    else if(domain_type ==    LIST_VAR) list_domain->put_negation_in(s);
+    else if(domain_type ==   RANGE_VAR) range_domain->put_negation_in(s);
+    else if(domain_type == VIRTUAL_VAR) {
+      
+      // std::cout << domain_type << std::endl;
+
+      // std::cout << "make the union of " << *this // << " in " << get_domain()
+      // 		<< " into " << s << std::endl;
+
+      virtual_domain->put_negation_in(s);
+    } //else if(domain_type ==   CONST_VAR) s.add(-constant_value);
+    else if(domain_type ==   EXPRESSION) expression->get_self().put_negation_in(s);
+    else //s.union_with(*bool_domain); 
+      {
+	s.add(0);
+	s.add(-1);
+      }
+
+#ifdef _PROFILING_PRIMITIVE
+    PROFILING_FOOT(_m_put_negation_in_)
 #endif
 
   }
@@ -1356,6 +1389,103 @@ Mistral::Event Mistral::Variable::set_domain(const int lo, const int up) {
   return evt;
 }
 
+Mistral::Event Mistral::Variable::set_domain(const Interval& I) {
+  return set_domain(I.min, I.max);
+}
+
+Mistral::Event Mistral::Variable::set_domain(const BiInterval& I) {
+  Event evt = NO_EVENT;
+
+  //std::cout << "set domain to " << I << std::endl;
+
+  if( I.negative.empty() ) {
+    if( I.positive.empty() ) {
+      if( I.zero ) {
+	//std::cout << "set domain to {0}\n";
+	evt |= set_domain(0);
+      } else evt |= FAIL_EVENT;
+    } else {
+      evt |= set_max(I.positive.max);
+      if( !(FAILED(evt)) ) {
+	if( I.zero ) {
+	  //std::cout << "set min to 0\n";
+	  evt |= set_min(0);
+	  if( !(FAILED(evt)) && I.positive.min > 1 ) {
+	    //std::cout << "remove interval [1," << (I.positive.min-1) << "]\n";
+	    evt |= remove_interval(1,I.positive.min-1);
+	  }
+	} else {
+	  //std::cout << "set min to " << I.positive.min << "\n";
+	  evt |= set_min(I.positive.min);
+	}
+      }
+    }
+  } else {
+    //std::cout << "set min to" << I.negative.min << "\n";
+    evt |= set_min(I.negative.min);
+
+    //std::cout << " => "<< get_domain() << std::endl;
+
+
+    if( !(FAILED(evt)) ) {
+      if( I.positive.empty() ) {
+	if( I.zero ) {
+	  //std::cout << "set max to 0\n";
+	  evt |= set_max(0);
+	  //std::cout << " => "<< get_domain() << std::endl;
+
+	  if( !(FAILED(evt)) && I.negative.max < -1 ) {
+	    //std::cout << "remove interval [" << (I.negative.max+1) << ",-1]\n";
+	    evt |= remove_interval(I.negative.max+1,-1);
+
+	    //std::cout << " => "<< get_domain() << std::endl;
+
+	  }
+	} else {
+	  //std::cout << "set max to " << I.negative.max << "\n";
+	  evt |= set_max(I.negative.max);
+
+	  //std::cout << " => "<< get_domain() << std::endl;
+
+	}
+      } else {
+	//std::cout << "set max to " << I.positive.max << "\n";
+	evt |= set_max(I.positive.max);
+
+	//std::cout << " => "<< get_domain() << std::endl;
+
+	if( !(FAILED(evt)) ) {
+	  if( I.zero ) {
+	    if( I.negative.max < -1 ) {
+	      //std::cout << "remove interval [" << (I.negative.max+1) << ",-1]\n";
+	      evt |= remove_interval(I.negative.max+1,-1);
+	    
+	      //std::cout << " => "<< get_domain() << std::endl;
+
+	    }
+	    if( !(FAILED(evt)) && I.positive.min > 1 ) {
+	      //std::cout << "remove interval [1," << (I.positive.min-1) << "]\n";
+	      evt |= remove_interval(1,I.positive.min-1);
+
+	      //std::cout << " => "<< get_domain() << std::endl;
+
+	    }
+	  } else {
+	    //std::cout << "remove interval [" << (I.negative.max+1) << "," << (I.positive.min-1) << "]\n";
+	    evt |= remove_interval(I.negative.max+1,I.positive.min-1);
+
+	    //std::cout << " => "<< get_domain() << std::endl;
+
+	  }
+	}
+      }
+    }
+  }
+
+  return evt;
+}
+
+
   Mistral::Event Mistral::Variable::remove_set(const BitSet& s) {
 
 #ifdef _PROFILING_PRIMITIVE
@@ -1446,6 +1576,20 @@ Mistral::Event Mistral::Variable::set_domain(const int lo, const int up) {
 
     return evt;
   }
+
+
+Mistral::Event Mistral::VariableRange::remove_interval(const int lo, const int up) {
+  Event removal = DOMAIN_EVENT;
+
+  if(lo <= min) removal = set_min(up+1);
+  else if(up >= max) removal = set_max(lo-1);
+  else {
+    ((Solver*)solver)->make_non_convex(id);
+    removal = ((Solver*)solver)->variables[id].remove_interval(lo, up);
+  }
+
+  return removal;
+}
 
 
 Mistral::Event Mistral::VariableRange::remove(const int v) {
@@ -1997,128 +2141,131 @@ Mistral::Variable Mistral::Variable::operator%(int k) {
 }
 
 
-
-// Mistral::DivExpression::DivExpression(Variable X, Variable Y) 
-//   : Expression(X,Y) {
-// }
-// Mistral::DivExpression::~DivExpression() {
-//#ifdef _DEBUG_MEMORY
-//  std::cout << "c delete div expression" << std::endl;
-//#endif
-//}
-
-// void Mistral::DivExpression::extract_constraint(Solver *s) {
-//   std::cerr << "Error: Div predicate can't be used as a constraint" << std::endl;
-//   exit(0);
-// }
-
-// void Mistral::DivExpression::extract_variable(Solver *s) {
-//   // z = x/y
-
-//   int max_pos_x = children[0].get_max();
-//   int min_neg_x = children[0].get_min();
-
-//   int min_pos_x = children[0].get_min_pos();
-//   int max_neg_x = children[0].get_max_neg();
-
-//   int max_pos_y = children[1].get_max();
-//   int min_neg_y = children[1].get_min();
-
-//   int min_pos_y = children[1].get_min_pos();
-//   int max_neg_y = children[1].get_max_neg();
-
-//   // positive part of z's domain
-//   int nlb1, nlb2, nub1, nub2;
-
-//   nlb1 = nlb2 = INFTY; //lb_neg;
-//   nub1 = nub2 = 0; //ub_neg;
-	
-//   // it can either be the positive parts of X and Y:
-//   if(max_pos_x>0 && max_pos_y>0) {
-//     // compute the bounds
-//     //std::cout << "\t   lb = " << min_pos_x << "/" << max_pos_y << std::endl;
-//     //std::cout << "\t   ub = " << max_pos_x << "/" << min_pos_y << std::endl;
-//     // nlb1 = (int)(ceil((double)(min_pos_x)/(double)(max_pos_y)));
-//     // nub1 = (int)(floor((double)(max_pos_x)/(double)(min_pos_y)));
-//     nlb1 = min_pos_x/max_pos_y;
-//     nub1 = max_pos_x/min_pos_y;
-//   }
-
-//   // or the negative parts of X and Y:
-//   if(min_neg_x<0 && min_neg_y<0) {
-//     // compute the bounds
-//     // nlb2 = (int)(ceil((double)(max_neg_x)/(double)(min_neg_y)));
-//     // nub2 = (int)(floor((double)(min_neg_x)/(double)(max_neg_y)));
-//     nlb2 = max_neg_x/min_neg_y;
-//     nub2 = min_neg_x/max_neg_y;
-//   }
-//   if(nlb1>nlb2) nlb1 = nlb2;
-//   if(nub1<nub2) nub1 = nub2;
+Mistral::AbsExpression::AbsExpression(Variable X) 
+  : Expression(X) { }
+Mistral::AbsExpression::~AbsExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete abs expression" << std::endl;
+#endif
+}
   
-//   int lb_pos = nlb1;
-//   int ub_pos = nub1;
+void Mistral::AbsExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Abs predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
 
+void Mistral::AbsExpression::extract_variable(Solver *s) {
+  int lb = 0;
+  if(children[0].get_max() < 0) lb = -children[0].get_max();
+  if(children[0].get_min() > 0) lb =  children[0].get_min();
+
+  Variable aux(lb, std::max(children[0].get_max(), -children[0].get_min()), DYN_VAR);
+  _self = aux;
   
-//   nlb1 = nlb2 = 0; //lb_pos;
-//   nub1 = nub2 = -INFTY; //ub_pos;
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+const char* Mistral::AbsExpression::get_name() const {
+  return "abs";
+}
+
+void Mistral::AbsExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(new PredicateAbs(children)));
+}
+
+Mistral::Variable Mistral::Abs(Variable x) {
+  Variable exp(new AbsExpression(x));
+  return exp;
+}
+
+
+
+Mistral::DivExpression::DivExpression(Variable X, Variable Y) 
+  : Expression(X,Y) {
+}
+Mistral::DivExpression::~DivExpression() {
+#ifdef _DEBUG_MEMORY
+ std::cout << "c delete div expression" << std::endl;
+#endif
+}
+
+void Mistral::DivExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Div predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::DivExpression::extract_variable(Solver *s) {
+  // z = x/y
+
+  BiInterval X(children[0]);
+  BiInterval Y(children[1]);
+
+  BiInterval Z = X/Y;
+
+  Variable aux(Z.get_min(), Z.get_max(), DYN_VAR);
+  _self = aux;
+
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+const char* Mistral::DivExpression::get_name() const {
+  return "div";
+}
+
+void Mistral::DivExpression::extract_predicate(Solver *s) {
+  s->add(new PredicateDiv(children));
+}
+
+
+Mistral::QuotientExpression::QuotientExpression(Variable X, const int quo) 
+  : Expression(X) { 
+  quotient=quo; 
+}
+Mistral::QuotientExpression::~QuotientExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete quotient expression" << std::endl;
+#endif
+}
   
-//   // it can either be the negative part of X and the positive part of Y:
-//   if(min_neg_x<0 && max_pos_y>0) {
-//     // compute the bounds  
-//     // nlb1 = (int)(ceil((double)(min_neg_x)/(double)(min_pos_y)));
-//     // nub1 = (int)(floor((double)(max_neg_x)/(double)(max_pos_y)));
-//     nlb1 = min_neg_x/min_pos_y;
-//     nub1 = max_neg_x/max_pos_y;
-//   }
-//   // or the negative part of Y and the positive part of X:
-//   if(max_pos_x>0 && min_neg_y<0) {
-//     // compute the bounds
-//     // nlb2 = (int)(ceil((double)(max_pos_x)/(double)(max_neg_y)));
-//     // nub2 = (int)(floor((double)(min_pos_x)/(double)(min_neg_y)));
-//     nlb2 = max_pos_x/max_neg_y;
-//     nub2 = min_pos_x/min_neg_y;
-//   }
+void Mistral::QuotientExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Quotient predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::QuotientExpression::extract_variable(Solver *s) {
+
+  BiInterval X(children[0]);
+  BiInterval Y = X/quotient;
+
+  Variable aux(Y.get_min(), Y.get_max(), DYN_VAR);
+  _self = aux;
   
-//   if(nlb1>nlb2) nlb1 = nlb2;
-//   if(nub1<nub2) nub1 = nub2;
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
 
-//   int lb_neg = nlb1;
-//   int ub_neg = nub1;
+const char* Mistral::QuotientExpression::get_name() const {
+  return "quotient";
+}
 
-//   //std::cout << "[" << lb_neg <<".." << ub_neg << "] u [" << lb_pos << ".." << ub_pos << "]" << std::endl;
+void Mistral::QuotientExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(new PredicateDivConstant(children, quotient)));
+}
 
-//   if(lb_neg>ub_neg)
-//     lb_neg = lb_pos;
-//   else if(lb_pos>ub_pos)
-//     ub_pos = ub_neg;
+Mistral::Variable Mistral::Variable::operator/(Variable x) {
+  Variable exp(new DivExpression(*this,x));
+  return exp;
+}
 
-//   if(children[0].contain(0)) {
-//     if(lb_neg > 0) lb_neg = 0;
-//     if(ub_pos < 0) ub_pos = 0;
-//   }
-
-
-//   Variable aux(lb_neg, ub_pos, DYN_VAR);
-//   _self = aux;
-
-//   _self.initialise(s, 1);
-//   _self = _self.get_var();
-//   children.add(_self);
-// }
-
-// const char* Mistral::DivExpression::get_name() const {
-//   return "div";
-// }
-
-// void Mistral::DivExpression::extract_predicate(Solver *s) {
-//   VarArray scope;
-//   scope.add(children[1]);
-//   scope.add(children[2]);
-//   scope.add(children[0]);
-
-//   s->add(new PredicateMul(children));
-//   children[1].remove(0);
-// }
+Mistral::Variable Mistral::Variable::operator/(int k) {
+  Variable exp(new QuotientExpression(*this,k));
+  return exp;
+}
 
 
 Mistral::FactorExpression::FactorExpression(Variable X, const int fct) 
@@ -2820,6 +2967,11 @@ Mistral::Variable Mistral::Variable::operator==(const int x) {
 
 Mistral::Variable Mistral::Variable::operator!=(const int x) {
   Variable exp(new EqualExpression(*this,x,0));
+  return exp;
+}
+
+Mistral::Variable Mistral::Variable::operator!=(const int x[2]) {
+  Variable exp(new MemberExpression(*this,x[0],x[1],0));
   return exp;
 }
 
@@ -4325,32 +4477,36 @@ Mistral::Variable Mistral::Subset(Variable X, Variable Y) {
 }
 
 
-Mistral::MemberExpression::MemberExpression(Variable X, Variable Y) 
+Mistral::MemberExpression::MemberExpression(Variable X, Variable Y, const int sp) 
   : Expression(X,Y) { 
   lb = +INFTY;
   ub = -INFTY;
   size = 0;
+  spin = sp;
 }
 
-Mistral::MemberExpression::MemberExpression(Variable X, const int lo, const int up) 
+Mistral::MemberExpression::MemberExpression(Variable X, const int lo, const int up, const int sp) 
   : Expression(X) { 
   lb = lo;
   ub = up;
   size = ub-lb+1;
+  spin = sp;
 }
 
-Mistral::MemberExpression::MemberExpression(Variable X, const BitSet& s) 
+Mistral::MemberExpression::MemberExpression(Variable X, const BitSet& s, const int sp) 
   : Expression(X) {
   lb = s.min();
   ub = s.max();
   size = s.size();
+  spin = sp;
 }
 
-Mistral::MemberExpression::MemberExpression(Variable X, const Vector<int>& s) 
+Mistral::MemberExpression::MemberExpression(Variable X, const Vector<int>& s, const int sp) 
   : Expression(X) {
   lb = s.front();
   ub = s.back();
   size = s.size; 
+  spin = sp;
 }
 
 Mistral::MemberExpression::~MemberExpression() {
@@ -4361,44 +4517,76 @@ Mistral::MemberExpression::~MemberExpression() {
 
 void Mistral::MemberExpression::extract_constraint(Solver *s) { 
 
-  //unsigned int i = 0, j = 0;
-  if(children.size == 2) {
-    // set variable
-    
-    VarArray scp;
-    SetExpression *y = (SetExpression*)(children[1].expression);
-    s->add(children[1] >= 1); // at least one element in the set
-    int vali, vnxt = children[0].get_min(), idx;
-    do {
-      scp.clear();
-      vali = vnxt;
-      idx = y->get_element_index(vali);
-      if(idx>=0) {
-	Variable x(0,1);
-	scp.add(children[0]);
-	scp.add(x);
-	s->add(Constraint(new PredicateConstantEqual(scp,vali)));
+  if(spin) {
+    //unsigned int i = 0, j = 0;
+    if(children.size == 2) {
+      // set variable
+      VarArray scp;
+      SetExpression *y = (SetExpression*)(children[1].expression);
+      s->add(children[1] >= 1); // at least one element in the set
+      int vali, vnxt = children[0].get_min(), idx;
+      do {
 	scp.clear();
-	scp.add(x);
-	scp.add(y->children[idx]);
-	s->add(Constraint(new ConstraintLess(scp)));
-	//s->add((children[0] == vali) <= y->children[idx]);
-      } else {
-	children[0].remove(vali);
-
-	//s->add(children[0] != vali);
-      }
-      vnxt = children[0].next(vali);
-    } while(vali < vnxt);
-  } else if(size == (ub-lb+1)) {
-    // interval 
-    
-    if(children[0].set_min(lb) == FAIL_EVENT) { s->fail(); }
-    if(children[0].set_max(ub) == FAIL_EVENT) { s->fail(); }
+	vali = vnxt;
+	idx = y->get_element_index(vali);
+	if(idx>=0) {
+	  Variable x(0,1);
+	  scp.add(children[0]);
+	  scp.add(x);
+	  s->add(Constraint(new PredicateConstantEqual(scp,vali)));
+	  scp.clear();
+	  scp.add(x);
+	  scp.add(y->children[idx]);
+	  s->add(Constraint(new ConstraintLess(scp)));
+	  //s->add((children[0] == vali) <= y->children[idx]);
+	} else {
+	  children[0].remove(vali);
+	  
+	  //s->add(children[0] != vali);
+	}
+	vnxt = children[0].next(vali);
+      } while(vali < vnxt);
+    } else if(size == (ub-lb+1)) {
+      // interval 
+      if(children[0].set_min(lb) == FAIL_EVENT) { s->fail(); }
+      if(children[0].set_max(ub) == FAIL_EVENT) { s->fail(); }
+    } else {
+      // set
+      if(children[0].set_domain(values) == FAIL_EVENT) { s->fail(); }
+    }
   } else {
-    // set
-
-    if(children[0].set_domain(values) == FAIL_EVENT) { s->fail(); }
+    // not member
+    //unsigned int i = 0, j = 0;
+    if(children.size == 2) {
+      // set variable
+      VarArray scp;
+      SetExpression *y = (SetExpression*)(children[1].expression);
+      //s->add(children[1] >= 1); // at least one element in the set
+      int vali, vnxt = children[0].get_min(), idx;
+      do {
+	scp.clear();
+	vali = vnxt;
+	idx = y->get_element_index(vali);
+	if(idx>=0) {
+	  Variable x(0,1);
+	  scp.add(children[0]);
+	  scp.add(x);
+	  s->add(Constraint(new PredicateConstantEqual(scp,vali,0)));
+	  scp.clear();
+	  scp.add(y->children[idx]);
+	  scp.add(x);
+	  s->add(Constraint(new ConstraintLess(scp)));
+	  //s->add((children[0] == vali) <= y->children[idx]);
+	} 
+	vnxt = children[0].next(vali);
+      } while(vali < vnxt);
+    } else if(size == (ub-lb+1)) {
+      // interval 
+      if(children[0].remove_interval(lb,ub) == FAIL_EVENT) { s->fail(); }
+    } else {
+      // set
+      if(children[0].remove_set(values) == FAIL_EVENT) { s->fail(); }
+    }
   }   
 
 }

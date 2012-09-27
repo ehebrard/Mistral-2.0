@@ -323,6 +323,17 @@ public:
   virtual void run();
 };
 
+
+class DivTest : public UnitTest {
+
+public:
+  
+  DivTest();
+  ~DivTest();
+
+  virtual void run();
+};
+
 class IntersectionTest : public UnitTest {
 
 public:
@@ -970,7 +981,6 @@ public:
     if(Verbosity) cout << "Run Checker test: "; 
 
 
-
     ConChecker< PredicateLess > cc1a("<=", false,true,12345,3,20,1);
     cc1a.init();
     cc1a.run(1000);
@@ -1505,7 +1515,74 @@ public:
    ConChecker< PredicateCMod > cc19("%",true,true,12345,3,30,0,true);
     cc19.init();
     cc19.run(100);
+ 
 
+   ConChecker< PredicateAbs > cc20("abs",true,false,12345,2,100,0,true);
+    cc20.init();
+    cc20.run(100);
+  
+
+    ConChecker< PredicateDivConstant > cc21pa("/", true,true,12345,2,50,0);
+    cc21pa.init();
+    cc21pa.run(1000);
+    ((PredicateDivConstant*)(cc21pa.con1.propagator))->quotient = 2;
+    ((PredicateDivConstant*)(cc21pa.con2.propagator))->quotient = 2;
+    ((PredicateDivConstant*)(cc21pa.con3.propagator))->quotient = 2;
+
+    ConChecker< PredicateDivConstant > cc21pb("/", true,true,12345,2,50,0);
+    cc21pb.init();
+    cc21pb.run(1000);
+    ((PredicateDivConstant*)(cc21pb.con1.propagator))->quotient = 3;
+    ((PredicateDivConstant*)(cc21pb.con2.propagator))->quotient = 3;
+    ((PredicateDivConstant*)(cc21pb.con3.propagator))->quotient = 3;
+
+    ConChecker< PredicateDivConstant > cc21pc("/", true,true,12345,2,50,0);
+    cc21pc.init();
+    cc21pc.run(1000);
+    ((PredicateDivConstant*)(cc21pc.con1.propagator))->quotient = 5;
+    ((PredicateDivConstant*)(cc21pc.con2.propagator))->quotient = 5;
+    ((PredicateDivConstant*)(cc21pc.con3.propagator))->quotient = 5;
+
+    ConChecker< PredicateDivConstant > cc21pd("/", true,true,12345,2,50,0);
+    cc21pd.init();
+    cc21pd.run(1000);
+    ((PredicateDivConstant*)(cc21pd.con1.propagator))->quotient = 12;
+    ((PredicateDivConstant*)(cc21pd.con2.propagator))->quotient = 12;
+    ((PredicateDivConstant*)(cc21pd.con3.propagator))->quotient = 12;
+
+
+    ConChecker< PredicateDivConstant > cc21na("/", true,true,12345,2,50,0);
+    cc21na.init();
+    cc21na.run(1000);
+    ((PredicateDivConstant*)(cc21na.con1.propagator))->quotient = -2;
+    ((PredicateDivConstant*)(cc21na.con2.propagator))->quotient = -2;
+    ((PredicateDivConstant*)(cc21na.con3.propagator))->quotient = -2;
+
+    ConChecker< PredicateDivConstant > cc21nb("/", true,true,12345,2,50,0);
+    cc21nb.init();
+    cc21nb.run(1000);
+    ((PredicateDivConstant*)(cc21nb.con1.propagator))->quotient = -3;
+    ((PredicateDivConstant*)(cc21nb.con2.propagator))->quotient = -3;
+    ((PredicateDivConstant*)(cc21nb.con3.propagator))->quotient = -3;
+
+    ConChecker< PredicateDivConstant > cc21nc("/", true,true,12345,2,50,0);
+    cc21nc.init();
+    cc21nc.run(1000);
+    ((PredicateDivConstant*)(cc21nc.con1.propagator))->quotient = -5;
+    ((PredicateDivConstant*)(cc21nc.con2.propagator))->quotient = -5;
+    ((PredicateDivConstant*)(cc21nc.con3.propagator))->quotient = -5;
+
+    ConChecker< PredicateDivConstant > cc21nd("/", true,true,12345,2,50,0);
+    cc21nd.init();
+    cc21nd.run(1000);
+    ((PredicateDivConstant*)(cc21nd.con1.propagator))->quotient = -12;
+    ((PredicateDivConstant*)(cc21nd.con2.propagator))->quotient = -12;
+    ((PredicateDivConstant*)(cc21nd.con3.propagator))->quotient = -12;
+
+
+    ConChecker< PredicateDiv > cc22("%",true,true,12345,3,50,0,true);
+    cc22.init();
+    cc22.run(100);
 
    /*
 
@@ -1586,6 +1663,356 @@ public:
 int main(int argc, char *argv[])
 {  
 
+  // Solver s;
+
+  // Variable X(100,101);
+  // Variable Y(10,15);
+
+  // Variable Z(1120, 10000);
+
+
+
+  // std::cout << X.get_domain() << " * " 
+  // 	    << Y.get_domain() << " = "
+  // 	    << Z.get_domain() << std::endl;
+
+
+  // s.add(X*Y == Z);
+  // s.consolidate();
+
+  // s.propagate();
+
+  // std::cout << X.get_domain() << " * " 
+  // 	    << Y.get_domain() << " = "
+  // 	    << Z.get_domain() << std::endl;
+
+
+  // exit(1);
+
+  // Solver s;
+
+  // PositiveHalfDomain X(300,310);
+
+  // PositiveHalfDomain Y(1,200);
+
+  // Variable Z(26,200);
+
+  // int interval1[2] = {244, 254};
+  // s.add( Z != interval1 );
+
+  // int interval2[2] = {56, 155};
+  // s.add( Z != interval2 );
+
+
+  // int interval3[2] = {40, 53};
+  // s.add( Z != interval3 );
+
+
+
+
+
+  // int interval4[2] = {27, 28};
+  // s.add( Z != interval4 );
+
+  // int interval5[2] = {30, 31};
+  // s.add( Z != interval5 );
+
+
+  // std::cout << Z.get_domain() << std::endl;
+
+
+  // //s.add( )
+
+  
+  // Interval ZI = X/Y;
+
+  // std::cout << ZI << std::endl;
+
+
+  // ZI = X.divided_by(Y, Z);
+
+
+  // std::cout << ZI << std::endl;
+
+  
+
+  // exit(1);
+
+
+
+
+  /*
+  Solver s;
+  NegativeHalfDomain X(-310,-300);
+  NegativeHalfDomain Y(-200,-1);
+  Variable Z(-200,200);
+  int interval1[2] = {244, 254};
+  s.add( Z != interval1 );
+  int interval2[2] = {56, 155};
+  s.add( Z != interval2 );
+  int interval3[2] = {40, 53};
+  s.add( Z != interval3 );
+  int interval4[2] = {27, 28};
+  s.add( Z != interval4 );
+  int interval5[2] = {30, 31};
+  s.add( Z != interval5 );
+  int interval6[2] = {-20,26};
+  s.add( Z != interval6 );
+  int interval7[2] = {-170,-70};
+  s.add( Z != interval7 );
+  std::cout << Z.get_domain() << std::endl;
+  Interval ZI = X/Y;
+  std::cout << ZI << std::endl;
+  ZI = X.divided_by(Y, Z);
+  std::cout << ZI << std::endl;
+ 
+
+  Solver s;
+  PositiveHalfDomain X(300,310);
+  NegativeHalfDomain Y(-200,-1);
+  Variable Z(-200,200);
+  int interval1[2] = {244, 254};
+  s.add( Z != interval1 );
+  int interval2[2] = {56, 155};
+  s.add( Z != interval2 );
+  int interval3[2] = {40, 53};
+  s.add( Z != interval3 );
+  int interval4[2] = {27, 28};
+  s.add( Z != interval4 );
+  int interval5[2] = {30, 31};
+  s.add( Z != interval5 );
+  int interval6[2] = {-20,26};
+  s.add( Z != interval6 );
+  int interval7[2] = {-170,-70};
+  s.add( Z != interval7 );
+  std::cout << Z.get_domain() << std::endl;
+  Interval ZI = X/Y;
+  std::cout << ZI << std::endl;
+  ZI = X.divided_by(Y, Z);
+  std::cout << ZI << std::endl;
+
+
+  Solver s;
+  PositiveHalfDomain X(300,310);
+  PositiveHalfDomain Y(1,200);
+  Variable Z(-200,200);
+  int interval1[2] = {244, 254};
+  s.add( Z != interval1 );
+  int interval2[2] = {56, 155};
+  s.add( Z != interval2 );
+  int interval3[2] = {40, 53};
+  s.add( Z != interval3 );
+  int interval4[2] = {27, 28};
+  s.add( Z != interval4 );
+  int interval5[2] = {30, 31};
+  s.add( Z != interval5 );
+  int interval6[2] = {-20,26};
+  s.add( Z != interval6 );
+  int interval7[2] = {-170,-70};
+  s.add( Z != interval7 );
+  std::cout << Z.get_domain() << std::endl;
+  Interval ZI = X/Y;
+  std::cout << ZI << std::endl;
+  ZI = X.divided_by(Y, Z);
+  std::cout << ZI << std::endl;
+ 
+
+  Solver s;
+  NegativeHalfDomain X(-310,-300);
+  PositiveHalfDomain Y(1,200);
+  Variable Z(-200,200);
+  int interval1[2] = {244, 254};
+  s.add( Z != interval1 );
+  int interval2[2] = {56, 155};
+  s.add( Z != interval2 );
+  int interval3[2] = {40, 53};
+  s.add( Z != interval3 );
+  int interval4[2] = {27, 28};
+  s.add( Z != interval4 );
+  int interval5[2] = {30, 31};
+  s.add( Z != interval5 );
+  int interval6[2] = {-20,26};
+  s.add( Z != interval6 );
+  int interval7[2] = {-170,-70};
+  s.add( Z != interval7 );
+  std::cout << Z.get_domain() << std::endl;
+  Interval ZI = X/Y;
+  std::cout << ZI << std::endl;
+  ZI = X.divided_by(Y, Z);
+  std::cout << ZI << std::endl;
+  */
+  
+
+  /*
+  Solver s;
+  PositiveHalfDomain X(300,310);
+  PositiveHalfDomain Y(5,350);
+  Variable Z(-200,200);
+  std::cout << Z.get_domain() << std::endl;
+  Interval ZI = X/Y;
+  std::cout << ZI << std::endl;
+  ZI = X.divided_by(Y, Z);
+  std::cout << ZI << std::endl;
+
+
+  exit(1);
+  */
+
+
+  // Solver s;
+
+  // PositiveHalfDomain X(300,310);
+
+  // NegativeHalfDomain Y(-200,-1);
+
+  // Variable Z(-200,-26);
+
+  // int interval1[2] = {-254, -244};
+  // s.add( Z != interval1 );
+
+  // int interval2[2] = {-155, -56};
+  // s.add( Z != interval2 );
+
+
+  // int interval3[2] = {-53, -40};
+  // s.add( Z != interval3 );
+
+
+
+
+
+  // int interval4[2] = {-28, -27};
+  // s.add( Z != interval4 );
+
+  // int interval5[2] = {-31, -30};
+  // s.add( Z != interval5 );
+
+
+  // std::cout << Z.get_domain() << std::endl;
+
+
+  // //s.add( )
+
+  
+  // Interval ZI = X/Y;
+
+  // std::cout << ZI << std::endl;
+
+
+  // ZI = X.divided_by(Y, Z);
+
+
+  // std::cout << ZI << std::endl;
+
+  
+
+  // exit(1);
+
+
+
+
+
+
+ //  Solver s;
+
+ //  NegativeHalfDomain X(-310,-300);
+
+ //  PositiveHalfDomain Y(1,200);
+
+
+ // Variable Z(-200,-26);
+
+ //  int interval1[2] = {-254, -244};
+ //  s.add( Z != interval1 );
+
+ //  int interval2[2] = {-155, -56};
+ //  s.add( Z != interval2 );
+
+
+ //  int interval3[2] = {-53, -40};
+ //  s.add( Z != interval3 );
+
+
+
+
+
+ //  int interval4[2] = {-28, -27};
+ //  s.add( Z != interval4 );
+
+ //  int interval5[2] = {-31, -30};
+ //  s.add( Z != interval5 );
+
+
+ //  std::cout << Z.get_domain() << std::endl;
+
+
+
+ //  //s.add( )
+
+  
+ //  Interval ZI = X/Y;
+
+ //  std::cout << ZI << std::endl;
+
+
+ //  ZI = X.divided_by(Y, Z);
+
+
+ //  std::cout << ZI << std::endl;
+
+  
+
+ //  exit(1);
+
+
+
+
+
+
+ // Solver s;
+
+ //  PositiveHalfDomain X(15,16);
+
+ //  PositiveHalfDomain Y(1,15);
+
+ //  Variable Z(1,14);
+
+ //  s.add( Z <= 14 );
+
+  
+ //  Interval ZI = X/Y;
+
+ //  std::cout << ZI << std::endl;
+
+
+ //  ZI = X.divided_by(Y, Z);
+
+
+ //  std::cout << ZI << std::endl;
+
+ //  exit(1);
+
+
+
+  //std::cout << (-11 / 2) << std::endl;
+
+
+
+  // BitSet res(-10, 100, BitSet::empt);
+  // BitSet dom(-10, 100, BitSet::full);
+  // dom.remove_interval(6,25);
+  // dom.remove(-3);
+
+  // std::cout << dom << std::endl;
+
+  // dom.negate(res);
+
+  // std::cout << res << std::endl;
+
+  // exit(1);
+
+
+
   // std::cout << " 117 %  17 = " <<  117 %  17 << std::endl;
   // std::cout << "-117 %  17 = " << -117 %  17 << std::endl;
   // std::cout << "-117 % -17 = " << -117 % -17 << std::endl;
@@ -1657,11 +2084,11 @@ int main(int argc, char *argv[])
   
   
   tests.push_back(new CheckerTest());
-  
 
   tests.push_back(new LexTest());
   tests.push_back(new IntersectionTest());
   tests.push_back(new CardTest());
+  tests.push_back(new DivTest());
   tests.push_back(new MinMaxTest());
   tests.push_back(new WeightedSumTest());
   tests.push_back(new ElementTest());
@@ -1686,7 +2113,6 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomRevNumAffectations<int>());
   //tests.push_back(new ConstraintArrayTest());
   tests.push_back(new RandomIntervalTest());
-
 
 
   //tests[0]->Verbosity = HIGH;
@@ -3663,6 +4089,81 @@ void MemberTest::run2() {
     //exit(1);
   }
   if(num_solutions != 2816) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+
+DivTest::DivTest() : UnitTest() {}
+DivTest::~DivTest() {}
+
+void DivTest::run() {
+
+  if(Verbosity) cout << "Run Div test: "; 
+
+  Solver s;
+
+  Variable X(-450, 1834);
+  Variable Y(-12, 7);
+
+  Vector<int> vals;
+  vals.add(-45);
+  vals.add(-23);
+  vals.add(-5);
+  vals.add(-4);
+  vals.add(-2);
+  vals.add(0);
+  vals.add(3);
+  vals.add(4);
+  vals.add(6);
+  vals.add(12);
+  vals.add(20);
+
+
+  Variable Z(vals);
+
+  s.add(X/Y == Z);
+
+  s.rewrite();
+  s.consolidate();
+
+  //std::cout << s << std::endl;
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    Solution sol(s.variables);
+    ++num_solutions;
+    
+    int x = X.get_solution_int_value();
+    int y = Y.get_solution_int_value();
+    int z = Z.get_solution_int_value();
+
+    /*
+    std::cout <<  x
+	      << "/" << y 
+	      << "=" << z
+	      << std::endl;
+    */
+
+    if(x/y != z) {
+      std::cout << "error!" << std::endl;
+      exit(1);
+    }
+  }
+
+  if(s.statistics.num_backtracks != 1473) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 1253) {
     cout << "Error: wrong number of solutions! (" 
 	 << (num_solutions) << ")" << endl;
     //exit(1);

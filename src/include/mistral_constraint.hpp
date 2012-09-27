@@ -2394,6 +2394,50 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
   /**********************************************
+   * NotAnd Constraint
+   **********************************************/
+  /*! \class ConstraintNotAnd
+    \brief  Conjunction (x0 and x1)
+  */
+  class ConstraintNotAnd : public BinaryConstraint
+  {
+
+  public:
+    /**@name Constructors*/
+    //@{
+    ConstraintNotAnd() : BinaryConstraint() {}
+    ConstraintNotAnd(Vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    ConstraintNotAnd(Variable x, Variable y) 
+      : BinaryConstraint(x,y) {}
+    ConstraintNotAnd(std::vector< Variable >& scp) 
+      : BinaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new ConstraintNotAnd(scope[0], scope[1])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintNotAnd() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const { 
+      return(sol[0] && sol[1]); 
+    }
+    virtual PropagationOutcome propagate();
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "!and"; }
+    //@}
+  };
+
+
+  /**********************************************
    * Or Predicate
    **********************************************/
   /*! \class PredicateOr
@@ -2682,6 +2726,58 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
   /**********************************************
+   * Abs Predicate
+   **********************************************/
+  /*! \class PredicateAbs
+    \brief  Truth value of a conjunction (!x0 <-> y)
+  */
+  class PredicateAbs : public BinaryConstraint
+  {
+
+  public:
+
+    /**@name Parameters*/
+    //@{  
+    BitSet buffer;
+    //@}
+
+
+    /**@name Constructors*/
+    //@{
+    PredicateAbs() : BinaryConstraint() {}
+    PredicateAbs(Vector< Variable >& scp) 
+      : BinaryConstraint(scp) { }
+    PredicateAbs(Variable x, Variable y) 
+      : BinaryConstraint(x,y) { }
+    PredicateAbs(std::vector< Variable >& scp) 
+      : BinaryConstraint(scp) { }
+    virtual Constraint clone() { return Constraint(new PredicateAbs(scope[0], scope[1])); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual ~PredicateAbs() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    PropagationOutcome propagate_change_on_X( const Event evt );
+    PropagationOutcome propagate_change_on_absX( const Event evt );
+    virtual int check( const int* sol ) const { 
+      return(std::abs(sol[0]) != sol[1]);
+    }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "abs"; }
+    //@}
+  };
+
+
+  /**********************************************
    * Modulo Predicate
    **********************************************/
   /*! \class PredicateMod
@@ -2866,6 +2962,101 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "%k"; }
     //@}
+  };
+
+
+
+  /**********************************************
+   * Quotient Predicate
+   **********************************************/
+  /*! \class PredicateMod
+    \brief  Binary Quotient predicate (x0 % x1 = y)
+  */
+  class PredicateDivConstant : public BinaryConstraint
+  {
+
+  public:
+   /**@name Parameters*/
+    //@{  
+    int quotient;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateDivConstant() : BinaryConstraint() {}
+    PredicateDivConstant(Vector< Variable >& scp, const int q=2) 
+      : BinaryConstraint(scp) { quotient=q; }
+    PredicateDivConstant(Variable x, Variable y, const int q=2) 
+      : BinaryConstraint(x,y) { quotient=q; }
+    PredicateDivConstant(std::vector< Variable >& scp, const int q=2) 
+      : BinaryConstraint(scp) { quotient=q; }
+    virtual Constraint clone() { return Constraint(new PredicateDivConstant(scope[0], scope[1], quotient)); }
+    virtual void initialise();
+    virtual int idempotent() { return 0;}
+    virtual ~PredicateDivConstant() {}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    PropagationOutcome filter();
+    virtual int check( const int* sol ) const { 
+      //return((sol[0] % quotient) != sol[1]);
+      return((sol[0] / quotient) != sol[1]);
+    }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "%k"; }
+    //@}
+  };
+
+
+
+  /**********************************************
+   * Division Predicate
+   **********************************************/
+  /*! \class PredicateDiv
+    \brief  Binary Division predicate (x0 / x1 = x2)
+  */
+  class PredicateDiv : public TernaryConstraint
+  {
+
+ public:
+    /**@name Constructors*/
+    //@{
+    PredicateDiv() : TernaryConstraint() {}
+    PredicateDiv(Variable x, Variable y, Variable z)
+      : TernaryConstraint(x, y, z) {}
+    PredicateDiv(Vector< Variable >& scp)
+      : TernaryConstraint(scp) {}
+    PredicateDiv(std::vector< Variable >& scp)
+      : TernaryConstraint(scp) {}
+    virtual Constraint clone() { return Constraint(new PredicateDiv(scope[0], scope[1], scope[2])); }
+    virtual void initialise();
+    virtual int idempotent() { return 0; }
+    virtual ~PredicateDiv() {}
+    //@}
+    
+    /**@name Solving*/
+    //@{
+    PropagationOutcome filter();
+    virtual int check( const int* sol ) const { return (!sol[1] || sol[2] != (sol[0] / sol[1])); }
+    virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+    
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "%="; }
+    //@}
+
   };
 
 

@@ -2759,10 +2759,128 @@ std::ostream& Mistral::PredicateFactor::display(std::ostream& os) const {
 }
 
 
+
+void Mistral::PredicateAbs::initialise() {
+  ConstraintImplementation::initialise();
+  trigger_on(_DOMAIN_, scope[0]);
+  trigger_on(_DOMAIN_, scope[1]);
+
+  int lb = -scope[1].get_max();
+  if(lb < scope[0].get_min())
+    lb = scope[0].get_min();
+  int ub = scope[1].get_max();
+  if(ub > scope[0].get_max())
+    ub = scope[0].get_max();
+  
+  buffer.initialise(lb, ub, BitSet::empt);
+}
+
+Mistral::PropagationOutcome Mistral::PredicateAbs::propagate_change_on_X(const Event evt) {
+  //if(DOMAIN_CHANGED(evt))
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+#ifdef _DEBUG_ABS
+  if(_DEBUG_ABS) {
+    std::cout << "*abs(" << scope[0].get_domain() << ") = " << scope[1].get_domain() << std::endl;
+  }
+#endif
+
+  if(scope[0].is_range()) {
+    int lb = 0;
+    if(scope[0].get_max() < 0) lb = -scope[0].get_max();
+    if(scope[0].get_min() > 0) lb =  scope[0].get_min();
+
+    if(IS_FAIL(scope[1].set_domain(
+				   lb,
+				   std::max(
+					    scope[0].get_max(),
+					    -scope[0].get_min())
+				   ))) wiped = FAILURE(1);
+  } else {
+    scope[0].put_negation_in(buffer);
+    scope[0].union_to(buffer);
+    
+    if(IS_FAIL(scope[1].set_domain(buffer))) wiped = FAILURE(1);
+  }
+
+#ifdef _DEBUG_ABS
+  if(_DEBUG_ABS) {
+    std::cout << "*abs(" << scope[0].get_domain() << ") = " << scope[1].get_domain() << std::endl << std::endl;
+  }
+#endif
+  
+  return wiped;
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateAbs::propagate_change_on_absX(const Event evt) {
+  //if(DOMAIN_CHANGED(evt))
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+#ifdef _DEBUG_ABS
+  if(_DEBUG_ABS) {
+    std::cout << "abs(" << scope[0].get_domain() << ") = *" << scope[1].get_domain() << std::endl;
+  }
+#endif
+
+
+  if(scope[1].is_range()) {
+    if(IS_FAIL(scope[0].set_domain(-scope[1].get_max(), scope[1].get_max()))) wiped = FAILURE(0);
+    else {
+      
+      // std::cout << "scope[1].get_min() > 0 : " << (scope[1].get_min() > 0) << std::endl;
+      // std::cout << "[" << (1-scope[1].get_min()) << "," << (scope[1].get_min()-1) << "]\n";
+
+      if(scope[1].get_min() > 0 && IS_FAIL(scope[0].remove_interval(1-scope[1].get_min(), scope[1].get_min()-1))) wiped = FAILURE(0);
+
+    }
+  } else {
+    scope[1].put_negation_in(buffer);
+    scope[1].union_to(buffer);
+    
+    if(IS_FAIL(scope[0].set_domain(buffer))) wiped = FAILURE(0);
+  }
+
+
+#ifdef _DEBUG_ABS
+  if(_DEBUG_ABS) {
+    std::cout << "abs(" << scope[0].get_domain() << ") = *" << scope[1].get_domain() << std::endl << std::endl;
+  }
+#endif
+
+  
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateAbs::propagate() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  wiped = propagate_change_on_X( LB_EVENT|UB_EVENT );
+  if(IS_OK(wiped)) wiped = propagate_change_on_absX( LB_EVENT|UB_EVENT );
+
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateAbs::propagate(const int changed_idx, const Event evt) {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  if(changed_idx) wiped = propagate_change_on_absX( evt );
+  else wiped = propagate_change_on_X( evt );
+  
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateAbs::display(std::ostream& os) const {
+  os << scope[1]/*.get_var()*/ << " == abs(" << scope[0]/*.get_var()*/ << ")";
+  return os;
+}
+
+
 void Mistral::PredicateNot::initialise() {
   ConstraintImplementation::initialise();
   trigger_on(_VALUE_, scope[0]);
   trigger_on(_VALUE_, scope[1]);
+
 }
 
 
@@ -3154,6 +3272,40 @@ Mistral::PropagationOutcome Mistral::ConstraintAnd::propagate(const int changed_
 
 std::ostream& Mistral::ConstraintAnd::display(std::ostream& os) const {
   os << "(" << scope[0]/*.get_var()*/ << " and " << scope[1]/*.get_var()*/ << ")";
+  return os;
+}
+
+
+void Mistral::ConstraintNotAnd::initialise() {
+  ConstraintImplementation::initialise();
+  
+  trigger_on(_DOMAIN_, scope[0]);
+  trigger_on(_DOMAIN_, scope[1]);
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintNotAnd::propagate() {   
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  if( scope[1].get_min() ){
+    if( IS_FAIL(scope[0].remove(1)) ) wiped = FAILURE(0);
+  } else if( scope[0].get_min() ) {
+    if( IS_FAIL(scope[1].remove(1)) ) wiped = FAILURE(1);
+  }
+  
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintNotAnd::propagate(const int changed_idx, 
+							      const Event evt) {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+  if(LB_CHANGED(evt) && IS_FAIL(scope[1-changed_idx].remove(1))) wiped = FAILURE(1-changed_idx);
+  
+  return wiped;
+}
+
+std::ostream& Mistral::ConstraintNotAnd::display(std::ostream& os) const {
+  os << "not(" << scope[0]/*.get_var()*/ << " and " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
 
@@ -3814,6 +3966,7 @@ std::ostream& Mistral::PredicateAdd::display(std::ostream& os) const {
 //     value = b - mod + d;
 //   return value;
 // }
+
 
 void Mistral::PredicateModConstant::initialise() {
   ConstraintImplementation::initialise();
@@ -5322,6 +5475,200 @@ std::ostream& Mistral::PredicateCMod::display(std::ostream& os) const {
   os << scope[2]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " % " << scope[1]/*.get_var()*/ << ")";
   return os;
 }
+
+
+void Mistral::PredicateDiv::initialise() {
+  ConstraintImplementation::initialise();
+
+  trigger_on(_RANGE_, scope[0]);
+  trigger_on(_RANGE_, scope[1]);
+  trigger_on(_RANGE_, scope[2]);
+}
+
+// Mistral::PropagationOutcome Mistral::PredicateDiv::rewrite() {
+//    Mistral::PropagationOutcome wiped = propagate();
+
+
+
+//   // VarArray tmp;
+//   // if(active == 3) {
+//   //   ConstraintImplementation *con;
+//   //   int i=0;
+//   //   for(; i<2; ++i)
+//   //     if(scope[i].is_ground()) {
+//   // 	relax();
+//   // 	tmp.add(scope[1-i]);
+//   // 	tmp.add(scope[2]);
+//   // 	if(scope[i].get_min() == 0) {
+//   // 	  con = new ConstraintEqual(tmp);
+//   // 	} else {
+//   // 	  con = new PredicateOffset(tmp, scope[i].get_min());
+//   // 	}
+//   // 	get_solver()->add(Constraint(con, con->type));
+//   //     }
+//   // }
+//   return wiped;
+// }
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::propagate() { 
+  if(IS_FAIL(scope[1].remove(0))) return FAILURE(1);
+  return filter();
+}
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::filter() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+
+#ifdef _DEBUG_DIV
+  if(_DEBUG_DIV) {
+    std::cout << on[0] << std::endl
+	      << on[1] << std::endl
+	      << on[2] << std::endl
+	      << scope[0].get_domain() << " / " 
+	      << scope[1].get_domain() << " = " 
+	      << scope[2].get_domain() << std::endl;
+  std::cout << "filter Z = X/Y" << std::endl;
+ }
+#endif
+
+  BiInterval X(scope[0]);
+  BiInterval Y(scope[1]);
+  BiInterval Z = X.divided_by(Y, scope[2]);
+  if(IS_FAIL(scope[2].set_domain(Z))) wiped = FAILURE(2);
+
+  
+  if(IS_OK(wiped)) {
+
+#ifdef _DEBUG_DIV
+  if(_DEBUG_DIV) {
+    std::cout << "filter X = Z*Y" << std::endl;
+  }
+#endif
+
+    Z = BiInterval(scope[2]);
+    X = Z.anti_div_X(Y);
+    if(IS_FAIL(scope[0].set_domain(X))) wiped = FAILURE(0);
+
+    if(IS_OK(wiped)) {
+
+
+      X = BiInterval(scope[0]);
+
+#ifdef _DEBUG_DIV
+  if(_DEBUG_DIV) {
+      std::cout << "X = " << scope[0].get_domain() << std::endl;
+      std::cout << "filter Y = X/Z" << std::endl;
+      std::cout << "filter " << scope[1].get_domain() << " = " << X << "/" << Z << std::endl;
+  }
+#endif
+
+      Y = Z.anti_div_Y(X);
+      //Y = X.anti_mul(Z);
+      if(IS_FAIL(scope[1].set_domain(Y))) wiped = FAILURE(1);
+
+    }
+  }
+
+
+
+#ifdef _DEBUG_DIV
+  if(_DEBUG_DIV) {
+    std::cout << on[0] << std::endl
+	      << on[1] << std::endl
+	      << on[2] << std::endl
+	      << scope[0].get_domain() << " / " 
+	      << scope[1].get_domain() << " = " 
+	      << scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
+  }
+#endif
+  
+
+  //std::cout << " vvv" << std::endl;
+
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateDiv::propagate(const int changed_idx, 
+							     const Event evt) {    
+
+ return filter();
+}
+
+std::ostream& Mistral::PredicateDiv::display(std::ostream& os) const {
+  os << scope[2]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " / " << scope[1]/*.get_var()*/ << ")";
+  return os;
+}
+
+
+
+void Mistral::PredicateDivConstant::initialise() {
+  ConstraintImplementation::initialise();
+  trigger_on(_RANGE_, scope[0]);
+  trigger_on(_RANGE_, scope[1]);
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateDivConstant::filter() {      
+  Mistral::PropagationOutcome wiped = CONSISTENT;
+
+#ifdef _DEBUG_DIV
+  if(_DEBUG_DIV) {
+    std::cout << scope[0] << " / " 
+	      << quotient << " = " 
+	      << scope[1] << std::endl; 
+    std::cout << scope[0].get_domain() << " / " 
+	      << quotient << " = " 
+	      << scope[1].get_domain() << std::endl 
+	      << on[0] << std::endl
+	      << on[1] << std::endl;
+  }
+#endif
+
+  BiInterval X(scope[0]);
+
+  BiInterval Y = X/quotient;
+  
+
+  if(IS_FAIL(scope[1].set_domain(Y))) wiped = FAILURE(1);
+
+  
+  if(IS_OK(wiped)) {
+
+    Y = BiInterval(scope[1]);
+
+    X = Y.anti_div_X(quotient);
+
+    if(IS_FAIL(scope[0].set_domain(X))) wiped = FAILURE(0);
+
+  }
+
+
+#ifdef _DEBUG_DIV
+  if(_DEBUG_DIV) {
+    std::cout << on[0] << std::endl
+	      << on[1] << std::endl
+	      << scope[0].get_domain() << " / " 
+	      << quotient << " = " 
+	      << scope[1].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
+  }
+#endif
+  
+  return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateDivConstant::propagate() {      
+  return filter();
+}
+
+Mistral::PropagationOutcome Mistral::PredicateDivConstant::propagate(const int changed_idx, const Event evt) {
+  return filter();
+}
+
+std::ostream& Mistral::PredicateDivConstant::display(std::ostream& os) const {
+  os << scope[1]/*.get_var()*/ << " == (" << scope[0]/*.get_var()*/ << " / " << quotient << ")";
+  return os;
+}
+
 
 
 void Mistral::PredicateMul::initialise() {

@@ -22,10 +22,15 @@
 #include <math.h>
 
 #include <mistral_structure.hpp>
+#include <mistral_variable.hpp>
 #include <mistral_global.hpp>
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Interval& x) {
+  return x.display(os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::BiInterval& x) {
   return x.display(os);
 }
 
@@ -480,6 +485,19 @@ std::ostream& Mistral::Interval::display(std::ostream& os) const {
   return os;
 }
 
+std::ostream& Mistral::BiInterval::display(std::ostream& os) const {
+
+  if(!negative.empty()) 
+    os << negative;
+  if(zero)
+    os << "[0]";
+  if(!positive.empty()) 
+    os << positive;
+
+  return os;
+}
+
+
 void Mistral::Interval::operator+=(const int x) {
   min += x;
   max += x;
@@ -575,47 +593,605 @@ Mistral::NegativeHalfDomain::NegativeHalfDomain(const int _min, const int _max) 
 Mistral::NegativeHalfDomain::~NegativeHalfDomain() {}
 
 // the interval I such that this*arg = I
-Mistral::Interval Mistral::NegativeHalfDomain::operator*(Mistral::PositiveHalfDomain arg) {
+Mistral::Interval Mistral::NegativeHalfDomain::operator*(const Mistral::PositiveHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(min*arg.max, max*arg.min);
 }
-Mistral::Interval Mistral::NegativeHalfDomain::operator*(Mistral::NegativeHalfDomain arg) {
+Mistral::Interval Mistral::NegativeHalfDomain::operator*(const Mistral::NegativeHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(max*arg.max, min*arg.min);
 }
+Mistral::Interval Mistral::NegativeHalfDomain::operator*(const int arg) {
+  Interval I;
+  if(!empty()) {
+    if(arg < 0)
+      I = Interval(max*arg, min*arg);
+    else
+      I = Interval(min*arg, max*arg); 
+  }
+  return I;
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_X(const Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty() || (!arg.min && !arg.max)) return Interval();
+  //(let arg be a positive int)
+  // what interval, divided by arg will give this
+
+  // the interval must be negative
+  // the minimum value that is in [this] (i.e., >= min) when divided by arg is min*arg+arg-1
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is max*arg;
+  return Interval(min*arg.max-arg.max+1, max*arg.min);
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_X(const Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty() || (!arg.min && !arg.max)) return Interval();
+  //(let arg be a negative int)
+  // what interval, divided by arg will give this
+  
+  // the interval must be positive
+  // the minimum value that is in [this] (i.e., <= max) when divided by arg is max*arg;
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is min*arg+arg+1;
+  return Interval(max*arg.max, min*arg.min-arg.min-1);
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_X_pos(const int arg) {
+  if(empty() || !arg) return Interval();
+  //(let arg be a positive int)
+  // what interval, divided by arg will give this
+
+  // the interval must be negative
+  // the minimum value that is in [this] (i.e., >= min) when divided by arg is min*arg+arg-1
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is max*arg;
+  return Interval(min*arg-arg+1, max*arg);
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_X_neg(const int arg) {
+  if(empty() || !arg) return Interval();
+  //(let arg be a negative int)
+  // what interval, divided by arg will give this
+  
+  // the interval must be positive
+  // the minimum value that is in [this] (i.e., <= max) when divided by arg is max*arg;
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is min*arg+arg+1;
+  return Interval(max*arg, min*arg-arg-1);
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_Y(const Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+
+  int ub = arg.min/(min-1)-1;
+  int lb = arg.max/max;
+
+  return Interval(lb,ub);
+  //return Interval((int)(ceil((double)(arg.max)/(double)(max))), (int)(ceil((double)(arg.min)/(double)(min))));
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_Y(const Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+
+  int lb = arg.max/(min-1)+1;
+  int ub = arg.min/max;
+
+  return Interval(lb,ub);
+  //return Interval((int)(floor((double)(arg.max)/(double)(min))), (int)(floor((double)(arg.min)/(double)(max))));
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_Y_pos(const int arg) {
+  if(empty()) return Interval();
+  return Interval((int)(floor((double)(arg)/(double)(max))), (int)(ceil((double)(arg)/(double)(min))));
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::anti_div_Y_neg(const int arg) {
+  if(empty()) return Interval();
+  return Interval((int)(floor((double)(arg)/(double)(min))), (int)(ceil((double)(arg)/(double)(max))));
+}
+
 
 // the interval I such that this*I = arg
-Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(Mistral::PositiveHalfDomain arg) {
+Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(const Mistral::PositiveHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
-  return Interval((int)(ceil((double)min/(double)(arg.min))), (int)(floor((double)max/(double)(arg.max))));
+  return Interval((int)(ceil((double)min/(double)(arg.min))), (int)(floor((double)(max)/(double)(arg.max))));
 }
-Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(Mistral::NegativeHalfDomain arg) {
+Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(const Mistral::NegativeHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
-  return Interval((int)(ceil((double)max/(double)(arg.min))), (int)(floor((double)min/(double)(arg.max))));
+  return Interval((int)(ceil((double)max/(double)(arg.min))), (int)(floor((double)(min)/(double)(arg.max))));
+}
+Mistral::Interval Mistral::NegativeHalfDomain::anti_mul(const int arg) {
+  Interval I;
+  if(!empty() || !arg) {
+    if(arg<0)
+      I = Interval((int)(ceil((double)max/(double)(arg))), (int)(floor((double)min/(double)(arg))));
+    else
+      I = Interval((int)(ceil((double)min/(double)(arg))), (int)(floor((double)max/(double)(arg))));
+  }
+  return I;
 }
 
 // the interval I such that this/arg = I
-Mistral::Interval Mistral::NegativeHalfDomain::operator/(Mistral::PositiveHalfDomain arg) {
+Mistral::Interval Mistral::NegativeHalfDomain::operator/(const Mistral::PositiveHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
 
   //std::cout << min << "/" << arg.min << " , " << max << "/" << arg.max << std::endl;
 
   return Interval(min/arg.min, max/arg.max);
 }
-Mistral::Interval Mistral::NegativeHalfDomain::operator/(Mistral::NegativeHalfDomain arg) {
+Mistral::Interval Mistral::NegativeHalfDomain::operator/(const Mistral::NegativeHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(max/arg.min, min/arg.max);
 }
+Mistral::Interval Mistral::NegativeHalfDomain::operator/(const int arg) {
+  Interval I;
+  if(!empty() || !arg) {
+    if(arg<0)
+      I = Interval(max/arg, min/arg);
+    else
+      I = Interval(min/arg, max/arg);
+  }
+  return I;
+}
+
+Mistral::Interval Mistral::NegativeHalfDomain::divided_by(const Mistral::NegativeHalfDomain Y,
+							  const Mistral::Variable target) {
+
+  if(empty() || Y.empty() || target.get_max()<0) return Interval();
+
+  PositiveHalfDomain X(-max, -min);
+  PositiveHalfDomain Yb(-(Y.max), -(Y.min));
+  return X.divided_by(Yb, target);
+
+//   // an upper bound z \in Z is reachable when dividing X by Y iff
+//   // there exists a value x \in X and y \in Y such that int(x/y) = z
+//   // to check that, we look at the interval [min(x)/z, max(x)/z], if it contain an integer value, then this is y.
+//   // otherwise, we need to look for the next higher y, in order to give the highest possible value smaller than z.
+//   // i.e., we consider y = int((max(x)/z)+1), hence the candidate value for z is int(max(x) / y) = int(max(x) / int((max(x)/z)+1))
+//   // we set z to the highest value in Z such that z <= int(max(x) / int((max(x)/z)+1)) and repeat the process until
+//   // we have found a reachable upper or non exists
+
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "compute the division of X = " << (*this) << " by Y = " << Y << " targeting Z = " << target.get_domain() << std::endl;
+//   std::cout << " -> compute the upper bound of Z\n"; 
+// #endif
+
+//   int lbX = min;
+//   int ubX = max;
+  
+//   int lbY = Y.min;
+//   int ubY = Y.max;
+
+//   // we work only on the positive side of Z
+//   int lbTarget = target.get_min();
+//   if(lbTarget < 0) lbTarget = 0;
+
+//   int ubTarget = target.get_max();
+
+//   int lb_z = lbTarget;
+//   int ub_z = ubTarget;
+  
+//   int curY = ubY;
+//   Interval reachable(ubX/curY, lbX/curY);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "   -> the currently valid upper bound of Z is " << ubTarget << "\n"; 
+//   std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by max(Y) = " << curY << std::endl;
+// #endif
+
+//   if(lbX/(curY+1) >= (lbX/curY)-1) {
+//     reachable.min = lbX/ubY;
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+//   }
+  
+//   while(!reachable.contain(ubTarget)) {
+//     // we do not reach Z's ub with the interval reachable when dividing by Y's lb
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "    -> however, it does not overlap with ub(Z) = " << ubTarget << std::endl;
+// #endif
+//     if(reachable.min > ubTarget) {
+    
+
+//       int y_lb = (int)ceil((double)(min) / (double)(ubTarget));
+//       int y_ub = (int)floor((double)(max) / (double)(ubTarget));
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is above target, we compute the interval on y that allow to reach " << ubTarget 
+// 		<< ": [" << ((double)(min) / (double)(ubTarget)) << "," << ((double)(max) / (double)(ubTarget)) << "]" << std::endl;
+// #endif
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_lb 
+// 		  << "), so " << ubTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+// 	curY = y_lb;
+// 	reachable = Interval(lbX/curY, ubX/curY);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval does not contain an integer, so we jump to the next available: " << y_lb 
+// 		  << " and recompute the reachable interval: " << reachable << std::endl;
+// #endif
+// 	if(ubX/(curY+1) >= (lbX/curY)-1) {
+// 	  reachable.min = lbX/ubY;
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+// 	}
+//       }
+//     }
+
+//     if(reachable.max < ubTarget) {
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is below target, so we decrease the target: " ;//<< std::endl;
+// #endif
+//       // we are below the target, so we jump to the next target
+//       if(reachable.max >= lb_z) {
+//   	ubTarget = target.prev(reachable.max+1);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << ubTarget << " is the new target\n";
+// #endif
+//       } else {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << " no more possibilities, we fail\n";
+// #endif
+//   	ubTarget = reachable.max;
+//   	break;
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "end loop on " << reachable << " => use " << ubTarget << " as new ub for Z" << std::endl;
+// #endif
+
+//   //ub_z = ubTarget;
+
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << " -> compute the lower bound of Z\n"; 
+// #endif
+
+//   //lbX = min;
+//   //ubX = max;
+  
+//   //lbY = Y.min;
+//   //ubY = Y.max;
+
+//   //lbTarget = target.get_min();
+//   ub_z = target.get_max();
+  
+//   curY = ubY;
+//   reachable = Interval(lbX/curY, ubX/curY);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "   -> the currently valid lower bound of Z is " << lbTarget << "\n"; 
+//   std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by max(Y) = " << curY << std::endl;
+// #endif
+
+// //   if(ubX/(curY+1) >= (lbX/curY)-1) {
+// //     reachable.min = lbX/ubY;
+// // #ifdef _DEBUG_INTERVAL_DIV
+// //     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// // #endif
+// //   }
+  
+//   while(!reachable.contain(lbTarget)) {
+//     // we do not reach Z's lb with the interval reachable when dividing by Y's ub
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "    -> however, it does not overlap with lb(Z) = " << lbTarget << std::endl;
+// #endif
+//     if(reachable.min < lbTarget) {
+    
+//       int y_lb = (int)ceil((double)(min) / (double)(lbTarget));
+//       int y_ub = (int)floor((double)(max) / (double)(lbTarget));
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is below target, we compute the interval on y that allow to reach " << lbTarget 
+// 		<< ": [" << ((double)(min) / (double)(lbTarget)) << "," << ((double)(max) / (double)(lbTarget)) << "]" << std::endl;
+// #endif
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_ub 
+// 		  << "), so " << lbTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+// 	curY = y_ub;
+// 	reachable = Interval(lbX/curY, ubX/curY);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval does not contain an integer, so we jump to the next available: " << y_ub 
+// 		  << " and recompute the reachable interval: " << reachable << std::endl;
+// #endif
+// // 	if(ubX/(curY+1) >= (lbX/curY)-1) {
+// // 	  reachable.min = lbX/ubY;
+// // #ifdef _DEBUG_INTERVAL_DIV
+// // 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// // #endif
+// // 	}
+//       }
+//     }
+
+//     if(reachable.max > lbTarget) {
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is above target, so we increase the target: " ;//<< std::endl;
+// #endif
+//       // we are below the target, so we jump to the next target
+//       if(reachable.min <= ub_z) {
+//   	lbTarget = target.next(reachable.min-1);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << lbTarget << " is the new target\n";
+// #endif
+//       } else {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << " no more possibilities, we fail\n";
+// #endif
+//   	lbTarget = reachable.min;
+//   	break;
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "end loop on " << reachable << " => use " << lbTarget << " as new lb for Z" << std::endl;
+// #endif
+
+
+//   Interval I(lbTarget, ubTarget);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << " => return " << I << std::endl;
+// #endif
+
+//   //exit(1);
+
+
+//   return I;
+}
+
+
+int get_next_higher_abs(const Mistral::Variable X, const int val, bool pos=true) {
+  if(pos) {
+    return X.next(val);
+  } 
+  return -(X.prev(-val));
+}
+
+int get_next_lower_abs(const Mistral::Variable X, const int val, bool pos=true) {
+  if(pos) {
+    return X.prev(val);
+  } 
+  return -(X.next(-val));
+}
+
+
+Mistral::Interval Mistral::NegativeHalfDomain::divided_by(const Mistral::PositiveHalfDomain Y,
+							  const Mistral::Variable target) {
+  if(empty() || Y.empty() || target.get_min()>0 ) return Interval();
+
+
+  PositiveHalfDomain X(-max, -min);
+  //PositiveHalfDomain Yb(-(Y.max), -(Y.min));
+  //PositiveHalfDomain X = -(*this);
+  return -(X.divided_by(Y, target, false));
+
+
+//   // an upper bound z \in Z is reachable when dividing X by Y iff
+//   // there exists a value x \in X and y \in Y such that int(x/y) = z
+//   // to check that, we look at the interval [min(x)/z, max(x)/z], if it contain an integer value, then this is y.
+//   // otherwise, we need to look for the next higher y, in order to give the highest possible value smaller than z.
+//   // i.e., we consider y = int((max(x)/z)+1), hence the candidate value for z is int(max(x) / y) = int(max(x) / int((max(x)/z)+1))
+//   // we set z to the highest value in Z such that z <= int(max(x) / int((max(x)/z)+1)) and repeat the process until
+//   // we have found a reachable upper or non exists
+
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "compute the division of X = " << (*this) << " by Y = " << Y << " targeting Z = " << target.get_domain() << std::endl;
+//   std::cout << " -> compute the lower bound of Z\n"; 
+// #endif
+
+//   int lbX = min;
+//   int ubX = max;
+  
+//   int lbY = Y.min;
+//   int ubY = Y.max;
+
+//   int lbTarget = target.get_min();
+
+//   // we work only on the positive side of Z
+//   int ubTarget = target.get_max();
+//   if(ubTarget > 0) ubTarget = 0;
+
+//   int lb_z = lbTarget;
+//   int ub_z = ubTarget;
+  
+//   int curY = ubY;
+//   Interval reachable(ubX/curY, lbX/curY);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "   -> the currently valid lower bound of Z is " << lbTarget << "\n"; 
+//   std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by max(Y) = " << curY << std::endl;
+// #endif
+
+//   if(ubX/(curY-1) <= (lbX/curY)+1) {
+//     reachable.max = lbX/lbY;
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+//   }
+  
+//   while(!reachable.contain(lbTarget)) {
+//     // we do not reach Z's lb with the interval reachable when dividing by Y's lb
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "    -> however, it does not overlap with ub(Z) = " << ubTarget << std::endl;
+// #endif
+//     if(reachable.max < lbTarget) {
+    
+
+//       int y_lb = (int)ceil((double)(max) / (double)(lbTarget));
+//       int y_ub = (int)floor((double)(min) / (double)(lbTarget));
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is below target, we compute the interval on y that allow to reach " << lbTarget 
+// 		<< ": [" << ((double)(max) / (double)(lbTarget)) << "," << ((double)(min) / (double)(lbTarget)) << "]" << std::endl;
+// #endif
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_ub 
+// 		  << "), so " << lbTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+// 	curY = y_ub;
+// 	reachable = Interval(ubX/curY, lbX/curY);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval does not contain an integer, so we jump to the next available: " << y_ub 
+// 		  << " and recompute the reachable interval: " << reachable << std::endl;
+// #endif
+// 	if(ubX/(curY-1) <= (lbX/curY)+1) {
+// 	  reachable.max = lbX/lbY;
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+// 	}
+//       }
+//     }
+
+//     if(reachable.min > lbTarget) {
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is above target, so we increase the target: " ;//<< std::endl;
+// #endif
+//       // we are below the target, so we jump to the next target
+//       if(reachable.min <= ub_z) {
+//   	lbTarget = target.next(reachable.min-1);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << lbTarget << " is the new target\n";
+// #endif
+//       } else {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << " no more possibilities, we fail\n";
+// #endif
+//   	lbTarget = reachable.min;
+//   	break;
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "end loop on " << reachable << " => use " << lbTarget << " as new lb for Z" << std::endl;
+// #endif
+
+//   //ub_z = ubTarget;
+
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << " -> compute the upper bound of Z\n"; 
+// #endif
+
+//   //lbX = min;
+//   //ubX = max;
+  
+//   //lbY = Y.min;
+//   //ubY = Y.max;
+
+//   //lbTarget = target.get_min();
+//   lb_z = target.get_min();
+  
+//   curY = lbY;
+//   reachable = Interval(ubX/curY, lbX/curY);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "   -> the currently valid upper bound of Z is " << ubTarget << "\n"; 
+//   std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by min(Y) = " << curY << std::endl;
+// #endif
+
+// //   if(ubX/(curY+1) >= (lbX/curY)-1) {
+// //     reachable.min = lbX/ubY;
+// // #ifdef _DEBUG_INTERVAL_DIV
+// //     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// // #endif
+// //   }
+  
+//   while(!reachable.contain(ubTarget)) {
+//     // we do not reach Z's ub with the interval reachable when dividing by Y's lb
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "    -> however, it does not overlap with ub(Z) = " << ubTarget << std::endl;
+// #endif
+//     if(reachable.min > ubTarget) {
+    
+//       int y_lb = (int)ceil((double)(max) / (double)(ubTarget));
+//       int y_ub = (int)floor((double)(min) / (double)(ubTarget));
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is above target, we compute the interval on y that allow to reach " << ubTarget 
+// 		<< ": [" << ((double)(max) / (double)(ubTarget)) << "," << ((double)(min) / (double)(ubTarget)) << "]" << std::endl;
+// #endif
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_lb 
+// 		  << "), so " << ubTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+// 	curY = y_lb;
+// 	reachable = Interval(ubX/curY, lbX/curY);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval does not contain an integer, so we jump to the next available: " << y_lb 
+// 		  << " and recompute the reachable interval: " << reachable << std::endl;
+// #endif
+// // 	if(ubX/(curY+1) >= (lbX/curY)-1) {
+// // 	  reachable.min = lbX/ubY;
+// // #ifdef _DEBUG_INTERVAL_DIV
+// // 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// // #endif
+// // 	}
+//       }
+//     }
+
+//     if(reachable.max < ubTarget) {
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is below target, so we decrease the target: " ;//<< std::endl;
+// #endif
+//       // we are below the target, so we jump to the next target
+//       if(reachable.max >= lb_z) {
+//   	ubTarget = target.prev(reachable.max+1);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << ubTarget << " is the new target\n";
+// #endif
+//       } else {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << " no more possibilities, we fail\n";
+// #endif
+//   	ubTarget = reachable.max;
+//   	break;
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "end loop on " << reachable << " => use " << ubTarget << " as new ub for Z" << std::endl;
+// #endif
+
+
+//   Interval I(lbTarget, ubTarget);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << " => return " << I << std::endl;
+// #endif
+
+//   //exit(1);
+
+
+//   return I;
+}
+
+
+
 
 // the interval I such that I/arg = this
-//Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(Mistral::PositiveHalfDomain arg);
-//Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(Mistral::NegativeHalfDomain arg);
+//Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(const Mistral::PositiveHalfDomain arg);
+//Mistral::Interval Mistral::NegativeHalfDomain::get_dividand(const Mistral::NegativeHalfDomain arg);
 ///----> this->operator*(arg) <----///
 
 
 // the interval I such that arg/I = this
-//Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(Mistral::PositiveHalfDomain arg);
-//Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(Mistral::NegativeHalfDomain arg);
+//Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(const Mistral::PositiveHalfDomain arg);
+//Mistral::Interval Mistral::NegativeHalfDomain::get_divisor(const Mistral::NegativeHalfDomain arg);
 ///----> arg->operator/(this) <----///
 
 // // the interval I such that this%mod = I
@@ -645,41 +1221,638 @@ Mistral::PositiveHalfDomain::PositiveHalfDomain() : Interval(INFTY, -INFTY) {}
 Mistral::PositiveHalfDomain::PositiveHalfDomain(const int _min, const int _max) : Interval(_min, _max) {}
 Mistral::PositiveHalfDomain::~PositiveHalfDomain() {}
 
-Mistral::Interval Mistral::PositiveHalfDomain::operator*(Mistral::PositiveHalfDomain arg) {
+Mistral::Interval Mistral::PositiveHalfDomain::operator*(const Mistral::PositiveHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(min*arg.min, max*arg.max);
 }
-Mistral::Interval Mistral::PositiveHalfDomain::operator*(Mistral::NegativeHalfDomain arg) {
+Mistral::Interval Mistral::PositiveHalfDomain::operator*(const Mistral::NegativeHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(max*arg.min, min*arg.max);
 }
+Mistral::Interval Mistral::PositiveHalfDomain::operator*(const int arg) {
+  Interval I;
+  if(!empty()) {
+    if(arg < 0)
+      I = Interval(max*arg, min*arg);
+    else
+      I = Interval(min*arg, max*arg);
+  }
+  return I;
+}
 
-Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(Mistral::PositiveHalfDomain arg) {
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_X(const Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty() || (!arg.min && !arg.max)) return Interval();
+  //(let arg be a positive int)
+  // what interval, divided by arg will give this
+  
+  // the interval must be positive
+  // the minimum value that is in [this] (i.e., >= min) when divided by arg is min*arg
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is max*arg+arg-1;
+  return Interval(min*arg.min, max*arg.max+arg.max-1);
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_X(const Mistral::NegativeHalfDomain arg) {
+  if(empty() || arg.empty() || (!arg.min && !arg.max)) return Interval();
+  //(let arg be a negative int)
+  // what interval, divided by arg will give this
+  
+  // the interval must be negative
+  // the minimum value that is in [this] (i.e., <= max) when divided by arg is max*arg+arg+1
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is min*arg;
+  return Interval(max*arg.min+arg.min+1, min*arg.max);
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_X_pos(const int arg) {
+  if(empty() || !arg) return Interval();
+  //(let arg be a positive int)
+  // what interval, divided by arg will give this
+  
+  // the interval must be positive
+  // the minimum value that is in [this] (i.e., >= min) when divided by arg is min*arg
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is max*arg+arg-1;
+  return Interval(min*arg, max*arg+arg-1);
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_X_neg(const int arg) {
+  if(empty() || !arg) return Interval();
+  //(let arg be a negative int)
+  // what interval, divided by arg will give this
+  
+  // the interval must be negative
+  // the minimum value that is in [this] (i.e., <= max) when divided by arg is max*arg+arg+1
+  // the maximum value that is in [this] (i.e., <= max) when divided by arg is min*arg;
+  return Interval(max*arg+arg+1, min*arg);
+}
+
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_Y(const Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
+  
+  int lb = arg.min/(max+1)+1;
+  int ub = arg.max/min;
+
+  return Interval(lb,ub);
+
+  //return Interval((int)(floor((double)arg.min/(double)(max))), (int)(floor((double)arg.max/(double)(min))));
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_Y(const Mistral::NegativeHalfDomain arg) {
+  // std::cout << arg << " // ?  = " << (*this) << std::endl;  
+  // std::cout << (empty()) << "|" << (arg.empty()) << std::endl;
   if(empty() || arg.empty()) return Interval();
 
-  // std::cout << "[" << (double)min/(double)(arg.max) << "," << (double)max/(double)(arg.min) << "] => ["
-  // 	    << (int)(ceil((double)min/(double)(arg.max))) << "," << (int)(floor((double)max/(double)(arg.min))) << "]\n";
+  int ub = arg.max/(max+1)-1;
+  int lb = arg.min/min;
 
+  return Interval(lb,ub);
+  //  return Interval((int)(ceil((double)arg.min/(double)(min))), (int)(ceil((double)arg.max/(double)(max))));
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_Y_pos(const int arg) {
+  if(empty()) return Interval();
+  return Interval((int)(floor((double)arg/(double)(max))), (int)(ceil((double)arg/(double)(min))));
+}
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_div_Y_neg(const int arg) {
+  if(empty()) return Interval();
+  return Interval((int)(floor((double)arg/(double)(min))), (int)(ceil((double)arg/(double)(max))));
+}
+
+
+Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(const Mistral::PositiveHalfDomain arg) {
+  if(empty() || arg.empty()) return Interval();
   return Interval((int)(ceil((double)min/(double)(arg.max))), (int)(floor((double)max/(double)(arg.min))));
 }
-Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(Mistral::NegativeHalfDomain arg) {
+Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(const Mistral::NegativeHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
-
   return Interval((int)(ceil((double)max/(double)(arg.max))), (int)(floor((double)min/(double)(arg.min))));
 }
+Mistral::Interval Mistral::PositiveHalfDomain::anti_mul(const int arg) {
+  Interval I;
+  if(!empty() || !arg) {
+    if(arg<0)
+      I = Interval((int)(ceil((double)max/(double)(arg))), (int)(floor((double)min/(double)(arg))));
+    else
+      I = Interval((int)(ceil((double)min/(double)(arg))), (int)(floor((double)max/(double)(arg))));
+  }
+  return I;
+}
 
-Mistral::Interval Mistral::PositiveHalfDomain::operator/(Mistral::PositiveHalfDomain arg) {
+Mistral::Interval Mistral::PositiveHalfDomain::operator/(const Mistral::PositiveHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(min/arg.max, max/arg.min);
 }
 
-Mistral::Interval Mistral::PositiveHalfDomain::operator/(Mistral::NegativeHalfDomain arg) {
+Mistral::Interval Mistral::PositiveHalfDomain::operator/(const Mistral::NegativeHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
   return Interval(max/arg.max, min/arg.min);
 }
 
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_div(Mistral::PositiveHalfDomain arg);
-// Mistral::Interval Mistral::PositiveHalfDomain::anti_div(Mistral::NegativeHalfDomain arg);
+Mistral::Interval Mistral::PositiveHalfDomain::divided_by(const Mistral::PositiveHalfDomain Y,
+							  const Mistral::Variable target,
+							  const bool pos) {
+  if(empty() || Y.empty() 
+     || (pos && target.get_max()<0)
+     || (!pos && target.get_min()>0))  return Interval();
+
+  // an upper bound z \in Z is reachable when dividing X by Y iff
+  // there exists a value x \in X and y \in Y such that int(x/y) = z
+  // to check that, we look at the interval [min(x)/z, max(x)/z], if it contain an integer value, then this is y.
+  // otherwise, we need to look for the next higher y, in order to give the highest possible value smaller than z.
+  // i.e., we consider y = int((max(x)/z)+1), hence the candidate value for z is int(max(x) / y) = int(max(x) / int((max(x)/z)+1))
+  // we set z to the highest value in Z such that z <= int(max(x) / int((max(x)/z)+1)) and repeat the process until
+  // we have found a reachable upper or non exists
+
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << "compute the division of X = " << (*this) << " by Y = " << Y << " targeting Z = " << target.get_domain() << std::endl;
+  std::cout << " -> compute the upper bound of Z\n"; 
+#endif
+
+  int lbX = min;
+  int ubX = max;
+  
+  int lbY = Y.min;
+  int ubY = Y.max;
+
+  // we work only on the positive side of Z
+  int lbTarget = (pos ? target.get_min() : -(target.get_max()));
+  if(lbTarget < 0) lbTarget = 0;
+
+  int ubTarget = (pos ? target.get_max() : -(target.get_min()));
+
+  int lb_z = lbTarget;
+  int ub_z = ubTarget;
+  
+  int curY = lbY;
+  Interval reachable(lbX/curY, ubX/curY);
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << "   -> the currently valid upper bound of Z is " << ubTarget << "\n"; 
+  std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by min(Y) = " << curY << std::endl;
+#endif
+
+  if(ubX/(curY+1) >= (lbX/curY)-1) {
+    reachable.min = lbX/ubY;
+#ifdef _DEBUG_INTERVAL_DIV
+    std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+#endif
+  }
+  
+  while(!reachable.contain(ubTarget)) {
+    // we do not reach Z's ub with the interval reachable when dividing by Y's lb
+#ifdef _DEBUG_INTERVAL_DIV
+    std::cout << "    -> however, it does not overlap with ub(Z) = " << ubTarget << std::endl;
+#endif
+
+    if(reachable.min > ubTarget) {
+
+      
+      // int y_lb = (int)ceil((double)(min) / (double)(ubTarget));
+      // int y_ub = (int)floor((double)(max) / (double)(ubTarget));
+      int y_lb = (ubTarget ? min / ubTarget : min+1);
+      int y_ub = (ubTarget ? max / ubTarget : INFTY);
+#ifdef _DEBUG_INTERVAL_DIV
+      std::cout << "    -> it is above target, we compute the interval on y that allow to reach " << ubTarget 
+	//<< ": [" << ((double)(min) / (double)(ubTarget)) << "," << ((double)(max) / (double)(ubTarget)) << "]" << std::endl;
+		<< ": [" << y_lb << "," << y_ub << "]" << std::endl
+		<< "       then maps it back to Z: [ " << (y_lb ? max/y_lb : INFTY) << "," << (y_ub ? min/y_ub : INFTY) << "]" << std::endl; 
+
+
+#endif
+      if((!y_lb || (max/y_lb >= ubTarget)) 
+	 && y_ub && ubTarget >= min/y_ub) {
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << "    -> this interval contains " << ubTarget 
+		  << " so it is consistent, END\n";
+#endif
+	break;
+      } else {
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_lb 
+// 		  << "), so " << ubTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+	curY = y_ub+1;
+
+	if(curY > ubY) {
+	  ubTarget = -INFTY;
+	  break;
+	}
+
+	
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << "    -> this interval does not contain " << ubTarget << ", so we jump to the next available: " << curY << std::endl;
+#endif
+	reachable = Interval(lbX/curY, ubX/curY);
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << "       and recompute the reachable interval: " << reachable << std::endl;
+#endif
+	if(ubX/(curY+1) >= (lbX/curY)-1) {
+	  reachable.min = lbX/ubY;
+#ifdef _DEBUG_INTERVAL_DIV
+	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+#endif
+	}
+      }
+    }
+
+    if(reachable.max < ubTarget) {
+#ifdef _DEBUG_INTERVAL_DIV
+      std::cout << "    -> it is below target, so we decrease the target: " ;//<< std::endl;
+#endif
+      // we are below the target, so we jump to the next target
+      if(reachable.max >= lb_z) {
+  	//ubTarget = target.prev(reachable.max+1);
+	ubTarget = get_next_lower_abs(target, reachable.max+1, pos);
+	if(ubTarget < 0) break;
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << ubTarget << " is the new target\n";
+#endif
+      } else {
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << " no more possibilities, we fail\n";
+#endif
+  	ubTarget = reachable.max;
+  	break;
+      }
+    }
+  }
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << "end loop on " << reachable << " => use " << ubTarget << " as new ub for Z" << std::endl;
+#endif
+
+  //ub_z = ubTarget;
+
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << " -> compute the lower bound of Z\n"; 
+#endif
+
+  //lbX = min;
+  //ubX = max;
+  
+  //lbY = Y.min;
+  //ubY = Y.max;
+
+  //lbTarget = target.get_min();
+  //ub_z = target.get_max();
+  
+  curY = ubY;
+  reachable = Interval(lbX/curY, ubX/curY);
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << "   -> the currently valid lower bound of Z is " << lbTarget << "\n"; 
+  std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by max(Y) = " << curY << std::endl;
+#endif
+
+//   if(ubX/(curY+1) >= (lbX/curY)-1) {
+//     reachable.min = lbX/ubY;
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+//   }
+  
+  while(!reachable.contain(lbTarget)) {
+    // we do not reach Z's lb with the interval reachable when dividing by Y's ub
+#ifdef _DEBUG_INTERVAL_DIV
+    std::cout << "    -> however, it does not overlap with lb(Z) = " << lbTarget << std::endl;
+#endif
+    if(reachable.min < lbTarget) {
+    
+      // int y_lb = (int)ceil((double)(min) / (double)(lbTarget));
+      // int y_ub = (int)floor((double)(max) / (double)(lbTarget));
+      int y_lb = min / lbTarget;
+      int y_ub = max / lbTarget;
+#ifdef _DEBUG_INTERVAL_DIV
+      std::cout << "    -> it is below target, we compute the interval on y that allow to reach " << lbTarget 
+	//<< ": [" << ((double)(min) / (double)(lbTarget)) << "," << ((double)(max) / (double)(lbTarget)) << "]" << std::endl;
+		<< ": [" << y_lb << "," << y_ub << "]" << std::endl
+		<< "       then maps it back to Z: [ " << (y_lb ? max/y_lb : INFTY) << "," << (y_ub ? min/y_ub : INFTY) << "]" << std::endl; 
+
+#endif
+      if((!y_lb || (max/y_lb >= lbTarget)) && 
+	 y_ub && lbTarget >= min/y_ub) {
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << "    -> this interval contains " << lbTarget
+		  << ", so it is consistent, END\n";
+#endif
+	break;
+      } else {
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_ub 
+// 		  << "), so " << lbTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+	curY = y_lb;
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << "    -> this interval does not contain " << lbTarget << ", so we jump to the next available: " << curY << std::endl; 
+#endif
+
+	if(curY < lbY) {
+	  lbTarget = INFTY;
+	  break;
+	}
+	reachable = Interval(lbX/curY, ubX/curY);
+
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << "       and recompute the reachable interval: " << reachable << std::endl;
+#endif
+// 	if(ubX/(curY+1) >= (lbX/curY)-1) {
+// 	  reachable.min = lbX/ubY;
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+// 	}
+      }
+    }
+
+    if(reachable.max > lbTarget) {
+#ifdef _DEBUG_INTERVAL_DIV
+      std::cout << "    -> it is above target, so we increase the target: " ;//<< std::endl;
+#endif
+      // we are below the target, so we jump to the next target
+      if(reachable.min <= ub_z) {
+  	//lbTarget = target.next(reachable.min-1);
+	lbTarget = get_next_higher_abs(target, reachable.min-1, pos);
+
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << lbTarget << " is the new target\n";
+#endif
+      } else {
+#ifdef _DEBUG_INTERVAL_DIV
+	std::cout << " no more possibilities, we fail\n";
+#endif
+  	lbTarget = reachable.min;
+  	break;
+      }
+    }
+  }
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << "end loop on " << reachable << " => use " << lbTarget << " as new lb for Z" << std::endl;
+#endif
+
+
+  Interval I(lbTarget, ubTarget);
+
+#ifdef _DEBUG_INTERVAL_DIV
+  std::cout << " => return " << I << std::endl;
+#endif
+
+  //exit(1);
+
+
+  return I;
+}
+
+
+
+
+Mistral::Interval Mistral::PositiveHalfDomain::divided_by(const Mistral::NegativeHalfDomain Y,
+							  const Mistral::Variable target) {
+  if(empty() || Y.empty() || target.get_min()>0 ) return Interval();
+
+  //PositiveHalfDomain X(-max, -min);
+  PositiveHalfDomain Yb(-(Y.max), -(Y.min));
+  //PositiveHalfDomain Yb = -Y;
+  return -(divided_by(Yb, target, false));
+
+
+//   // an upper bound z \in Z is reachable when dividing X by Y iff
+//   // there exists a value x \in X and y \in Y such that int(x/y) = z
+//   // to check that, we look at the interval [min(x)/z, max(x)/z], if it contain an integer value, then this is y.
+//   // otherwise, we need to look for the next higher y, in order to give the highest possible value smaller than z.
+//   // i.e., we consider y = int((max(x)/z)+1), hence the candidate value for z is int(max(x) / y) = int(max(x) / int((max(x)/z)+1))
+//   // we set z to the highest value in Z such that z <= int(max(x) / int((max(x)/z)+1)) and repeat the process until
+//   // we have found a reachable upper or non exists
+
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "compute the division of X = " << (*this) << " by Y = " << Y << " targeting Z = " << target.get_domain() << std::endl;
+//   std::cout << " -> compute the lower bound of Z\n"; 
+// #endif
+
+//   int lbX = min;
+//   int ubX = max;
+  
+//   int lbY = Y.min;
+//   int ubY = Y.max;
+
+//   int lbTarget = target.get_min();
+
+//   // we work only on the positive side of Z
+//   int ubTarget = target.get_max();
+//   if(ubTarget > 0) ubTarget = 0;
+
+//   int lb_z = lbTarget;
+//   int ub_z = ubTarget;
+  
+//   int curY = ubY;
+//   Interval reachable(ubX/curY, lbX/curY);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "   -> the currently valid lower bound of Z is " << lbTarget << "\n"; 
+//   std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by max(Y) = " << curY << std::endl;
+// #endif
+
+//   if(ubX/(curY-1) <= (lbX/curY)+1) {
+//     reachable.max = lbX/lbY;
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+//   }
+  
+//   while(!reachable.contain(lbTarget)) {
+//     // we do not reach Z's lb with the interval reachable when dividing by Y's lb
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "    -> however, it does not overlap with ub(Z) = " << ubTarget << std::endl;
+// #endif
+//     if(reachable.max < lbTarget) {
+    
+
+//       int y_lb = (int)ceil((double)(max) / (double)(lbTarget));
+//       int y_ub = (int)floor((double)(min) / (double)(lbTarget));
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is below target, we compute the interval on y that allow to reach " << lbTarget 
+// 		<< ": [" << ((double)(max) / (double)(lbTarget)) << "," << ((double)(min) / (double)(lbTarget)) << "]" << std::endl;
+// #endif
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_ub 
+// 		  << "), so " << lbTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+// 	curY = y_ub;
+// 	reachable = Interval(ubX/curY, lbX/curY);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval does not contain an integer, so we jump to the next available: " << y_ub 
+// 		  << " and recompute the reachable interval: " << reachable << std::endl;
+// #endif
+// 	if(ubX/(curY-1) <= (lbX/curY)+1) {
+// 	  reachable.max = lbX/lbY;
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// #endif
+// 	}
+//       }
+//     }
+
+//     if(reachable.min > lbTarget) {
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is above target, so we increase the target: " ;//<< std::endl;
+// #endif
+//       // we are below the target, so we jump to the next target
+//       if(reachable.min <= ub_z) {
+//   	lbTarget = target.next(reachable.min-1);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << lbTarget << " is the new target\n";
+// #endif
+//       } else {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << " no more possibilities, we fail\n";
+// #endif
+//   	lbTarget = reachable.min;
+//   	break;
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "end loop on " << reachable << " => use " << lbTarget << " as new lb for Z" << std::endl;
+// #endif
+
+//   //ub_z = ubTarget;
+
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << " -> compute the upper bound of Z\n"; 
+// #endif
+
+//   //lbX = min;
+//   //ubX = max;
+  
+//   //lbY = Y.min;
+//   //ubY = Y.max;
+
+//   //lbTarget = target.get_min();
+//   lb_z = target.get_min();
+  
+//   curY = lbY;
+//   reachable = Interval(ubX/curY, lbX/curY);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "   -> the currently valid upper bound of Z is " << ubTarget << "\n"; 
+//   std::cout << "   -> the interval " << reachable <<  " can be obtained when divinding X = " << (*this) << " by min(Y) = " << curY << std::endl;
+// #endif
+
+// //   if(ubX/(curY+1) >= (lbX/curY)-1) {
+// //     reachable.min = lbX/ubY;
+// // #ifdef _DEBUG_INTERVAL_DIV
+// //     std::cout << "  -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// // #endif
+// //   }
+  
+//   while(!reachable.contain(ubTarget)) {
+//     // we do not reach Z's ub with the interval reachable when dividing by Y's lb
+// #ifdef _DEBUG_INTERVAL_DIV
+//     std::cout << "    -> however, it does not overlap with ub(Z) = " << ubTarget << std::endl;
+// #endif
+//     if(reachable.min > ubTarget) {
+    
+//       int y_lb = (int)ceil((double)(max) / (double)(ubTarget));
+//       int y_ub = (int)floor((double)(min) / (double)(ubTarget));
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is above target, we compute the interval on y that allow to reach " << ubTarget 
+// 		<< ": [" << ((double)(max) / (double)(ubTarget)) << "," << ((double)(min) / (double)(ubTarget)) << "]" << std::endl;
+// #endif
+//       if(y_lb <= y_ub) {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval contains an integer (" << y_lb 
+// 		  << "), so " << ubTarget << " is consistent, END\n";
+// #endif
+// 	break;
+//       } else {
+// 	curY = y_lb;
+// 	reachable = Interval(ubX/curY, lbX/curY);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << "    -> this interval does not contain an integer, so we jump to the next available: " << y_lb 
+// 		  << " and recompute the reachable interval: " << reachable << std::endl;
+// #endif
+// // 	if(ubX/(curY+1) >= (lbX/curY)-1) {
+// // 	  reachable.min = lbX/ubY;
+// // #ifdef _DEBUG_INTERVAL_DIV
+// // 	  std::cout << "    -> however, from now on, the intervals are contiguous, so we go directly to the end: " << reachable << std::endl;
+// // #endif
+// // 	}
+//       }
+//     }
+
+//     if(reachable.max < ubTarget) {
+// #ifdef _DEBUG_INTERVAL_DIV
+//       std::cout << "    -> it is below target, so we decrease the target: " ;//<< std::endl;
+// #endif
+//       // we are below the target, so we jump to the next target
+//       if(reachable.max >= lb_z) {
+//   	//ubTarget = target.prev(reachable.max+1);
+// 	ubTarget = get_next_lower_abs(target, reachable.max+1, pos);
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << ubTarget << " is the new target\n";
+// #endif
+//       } else {
+// #ifdef _DEBUG_INTERVAL_DIV
+// 	std::cout << " no more possibilities, we fail\n";
+// #endif
+//   	ubTarget = reachable.max;
+//   	break;
+//       }
+//     }
+//   }
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << "end loop on " << reachable << " => use " << ubTarget << " as new ub for Z" << std::endl;
+// #endif
+
+
+//   Interval I(lbTarget, ubTarget);
+
+// #ifdef _DEBUG_INTERVAL_DIV
+//   std::cout << " => return " << I << std::endl;
+// #endif
+
+//   //exit(1);
+
+
+//   return I;
+}
+
+
+
+// Mistral::Interval Mistral::PositiveHalfDomain::operator/(const Mistral::NegativeHalfDomain arg,
+// 							 const Mistral::NegativeHalfDomain target) {
+//   if(empty() || arg.empty()) return Interval();
+//   return Interval(max/arg.max, min/arg.min);
+// }
+Mistral::Interval Mistral::PositiveHalfDomain::operator/(const int arg) {
+  Interval I;
+  if(!empty() || !arg) {
+    if(arg<0)
+      I = Interval(max/arg, min/arg);
+    else
+      I = Interval(min/arg, max/arg);
+  }
+  return I;
+}
+
+// Mistral::Interval Mistral::PositiveHalfDomain::anti_div_X(const Mistral::PositiveHalfDomain arg);
+// Mistral::Interval Mistral::PositiveHalfDomain::anti_div_X(const Mistral::NegativeHalfDomain arg);
 
 // Mistral::Interval Mistral::PositiveHalfDomain::operator%(const int mod) {
 //   // the value of the modulo increase with higher values, unless 
@@ -726,6 +1899,19 @@ Mistral::BiInterval::BiInterval(const Interval _neg, const Interval _pos, const 
 
   zero = (z || _pos.contain(0) || _neg.contain(0));
 }
+Mistral::BiInterval::BiInterval(const Interval _neg, const Interval _pos, const Interval z) {
+  positive.min = _pos.min;
+  positive.max = _pos.max;
+  if(1 > positive.min || z.contain(1)) positive.min =  1;
+  if(z.max > positive.max) positive.max = z.max;
+  
+  negative.min = _neg.min;
+  negative.max = _neg.max;
+  if(negative.max > -1 || z.contain(-1)) negative.max = -1;
+  if(z.min < negative.min) negative.min = z.min;
+
+  zero = (z.contain(0) || _pos.contain(0) || _neg.contain(0));
+}
 Mistral::BiInterval::BiInterval(const Interval I) {
   initialise(I.min, I.max);  
 }
@@ -766,14 +1952,368 @@ Mistral::BiInterval::BiInterval() {
   positive.min = +INFTY;
   positive.max = -INFTY;
   
-  positive.min = +INFTY;
-  positive.max = -INFTY;
+  negative.min = +INFTY;
+  negative.max = -INFTY;
   
   zero = false;
 }
+Mistral::BiInterval::BiInterval(const Variable x) {
+
+  // std::cout << "build a bi-interval from " << x << " in " << x.get_domain() << std::endl;
+  // std::cout << x.get_max_neg() << ".." << x.get_min_pos() << std::endl;
+
+  positive.min = x.get_min_pos();
+  positive.max = x.get_max();
+  
+  negative.min = x.get_min();
+  negative.max = x.get_max_neg();
+  
+  zero = x.contain(0);
+}
 Mistral::BiInterval::~BiInterval() {}
+
+
+int Mistral::BiInterval::get_min() const {
+  int the_min = 0;
+  if(negative.empty()) {
+    if(!zero) the_min = positive.min;
+  } else {
+    the_min = negative.min;
+  }
+  return the_min;
+}
+
+int Mistral::BiInterval::get_max() const {
+  int the_max = 0;
+  if(positive.empty()) {
+    if(!zero) the_max = negative.max;
+  } else {
+    the_max = positive.max;
+  }
+  return the_max;
+}
+
+int Mistral::BiInterval::get_min_abs() const {
+  int the_min = 0;
+  if(!zero) {
+    if(negative.empty()) the_min = positive.min;
+    else if(positive.empty()) the_min = -(negative.max);
+    else the_min = std::min(positive.min, -(negative.max));
+  } 
+  return the_min;
+}
+int Mistral::BiInterval::get_max_abs() const {
+  int the_max = 0;
+ 
+  if(negative.empty()) {
+    if(!positive.empty()) the_max = positive.max;
+  } else if(positive.empty()) the_max = -(negative.min);
+  else the_max = std::max(positive.max, -(negative.min));
+  
+  return the_max;
+}
+
+int Mistral::BiInterval::is_hollow() const {
+  return (!positive.empty() &&
+	  !negative.empty() &&
+	  (!zero || negative.max < -1 || positive.min > 1));
+}
+
     
-Mistral::BiInterval Mistral::BiInterval::operator*(Mistral::BiInterval arg) {
+Mistral::BiInterval Mistral::BiInterval::operator*(const int arg) {
+  // Interval pos = (arg<0 ? negative : positive) * arg;
+  // Interval neg = (arg<0 ? positive : negative) * arg;
+  Interval pos, neg;
+  if(arg < 0) {
+    pos = negative*arg;
+    neg = positive*arg;
+  } else {
+    neg = negative*arg;
+    pos = positive*arg;
+  }
+
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+  display(std::cout) ;
+  std::cout << " * " << arg << " = ";
+  }
+#endif
+
+  BiInterval I(neg, pos, zero || !arg);
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+  I.display(std::cout);
+  std::cout << std::endl << neg << std::endl << pos << std::endl;
+  }
+#endif
+
+  return I;
+}
+
+
+Mistral::BiInterval Mistral::BiInterval::anti_div_X(const int arg) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+  std::cout << "compute anti div : [min?,max?] / " << arg << " = ";
+  display(std::cout);
+  std::cout << std::endl;
+  }
+#endif 
+
+  BiInterval I;
+
+  if(arg) {
+
+    Interval pos, neg, z;
+    
+    if(arg > 0) {
+      pos = positive.anti_div_X_pos(arg);
+      neg = negative.anti_div_X_pos(arg);
+    } else {
+      neg = positive.anti_div_X_neg(arg);
+      pos = negative.anti_div_X_neg(arg);
+    }
+
+    if(zero) {
+      if(arg<0)
+	z = Interval(1+arg, -arg-1);
+      else
+	z = Interval(1-arg,  arg-1);
+    }
+
+   
+    I = BiInterval(neg, pos, z);
+
+  }
+
+  return I;
+}
+
+
+// X / Y = Z
+// X = Z * Y
+Mistral::BiInterval Mistral::BiInterval::anti_div_X(const Mistral::BiInterval arg) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+  std::cout << "compute anti div : [min?,max?] / " << arg << " = ";
+  display(std::cout);
+  std::cout << std::endl;
+  }
+#endif 
+
+  BiInterval I;
+
+  Interval pospos = positive.anti_div_X(arg.positive);
+
+  //std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
+
+  Interval posneg = positive.anti_div_X(arg.negative);
+
+  //std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+
+  Interval negpos = negative.anti_div_X(arg.positive);
+
+  //std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+
+  Interval negneg = negative.anti_div_X(arg.negative);
+
+  //std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
+
+  Interval z;
+
+  if(zero) {
+    int amin = -arg.get_min();
+    int amax =  arg.get_max();
+    int maxabs = std::max(amin, amax);
+    z = Interval(1-maxabs, maxabs-1);
+  }
+
+  //std::cout << "zero: [" << negpos.min << "," << negpos.max << "]\n";
+  
+  I = BiInterval(negpos.get_union(posneg), pospos.get_union(negneg), z);
+ 
+  //std::cout << " ==> " << I << std::endl << std::endl;
+  
+  return I;
+}
+
+
+// X/Y = Z
+// Y = X/Z
+Mistral::BiInterval Mistral::BiInterval::anti_div_Y(const int arg) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "compute anti div : " << arg << " / [min?,max?] = ";
+  display(std::cout);
+  std::cout << std::endl;
+  }
+#endif 
+
+  BiInterval I(-INFTY, INFTY);
+
+  if(arg) {
+
+    Interval pos, neg, zpos, zneg;
+    
+    if(zero) {
+      if(arg<0) {
+	zpos = Interval(arg+1, INFTY);
+	zneg = Interval(-INFTY, -arg-1);
+      } else {
+	zpos = Interval(-arg+1, INFTY);
+	zneg = Interval(-INFTY, arg-1);
+      }
+    }
+
+    if(arg > 0) {
+      pos = positive.anti_div_Y_pos(arg);
+      neg = negative.anti_div_Y_pos(arg);
+    } else {
+      neg = positive.anti_div_Y_neg(arg);
+      pos = negative.anti_div_Y_neg(arg);
+    }
+   
+    I = BiInterval(neg.get_union(zneg), pos.get_union(zpos), false);
+
+  }
+
+  return I;
+}
+
+Mistral::BiInterval Mistral::BiInterval::anti_div_Y(const Mistral::BiInterval arg) {
+
+#ifdef _DEBUG_INTERVALS
+  if(_DEBUG_INTERVALS) {
+    std::cout << "compute anti div : " << arg << " / [min?,max?] = ";
+  display(std::cout);
+  std::cout << std::endl;
+  }
+#endif 
+
+  BiInterval I(-INFTY, INFTY);
+  Interval pos, neg, zpos, zneg;
+
+  if(!(arg==0)) {
+
+    Interval pospos = positive.anti_div_Y(arg.positive);
+    
+    //std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
+    
+    Interval posneg = positive.anti_div_Y(arg.negative);
+    
+    //std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+    
+    Interval negpos = negative.anti_div_Y(arg.positive);
+    
+    //std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+    
+    Interval negneg = negative.anti_div_Y(arg.negative);
+    
+    //std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
+    
+    Interval z;
+    
+    if(zero) {
+      
+      // int amin = 
+      // int amax = arg.get_max_abs();
+      int minabs = arg.get_min_abs(); //std::min(amin, amax);
+      
+      zpos = Interval(minabs+1, INFTY); 
+      zneg = Interval(-INFTY, -minabs-1);
+      
+    }
+    
+    //std::cout << "zero: " << zneg << " u " << zpos << "\n";
+    
+
+    Interval K0 = negpos.get_union(posneg);
+
+    //Interval K1 = negpos.get_union(posneg).get_union(zneg);
+    Interval K1 = K0.get_union(zneg);
+
+    Interval K2 = pospos.get_union(negneg).get_union(zpos);
+
+    //std::cout << K0 << std::endl;
+    
+    //std::cout << K1 << std::endl;
+
+
+    I = BiInterval(K1, K2, false);
+   
+  }
+
+  //std::cout << " ==> " << I << std::endl << std::endl;
+
+  return I;
+}
+
+Mistral::BiInterval Mistral::BiInterval::divided_by(const BiInterval arg, const Variable target) {
+  BiInterval I;
+  if(!(arg == 0)){
+    if(*this == 0) {
+      I = 0;
+    } else { 
+    
+      Interval pospos = positive.divided_by(arg.positive, target);
+      
+      //  std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
+      
+      Interval negneg = negative.divided_by(arg.negative, target);
+      
+      //  std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
+      
+      
+      Interval posneg = positive.divided_by(arg.negative, target);
+      
+      //  std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+      
+      Interval negpos = negative.divided_by(arg.positive, target);
+      
+      //  std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+      
+      
+      // if this can be 0, then I can be 0
+      I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), zero);
+    }
+  }
+
+  //std::cout << " ==> " << I << std::endl << std::endl;
+
+  return I;
+}
+
+Mistral::BiInterval Mistral::BiInterval::operator/(const int arg) {
+  Interval pos;
+  Interval neg;
+
+  // display(std::cout) ;
+  // std::cout << " / " << arg << " = ";
+
+  if(arg > 0) {
+    pos = positive / arg;
+    neg = negative / arg;
+  } else if(arg < 0) {
+    neg = positive / arg;
+    pos = negative / arg;
+  }
+
+  BiInterval I(neg, pos, zero);
+
+  // I.display(std::cout);
+  // std::cout << std::endl << neg << std::endl << pos << std::endl;
+
+  return I;
+}
+
+
+
+Mistral::BiInterval Mistral::BiInterval::operator*(const Mistral::BiInterval arg) {
   Interval pospos = positive * arg.positive;
 
   //  std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
@@ -795,8 +2335,9 @@ Mistral::BiInterval Mistral::BiInterval::operator*(Mistral::BiInterval arg) {
 
   return I;
 }
+
 // the interval I such that this*I = arg     (I = this/arg)
-Mistral::BiInterval Mistral::BiInterval::anti_mul(Mistral::BiInterval arg) {
+Mistral::BiInterval Mistral::BiInterval::anti_mul(const Mistral::BiInterval arg) {
   BiInterval I;
   if(zero && arg.zero) {
     // if this and arg can be 0, then I is not constrained
@@ -806,29 +2347,32 @@ Mistral::BiInterval Mistral::BiInterval::anti_mul(Mistral::BiInterval arg) {
   } else {
     Interval pospos = positive.anti_mul(arg.positive);
 
-    //std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
+    //    std::cout << "pospos: [" << pospos.min << "," << pospos.max << "]\n";
 
     Interval negneg = negative.anti_mul(arg.negative);
 
-    //std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
+    //    std::cout << "negneg: [" << negneg.min << "," << negneg.max << "]\n";
 
 
     Interval posneg = positive.anti_mul(arg.negative);
 
-    //std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
+    ///    std::cout << "posneg: [" << posneg.min << "," << posneg.max << "]\n";
 
     Interval negpos = negative.anti_mul(arg.positive);
 
-    //std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
+    //    std::cout << "negpos: [" << negpos.min << "," << negpos.max << "]\n";
 
 
     // if arg cannot be 0, then I cannot be 0
     I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), zero);
   }
+
+  //  std::cout << " ==> " << I << std::endl << std::endl;
+
   return I;
 }
 // the interval I such that this/arg = I
-Mistral::BiInterval Mistral::BiInterval::operator/(Mistral::BiInterval arg) {
+Mistral::BiInterval Mistral::BiInterval::operator/(const Mistral::BiInterval arg) {
   BiInterval I;
   if(!(arg == 0)){
     if(*this == 0) {
@@ -857,10 +2401,13 @@ Mistral::BiInterval Mistral::BiInterval::operator/(Mistral::BiInterval arg) {
       I = BiInterval(posneg.get_union(negpos), pospos.get_union(negneg), zero);
     }
   }
+
+  //std::cout << " ==> " << I << std::endl << std::endl;
+
   return I;
 }
 
-bool Mistral::BiInterval::operator==(const int x) {
+bool Mistral::BiInterval::operator==(const int x) const {
   if(x) {
     if(x<0) return x == negative.min && x == negative.max;
     else return x == positive.min && x == positive.max;
