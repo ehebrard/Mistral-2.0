@@ -229,64 +229,74 @@ void
 FlatZincModel::newSetVar(SetVarSpec* vs) {
 
 #ifdef _VERBOSE_PARSER
-	if((setVarCount % _VERBOSE_PARSER) == 0) {
-		std::cout << "s";
-		std::cout.flush();
-	}
+  if((setVarCount % _VERBOSE_PARSER) == 0) {
+    std::cout << "s";
+    std::cout.flush();
+  }
 #endif
 
-	if (vs->alias) {
-		sv[intVarCount++] = sv[vs->i];
-	} else if( vs->assigned) {
-		assert(vs->upperBound());
-		AST::SetLit* vsv = vs->upperBound.some();
-		if (vsv->interval) {
-			Variable x = SetVariable(vsv->min, vsv->max);
-			sv[setVarCount++] = x;
-			//for(int i = vsv->min; i <= vsv->max; ++i)
-			//x.include(solver, i, NO_REASON);
-		} else {
-			if( vsv->s.empty() ) {
-				Variable x = SetVariable(0, 0);
-				//x.exclude(solver, 0, NO_REASON);
-				//sv[setVarCount++] = x;
-			} else {
-				int umin = vsv->s[0], umax = vsv->s[0];
-				for(size_t i = 1; i != vsv->s.size(); ++i) {
-					umin = std::min(umin, vsv->s[i]);
-					umax = std::max(umax, vsv->s[i]);
-				}
-				Variable x = SetVariable(umin, umax);
-				sv[setVarCount++] = x;
-				// for(size_t i = 0; i != vsv->s.size(); ++i)
-				//   x.include(solver, vsv->s[i], NO_REASON);
-				// for(int i = x.umin(solver), iend = x.umax(solver); i <= iend; ++i)
-				//   if( !x.includes(solver, i) )
-				//     x.exclude(solver, i, NO_REASON);
-			}
-		}
-	} else if( vs->upperBound() ) {
-		AST::SetLit* vsv = vs->upperBound.some();
-		Variable x = SetVariable(vsv->min, vsv->max);
-		//setvar x = solver.newSetVar(vsv->min, vsv->max);
-		sv[setVarCount++] = x;
-		// if( !vsv->interval ) {
-		//   int prev = vsv->min;
-		//   for(size_t i = 0; i != vsv->s.size(); ++i) {
-		//     if( vsv->s[i] > prev+1 ) {
-		//       for(int q = prev+1; q != vsv->s[i]; ++q)
-		//         x.exclude(solver, q, NO_REASON);
-		//     }
-		//     prev = vsv->s[i];
-		//   }
-		// } // otherwise everything is unset and we are done here
-	} else {
-		// completely free
-		//setvar x = solver.newSetVar(-1000, 1000);
-		Variable x = SetVariable(-1000, 1000);
-		sv[setVarCount++] = x;
-	}
-	sv_introduced[setVarCount-1] = vs->introduced;
+  if (vs->alias) {
+    sv[setVarCount++] = sv[vs->i];
+  } else if( vs->assigned) {
+    assert(vs->upperBound());
+    AST::SetLit* vsv = vs->upperBound.some();
+    if (vsv->interval) {
+
+      std::cout << "create a set variable from a ground interval [" << vsv->min << ".." << vsv->max << "]\n";
+
+      Variable x = SetVariable(vsv->min, vsv->max);
+      sv[setVarCount++] = x;
+
+      std::cout << x << " in " << x.get_domain() << std::endl;
+
+    } else {
+      if( vsv->s.empty() ) {
+
+        // std::cout << "create an empty set variable\n";
+
+        // Variable x = SetVariable();
+
+        // std::cout << x << " in " << x.get_domain() << std::endl;
+
+        // //x.exclude(solver, 0, NO_REASON);
+        // //sv[setVarCount++] = x;
+      } else {
+        int umin = vsv->s[0], umax = vsv->s[0];
+        for(size_t i = 1; i != vsv->s.size(); ++i) {
+          umin = std::min(umin, vsv->s[i]);
+          umax = std::max(umax, vsv->s[i]);
+        }
+        Variable x = SetVariable(umin, umax);
+        sv[setVarCount++] = x;
+        // for(size_t i = 0; i != vsv->s.size(); ++i)
+        //   x.include(solver, vsv->s[i], NO_REASON);
+        // for(int i = x.umin(solver), iend = x.umax(solver); i <= iend; ++i)
+        //   if( !x.includes(solver, i) )
+        //     x.exclude(solver, i, NO_REASON);
+      }
+    }
+  } else if( vs->upperBound() ) {
+    AST::SetLit* vsv = vs->upperBound.some();
+    Variable x = SetVariable(vsv->min, vsv->max);
+    //setvar x = solver.newSetVar(vsv->min, vsv->max);
+    sv[setVarCount++] = x;
+    // if( !vsv->interval ) {
+    //   int prev = vsv->min;
+    //   for(size_t i = 0; i != vsv->s.size(); ++i) {
+    //     if( vsv->s[i] > prev+1 ) {
+    //       for(int q = prev+1; q != vsv->s[i]; ++q)
+    //         x.exclude(solver, q, NO_REASON);
+    //     }
+    //     prev = vsv->s[i];
+    //   }
+    // } // otherwise everything is unset and we are done here
+  } else {
+    // completely free
+    //setvar x = solver.newSetVar(-1000, 1000);
+    Variable x = SetVariable(-1000, 1000);
+    sv[setVarCount++] = x;
+  }
+  sv_introduced[setVarCount-1] = vs->introduced;
 }
 
 void
@@ -822,6 +832,26 @@ FlatZincModel::set_annotations(const bool on) {
     }
       
     if(fz_search_sequences.empty()) {
+
+      // solver.monitor_list << "{";
+      // solver.monitor_list << solver.variable[0];
+      // solver.monitor_list << ",";
+      // solver.monitor_list << solver.variable[1];
+      // solver.monitor_list << ",";
+      // solver.monitor_list << solver.variable[2];
+      // solver.monitor_list << "} \\ {";
+      // solver.monitor_list << solver.variable[4];
+      // solver.monitor_list << ",";
+      // solver.monitor_list << solver.variable[5];
+      // solver.monitor_list << ",";
+      // solver.monitor_list << solver.variable[6];
+      // solver.monitor_list << ",";
+      // solver.monitor_list << solver.variable[7];
+      // solver.monitor_list << ",";
+      // solver.monitor_list << solver.variable[8];
+      // solver.monitor_list << "} = {";
+
+
       // there is no annotation, we use the default strategy
       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
     } else {
@@ -833,6 +863,11 @@ FlatZincModel::set_annotations(const bool on) {
                                       fz_search_heuristics, 
                                       fz_search_policies, 
                                       fz_search_goals);
+
+
+      //cout << outcome2str(result) << " " << outcome2str(solver.statistics.outcome) << endl;
+
+
     }
       
 
@@ -1110,6 +1145,14 @@ FlatZincModel::print_solution(std::ostream& out, const Printer& p) const {
 
 #ifdef _FLATZINC_OUTPUT
 
+  // for(int i=0; i<solver.variables.size; ++i) {
+  //   std::cout << solver.variables[i] << ": " ;
+  //   if(solver.variables[i].get_solution_min() == solver.variables[i].get_solution_max())
+  //     std::cout << solver.variables[i].get_solution_min() << std::endl;
+  //   else std::cout << solver.variables[i].get_solution_min() << ".." << solver.variables[i].get_solution_max() << std::endl;
+  // }
+
+
   if(solver.statistics.num_solutions) {
     p.print(out, solver, iv, bv, sv);
   }
@@ -1170,12 +1213,16 @@ Printer::printElem(std::ostream& out,
 		SetExpression *x = (SetExpression*)(sv[ai->getSetVar()].expression);
 		set<int> lb;
 		set<int> ub;
-		for(unsigned int i=0; i<x->elts_ub.size; ++i) {
+		for(unsigned int i=0; i<x->elts_lb.size; ++i) {
+                  lb.insert(x->elts_lb[i]);
+                  ub.insert(x->elts_lb[i]);
+                }
+		for(unsigned int i=0; i<x->elts_var.size; ++i) {
 			if(x->get_index_var(i).get_solution_min()) {
-				lb.insert(x->elts_ub[i]);
-				ub.insert(x->elts_ub[i]);
-			} else if(x->children[i].get_solution_max())
-				ub.insert(x->elts_ub[i]);
+				lb.insert(x->elts_var[i]);
+				ub.insert(x->elts_var[i]);
+			} else if(x->get_index_var(i).get_solution_max())
+				ub.insert(x->elts_var[i]);
 		}
 		out << "{";
 		for( set<int>::const_iterator i = ub.begin(); i != ub.end(); ++i) {

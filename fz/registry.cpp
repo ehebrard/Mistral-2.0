@@ -1238,7 +1238,7 @@ namespace FlatZinc {
 
       s.add(selector > 0);
       s.add(selector <= sv.size);
-      s.add(ElementSet(sv, selector, 1) == result);
+      //s.add(ElementSet(sv, selector, 1) == result);
     }
     void p_array_var_bool_element(Solver& s, FlatZincModel& m,
                                   const ConExpr& ce, AST::Node* ann) {
@@ -1733,6 +1733,7 @@ namespace FlatZinc {
                     const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable card = getIntVar(s, m, ce[1]);
+
       s.add(Card(A) == card);
     }
 
@@ -1742,8 +1743,9 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
-      report_unsupported("p_set_diff");
-      //s.add(SetDiff(A,B,C));
+      //report_unsupported("p_set_diff");
+      
+      s.add(SetDifference(A,B) == C);
     }
 
     void p_set_symdiff(Solver& s, FlatZincModel& m,
@@ -1812,9 +1814,9 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
-      report_unsupported("p_set_eq_re");
+      //report_unsupported("p_set_eq_re");
 
-      //s.add( b == SetEqual(A,B) );
+      s.add( b == (A == B) );
     }
 
     void p_set_ne_reif(Solver& s, FlatZincModel& m,
@@ -1960,7 +1962,7 @@ namespace FlatZinc {
 
         registry().add("array_var_int_element", &p_array_int_element);
         registry().add("array_int_element", &p_array_int_element);
-        registry().add("array_set_element", &p_array_set_element);
+        //registry().add("array_set_element", &p_array_set_element);
         registry().add("array_var_set_element", &p_array_set_element);
         registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);

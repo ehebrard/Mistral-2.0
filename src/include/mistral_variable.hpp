@@ -1429,6 +1429,8 @@ namespace Mistral {
     const Variable get_var() const;
     bool is_expression() { return domain_type == EXPRESSION; }
     bool is_initialised() const { return domain_type != CONST_VAR && variable->is_initialised(); }
+    bool is_set_var(); //{ return domain_type == EXPRESSION && expression->is_set(); }
+ 
 
     Variable operator+(Variable);
     Variable operator+(const int);
@@ -1777,7 +1779,7 @@ namespace Mistral {
     
     Variable get_self(); //{ return ((Solver*)solver)->variables[id]; }
 
-    virtual void extract_constraint(Solver*) {}
+    virtual void extract_constraint(Solver*); // {}
     virtual void extract_predicate(Solver*) {}
     //virtual void reify(Solver *s, Variable X);
     virtual void extract_variable(Solver*);
@@ -1908,6 +1910,22 @@ namespace Mistral {
 
   };
 
+
+  class IdExpression : public Expression {
+
+  public:
+    
+    IdExpression(Variable X);
+    virtual ~IdExpression();
+
+    //virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    //virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+
   class FactorExpression : public Expression {
 
   public:
@@ -1957,8 +1975,9 @@ namespace Mistral {
   class AndExpression : public Expression {
 
   public:
+    int spin;
 
-    AndExpression(Variable X, Variable Y);
+    AndExpression(Variable X, Variable Y, const int sp=true);
     virtual ~AndExpression();
 
     virtual void extract_constraint(Solver*);
@@ -1971,8 +1990,9 @@ namespace Mistral {
   class OrExpression : public Expression {
 
   public:
+    int spin;
 
-    OrExpression(Variable X, Variable Y);
+    OrExpression(Variable X, Variable Y, const int sp=true);
     virtual ~OrExpression();
 
     virtual void extract_constraint(Solver*);
@@ -2056,6 +2076,24 @@ namespace Mistral {
     virtual const char* get_name() const;
 
   };
+
+  // class EqualSetExpression : public Expression {
+
+  // public:
+  
+  //   int spin;
+  //   int value;
+
+  //   EqualSetExpression(Variable X, Variable Y, const int sp=1);
+  //   EqualSetExpression(Variable X, const int y, const int sp=1);
+  //   virtual ~EqualSetExpression();
+
+  //   virtual void extract_constraint(Solver*);
+  //   virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
 
   class EqualSetExpression : public Expression {
 
@@ -2317,38 +2355,116 @@ namespace Mistral {
   Variable Max(Variable X, Variable Y);
 
 
+  // class SetExpression : public BoolSumExpression {
+    
+  // public:
+    
+  //   /**
+  //      SetExpression are constraints gluing together Boolean variables (plus a cardinality integer var) 
+  //      to define set variables
+
+  //      There will be as many variables as elements in the ub
+  //      - if the element is also in the lb the variable is a constant equal to 1
+  //      - otherwise the variable is a Boolean.
+  //   */
+
+  //   // num_args returns the number of arguments of the constraint, besides the Bool and card var
+  //   // it is used for SetExpression standing for operation, for instance SetIntersection will have
+  //   // two arguments 
+  //   int num_args;
+ 
+  //   // the list of elements in the ub
+  //   Vector< int > elts_ub;
+  //   // the list of elements in the lb
+  //   Vector< int > elts_lb;
+    
+
+
+
+  //   // bitset used to know if an element is variable (i.e., in ub and not not in lb)
+  //   // the bitset works on indexes
+  //   //BitSet is_variable;
+
+  //   /*
+  //   int min_elt;
+  //   int max_elt;
+  //   */
+
+  //   SetExpression() : BoolSumExpression() {}
+  //   SetExpression(const int lelt, const int uelt, const int clb, const int cub);
+  //   // SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
+  //   SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub);
+  //   void initialise_elements();
+  //   virtual ~SetExpression();
+    
+
+  //   // return
+  //   //int get_next_var_element(const int e);
+
+  //   //Variable get_self() {return children.back(); }
+
+  //   // returns the variable standing for the idx'th variable element
+  //   Variable get_index_var(const int idx) {return children[num_args+idx];}
+  //   // returns the variable standing for element vali
+  //   Variable get_elt_var(const int vali);
+  //   int get_element_index(const int vali);
+    
+  //   // bool can_be_in(const int vali) { return allowed.contain(vali); }
+  //   // bool must_be_in(const int vali) { return required.contain(vali); }
+  //   // int get_smallest_elt() { return elements.front(); }
+  //   // int get_highest_elt() { return elements.back(); }
+
+  //   virtual const char* get_name() const;
+  //   virtual std::ostream& display(std::ostream& os) const;
+  //   virtual int get_solution_int_value() const ;
+  //   virtual std::string get_solution_str_value() const ;
+  // };
+
+
   class SetExpression : public BoolSumExpression {
     
   public:
     
-    //VarArray elements;
-    Vector< int > elts_ub;
-    Vector< int > elts_lb;
+    /**
+       SetExpression are constraints gluing together Boolean variables (plus a cardinality integer var) 
+       to define set variables
+
+       There will be as many variables as elements in ub\lb
+    */
+
+    // num_args returns the number of arguments of the constraint, besides the Bool and card var
+    // it is used for SetExpression standing for operation, for instance SetIntersection will have
+    // two arguments 
     int num_args;
-    // BitSet required;
-    // BitSet allowed;
  
+    // the list of elements in ub\lb
+    Vector< int > elts_var;
+    // the list of elements in the lb
+    Vector< int > elts_lb;
+    
+
     SetExpression() : BoolSumExpression() {}
     SetExpression(const int lelt, const int uelt, const int clb, const int cub);
     // SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
     SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub);
     void initialise_elements();
     virtual ~SetExpression();
+
+    virtual void extract_predicate(Solver*);
     
+    // returns the variable standing for the idx'th variable element
     Variable get_index_var(const int idx) {return children[num_args+idx];}
+    // returns the variable standing for element vali
     Variable get_elt_var(const int vali);
     int get_element_index(const int vali);
+    int get_element_lb_index(const int vali);
     
-    // bool can_be_in(const int vali) { return allowed.contain(vali); }
-    // bool must_be_in(const int vali) { return required.contain(vali); }
-    // int get_smallest_elt() { return elements.front(); }
-    // int get_highest_elt() { return elements.back(); }
-
     virtual const char* get_name() const;
-    virtual std::ostream& display(std::ostream& os) const;
+    virtual std::ostream& display(std::ostream& os, const bool all=false) const;
     virtual int get_solution_int_value() const ;
     virtual std::string get_solution_str_value() const ;
   };
+
 
   Variable SetVariable(const int lelt, const int uelt, 
   		       const int clb=0, const int cub=INFTY);
@@ -2360,38 +2476,56 @@ namespace Mistral {
   Variable Card(Variable S); //{ return S; }
 
 
-  class ElementSetExpression : public SetExpression {
+  // class ElementSetExpression : public SetExpression {
+
+  // public:
+
+  //   int offset;
+  //   //VarArray elements;
+  //   //Vector< int > values;
+
+  //   ElementSetExpression(Vector< Variable >& args, Variable X, int ofs);
+  //   virtual ~ElementSetExpression();
+  //   void initialise_domain();
+
+  //   //virtual Variable get_index_var(const int idx);
+
+  //   virtual void extract_constraint(Solver*);
+  //   //virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
+  // Variable ElementSet(Vector<Variable>& X, Variable selector, int offset=0);
+  // Variable ElementSet(VarArray& X, Variable selector, int offset=0);
+
+
+
+  // class IntersectionExpression : public SetExpression {
+
+  // public:
+
+  //   IntersectionExpression(Variable X, Variable Y);
+  //   virtual ~IntersectionExpression();
+  //   void initialise_domain();
+
+  //   virtual void extract_constraint(Solver*);
+  //   //virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
+  class Intersection2Expression : public SetExpression {
 
   public:
 
-    int offset;
-    //VarArray elements;
-    //Vector< int > values;
+    Vector<int> map_x;
+    Vector<int> map_y;
 
-    ElementSetExpression(Vector< Variable >& args, Variable X, int ofs);
-    virtual ~ElementSetExpression();
-    void initialise_domain();
-
-    //virtual Variable get_index_var(const int idx);
-
-    virtual void extract_constraint(Solver*);
-    //virtual void extract_variable(Solver*);
-    virtual void extract_predicate(Solver*);
-    virtual const char* get_name() const;
-
-  };
-
-  Variable ElementSet(Vector<Variable>& X, Variable selector, int offset=0);
-  Variable ElementSet(VarArray& X, Variable selector, int offset=0);
-
-
-
-  class IntersectionExpression : public SetExpression {
-
-  public:
-
-    IntersectionExpression(Variable X, Variable Y);
-    virtual ~IntersectionExpression();
+    Intersection2Expression(Variable X, Variable Y);
+    virtual ~Intersection2Expression();
     void initialise_domain();
 
     virtual void extract_constraint(Solver*);
@@ -2402,6 +2536,42 @@ namespace Mistral {
   };
 
   Variable Intersection(Variable X, Variable Y);
+
+
+  // class SetDifferenceExpression : public SetExpression {
+
+  // public:
+
+  //   SetDifferenceExpression(Variable X, Variable Y);
+  //   virtual ~SetDifferenceExpression();
+  //   void initialise_domain();
+
+  //   virtual void extract_constraint(Solver*);
+  //   //virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
+  class SetDifferenceExpression : public SetExpression {
+
+  public:
+
+    // Vector<int> map_x;
+    // Vector<int> map_y;
+
+    SetDifferenceExpression(Variable X, Variable Y);
+    virtual ~SetDifferenceExpression();
+    void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    //virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable SetDifference(Variable X, Variable Y);
 
 
 
@@ -2418,6 +2588,20 @@ namespace Mistral {
     virtual const char* get_name() const;
 
   };
+
+  // class SubsetExpression : public Expression {
+
+  // public:
+
+  //   SubsetExpression(Variable X, Variable Y);
+  //   virtual ~SubsetExpression();
+
+  //   virtual void extract_constraint(Solver*);
+  //   virtual void extract_variable(Solver*);
+  //   virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
 
   Variable Subset(Variable X, Variable Y);
 

@@ -2762,7 +2762,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     PropagationOutcome propagate_change_on_X( const Event evt );
     PropagationOutcome propagate_change_on_absX( const Event evt );
     virtual int check( const int* sol ) const { 
-      return(std::abs(sol[0]) != sol[1]);
+      return(abs(sol[0]) != sol[1]);
     }
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
@@ -3367,7 +3367,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
-    virtual bool absorb_negation(const int var) { return true; }
+    //virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateBoolSum();
     //@}
 

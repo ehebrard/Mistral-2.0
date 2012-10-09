@@ -308,7 +308,7 @@ Mistral::Interval Mistral::Interval::target_positive_modulo(const int mod, const
 
 // the interval I such that this%mod = I
 Mistral::Interval Mistral::Interval::operator%(const int mod) {
-  int modulo = std::abs(mod);
+  int modulo = abs(mod);
   Interval J;
   if(min>=0) J = positive_modulo(modulo);
   else if(max < 0) {
@@ -333,7 +333,7 @@ Mistral::Interval Mistral::Interval::target_c_modulo(const int mod, const Interv
 
   //std::cout << "compute c modulo " << (*this) << " % " << mod << " inter " << J << std::endl; 
 
-  int modulo = std::abs(mod);
+  int modulo = abs(mod);
   Interval K;
   if(min>=0) {
     K = target_positive_modulo(modulo, J);
@@ -2452,8 +2452,8 @@ Mistral::IntervalList::~IntervalList() {}
 
 //void union_with(IntervalList& I);
 void Mistral::IntervalList::intersect_with(const IntervalList& with, IntervalList& into) const {
-  int current_self = 0;
-  int current_with = 0;
+  unsigned int current_self = 0;
+  unsigned int current_with = 0;
 
 #ifdef _DEBUG_INTERVALS
   if(_DEBUG_INTERVALS) {
@@ -2545,8 +2545,8 @@ void Mistral::IntervalList::intersect_with(const IntervalList& with, IntervalLis
 
 
 void Mistral::IntervalList::union_with(const IntervalList& with, IntervalList& into) const {
-  int current_self = 0;
-  int current_with = 0;
+  unsigned int current_self = 0;
+  unsigned int current_with = 0;
 
 #ifdef _DEBUG_INTERVALS
   if(_DEBUG_INTERVALS) {

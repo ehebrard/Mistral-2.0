@@ -1175,7 +1175,7 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
 
 	phase_level.add(level);
 	// the current phase has a solution
-	if((int)(++phase) == sequence.size)
+	if(++phase == sequences.size)
 	  {
 
 #ifdef _DEBUG_SEARCH
@@ -1197,6 +1197,14 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
 #endif
 
       }
+  }
+
+  statistics.outcome = satisfiability;
+
+  statistics.end_time = get_run_time();
+
+  if(parameters.verbosity)  {
+    std::cout << statistics;
   }
 
   return satisfiability;
@@ -1338,6 +1346,11 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   if(goal){ // delete objective;
     objective = goal;}
   else if(!objective) objective = new Goal(Goal::SATISFACTION);
+
+  // std::cout << (int*)heu << " " << (int*)heuristic << std::endl;
+  // std::cout << heuristic << std::endl;
+  // heuristic->display(std::cout);
+  // std::cout << std::endl << sequence << std::endl;
 
   heuristic->initialise(sequence);
 

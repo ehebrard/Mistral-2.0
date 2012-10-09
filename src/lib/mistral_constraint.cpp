@@ -2910,6 +2910,10 @@ Mistral::PropagationOutcome Mistral::PredicateNot::rewrite() {
       for(Event trig = 0; can_negate && trig<3; ++trig) {
 	for(int i = get_solver()->constraint_graph[idx].on[trig].size; can_negate && i--;) {
 	  con = get_solver()->constraint_graph[idx].on[trig][i];
+
+	  // std::cout << con << (con.absorb_negation(con.index()) ? " can" : " cammot") 
+	  // 	    << " absorb negation of " << con.get_scope()[con.index()] << std::endl;
+
 	  can_negate &= con.absorb_negation(con.index());
 	}
       }
@@ -4187,7 +4191,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
     int min_x = scope[0].get_min();
     int max_x = scope[0].get_max();
     
-    int lb, ub, incr = std::abs(modulo);
+    int lb, ub, incr = abs(modulo);
 
 
 #ifdef _DEBUG_CMOD
@@ -5174,7 +5178,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
     int min_x = scope[0].get_min();
     int max_x = scope[0].get_max();
     
-    int lb, ub, incr = std::abs(modulo);
+    int lb, ub, incr = abs(modulo);
 
 
     llb.clear();
