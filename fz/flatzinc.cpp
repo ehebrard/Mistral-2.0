@@ -49,7 +49,7 @@
 #include <mistral_variable.hpp>
 
 //#define _DEBUG_FLATZINC true
-//#define _VERBOSE_PARSER 1
+#define _VERBOSE_PARSER 1000
 
 
 
@@ -502,14 +502,14 @@ bool FlatZincModel::getAnnotations( AST::Call*  c , Vector<Variable> &__vars, st
 
 			for (unsigned int j=0; j< __varsArray->a.size(); j++ )
 			{
-				if (__varsArray->a[j]->isIntVar())
-					__vars.push_back(iv[__varsArray->a[j]->getIntVar()]);
-				else if (__varsArray->a[j]->isSetVar())
-					__vars.push_back( sv[__varsArray->a[j]->getSetVar()]);
-				else if (__varsArray->a[j]->isBoolVar())
-					__vars.push_back( bv[__varsArray->a[j]->getBoolVar()]);
-				else
-					return false;
+                          if (__varsArray->a[j]->isIntVar())
+                            __vars.push_back(iv[__varsArray->a[j]->getIntVar()].get_var());
+                          else if (__varsArray->a[j]->isSetVar())
+                            __vars.push_back( sv[__varsArray->a[j]->getSetVar()]);
+                          else if (__varsArray->a[j]->isBoolVar())
+                            __vars.push_back( bv[__varsArray->a[j]->getBoolVar()].get_var());
+                          else
+                            return false;
 			}
 		}
 
@@ -831,33 +831,53 @@ FlatZincModel::set_annotations(const bool on) {
       get_annotations();
     }
       
-    if(fz_search_sequences.empty()) {
+    if(fz_search_sequences.size < 2) {
 
-      // solver.monitor_list << "{";
-      // solver.monitor_list << solver.variable[0];
-      // solver.monitor_list << ",";
-      // solver.monitor_list << solver.variable[1];
-      // solver.monitor_list << ",";
-      // solver.monitor_list << solver.variable[2];
-      // solver.monitor_list << "} \\ {";
-      // solver.monitor_list << solver.variable[4];
-      // solver.monitor_list << ",";
-      // solver.monitor_list << solver.variable[5];
-      // solver.monitor_list << ",";
-      // solver.monitor_list << solver.variable[6];
-      // solver.monitor_list << ",";
-      // solver.monitor_list << solver.variable[7];
-      // solver.monitor_list << ",";
-      // solver.monitor_list << solver.variable[8];
-      // solver.monitor_list << "} = {";
+
+      // Variable obj = iv[_optVar].get_var();
+      // solver.monitor_list << "[";
+      // solver.monitor_list << solver.variables[542];
+      // solver.monitor_list << ", ";
+      // solver.monitor_list << solver.variables[544];
+      // solver.monitor_list << ", ";
+      // solver.monitor_list << solver.variables[546];
+      // solver.monitor_list << ", ";
+      // solver.monitor_list << solver.variables[548];
+      // // solver.monitor_list << ",";
+      // // solver.monitor_list << solver.variable[5];
+      // // solver.monitor_list << ",";
+      // // solver.monitor_list << solver.variable[6];
+      // // solver.monitor_list << ",";
+      // // solver.monitor_list << solver.variable[7];
+      // // solver.monitor_list << ",";
+      // // solver.monitor_list << solver.variable[8];
+      // solver.monitor_list << "], objective: " << obj ;
+      // solver.monitor_list << "\n" ;
+
 
 
       // there is no annotation, we use the default strategy
-      result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+      if(fz_search_sequences.empty())
+        result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+      else
+        result = solver.depth_first_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
     } else {
       // follows flatzinc model's annotations
 
-      cout << " c sequence search" << std::endl;
+      cout << "% c sequence search on " << fz_search_sequences << std::endl;
+
+      Variable obj = iv[_optVar].get_var();
+      for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
+        solver.monitor_list << "[ " ;
+        for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
+          solver.monitor_list << fz_search_sequences[k][i] ;
+          solver.monitor_list << " " ;
+        }
+        solver.monitor_list << "]\n" ;
+      }
+      solver.monitor_list << "objective: " << obj ;
+      solver.monitor_list << "\n" ;
+      
 
       result = solver.sequence_search(fz_search_sequences, 
                                       fz_search_heuristics, 
@@ -1155,6 +1175,10 @@ FlatZincModel::print_solution(std::ostream& out, const Printer& p) const {
 
   if(solver.statistics.num_solutions) {
     p.print(out, solver, iv, bv, sv);
+
+    if(_optVar >= 0)
+      out << "% objective: " << iv[_optVar].get_var() << " in [" << iv[_optVar].get_solution_min() 
+          << ".." << iv[_optVar].get_solution_max() << "]" << endl;
   }
   out << "----------" << std::endl;
 
@@ -1182,13 +1206,13 @@ Printer::printElem(std::ostream& out,
 	if (ai->isInt(k)) {
 		out << k;
 	} else if (ai->isIntVar()) {
-/*		int lb = iv[ai->getIntVar()].get_solution_min();
-		int ub = iv[ai->getIntVar()].get_solution_max();
-		if( lb == ub )
-			out << lb;
-		else
-			out << lb << ".." << ub;
-*/
+          // int lb = iv[ai->getIntVar()].get_solution_min();
+          // int ub = iv[ai->getIntVar()].get_solution_max();
+          // if( lb == ub )
+          //   out << lb;
+          // else
+          //   out << lb << ".." << ub;
+          
           out << iv[ai->getIntVar()].get_solution_int_value();
 	} else if (ai->isBoolVar()) {
 		/*

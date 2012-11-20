@@ -84,6 +84,8 @@ namespace Mistral {
 #endif
     }
     
+    int check_and_post(Constraint ct) ;
+
     int post(Constraint ct) ;
 
     void relax(const int idx) ;
@@ -599,6 +601,8 @@ namespace Mistral {
     
   public:
 
+    typedef int* iterator;
+
     /*!@name Parameters*/
     //@{  
     /// value trail
@@ -608,25 +612,41 @@ namespace Mistral {
     /*!@name Constructors*/
     //@{ 
     ReversibleSet() : Reversible(), IntStack() {}
-    ReversibleSet(Environment *s, const int lb=0, const int ub=0, const bool full=true)
+    ReversibleSet(Environment *s, const int lb=0, const int ub=0, const int sz=-1, const bool full=true)
       : Reversible(s)
     {
-      initialise(lb, ub, full);
+      if(sz < 0)
+	initialise(lb, ub, ub-lb+1, full);
+      else
+	initialise(lb, ub, sz, full);
     }
 
     virtual ~ReversibleSet()
     {
     }
 
-    virtual void initialise(Environment *s, const int lb, const int ub, const bool full)
+    virtual void initialise(Environment *s)
     {
       Reversible::initialise(s);
-      initialise(lb, ub, full);
+    }
+
+    // virtual void initialise(Environment *s, ReversibleSet *e, const int)
+    // {
+    //   Reversible::initialise(s);
+    //   initialise(e);
+    //   // trail_.add(size);
+    //   // trail_.add(-1);
+    // }
+
+    virtual void initialise(Environment *s, const int lb, const int ub, const int sz, const bool full)
+    {
+      Reversible::initialise(s);
+      initialise(lb, ub, sz, full);
       // trail_.add(size);
       // trail_.add(-1);
     }
 
-    virtual void initialise(const int lb, const int ub, const bool full)
+    virtual void initialise(const int lb, const int ub, const int sz, const bool full)
     {
       int l = lb;
       int u = ub;
@@ -634,8 +654,48 @@ namespace Mistral {
 	u = l-1;
 	l = 0;
       }
-      IntStack::initialise(l, u, full);
-      trail_.initialise(0, 2*(u-l+1));
+      IntStack::initialise(l, u, sz, full);
+      trail_.initialise(0, 2*sz);
+      trail_.add(size);
+      trail_.add(-1);
+    }
+
+    virtual void initialise(Environment *s, const int lb, const int ub, const Vector<int>& vals)
+    {
+      Reversible::initialise(s);
+      initialise(lb, ub, vals);
+      // trail_.add(size);
+      // trail_.add(-1);
+    }
+
+    virtual void initialise(ReversibleSet& shared, const int sz)
+    {
+      Reversible::initialise(shared.env);
+
+      index_capacity = shared.index_capacity;
+  
+      list_capacity = sz;
+      list_ = new int[list_capacity];
+  
+      start_ = shared.start_;
+      index_ = shared.index_;
+  
+      size = 0;
+
+      trail_.initialise(0, 2*sz);
+      trail_.add(size);
+      trail_.add(-1);
+      //IntStack::initialise((IntStack)shared, sz);
+      // trail_.add(size);
+      // trail_.add(-1);
+    }
+
+    virtual void initialise(const int lb, const int ub, const Vector<int>& vals)
+    {
+      IntStack::initialise(lb, ub, vals.size, false);
+      for(unsigned int i=0; i<vals.size; ++i)
+	init_add(vals[i]);
+      trail_.initialise(0, 2*size);
       trail_.add(size);
       trail_.add(-1);
     }
@@ -643,46 +703,233 @@ namespace Mistral {
 
     /*!@name Backtrack method*/
     //@{    
-    inline void restore() { 
-      trail_.pop(); size = trail_.pop(); 
-    } 
-    inline void save() { 
-      if(trail_.back() != env->level) {
-	trail_.add(size);
-	trail_.add(env->level);
-	env->save(this);
-      }
-    }
+    void restore();
+    void save();
     //@}
 
     /*!@name Manipulation*/
     //@{  
     // it's either 'add's...
-    inline void reversible_add(const int elt) {
-      save();
-      add(elt);
-    }
+    void reversible_add(const int elt);
 
     // ...or remove, but not both!!
-    inline void reversible_remove(const int elt) {
-      save();
-      remove(elt);
-    }
+    void reversible_remove(const int elt);
 
-    inline int reversible_pop()
-    {
-      save();
-      return pop();
-    }
+    void reversible_set_to(const int elt);
+    int reversible_pop();
 
-    inline int reversible_pop_head()
-    {
-      save();
-      return pop_head();
-    }
+    int reversible_pop_head();
     //@}    
 
+    // /*!@name Backtrack method*/
+    // //@{    
+    //  void restore() { 
+    //   trail_.pop(); size = trail_.pop(); 
+    // } 
+    //  void save() { 
+
+    //   //std::cout << trail_.size << " " << env << std::endl;
+
+    //   if(trail_.back() != env->level) {
+    // 	trail_.add(size);
+    // 	trail_.add(env->level);
+    // 	env->save(this);
+    //   }
+    // }
+    // //@}
+
+    // /*!@name Manipulation*/
+    // //@{  
+    // // it's either 'add's...
+    //  void reversible_add(const int elt) {
+    //   save();
+    //   add(elt);
+    // }
+
+    // // ...or remove, but not both!!
+    //  void reversible_remove(const int elt) {
+    //   save();
+    //   remove(elt);
+    // }
+
+
+    //  void reversible_set_to(const int elt) {
+    //   save();
+    //   set_to(elt);
+    // }
+
+    //  int reversible_pop()
+    // {
+    //   save();
+    //   return pop();
+    // }
+
+    //  int reversible_pop_head()
+    // {
+    //   save();
+    //   return pop_head();
+    // }
+    // //@}    
+
   };
+
+  // /********************************************
+  //  * Reversible Bitset
+  //  ********************************************/
+  // /*! \class ReversibleBitset
+  //   \brief Backtrackable IntStack
+  // */
+  // template< class WORD_TYPE, class FLOAT_TYPE >
+  // class ReversibleBitset : public Reversible, public Bitset< WORD_TYPE, FLOAT_TYPE > {
+    
+  // public:
+
+  //   /*!@name Parameters*/
+  //   //@{  
+  //   Vector< int > trail_;
+
+  //   /// trail for the bitset representation
+  //   WORD_TYPE **delta_;
+  //   int **level_;
+  //   WORD_TYPE **delta_abs;
+  //   int **level_abs;
+  //   //@}
+
+  //   /*!@name Constructors*/
+  //   //@{ 
+  //   ReversibleBitset() : Reversible(), IntStack() {}
+  //   ReversibleBitset(Environment *s, const int lb=0, const int ub=0, const bool full=true)
+  //     : Reversible(s)
+  //   {
+  //     initialise(lb, ub, full);
+  //   }
+
+  //   virtual ~ReversibleBitset()
+  //   {
+  //   }
+
+  //   virtual void initialise(Environment *s)
+  //   {
+  //     Reversible::initialise(s);
+  //   }
+
+  //   // virtual void initialise(Environment *s, ReversibleBitset *e, const int)
+  //   // {
+  //   //   Reversible::initialise(s);
+  //   //   initialise(e);
+  //   //   // trail_.add(size);
+  //   //   // trail_.add(-1);
+  //   // }
+
+  //   virtual void initialise(Environment *s, const int lb, const int ub, const bool full)
+  //   {
+  //     Reversible::initialise(s);
+  //     initialise(lb, ub, full);
+  //     // trail_.add(size);
+  //     // trail_.add(-1);
+  //   }
+
+  //   virtual void initialise(const int lb, const int ub, const bool full)
+  //   {
+  //     int l = lb;
+  //     int u = ub;
+  //     if(l>u) {
+  // 	u = l-1;
+  // 	l = 0;
+  //     }
+  //     IntStack::initialise(l, u, u-l+1, full);
+  //     trail_.initialise(0, 2*(u-l+1));
+  //     trail_.add(size);
+  //     trail_.add(-1);
+  //   }
+
+  //   virtual void initialise(Environment *s, const int lb, const int ub, const Vector<int>& vals)
+  //   {
+  //     Reversible::initialise(s);
+  //     initialise(lb, ub, vals);
+  //     // trail_.add(size);
+  //     // trail_.add(-1);
+  //   }
+
+  //   virtual void initialise(ReversibleBitset& shared, const int sz)
+  //   {
+  //     index_capacity = shared.index_capacity;
+  
+  //     list_capacity = sz;
+  //     list_ = new int[list_capacity];
+  
+  //     start_ = shared.start_;
+  //     index_ = shared.index_;
+  
+  //     size = 0;
+
+  //     trail_.initialise(0, 2*sz);
+  //     trail_.add(size);
+  //     trail_.add(-1);
+  //     //IntStack::initialise((IntStack)shared, sz);
+  //     // trail_.add(size);
+  //     // trail_.add(-1);
+  //   }
+
+  //   virtual void initialise(const int lb, const int ub, const Vector<int>& vals)
+  //   {
+  //     IntStack::initialise(lb, ub, vals.size, false);
+  //     for(unsigned int i=0; i<vals.size; ++i)
+  // 	init_add(vals[i]);
+  //     trail_.initialise(0, 2*size);
+  //     trail_.add(size);
+  //     trail_.add(-1);
+  //   }
+  //   //@}
+
+  //   /*!@name Backtrack method*/
+  //   //@{    
+  //   inline void restore() { 
+  //     trail_.pop(); size = trail_.pop(); 
+  //   } 
+  //   inline void save() { 
+  //     if(trail_.back() != env->level) {
+  // 	trail_.add(size);
+  // 	trail_.add(env->level);
+  // 	env->save(this);
+  //     }
+  //   }
+  //   //@}
+
+  //   /*!@name Manipulation*/
+  //   //@{  
+  //   // it's either 'add's...
+  //   inline void reversible_add(const int elt) {
+  //     save();
+  //     add(elt);
+  //   }
+
+  //   // ...or remove, but not both!!
+  //   inline void reversible_remove(const int elt) {
+  //     save();
+  //     remove(elt);
+  //   }
+
+
+  //   inline void reversible_set_to(const int elt) {
+  //     save();
+  //     set_to(elt);
+  //   }
+
+  //   inline int reversible_pop()
+  //   {
+  //     save();
+  //     return pop();
+  //   }
+
+  //   inline int reversible_pop_head()
+  //   {
+  //     save();
+  //     return pop_head();
+  //   }
+  //   //@}    
+
+  // };
 
 
   template < class PRIMITIVE_TYPE > 

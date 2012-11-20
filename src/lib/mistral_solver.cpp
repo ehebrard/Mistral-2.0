@@ -510,8 +510,7 @@ void Mistral::ConstraintQueue::declare(Constraint c, Solver *s) {
   int new_min_p = min_priority;
   int new_max_p = min_priority+cardinality-1;
   
-  if(cons_idx == 0) solver = s;
-  if(cons_priority < new_min_p || cons_priority > new_max_p) {
+  if(cons_idx == 0) solver = s;  if(cons_priority < new_min_p || cons_priority > new_max_p) {
     if(cardinality > 0) {
       if(cons_priority < new_min_p) new_min_p = cons_priority;
       if(cons_priority > new_max_p) new_max_p = cons_priority;
@@ -796,7 +795,7 @@ Mistral::Solver::Solver()
   reason.initialise(0,128);
   constraints.initialise(0,256);
   //constraint_graph.initialise(128);
-  posted_constraints.initialise(0,256,false);
+  posted_constraints.initialise(0,255,256,false);
   sequence.initialise(this);
   sequence.initialise(128);
   initialised_vars = 0;
@@ -934,16 +933,18 @@ void Mistral::Solver::remove(Variable x) {
 }
 
 int Mistral::Solver::declare(Variable x) {
+
   if(x.domain_type > DYN_VAR) booleans.add(&x);
 
   // add the variables to the set of vars
   active_variables.declare(variables.size);
 
-
-  x.variable->id = variables.size;
-  x.variable->solver = this;
+  x.variable->initialise(this);
+  //x.variable->id = variables.size;
+  //x.variable->solver = this;
   visited.extend(variables.size);
   variables.add(x);
+
   declared_variables.add(x);
   assignment_level.add(INFTY);
   reason.add(NULL);
@@ -969,6 +970,9 @@ int Mistral::Solver::declare(Variable x) {
 
 
   notify_add_variable();
+
+  //std::cout << x.get_domain() << std::endl;
+
 
   return variables.size-1;
 }
@@ -1107,67 +1111,124 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
   unsigned int phase = 0;
   Outcome satisfiability = UNKNOWN, phase_satisfiability = UNKNOWN;
   Vector< int > phase_level;
-  phase_level.add(level);
 
+  
+  VarStack < Variable, ReversibleNum<int> >  copy_sequences[sequences.size];
+
+  for(unsigned int i=0; i<sequences.size; ++i) {
+    copy_sequences[i].initialise(this);
+    copy_sequences[i].initialise(sequences[i].size);
+    for(unsigned int j=0; j<variables.size; ++j) {
+      Variable x = variables[j];
+      copy_sequences[i].declare(x);
+     }
+  }
+
+  for(unsigned int i=0; i<sequences.size; ++i) {
+    copy_sequences[i].clear();
+    for(unsigned int j=sequences[i].size; j;) {
+      Variable x = sequences[i][--j].get_var();
+      if(!x.is_ground() && !copy_sequences[i].safe_contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) 
+	copy_sequences[i].add(x);
+    }
+  }
+
+
+
+  phase_level.add(level);
+  //int max_phase = -1;
+  
   // repeat until
   while(satisfiability == UNKNOWN) {  
+    //phase_level.add(level);
 
 #ifdef _DEBUG_SEARCH
     std::cout << " c";
     for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
-    std::cout << " init phase " << phase << std::endl;
+    std::cout << " ss init phase " << phase << " " << level << " " << phase_level << std::endl;
+    std::cout << " c";
+    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+    std::cout << " ss search on " << sequences[phase] << std::endl;
 #endif
 
     //initialise with the parameters of the current phase
-    initialise_search(sequences[phase], heuristics[phase], policies[phase], goals[phase]);
+    //if(phase > max_phase) {
+    initialise_search(copy_sequences[phase], heuristics[phase], policies[phase], goals[phase]);
  
+    std::cout << heuristics[phase] << std::endl;
 
 #ifdef _DEBUG_SEARCH
     std::cout << " c";
     for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
-    std::cout << " search phase " << phase << ": ";
+    std::cout << " ss search phase " << phase << ": " << std::endl;
 #endif
 
     //search the subset of variables
     if(objective->has_function()) {
       objective->set_type(phase < sequences.size-1 ? Goal::SATISFACTION : Goal::OPTIMIZATION);
     }
-    phase_satisfiability = chronological_dfs(phase_level.back());//search(); //false, (phase < sequences.size-1));
+    phase_satisfiability = chronological_dfs(phase_level.back());
 
 #ifdef _DEBUG_SEARCH
-    std::cout << outcome2str(phase_satisfiability) << std::endl;
+    std::cout << " c";
+    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
+    std::cout << " ss " << outcome2str(phase_satisfiability) << std::endl;
 #endif
 
     if(phase_satisfiability == UNSAT || phase_satisfiability == OPT) 
       {
 
+	int lvl = phase_level.pop();
 	// the current phase is not satisfiable
 	if(phase_level.empty()) 
 	  {
 #ifdef _DEBUG_SEARCH
 	    std::cout << " c";
 	    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
-	    std::cout << " UNSAT! " << std::endl;
+	    std::cout << " ss UNSAT! " << std::endl;
 #endif
 
 	    // we have exhausted the complete search, returns
-	    satisfiability = UNSAT;
+	    satisfiability = phase_satisfiability;
 	  }
 	else
 	  {
 	    // go back to the previous phase
-	    phase_level.pop();
+	    //phase_level.pop();
 	    --phase;
 
 #ifdef _DEBUG_SEARCH
 	    std::cout << " c";
 	    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
-	    std::cout << " backtrack to phase " << phase << std::endl;
+	    std::cout << " ss backtrack to phase " << phase 
+		      << " (level " << lvl-1 << ")" << std::endl;
 	    //exit(1);
 #endif
 	    
-	    branch_right();
 
+	    std::cout << decisions << std::endl;
+
+	    //int lvl = phase_level.pop();
+	    restore(lvl);
+	    decisions.size = lvl;
+
+
+// 	    Mistral::Decision deduction = decisions[lvl-1];
+// 	    deduction.invert();
+
+
+// #ifdef _DEBUG_SEARCH
+//   if(_DEBUG_SEARCH) {
+//     std::cout << "c";
+//     for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+//     std::cout << deduction << std::endl;
+//   }
+// #endif
+
+// 	    deduction.make();
+
+	    branch_right();
+	    //phase_satisfiability = UNKNOWN;
 	  }
       }
     else if(phase_satisfiability == SAT)
@@ -1181,7 +1242,7 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
 #ifdef _DEBUG_SEARCH
 	    std::cout << " c";
 	    for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
-	    std::cout << " SAT! " << std::endl;
+	    std::cout << " ss SAT! " << std::endl;
 #endif
 
 	    // we have found a complete solution
@@ -1192,7 +1253,7 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
 	else{
 	  std::cout << " c";
 	  for(unsigned int i=0; i<phase; ++i) std::cout << "    ";
-	  std::cout << " advance to phase " << phase << std::endl;
+	  std::cout << " ss advance to phase " << phase << std::endl;
 	}
 #endif
 
@@ -1206,6 +1267,8 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
   if(parameters.verbosity)  {
     std::cout << statistics;
   }
+
+  //std::cout << outcome2str(satisfiability) << std::endl;
 
   return satisfiability;
 }
@@ -1295,7 +1358,6 @@ Mistral::Outcome Mistral::Solver::get_next_solution()
 }
 
 void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
-
   if(size.back() < 1024) {
     x->bool_domain = slots.back()+size.back();
     ++size.back();
@@ -1306,7 +1368,6 @@ void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
     slots.add(nslot);
     x->bool_domain = nslot;
   }
-
 
   //std::cout << "zzz " << *x << ": " << x->domain_type << std::endl;
 }
@@ -1365,6 +1426,59 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   				      << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
 }
 
+
+void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> >& seq, 
+					BranchingHeuristic *heu, 
+					RestartPolicy *pol,
+					Goal *goal) 
+{
+
+  consolidate();
+
+  if(level < 0) save();
+
+  active_solver = this;
+  signal(SIGINT,Mistral_SIGINT_handler);
+
+
+  sequence.point_to(seq);
+
+  //std::cout << "init seq: " << sequence << std::endl;
+
+  num_search_variables = sequence.size;
+
+  if(heu) { // delete heuristic
+      ; heuristic = heu; }
+  else if(!heuristic) heuristic = new GenericHeuristic< Lexicographic, MinValue >(this);
+  if(pol) { // delete policy;
+    policy    = pol; }
+  else if(!policy)    policy    = new NoRestart();
+  if(goal){ // delete objective;
+    objective = goal;}
+  else if(!objective) objective = new Goal(Goal::SATISFACTION);
+
+  // std::cout << (int*)heu << " " << (int*)heuristic << std::endl;
+  // std::cout << heuristic << std::endl;
+  // heuristic->display(std::cout);
+  // std::cout << std::endl << sequence << std::endl;
+
+  
+  heuristic->initialise(sequence);
+
+  
+
+
+  parameters.restart_limit = policy->base;
+  parameters.limit = (policy->base > 0);
+
+  statistics.num_constraints = constraints.size;
+  
+  if(parameters.verbosity)  std::cout << " c +" << std::setw(90) << std::setfill('=')
+  				      << "+" << std::endl << std::setfill(' ') 
+  				      << " c |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl 
+  				      << " c |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
+}
+
   
 Mistral::Solver::~Solver() {
 #ifdef _DEBUG_MEMORY
@@ -1398,9 +1512,6 @@ Mistral::Solver::~Solver() {
 
   //std::cout << "delete variables" << std::endl;
   for(unsigned int i=0; i<variables.size; ++i) {
-
-    //std::cout << "  delete " << variables[i] << " in " << variables[i].get_domain() << std::endl;
-
     int domain_type = variables[i].domain_type;
     if     (domain_type ==  BITSET_VAR) delete variables[i].bitset_domain;
     else if(domain_type ==    LIST_VAR) delete variables[i].list_domain;
@@ -1701,6 +1812,10 @@ void Mistral::Solver::notify_post(Constraint c) {
 } 
 
 void Mistral::Solver::notify_change_variable(const int idx) { 
+
+  // std::cout << "notify change on " << variables[idx] << " in " << variables[idx].get_domain() 
+  // 	    << " to " <<  variable_triggers << std::endl;
+
   for(unsigned int i=0; i<variable_triggers.size; ++i) {
     variable_triggers[i]->notify_change(idx);
   }
@@ -3356,63 +3471,74 @@ void Mistral::Solver::forget() {
 }
 
 
-void Mistral::Solver::branch_right() {
-  Mistral::Decision deduction;
-  //backtrack_level = level-1;
-  // if(parameters.backjump) {
-  //   //int backtrack_level=level-1;
-  //   decision = learn_nogood_and_backjump(); //backtrack_level);
-  //   else {
-  //     while(level>backtrack_level) {
-  // 	restore();
-  // 	decisions.pop();
-  //     }
-  //   }
-  // } else {
+Mistral::Outcome Mistral::Solver::branch_right() {
+  //std::cout << "BR" << std::endl;
 
+  int status = UNKNOWN;
+  if( level == search_root ) status = exhausted(); //objective);
+  else {
 
-  if(parameters.backjump) {
-    //decisions.size += (backtrack_level-level);
-    Lit p = learnt_clause[0];
-    deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NOT(SIGN(p)));
-  } else {
-    backtrack_level = level-1;
-    //deduction = decisions.pop();
-    deduction = decisions.back();
-    deduction.invert();
-  }
-
-  //decisions.size = backtrack_level;
-
-  // if(backtrack_level == level)
-  //   {
-  //     std::cout << "CA ALORS!" << std::endl;
-  //   }
-
-  restore(backtrack_level);  
-
-  //decision = decisions.pop(); 
-  //decision.invert();
-  //}
-
-  // if( limits_expired() ) status = LIMITOUT;
-  // else {
-  
+    Mistral::Decision deduction;
+    //backtrack_level = level-1;
+    // if(parameters.backjump) {
+    //   //int backtrack_level=level-1;
+    //   decision = learn_nogood_and_backjump(); //backtrack_level);
+    //   else {
+    //     while(level>backtrack_level) {
+    // 	restore();
+    // 	decisions.pop();
+    //     }
+    //   }
+    // } else {
+    
+    
+    if(parameters.backjump) {
+      //decisions.size += (backtrack_level-level);
+      Lit p = learnt_clause[0];
+      deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NOT(SIGN(p)));
+    } else {
+      backtrack_level = level-1;
+      //deduction = decisions.pop();
+      deduction = decisions.back();
+      
+      //std::cout << "DEDUCE " << deduction << std::endl;
+      
+      deduction.invert();
+    }
+    
+    //decisions.size = backtrack_level;
+    
+    // if(backtrack_level == level)
+    //   {
+    //     std::cout << "CA ALORS!" << std::endl;
+    //   }
+    
+    restore(backtrack_level);  
+    
+    //decision = decisions.pop(); 
+    //decision.invert();
+    //}
+    
+    // if( limits_expired() ) status = LIMITOUT;
+    // else {
+    
 #ifdef _DEBUG_SEARCH
-  if(_DEBUG_SEARCH) {
-    std::cout << "c";
-    for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-    std::cout << deduction << std::endl;
-  }
+    if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+      std::cout << deduction << std::endl;
+    }
 #endif
-  
-  //decisions.back(-1).make();
-  //decision.make();
-  deduction.make();
-  //}
+    
+    //decisions.back(-1).make();
+    //decision.make();
+    deduction.make();
+    //}
+    
+    
+  }
 
-
-
+  return status;
 }
 
 
@@ -3514,7 +3640,7 @@ void Mistral::Solver::branch_left() {
  Mistral::Outcome Mistral::Solver::satisfied() {    
 #ifdef _DEBUG_SEARCH
    if(_DEBUG_SEARCH) {
-     std::cout << " c";
+     std::cout << "c";
      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
      std::cout << " SAT!" << std::endl; 
    }
@@ -3534,23 +3660,24 @@ void Mistral::Solver::branch_left() {
     Variable *scope;
     Constraint C;
     bool all_assigned;
+    int real_arity;
 
 
     for(i=0; i<posted_constraints.size; ++i) {
-
-
       //std::cout << posted_constraints[i] << " / " << constraints.size << std::endl;
 
       all_assigned = true;
       C = constraints[posted_constraints[i]];
       //C.consolidate();
 
+      real_arity = 0;
       k=C.arity();
       scope = C.get_scope();
       for(j=0; j<k; ++j) {
 	if(scope[j].is_ground()) 
 	  tmp_sol.add(scope[j].get_value());
 	else {
+	  ++real_arity;
 	  tmp_sol.add(scope[j].get_min());
 	  all_assigned = false;
 	  //break;
@@ -3578,15 +3705,22 @@ void Mistral::Solver::branch_left() {
 	//   }
 	// }
 
-
-	/// This checks that all bounds are BC
-	for(j=0; j<k && consistent; ++j) {
-	  if(!scope[j].is_ground()) {
-	    if(!C.find_bound_support(j, scope[j].get_min())) consistent = false;
-	    else if(!C.find_bound_support(j, scope[j].get_max())) consistent = false;
+// #ifdef _DEBUG_SEARCH
+// 	if(_DEBUG_SEARCH) {
+// 	  std::cout << "c check incomplete assignment of " << C << " (" << real_arity << ")" << std::endl; 
+// 	}
+// #endif
+	
+	if(real_arity < 5) {
+	  /// This checks that all bounds are BC
+	  for(j=0; j<k && consistent; ++j) {
+	    if(!scope[j].is_ground()) {
+	      if(!C.find_bound_support(j, scope[j].get_min())) consistent = false;
+	      else if(!C.find_bound_support(j, scope[j].get_max())) consistent = false;
+	    }
 	  }
 	}
-	
+
 
       } else {
 	consistent = !C.check(tmp_sol.stack_);
@@ -3637,6 +3771,15 @@ void Mistral::Solver::branch_left() {
   for(i=0; i<solution_triggers.size; ++i) {
     solution_triggers[i]->notify_solution();
   }
+
+#ifdef _DEBUG_SEARCH
+  if(_DEBUG_SEARCH) {
+    std::cout << "c";
+    for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+    std::cout << "=> " << outcome2str(result) << std::endl;
+  }
+#endif
+  
   
   return result;
   
@@ -3647,7 +3790,7 @@ void Mistral::Solver::branch_left() {
 Mistral::Outcome Mistral::Solver::exhausted() {    
 #ifdef _DEBUG_SEARCH
   if(_DEBUG_SEARCH) {
-    std::cout << " c UNSAT!" << std::endl; 
+    std::cout << "c UNSAT!" << std::endl; 
   }
 #endif
   
@@ -3698,10 +3841,10 @@ Mistral::Outcome Mistral::Solver::exhausted() {
           It is possible to start the search with the decision stack and trail non empty, and backtrack
 	  on them (if 'root' is set to something lower than their size), or not.
  */
-Mistral::Outcome Mistral::Solver::chronological_dfs(const int root) 
+Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root) 
 {
-
-  //std::cout << "start search rooted at level " << root << std::endl;
+  search_root = _root;
+  //std::cout << "start search rooted at level " << search_root << std::endl;
 
   int status = UNKNOWN;
   while(status == UNKNOWN) {
@@ -3711,13 +3854,20 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int root)
     //   exit(1);
     // }
 
+    //std::cout << sequence << std::endl;
+
+    //std::cout << constraints[0] << std::endl;
+
+
     if(propagate()) {
 
+      //std::cout << "sequence: " << sequence << std::endl;
+
 #ifdef _MONITOR
-    monitor_list.display(std::cout);
-    std::cout << std::endl;
-    //display(std::cout, 2);
-    check_constraint_graph_integrity();
+      monitor_list.display(std::cout);
+      std::cout << std::endl;
+      //display(std::cout, 2);
+      //check_constraint_graph_integrity();
 #endif
             
       ++statistics.num_nodes;
@@ -3728,14 +3878,24 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int root)
     } else {
 
       if( parameters.backjump ) learn_nogood();
-      //if( decisions.empty() ) status = exhausted(); //objective);
-      if( level == root ) status = exhausted(); //objective);
-      else if( limits_expired() ) status = LIMITOUT;
-      else branch_right();
+      if( limits_expired() ) {
+	status = LIMITOUT;
+      } else status = branch_right();
+
+
+      // if( parameters.backjump ) learn_nogood();
+      // //if( decisions.empty() ) status = exhausted(); //objective);
+      // if( level == root ) status = exhausted(); //objective);
+      // else if( limits_expired() ) {
+      // 	status = LIMITOUT;
+      // } else branch_right();
 
     }
 
   }
+
+  //std::cout << outcome2str(status) << std::endl;
+
   return status;
 }
 

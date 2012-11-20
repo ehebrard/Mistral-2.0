@@ -23,7 +23,9 @@
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
- 
+
+
+//#define  _DEBUG_TABLE (id == 7)
 
 
 
@@ -208,63 +210,6 @@ void Mistral::GlobalConstraint::initialise_vars(Solver *s) {
 
 void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
-// #ifdef _DEBUG_RELAX
-//   std::cout << "[" << std::setw(4) << id << "]: first post on: " ;
-// #endif
-
-//   solver = s;
-//   // for each of its variables
-//   self = new Constraint[on.size];
-//   index = new int[on.size];
-//   for(unsigned int i=0; i<on.size; ++i) {
-//     //_scope[i].initialise(s, false);
-//     self[i] = Constraint(this, i|type);
-//     //post_on(i);
-    
-//     Constraint c = self[i];
-//     c.data |= POSTED;
-
-//     solver->save( c );
-
-//     index[i] = -1;
-
-//     //index[i] = on[i]->post(self[i]);
-//     //if(_scope[i].domain_type != CONST_VAR) {
-//     //if(!(_scope[i].is_constant())) {
-//     if(!(_scope[i].is_ground())) {
-      
-//       //std::cout << "yes" << std::endl;
-
-// #ifdef _DEBUG_RELAX
-//       std::cout << _scope[i] << " " ;
-// #endif
-
-//       un_relax_from(i);
-      
-      
-//     }  
-//     else {
-      
-//       //std::cout << "no" << std::endl;
-
-//       desactivate(i);
-       
-//     } 
-
-//     // else {
-
-//     //   //std::cout << "no" << std::endl;
-//     // }
-//   }
-
-// #ifdef _DEBUG_RELAX
-//   std::cout << std::endl;
-
-// #endif
-
-//   //mark_domain();
-
-
 #ifdef _DEBUG_RELAX
   std::cout << "[" << std::setw(4) << id << "]: first post on: " ;
 #endif
@@ -303,7 +248,8 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 	std::cout << _scope[i] << " " ;
 #endif
 
-	un_relax_from(i);
+	//un_relax_from(i);
+	check_and_un_relax_from(i);
       }  
     }
   }
@@ -352,6 +298,12 @@ int Mistral::Trigger::post(Constraint ct) {
   add(ct);
   return size-1;
 }
+
+int Mistral::Trigger::check_and_post(Constraint ct) {
+  if(!size || back() != ct) add(ct);
+  return size-1;
+}
+
 
 void Mistral::Trigger::relax(const int idx) {
   //std::cout << "relax " << idx << " out of " << size << std::endl;
@@ -1269,6 +1221,7 @@ Mistral::GlobalConstraint::~GlobalConstraint() {
   if(changes.list_ == events.list_)
     events.list_ = NULL;
   delete [] event_type;
+  delete [] solution;
   //delete [] scope;
 }
 
@@ -1281,7 +1234,7 @@ void Mistral::GlobalConstraint::initialise() {
   // index = new Constraint**[scope.size];
   // trigger = new int[scope.size];
   solution = new int[scope.size];
-  changes.initialise(0, scope.size-1, false);
+  changes.initialise(0, scope.size-1, scope.size, false);
   supports = NULL;
 
   std::fill(event_type, event_type+on.size, NO_EVENT);
@@ -1290,7 +1243,7 @@ void Mistral::GlobalConstraint::initialise() {
   // std::fill(trigger, trigger+scope.size, _DOMAIN_);
   std::fill(solution, solution+scope.size, 0);
 
-  active.initialise(solver, 0, on.size-1, true);
+  active.initialise(solver, 0, on.size-1, on.size, true);
 
   GlobalConstraint::set_idempotent();
 }
@@ -1378,7 +1331,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
 
   PropagationOutcome wiped_idx = CONSISTENT;
   if(!active) {
-    if(scope[0].get_min() == scope[1].get_min()) wiped_idx = FAILURE(0);
+    if(scope[0].get_first() == scope[1].get_first()) wiped_idx = FAILURE(0);
   } else {
     
     // if(active != 3) {
@@ -1395,7 +1348,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
     // 		<< scope[active-1].get_domain() << std::endl;
 
 
-    if(active != 3 && (scope[active-1].remove(scope[2-active].get_min()) == FAIL_EVENT)) wiped_idx = FAILURE(active-1);
+    if(active != 3 && (scope[active-1].remove(scope[2-active].get_first()) == FAIL_EVENT)) wiped_idx = FAILURE(active-1);
   }
   return wiped_idx;
 }
@@ -1403,11 +1356,13 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate() {
 Mistral::PropagationOutcome Mistral::ConstraintNotEqual::propagate(const int changed_idx, 
 								   const Event evt) {
 
-  //std::cout << "\n propagate changes on " << scope[changed_idx] << " to " << scope[1-changed_idx] << std::endl;
+  // std::cout << "\n propagate changes on " << scope[changed_idx] << " to " << scope[1-changed_idx] 
+  // 	    << " (remove " << scope[changed_idx].get_first() << " from " 
+  // 	    << scope[1-changed_idx].get_domain() << ")" << std::endl;
 
   //active^=(1 << changed_idx);
   int var = 1-changed_idx;
-  PropagationOutcome wiped_idx = (scope[var].remove(scope[changed_idx].get_min()) == FAIL_EVENT ? FAILURE(var) : CONSISTENT);
+  PropagationOutcome wiped_idx = (scope[var].remove(scope[changed_idx].get_first()) == FAIL_EVENT ? FAILURE(var) : CONSISTENT);
   //if(IS_OK(wiped_idx)) relax_from(var);
   return wiped_idx;
 }
@@ -2659,10 +2614,30 @@ void Mistral::PredicateOffset::initialise() {
 Mistral::PropagationOutcome Mistral::PredicateOffset::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
+
+#ifdef _DEBUG_OFFSET
+  if(_DEBUG_OFFSET) {
+    std::cout << scope[0].get_domain() << " + " << offset << " = " << scope[1].get_domain() << std::endl;
+  }
+#endif
+
+
   if( IS_FAIL(scope[0].set_min( scope[1].get_min() - offset )) ) wiped = FAILURE(0); 
   else if( IS_FAIL(scope[0].set_max( scope[1].get_max() - offset )) ) wiped = FAILURE(0); 
   else if( IS_FAIL(scope[1].set_min( scope[0].get_min() + offset )) ) wiped = FAILURE(1); 
   else if( IS_FAIL(scope[1].set_max( scope[0].get_max() + offset )) ) wiped = FAILURE(1);
+
+
+#ifdef _DEBUG_OFFSET
+  if(_DEBUG_OFFSET) {
+    if(IS_OK(wiped))
+      std::cout << scope[0].get_domain() << " + " << offset << " = " << scope[1].get_domain() ;
+    else
+      std::cout << "fail!" ;
+    std::cout << std::endl << std::endl;
+  }
+#endif
+
   
   return wiped;
 }
@@ -2670,13 +2645,66 @@ Mistral::PropagationOutcome Mistral::PredicateOffset::propagate() {
 Mistral::PropagationOutcome Mistral::PredicateOffset::propagate(const int changed_idx, const Event evt) {
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if(changed_idx == 1) {
-    if( LB_CHANGED(evt) && IS_FAIL(scope[0].set_min( scope[1].get_min() - offset )) ) wiped = FAILURE(0); 
-    else if( UB_CHANGED(evt) && IS_FAIL(scope[0].set_max( scope[1].get_max() - offset )) ) wiped = FAILURE(0);
-  } else { 
-    if( LB_CHANGED(evt) && IS_FAIL(scope[1].set_min( scope[0].get_min() + offset )) ) wiped = FAILURE(1); 
-    else if( UB_CHANGED(evt) && IS_FAIL(scope[1].set_max( scope[0].get_max() + offset )) ) wiped = FAILURE(1);
+
+#ifdef _DEBUG_OFFSET
+  if(_DEBUG_OFFSET) {
+    std::cout << scope[0].get_domain() << " + " << offset << " = " << scope[1].get_domain() << std::endl;
   }
+#endif
+
+  int changed = changed_idx;
+  Event enxt, ecur=evt;
+  while(IS_OK(wiped) && ecur != NO_EVENT) {
+    enxt = NO_EVENT;
+    
+#ifdef _DEBUG_OFFSET
+  if(_DEBUG_OFFSET) {
+    std::cout << "react to " << event2str(ecur) << " on " << scope[changed] << std::endl;
+  }
+#endif
+
+    if(changed == 1) {
+      if( LB_CHANGED(ecur) ) {
+	enxt |= scope[0].set_min( scope[1].get_min() - offset );
+	if(FAILED(enxt)) wiped = FAILURE(0); 
+      }
+      if( IS_OK(wiped) && UB_CHANGED(ecur) ) {
+	enxt |= scope[0].set_max( scope[1].get_max() - offset );
+	if(FAILED(enxt)) wiped = FAILURE(0);
+      }
+      changed = 0;
+    } else { 
+      if( LB_CHANGED(ecur) ) {
+	enxt |= scope[1].set_min( scope[0].get_min() + offset );
+        if(FAILED(enxt)) wiped = FAILURE(1);
+      } 
+      if( IS_OK(wiped) && UB_CHANGED(ecur) ) {
+	enxt |= scope[1].set_max( scope[0].get_max() + offset );
+	if(FAILED(enxt)) wiped = FAILURE(1);
+      }
+      changed = 1;
+    }
+
+#ifdef _DEBUG_OFFSET
+  if(_DEBUG_OFFSET) {
+    std::cout << " ====> " << event2str(enxt) << " on " << scope[changed] << std::endl;
+  }
+#endif
+
+    ecur = enxt;
+  }
+
+
+#ifdef _DEBUG_OFFSET
+  if(_DEBUG_OFFSET) {
+    if(IS_OK(wiped))
+      std::cout << scope[0].get_domain() << " + " << offset << " = " << scope[1].get_domain() ;
+    else
+      std::cout << "fail!" ;
+    std::cout << std::endl << std::endl;
+  }
+#endif
+
 
   return wiped;
 }
@@ -7060,6 +7088,613 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 
 
 
+Mistral::ConstraintTable::ConstraintTable(Vector< Variable >& scp)
+  : GlobalConstraint(scp) { priority = 0; }
+
+void Mistral::ConstraintTable::initialise() {
+  ConstraintImplementation::initialise();
+  unsigned int arity = scope.size;
+
+  for(unsigned int i=0; i<arity; ++i)
+    trigger_on(_DOMAIN_, scope[i]);
+
+  
+  support_of = new ReversibleSet*[arity];
+  values = new Vector<int>[arity];
+  for(unsigned int i=0; i<arity; ++i) {
+
+    support_of[i] = new ReversibleSet[scope[i].get_initial_max() - scope[i].get_initial_min() + 1];
+    support_of[i] -= scope[i].get_initial_min();
+    values[i].initialise(0,scope[i].get_size());
+
+    int vnxt = scope[i].get_first(), val;
+    do {
+      val = vnxt;
+
+      if(values[i].empty()) {
+  	support_of[i][val].initialise(solver, 
+				      0, table.size, 8, false);
+      } else {
+	support_of[i][val].initialise(support_of[i][values[i][0]], 8);
+      }
+
+
+      //std::cout << "support_of[" << i << "][" << val << "]: " << support_of[i][val].env << std::endl;
+
+      values[i].add(val);
+      
+      vnxt = scope[i].next(val);
+    } while( val != vnxt );
+  }
+
+  for(unsigned int k=0; k<table.size; ++k) {
+    //std::cout << "add " << table[k] << std::endl;
+    for(unsigned int i=0; i<arity; ++i) {
+      support_of[i][table[k][i]].init_add(k);
+    }
+  }
+
+  //exit(1);
+
+
+  GlobalConstraint::initialise();
+
+  value_delta = new DomainDelta[arity];
+  // initialise the domain_delta
+  for(unsigned int i=0; i<arity; ++i) {
+    value_delta[i].initialise(scope[i]);
+  }
+
+
+  // then we "propagate"
+  for(unsigned int xi=0; xi<arity; ++xi) {
+    Domain dom_xi(scope[xi]);
+    //std::cout << "iterate over " << scope[xi].get_domain() << std::endl;
+     
+    Domain::iterator xstop = dom_xi.begin();
+
+    int valj;
+    for(Domain::iterator xit = dom_xi.end(); --xit>=xstop; ) {
+      valj = dom_xi.get_value(xit); 
+
+      if(support_of[xi][valj].empty())  {
+	if(FAILED(scope[xi].remove(valj))) get_solver()->fail();
+	//pruned.add( assignment(xi, valj) );
+      }
+      // std::cout << scope[xi] << " = " << valj << ":" ;
+      // for(int k=0; k<support_of[xi][valj].size; ++k) {
+      // 	std::cout << " " << table[support_of[xi][valj][k]] ;
+      // }
+      // std::cout << std::endl;
+
+    }
+  }
+}
+
+Mistral::ConstraintTable::~ConstraintTable() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete table constraint" << std::endl;
+#endif
+
+  for(unsigned int i=0; i<scope.size; ++i) {
+    for(unsigned int j=1; j<values[i].size; ++j) {
+      support_of[i][values[i][j]].index_ = NULL;
+      support_of[i][values[i][j]].start_ = NULL;
+    }
+    support_of[i] += scope[i].get_initial_min();
+    delete [] support_of[i];
+
+    //delete value_delta[i].cleanup();
+  }
+  delete [] support_of;
+  delete [] value_delta;
+  delete [] values;
+
+}
+
+
+
+Mistral::PropagationOutcome Mistral::ConstraintTable::propagate() 
+{
+  PropagationOutcome wiped = CONSISTENT;
+
+  int xi, xj, vali, valj, sk, tk;
+  Domain::iterator xstop;
+  Domain::iterator xit;
+
+  int arity = scope.size;
+
+#ifdef _DEBUG_TABLE
+  std::cout << "propagate " << *this << std::endl;
+  std::cout << active << std::endl;
+#endif
+
+  while(!changes.empty()) {
+
+#ifdef _DEBUG_TABLE
+    std::cout << "modified variables: " << changes << std::endl;
+#endif
+
+    xi = changes.pop();
+
+#ifdef _DEBUG_TABLE
+    std::cout << "  changes on " << scope[xi] << ":\n";
+#endif
+
+    xstop = value_delta[xi].begin();
+    for(xit = value_delta[xi].end(); --xit>=xstop; ) {
+      vali = *xit;
+
+#ifdef _DEBUG_TABLE
+      std::cout << "    lost " << vali << ": " << std::endl;
+#endif
+
+      for(sk = support_of[xi][vali].size; sk--;) {
+	tk = support_of[xi][vali][sk];
+
+#ifdef _DEBUG_TABLE
+	//std::cout << ".";
+
+	std::cout << "       remove " << tk << " <" << table[tk][0];
+	for(xj = 1; xj < arity; ++xj) {
+	  std::cout << " " << table[tk][xj];
+	}
+	std::cout << "> from " << std::endl;
+#endif
+
+	for(xj = arity; xj--;) {
+	  if(xj != xi
+	     //&& active.contain(xj)
+	     ) {
+	    valj = table[tk][xj];
+
+#ifdef _DEBUG_TABLE
+	    // std::cout << "revremove " << tk << " from support_of[" << xj << "][" << valj << "]\n";
+	    std::cout << "        " << scope[xj] << " = " << valj << ": " << support_of[xj][valj] << std::endl;
+#endif
+
+	    //if(support_of[xj][valj].contain(tk)) {
+	   
+	      // if(!(active.contain(xj))) {
+	      // 	std::cout << "ERROR 1" << std::endl;
+
+	      // 	std::cout << active << std::endl;
+
+	      // 	print_active();
+		
+	      // 	std::cout << scope[xj] << " in " << scope[xj].get_domain() << std::endl;
+		
+	      // 	std::cout << support_of[xj][valj] << std::endl;
+
+	      // 	std::cout << "try to remove " << tk << std::endl;
+
+	      // 	exit(1);
+	      // }
+
+	      support_of[xj][valj].reversible_remove(tk);
+
+#ifdef _DEBUG_TABLE
+	      std::cout << "        " << support_of[xj][valj] << " (" << support_of[xj][valj].empty() << ")" << std::endl;
+#endif	  
+	      
+	      if(support_of[xj][valj].empty()) {
+		
+#ifdef _DEBUG_TABLE
+		std::cout << "        [emptied " << scope[xj] << "'s support list]!!" << std::endl;
+#endif
+		
+		if(FAILED(scope[xj].remove(valj))) { wiped = FAILURE(xj); goto FAIL; }
+		//if(!changes.contain(xj)) changes.add(xj);
+	      }
+// 	    } 
+
+// #ifdef _DEBUG_TABLE
+// 	    else {
+// 	      //if(active.contain(xj)) {
+// 	    	std::cout << "ERROR 2" << std::endl;
+// 	    	exit(1);
+// 	    	//}
+// 	    }
+// #endif
+
+	  }
+	}
+      }
+
+// #ifdef _DEBUG_TABLE
+//       std::cout << std::endl; 
+// #endif
+
+    }
+  }
+
+  for(xi=0; xi<arity; ++xi) {
+    value_delta[xi].close();
+  }
+  
+ FAIL: 
+  return wiped;
+}
+
+int Mistral::ConstraintTable::check( const int* s ) const 
+{
+  int xmin=0, found = false;
+  const int *support;
+  unsigned int arity = scope.size, min = INFTY;
+  for(unsigned int i=0; i<arity; ++i) {
+    if(support_of[i][s[i]].list_capacity < min) {
+      xmin = i;
+      min = support_of[i][s[i]].list_capacity;
+    }
+  }
+
+  ReversibleSet::iterator end = support_of[xmin][s[xmin]].end_mem();
+  for(ReversibleSet::iterator it = support_of[xmin][s[xmin]].begin(); !found && it!=end; ++it) {
+    support = table[*it];
+    found = true;
+    for(unsigned int i=0; found && i<arity; ++i) {
+      if(support[i] != s[i]) found = false;
+    }
+  }
+
+  return !found;
+}
+
+std::ostream& Mistral::ConstraintTable::display_supports(std::ostream& os) const {
+  unsigned int arity = scope.size;
+  for(unsigned int xi=0; xi<arity; ++xi) {
+    
+    os << scope[xi] << " in " << scope[xi].get_domain() << std::endl;
+
+    Domain dom_xi(scope[xi]);
+    
+    Domain::iterator xstop = dom_xi.end();
+    
+    int valj;
+    for(Domain::iterator xit = dom_xi.begin(); xit<xstop; ++xit) {
+      valj = dom_xi.get_value(xit);   
+      os << "    = " << valj << ": " << support_of[xi][valj] << std::endl;
+    }
+    os << std::endl;  
+  }
+  return os;
+}
+
+std::ostream& Mistral::ConstraintTable::display(std::ostream& os) const {
+  os << "TABLE(" << scope[0]/*.get_var()*/ ;
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << ", " << scope[i]/*.get_var()*/;
+  os << ")";
+  
+  //display_supports(os);
+
+  // os << ") in " ;
+  // for(unsigned int i=0; i<table.size; ++i) {
+  //   os << "<" << table[i][0] ;
+  //   for(unsigned int j=1; j<scope.size; ++j) {
+  //     os << " " << table[i][j] ;
+  //   }
+  //   os << ">";
+  // }
+  return os;
+}
+
+void Mistral::ConstraintTable::add(const int* tuple) {
+  table.add(tuple);
+}
+
+
+
+
+
+
+
+
+
+Mistral::ConstraintTableGAC2001Allowed::ConstraintTableGAC2001Allowed(Vector< Variable >& scp)
+  : GlobalConstraint(scp) { priority = 0; }
+
+void Mistral::ConstraintTableGAC2001Allowed::initialise() {
+  ConstraintImplementation::initialise();
+  unsigned int arity = scope.size;
+
+  for(unsigned int i=0; i<arity; ++i)
+    trigger_on(_DOMAIN_, scope[i]);
+
+
+  unsigned int i, j;
+  int nval;
+
+  firstSupport = new ReversibleNum<int>*[arity];
+  themins = new int[arity];
+  order = new int[arity];
+  supportList = new Vector<const int*>*[arity];
+
+
+  for(i=0; i<arity; ++i) {
+    order[i] = i;
+    themins[i] = scope[i].get_initial_min();
+    nval=(scope[i].get_initial_max() - themins[i] + 1);
+
+    /// init the reversible data structure 'firstSupport'
+    firstSupport[i] = new ReversibleNum<int>[nval];
+    firstSupport[i] -= themins[i];
+
+    Domain dom_xi(scope[i]);
+    Domain::iterator xit = dom_xi.begin();
+    Domain::iterator xend = dom_xi.end();
+
+    while(xit != xend) {
+      nval = dom_xi.get_value(xit);
+      firstSupport[i][nval].initialise(solver, 0);
+      ++xit;
+    }
+  }
+
+  GlobalConstraint::initialise();
+
+  for(i=0; i<arity; ++i) {
+    /// init the list of supports for each value
+    supportList[i] = new Vector<const int*> [scope[i].get_initial_max() - themins[i] + 1];
+    supportList[i] -= themins[i];
+  }
+
+  i=tuples.size;
+  while( i-- ) {
+    for(j=0; j<arity; ++j)
+      supportList[j][tuples[i][j]].add( tuples[i] );	   
+  }
+
+}
+
+Mistral::ConstraintTableGAC2001Allowed::~ConstraintTableGAC2001Allowed() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete table gac 2001 constraint" << std::endl;
+#endif
+
+  int i, arity = scope.size;
+  for(i=0; i<arity; ++i) {
+    firstSupport[i] += themins[i];
+    delete [] firstSupport[i];
+  }
+  delete [] firstSupport;
+  delete [] order;
+
+  for(i=0; i<arity; ++i) {
+    supportList[i] += themins[i];
+    delete [] supportList[i];
+  }
+  delete [] supportList;
+  delete [] themins;
+
+}
+
+
+
+Mistral::PropagationOutcome Mistral::ConstraintTableGAC2001Allowed::propagate() 
+{
+  PropagationOutcome wiped = CONSISTENT;
+
+  int i, oi, j, k, ok, valid, index, n, arity = scope.size, changedIdx;
+
+
+
+#ifdef _DEBUG_TABLE
+  if(_DEBUG_TABLE) {
+  std::cout << "\npropagate " << *this << std::endl;
+  std::cout << active << std::endl;
+  }
+#endif
+
+ 
+  for(i=1; i<arity; ++i) {   // order variables by increasing domain size
+    j=i;
+    while( j && scope[order[j]].get_size() < scope[order[j-1]].get_size() ) {      
+      ok = order[j];
+      order[j] = order[j-1];
+      order[--j] = ok;
+    }
+  }
+
+
+
+  while(IS_OK(wiped) && !changes.empty()) {
+
+#ifdef _DEBUG_TABLE
+    if(_DEBUG_TABLE) {
+    std::cout << "modified variables: " << changes << std::endl;
+    }
+#endif
+
+    changedIdx = changes.pop();
+
+
+#ifdef _DEBUG_TABLE
+    if(_DEBUG_TABLE) {
+    std::cout << "  changes on " << scope[changedIdx] << ":\n";
+    }
+#endif
+
+    
+    for( i=0; IS_OK(wiped) && i<arity; ++i ) {
+      oi = order[i];
+      if( oi != changedIdx && active.contain(oi) ) 
+	{
+	  
+#ifdef _DEBUG_TABLE
+	  if(_DEBUG_TABLE) {
+	  std::cout << "    revise " << scope[oi] << " in " << scope[oi].get_domain() << ":\n";
+	  }
+#endif
+
+	  Domain dom_xi(scope[oi]);
+	  
+	  Domain::iterator xit = dom_xi.end();
+	  Domain::iterator xend = dom_xi.begin();
+
+	  while(xit > xend && IS_OK(wiped)) {
+	    --xit;
+	    j = dom_xi.get_value(xit);
+
+	    n = supportList[oi][j].size;
+	    supports_X = supportList[oi][j].stack_; // init the list of supports
+
+#ifdef _DEBUG_TABLE
+	    if(_DEBUG_TABLE) {
+	    std::cout << "      = " << j << ": " ;
+	    }
+#endif
+	    
+	    valid = false;
+	    for(index=firstSupport[oi][j]; !valid && index<n; ++index) {
+
+
+#ifdef _DEBUG_TABLE
+	      if(_DEBUG_TABLE) {
+	    std::cout << "<" << supports_X[index][0];
+	    for(k=1; k<arity; ++k)
+	      std::cout << " " << supports_X[index][k];
+	    std::cout << ">" ;
+	      }
+#endif
+
+	      valid = true;
+	      for(k=0; valid && k<arity; ++k) {
+		ok = order[k];
+		valid = ( oi == ok || scope[ok].contain( supports_X[index][ok] ) );
+	      }
+	    }
+	    if( valid ) firstSupport[oi][j] = index-1;
+	    else {
+// #ifdef _DEBUG_TABLE
+// 	      if(_DEBUG_TABLE) {
+// 		std::cout << "remove " << j << " from " << scope[oi].get_domain() << std::endl;
+	      
+		if(FAILED(scope[oi].remove( j ))) wiped = FAILURE(oi);
+		
+		//std::cout << wiped << std::endl;
+	    }
+
+#ifdef _DEBUG_TABLE
+	    if(_DEBUG_TABLE) {
+	    if( valid ) {
+	      std::cout << " ok!";
+	    } else {
+	      std::cout << " empty!" ;
+	    }
+	    std::cout << std::endl;
+	    }
+#endif
+	    
+	    //--xit;
+	  }
+
+#ifdef _DEBUG_TABLE
+	    if(_DEBUG_TABLE) {
+	      std::cout << "    revised " << scope[oi] << " in " << scope[oi].get_domain() << ":\n\n";
+	    }
+#endif
+	}
+    }
+  }
+
+#ifdef _DEBUG_TABLE
+  if(_DEBUG_TABLE) {
+    std::cout << "return " << (IS_OK(wiped) ? "consistent\n" : "failure\n");
+  }
+#endif
+
+  return wiped;
+}
+
+int Mistral::ConstraintTableGAC2001Allowed::check( const int* s ) const 
+{
+
+
+
+  int xmin=0, found = false, t;
+  const int *support;
+  unsigned int arity = scope.size, min = INFTY;
+
+  std::cout << "check " << *this << " (" << s[0];
+  for(unsigned int i=1; i<arity; ++i) {
+    std::cout << " " << s[i];
+  }
+  std::cout << ")" << std::endl;
+
+
+  for(unsigned int i=0; i<arity; ++i) {
+    if(supportList[i][s[i]].size < min) {
+      xmin = i;
+      min = supportList[i][s[i]].size;
+    }
+  }
+
+
+  t = supportList[xmin][s[xmin]].size;
+  while(!found && t--) {
+    support = supportList[xmin][s[xmin]][t];
+    found = true;
+    //std::cout << "<"
+    for(unsigned int i=0; found && i<arity; ++i) {
+      //std::cout << " " << support[i];
+      if(support[i] != s[i]) found = false;
+    }
+    // if(found)
+    //   std::cout << "> OK!" << std::endl;
+  }
+  
+  return !found;
+}
+
+std::ostream& Mistral::ConstraintTableGAC2001Allowed::display_supports(std::ostream& os) const {
+  // unsigned int arity = scope.size;
+  // for(unsigned int xi=0; xi<arity; ++xi) {
+    
+  //   os << scope[xi] << " in " << scope[xi].get_domain() << std::endl;
+
+  //   Domain dom_xi(scope[xi]);
+    
+  //   Domain::iterator xstop = dom_xi.end();
+    
+  //   int valj;
+  //   for(Domain::iterator xit = dom_xi.begin(); xit<xstop; ++xit) {
+  //     valj = dom_xi.get_value(xit);   
+  //     os << "    = " << valj << ": " << support_of[xi][valj] << std::endl;
+  //   }
+  //   os << std::endl;  
+  // }
+  return os;
+}
+
+std::ostream& Mistral::ConstraintTableGAC2001Allowed::display(std::ostream& os) const {
+  os << "TABLE_GAC2001(" << scope[0]/*.get_var()*/ ;
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << ", " << scope[i]/*.get_var()*/;
+  os << ")";
+  
+  //display_supports(os);
+
+  // os << ") in " ;
+  // for(unsigned int i=0; i<table.size; ++i) {
+  //   os << "<" << table[i][0] ;
+  //   for(unsigned int j=1; j<scope.size; ++j) {
+  //     os << " " << table[i][j] ;
+  //   }
+  //   os << ">";
+  // }
+  return os;
+}
+
+void Mistral::ConstraintTableGAC2001Allowed::add(const int* tuple) {
+  tuples.add(tuple);
+}
+
+
+
+
 
 Mistral::ConstraintBoolSumEqual::ConstraintBoolSumEqual(Vector< Variable >& scp, const int t)
   : GlobalConstraint(scp) { 
@@ -7353,7 +7988,7 @@ void Mistral::PredicateWeightedSum::initialise() {
   // exit(1);
 
 
-  unknown_parity.initialise(solver, 0, scope.size-1, true);
+  unknown_parity.initialise(solver, 0, scope.size-1, scope.size, true);
   //parity.Reversible::initialise(scope[0].get_solver());
   parity.initialise(solver, ((lower_bound%2)!=0));
 
@@ -8764,7 +9399,7 @@ void Mistral::PredicateMin::initialise() {
   }
   GlobalConstraint::initialise();
 
-  candidates.initialise(solver, 0, scope.size-2, true);
+  candidates.initialise(solver, 0, scope.size-2, scope.size-1, true);
   int n = scope.size-1;
   for(int i=0; i<n; ++i) {
     if(scope[i].get_min() > scope[n].get_max()) {
@@ -8799,6 +9434,7 @@ void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int change
 #endif
   
   if(changed_idx<n) {
+    event_type[n] = 0;
     if(candidates.contain(changed_idx)) {
 #ifdef _DEBUG_MIN
       std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is a candidate" << std::endl;
@@ -8820,7 +9456,14 @@ void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int change
 #ifdef _DEBUG_MIN
 	  std::cout << "    => update " << scope[n] << "'s ub" << std::endl;
 #endif
-	  FILTER3(n, set_max(scope[changed_idx].get_max()));	
+
+	  //std::cout << wiped << std::endl;
+
+	  FILTER3(n, set_max(scope[changed_idx].get_max()));
+
+	  // std::cout << scope[n] << " in " << scope[n].get_domain() << " <= "
+	  // 	    << scope[changed_idx].get_max() << " " << wiped << std::endl;
+	
 #ifdef _DEBUG_MIN
 	  if(IS_OK(wiped)) {
 	    std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
@@ -9233,7 +9876,7 @@ void Mistral::PredicateMax::initialise() {
 // #endif
 
 
-  candidates.initialise(solver, 0, scope.size-2, true);
+  candidates.initialise(solver, 0, scope.size-2, scope.size-1, true);
   int n = scope.size-1;
   for(int i=0; i<n; ++i) {
     if(scope[i].get_max() < scope[n].get_min()) {

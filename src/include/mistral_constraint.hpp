@@ -222,6 +222,8 @@ namespace Mistral {
 
     virtual void print_active() = 0;
 
+    //virtual void remove_duplicates();
+
     bool is_active() {
       bool active = false;
       for(unsigned int i=0; !active && i<on.size; ++i) {
@@ -240,14 +242,12 @@ namespace Mistral {
     }
     
     void un_relax_from(const int var) {
-      // std::cout << var << std::endl;
-      // std::cout << " urf post [" << id << "] on " << scope[var] << ": " ;
-      // std::cout.flush();
-      // std::cout << on[var] << " -> " ;      
-      
       index[var] = on[var]->post(self[var]);
-      
-      //std::cout << on[var]  << std::endl;
+    }
+
+    // does not post a constraint that was posted on the same variable recently
+    void check_and_un_relax_from(const int var) {
+      index[var] = on[var]->check_and_post(self[var]);
     }
 
 
@@ -529,7 +529,7 @@ namespace Mistral {
 	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
-	      exit(1);
+	      //exit(1);
 	    }
 	  } else {
 	    if(!(scope[i].is_ground())) {
@@ -543,7 +543,7 @@ namespace Mistral {
 	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
-	      exit(1);
+	      //exit(1);
 	    }
 	  }
 	}
@@ -1313,12 +1313,13 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     inline void set_idempotent() {
       if(idempotent()) {
 	events.size = 0;
-	events.capacity = changes.capacity;
+	events.index_capacity = changes.index_capacity;
+	events.list_capacity = changes.list_capacity;
 	events.list_ = changes.list_;
 	events.index_ = changes.index_;
 	events.start_ = NULL;
       } else {
-	events.initialise(0, changes.capacity-1, false);
+	events.initialise(0, changes.index_capacity-1, changes.index_capacity, false);
       }
     }
 
@@ -1658,7 +1659,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
-	      exit(1);
+	      //exit(1);
 	    }
 	  } else {
 	    if(!(scope[i].is_ground())) {
@@ -1672,7 +1673,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 	      for(unsigned int j=0; j<on.size; ++j)
 		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
 	      std::cout << " (exit on check_active())" << std::endl;
-	      exit(1);
+	      //exit(1);
 	    }
 	  }
 	}
@@ -3250,6 +3251,398 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
+//   template< int ARITY >
+//   /**********************************************
+//    *Tuple Constraint
+//    **********************************************/
+//   //  <x1 , ... , xn> == y
+//   /// associate a value in y with each tuple in a given list
+//   /// and ensures that the tuple corresponding to the value of y
+//   /// is equal to <x1 , ... , xn>
+//   class PredicateTuple : public GlobalConstraint {
+ 
+//   public:
+
+//     typedef Tuple< ARITY, int >  tuple;
+//     typedef Tuple< 2, int > assignment;
+
+//     /**@name Parameters*/
+//     //@{
+//     // // given the rank $i$ of a tuple in $table$, and a variable $j$, the id of this tuple in the set $support_of[j]$
+//     // tuple<ARITY> *table2support;
+    
+//     // // given a variable $j$ and a value $k$ in the set $support_of[j]$, the id of the corresponding tuple in $table$
+//     // int **support2table;
+
+//     // for each variable and each value, the set of support. In fact, the rank of the support in $tabl$ is stored in the set.
+//     // since support are partitioned between values, all set for a given variable share the same $index_$
+//     ReversibleSet          *support_of[ARITY];
+//     // values initialy in the domains (used for memory deallocation)
+//     Vector<int>                 values[ARITY];
+
+//     // the list of tuples
+//     Vector< tuple >             table;
+    
+//     Vector< assignment >       pruned;
+
+//     DomainDelta            value_delta[ARITY];
+
+//     //@}
+
+//     /**@name Constructors*/
+//     //@{
+//     PredicateTuple() : GlobalConstraint() { }
+//     PredicateTuple(Vector< Variable >& scp);
+//     PredicateTuple(std::vector< Variable >& scp);
+//     virtual Constraint clone() { return Constraint(new PredicateTuple(scope)); }
+//     virtual void initialise();
+//     virtual int idempotent() { return 1;}
+//     virtual int postponed() { return 1;}
+//     virtual int pushed() { return 1;}
+//     //virtual bool absorb_negation(const int var) { return true; }
+//     virtual ~PredicateTuple();
+//     //@}
+
+//     /**@name Solving*/
+//     //@{
+//     virtual int check( const int* sol ) const ;
+//     virtual PropagationOutcome propagate();
+//     //virtual RewritingOutcome rewrite();
+//     //@}
+  
+//     /**@name Miscellaneous*/
+//     //@{  
+//     virtual std::ostream& display(std::ostream&) const ;
+//     virtual std::string name() const { return "bsum=k"; }
+//     //@}
+//   };
+
+
+// template< int ARITY >
+// PredicateTuple<ARITY>::PredicateTuple(Vector< Variable >& scp)
+//   : GlobalConstraint(scp) { 
+// }
+
+// template< int ARITY >
+// void PredicateTuple<ARITY>::initialise() {
+//   ConstraintImplementation::initialise();
+
+//   for(unsigned int i=0; i<scope.size; ++i)
+//     trigger_on(_DOMAIN_, scope[i]);
+
+//   //Vector<int> supports(0, max(256, table.size/ARITY/10));
+//   //support_of = new ReversibleSet*[ARITY];
+//   for(int i=0; i<ARITY; ++i) {
+//     support_of[i] = new ReversibleSet[scope[i].get_initial_max() - scope[i].get_initial_min() + 1];
+//     support_of[i] -= scope[i].get_initial_min();
+//     values[i].initialise(0,scope[i].get_size());
+
+//     int vnxt = scope[i].get_first(), val;
+//     do {
+//       val = vnxt;
+
+//       if(values[i].empty()) {
+//   	support_of[i][val].initialise(0, table.size, 8, false);
+//       } else {
+// 	support_of[i][val].initialise(support_of[i][values[i][0]], 8);
+//       }
+
+//       values[i].add(val);
+      
+//       vnxt = scope[i].next(val);
+//     } while( val != vnxt );
+//   }
+
+//   for(unsigned int k=0; k<table.size; ++k) {
+//     //std::cout << "add " << table[k] << std::endl;
+//     for(int i=0; i<ARITY; ++i) {
+//       support_of[i][table[k][i]].init_add(k);
+//     }
+//   }
+
+//   GlobalConstraint::initialise();
+
+
+//   // initialise the domain_delta
+//   for(int i=0; i<ARITY; ++i) {
+//     value_delta[i].initialise(scope[i]);
+//   }
+
+
+//   std::cout << changes << std::endl;
+//   std::cout << events << std::endl;
+
+//   // then we "propagate"
+//   for(int xi=0; xi<ARITY; ++xi) {
+//     Domain dom_xi(scope[xi]);
+    
+//     std::cout << "iterate over " << scope[xi].get_domain() << std::endl;
+     
+//     Domain::iterator xstop = dom_xi.begin();
+
+//     int valj;
+//     for(Domain::iterator xit = dom_xi.end(); --xit>=xstop; ) {
+//       valj = dom_xi.get_value(xit); 
+
+//       if(support_of[xi][valj].empty())  {
+// 	scope[xi].remove(valj);
+// 	pruned.add( assignment(xi, valj) );
+//       }
+//       std::cout << scope[xi] << " = " << valj << ":" ;
+//       for(int k=0; k<support_of[xi][valj].size; ++k) {
+// 	std::cout << " " << table[support_of[xi][valj][k]] ;
+//       }
+//       std::cout << std::endl;
+
+//     }
+//   }
+
+//   std::cout << changes << std::endl;
+//   std::cout << events << std::endl;
+
+
+
+
+
+//   // initialise the domain_delta
+//   for(int i=0; i<ARITY; ++i) {
+//     DomainDelta::iterator xit = value_delta[i].begin();
+//     DomainDelta::iterator xend = value_delta[i].end();
+
+//     std::cout << scope[i] << " in " << scope[i].get_domain() << ": " << std::endl;
+//     while(xit != xend) {
+//       std::cout << "removed " << scope[i] << " = " << *xit << std::endl;
+//       ++xit;
+//     }
+//     std::cout << std::endl;
+
+//     value_delta[i].close();
+//   }
+
+
+//   for(int i=0; i<ARITY; ++i) {
+//     DomainDelta::iterator xit = value_delta[i].begin();
+//     DomainDelta::iterator xend = value_delta[i].end();
+
+//     std::cout << scope[i] << " in " << scope[i].get_domain() << ": " << std::endl;
+//     while(xit != xend) {
+//       std::cout << "removed " << scope[i] << " = " << *xit << std::endl;
+//       ++xit;
+//     }
+//     std::cout << std::endl;
+
+//     value_delta[i].close();
+//   }
+
+
+//   scope[0].remove(13);
+//   scope[0].remove(9);
+
+
+//   scope[2].remove(3);
+//   scope[2].remove(17);
+//   scope[2].remove(8);
+//   scope[2].remove(9);
+
+//   for(int i=0; i<ARITY; ++i) {
+//     DomainDelta::iterator xit = value_delta[i].begin();
+//     DomainDelta::iterator xend = value_delta[i].end();
+
+//     std::cout << scope[i] << " in " << scope[i].get_domain() << ": " << std::endl;
+//     while(xit != xend) {
+//       std::cout << "removed " << scope[i] << " = " << *xit << std::endl;
+//       ++xit;
+//     }
+//     std::cout << std::endl;
+
+//     value_delta[i].close();
+//   }
+
+
+
+//   std::cout << pruned << std::endl;
+
+// }
+
+// template< int ARITY >
+// PredicateTuple<ARITY>::~PredicateTuple() 
+// {
+// #ifdef _DEBUG_MEMORY
+//   std::cout << "c delete boolsumequal constraint" << std::endl;
+// #endif
+// }
+
+// template< int ARITY >
+// PropagationOutcome PredicateTuple<ARITY>::propagate() 
+// {
+//   PropagationOutcome wiped = CONSISTENT;
+
+//   int xi, xj, vali, valj, sk, tk;
+//   Domain::iterator xstop;
+//   Domain::iterator xit;
+
+//   while(!changes.empty()) {
+//     xi = changes.pop();
+//     xstop = value_delta[xi].begin();
+//     for(xit = value_delta[xi].end(); --xit>=xstop; ) {
+//       vali = *xit;
+//       for(sk = support_of[xi][vali].size; sk--;) {
+// 	tk = support_of[xi][vali][sk];
+// 	for(xj = ARITY; xj--;) {
+// 	  valj = table[tk][xj];
+// 	  support_of[xj][valj].remove(tk);
+// 	  if(support_of[xj][valj].empty()) {
+// 	    if(FAILED(scope[xj].remove(valj))) { wiped = FAILURE(xj); goto FAIL; }
+// 	    if(!changes.contain(xj)) changes.add(xj);
+// 	  }
+// 	}
+//       }
+//     }
+//   }
+  
+//  FAIL: 
+//   return wiped;
+// }
+
+// template< int ARITY >
+// int PredicateTuple<ARITY>::check( const int* s ) const 
+// {
+//   // int i=scope.size, t=0;
+//   // while(--i) t+=s[i];
+//   // return total != t; 
+//   return true;
+// }
+
+// template< int ARITY >
+// std::ostream& PredicateTuple<ARITY>::display(std::ostream& os) const {
+//   // os << "(" << scope[0]/*.get_var()*/ ;
+//   // for(unsigned int i=1; i<scope.size; ++i) 
+//   //   os << " + " << scope[i]/*.get_var()*/;
+//   // os << ") == " << total ;
+//   return os;
+// }
+
+
+
+  /**********************************************
+   *Table Constraint
+   **********************************************/
+  //  <x1 , ... , xn> == y
+  /// associate a value in y with each tuple in a given list
+  /// and ensures that the tuple corresponding to the value of y
+  /// is equal to <x1 , ... , xn>
+  class ConstraintTable : public GlobalConstraint {
+ 
+  public:
+
+    //typedef Tuple< 2, int > assignment;
+
+    /**@name Parameters*/
+    //@{
+    // for each variable and each value, the set of support. In fact, the rank of the support in $tabl$ is stored in the set.
+    // since support are partitioned between values, all set for a given variable share the same $index_$
+    ReversibleSet          **support_of;
+    // values initialy in the domains (used for memory deallocation)
+    Vector<int>                 *values;
+
+    // the list of tuples
+    Vector< const int* >          table;
+    
+    // Handlers for domain-delta
+    DomainDelta            *value_delta;
+
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintTable() : GlobalConstraint() { }
+    ConstraintTable(Vector< Variable >& scp);
+    ConstraintTable(std::vector< Variable >& scp);
+    virtual Constraint clone() { return Constraint(new ConstraintTable(scope)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintTable();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    void add(const int* tuple);
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display_supports(std::ostream&) const ;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bsum=k"; }
+    //@}
+  };
+
+
+  /**********************************************
+   *TableGAC2001Allowed Constraint
+   **********************************************/
+  //  <x1 , ... , xn> == y
+  /// associate a value in y with each tuple in a given list
+  /// and ensures that the tuple corresponding to the value of y
+  /// is equal to <x1 , ... , xn>
+  class ConstraintTableGAC2001Allowed : public GlobalConstraint {
+ 
+  public:
+
+    //typedef Tuple< 2, int > assignment;
+
+    /**@name Parameters*/
+    //@{
+    ReversibleNum<int> **firstSupport;
+    Vector< const int* > **supportList;
+    int *order;
+    //BitSet *D_X;
+    const int** supports_X;
+    int* themins;
+    Vector< const int* > tuples;
+    //bool isClone;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintTableGAC2001Allowed() : GlobalConstraint() { }
+    ConstraintTableGAC2001Allowed(Vector< Variable >& scp);
+    ConstraintTableGAC2001Allowed(std::vector< Variable >& scp);
+    virtual Constraint clone() { return Constraint(new ConstraintTableGAC2001Allowed(scope)); }
+    virtual void initialise();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintTableGAC2001Allowed();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    void add(const int* tuple);
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display_supports(std::ostream&) const ;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bsum=k"; }
+    //@}
+  };
+
+
+
 
   /**********************************************
    * BoolSum Equal Constraint
@@ -3488,6 +3881,48 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     PredicateElement(std::vector< Variable >& scp, const int o=0);
     virtual ~PredicateElement();
     virtual Constraint clone() { return Constraint(new PredicateElement(scope, offset)); }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "[x]="; }
+    //@}
+  };
+
+
+  /**********************************************
+   * BoolElement Predicate
+   **********************************************/
+  /*! \class PredicateBoolElement
+    \brief  
+  */
+  class PredicateBoolElement : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    int aux_dom;
+    int offset;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateBoolElement(Vector< Variable >& scp, const int o=0);
+    PredicateBoolElement(std::vector< Variable >& scp, const int o=0);
+    virtual ~PredicateBoolElement();
+    virtual Constraint clone() { return Constraint(new PredicateBoolElement(scope, offset)); }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}

@@ -54,7 +54,9 @@ namespace Mistral {
   typedef Array<Lit> Clause;
 
 
+  //#define _DEBUG_BUILD true
   //#define _DEBUG_BACKTRACK true
+  //#define _DEBUG_RESTORE true
   //#define _DEBUG_RELAX true
   //#define _DEBUG_HISTORY true  
   //#define _DEBUG_GENPROPAG true
@@ -72,6 +74,7 @@ namespace Mistral {
   //#define _DEBUG_CLIQUENOTEQUAL true
   //#define _DEBUG_MIN true
   //#define _DEBUG_MIN ((id==23))
+  //#define _DEBUG_MIN ((scope[2].id()==801))
   //#define _DEBUG_MAX true
   //#define _DEBUG_MAX (get_solver()->parameters.verbosity == -7)
   //#define _DEBUG_MAX ((id==368))
@@ -85,6 +88,7 @@ namespace Mistral {
   //#define _DEBUG_CMOD true  
   //#define _DEBUG_ABS true  
   //#define _DEBUG_DIV true  
+  //#define _DEBUG_OFFSET ((id==1309))
 
   
 #define NORESTART 0
@@ -321,6 +325,9 @@ namespace Mistral {
 
 
   std::string domain2str(int d);
+
+
+  //void print_trace(std::ostream& os, )
 
   /**********************************************
    * Timing Memory and Command line utilities 

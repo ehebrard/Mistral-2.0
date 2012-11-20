@@ -295,6 +295,12 @@ public:
   
   void run1();
   void run2();
+  void run3();
+  void run4();
+  void run5();
+  void run6();
+  void run7();
+  void run8();
   virtual void run();
 };
 
@@ -356,6 +362,32 @@ public:
   
   IntersectionTest();
   ~IntersectionTest();
+
+  void run1();
+  void run2();
+  void run3();
+  virtual void run();
+};
+
+class UnionTest : public UnitTest {
+
+public:
+  
+  UnionTest();
+  ~UnionTest();
+
+  void run1();
+  void run2();
+  void run3();
+  virtual void run();
+};
+
+class SymmetricDifferenceTest : public UnitTest {
+
+public:
+  
+  SymmetricDifferenceTest();
+  ~SymmetricDifferenceTest();
 
   void run1();
   void run2();
@@ -1544,14 +1576,14 @@ public:
     cc18nc.run(1000);
     
 
-   ConChecker< PredicateCMod > cc19("%",true,true,12345,3,30,0,true);
+    ConChecker< PredicateCMod > cc19("%",true,true,12345,3,30,0,true);
     cc19.init();
     cc19.run(100);
- 
-
-   ConChecker< PredicateAbs > cc20("abs",true,false,12345,2,100,0,true);
+    
+    
+    ConChecker< PredicateAbs > cc20("abs",true,false,12345,2,100,0,true);
     cc20.init();
-    cc20.run(100);
+    cc20.run(1000);
   
 
     ConChecker< PredicateDivConstant > cc21pa("/", true,true,12345,2,50,0);
@@ -1697,19 +1729,100 @@ public:
 int main(int argc, char *argv[])
 {  
 
-  //int xx = (-1);
+  // // BitSet s(-100, 200, BitSet::empt);
 
-  //int zz = (xx)
+  // // s.add(-43);
+  // // s.add(-9);
+  // // s.add(-7);
+  // // s.add(12);
+  // // s.add(13);
+  // // s.add(14);
+  // // s.add(16);
+  // // s.add(32);
+  // // s.add(63);
+  // // s.add(127);
+  // // s.add(128);
+  // // s.add(187);
 
-  //int yy = -15;
-
-  // std::cout << ((unsigned int)xx) << " " ;
-  // showUint(xx, std::cout);
-
-  // std::cout << std::endl;
   
+  // // std::cout << s << std::endl;
+
+  // // int *b = new int[12];
+  // // b[0] = -43;
+  // // s.iterate_into(12, b);
+
+  // // for(int i=0; i<12; ++i) {
+  // //   std::cout << b[i] << std::endl;
+  // // }
+
+
+
+
+  // Vector<int> vals;
+
+  // vals.add(-43);
+  // vals.add(-9);
+  // vals.add(-7);
+  // vals.add(12);
+  // vals.add(13);
+  // vals.add(14);
+  // vals.add(16);
+  // vals.add(32);
+  // vals.add(63);
+  // vals.add(127);
+  // vals.add(128);
+  // vals.add(187);
+
+  // Variable X(vals, BITSET_VAR);
+
+  // Variable Y(vals, LIST_VAR);
+
+  // Variable Z(-13, 7, RANGE_VAR);
+
+  // Solver s;
+  // s.add(X);
+  // s.add(Y);
+  // s.add(Z);
+
+  // Domain dom_x(X);
+  // Domain dom_y(Y);
+  // Domain dom_z(Z);
+
+
+  // Domain::iterator xit = dom_x.begin();
+  // Domain::iterator xend = dom_x.end();
+
+  // Domain::iterator yit = dom_y.begin();
+  // Domain::iterator yend = dom_y.end();
+
+  // Domain::iterator zit = dom_z.begin();
+  // Domain::iterator zend = dom_z.end();
+
+  // cout << "bitset domain: " << X.get_domain() << "\n";
+  // while(xit != xend) {
+  //   cout << dom_x.get_value(xit) << endl;
+  //   ++xit;
+  // }
+
+  // cout << "\nlist domain: " << Y.get_domain() << "\n";
+  // while(yit != yend) {
+  //   cout << dom_y.get_value(yit) << endl;
+  //   ++yit;
+  // }
+
+  // cout << "\nrange domain: " << Z.get_domain() << "\n";
+  // int k = 0;
+  // while(zit != zend && k < 30) {
+  //   cout << dom_z.get_value(zit) << endl;
+  //   ++zit;
+  //   ++k;
+  // }
+
+
   // exit(1);
-   
+
+
+
   usrand(12345);
 
   std::vector<UnitTest*> tests;
@@ -1719,7 +1832,9 @@ int main(int argc, char *argv[])
 
 
   tests.push_back(new CheckerTest());
+  tests.push_back(new SymmetricDifferenceTest());
   tests.push_back(new LexTest());
+  tests.push_back(new UnionTest());
   tests.push_back(new IntersectionTest());
   tests.push_back(new SubsetTest());
   tests.push_back(new EqualSetTest());
@@ -1749,6 +1864,7 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomRevNumAffectations<int>());
   //tests.push_back(new ConstraintArrayTest());
   tests.push_back(new RandomIntervalTest());
+
 
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
@@ -3471,18 +3587,44 @@ void SubsetTest::run() {
   if(Verbosity) cout << "Run Subset test: "; 
   cout.flush();
 
+
   run1();
   cout << "1 ";
   cout.flush();
 
-
   run2();
   cout << "2 ";
+  cout.flush();
+  
+  run3();
+  cout << "3 ";
+  cout.flush();
+  
+  run4();
+  cout << "4 ";
+  cout.flush();
+  
+  run5();
+  cout << "5 ";
+  cout.flush();
+
+  run6();
+  cout << "6 ";
+  cout.flush();
+
+  run7();
+  cout << "7 ";
+  cout.flush();
+
+  run8();
+  cout << "8 ";
 }
 
-void SubsetTest::run1() {
+// 714 + 81942 = 82656 / 82656
+//  50 + 21510 = 21560 / 21560
+ 
 
-  
+void SubsetTest::run1() {
 
   Solver s;
 
@@ -3604,6 +3746,397 @@ void SubsetTest::run2() {
     //exit(1);
   }
   if(num_solutions != 50) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SubsetTest::run3() {
+
+  Solver s;
+
+  Variable X = SetVariable(1,9,3,5);
+  Variable Y = SetVariable(1,9,2,4);
+  Variable B(0,1);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Subset(X,Y) == B );
+
+  // std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " subset of " << Y.get_solution_str_value() << ": " << B.get_solution_str_value() << endl;
+  }
+
+  if(s.statistics.num_backtracks != 82655) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 82656) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SubsetTest::run4() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(300);
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+  Variable B(0,1);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Subset(X,Y) == B );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " subset of " << Y.get_solution_str_value() << ": " << B.get_solution_str_value() << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 21559) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 21560) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SubsetTest::run5() {
+
+  Solver s;
+
+  Variable X = SetVariable(1,9,3,5);
+  Variable Y = SetVariable(1,9,2,4);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( NotSubset(X,Y) );
+
+  // std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " not subset of " << Y.get_solution_str_value() << endl;
+  }
+
+  if(s.statistics.num_backtracks != 81941) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 81942) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SubsetTest::run6() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(300);
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( NotSubset(X,Y) );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " not subset of " << Y.get_solution_str_value() << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 21509) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 21510) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SubsetTest::run7() {
+
+  Solver s;
+
+  Variable X = SetVariable(1,9,3,5);
+  Variable Y = SetVariable(1,9,2,4);
+  Variable B(0,1);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( NotSubset(X,Y) == B );
+
+  // std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  //cout << "Consolidate\n" << s << endl;  
+
+  //exit(1);
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " not subset of " << Y.get_solution_str_value() << ": " << B.get_solution_str_value() << endl;
+  }
+
+  if(s.statistics.num_backtracks != 82655) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 82656) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SubsetTest::run8() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(300);
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+  Variable B(0,1);
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( NotSubset(X,Y) == B );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    //cout << X.get_solution_str_value() << " not subset of " << Y.get_solution_str_value() << ": " << B.get_solution_str_value() << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 21559) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 21560) {
     cout << "Error: wrong number of solutions! (" 
 	 << (num_solutions) << ")" << endl;
     //exit(1);
@@ -4614,6 +5147,551 @@ void IntersectionTest::run3() {
 
 
 
+UnionTest::UnionTest() : UnitTest() {}
+UnionTest::~UnionTest() {}
+
+void UnionTest::run() {
+
+  if(Verbosity) cout << "Run Union test: "; 
+  cout.flush();
+
+  run1();
+  cout << "1 ";
+  cout.flush();
+
+  run2();
+  cout << "2 ";
+  cout.flush();
+
+  run3();
+  cout << "3 ";
+
+}
+
+
+void UnionTest::run1() {
+
+  Solver s;
+
+  Variable Z = SetVariable(1,9,2,3);
+  Variable Y = SetVariable(1,9,1,5);
+  Variable X = SetVariable(1,9,1,5);
+
+
+  s.add( Union(X,Y) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+  //cout << s << endl;
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+
+  //cout << s.sequence << std::endl;
+
+  //exit(1);
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+
+    // //cout << s.last_solution_lb << endl;
+    // cout << Z.get_solution_str_value() << " == " 
+    //  	 << X.get_solution_str_value() << " union " 
+    //  	 << Y.get_solution_str_value() << endl;
+
+  }
+
+  //if(s.statistics.num_backtracks != 75215) {
+  if(s.statistics.num_backtracks != 2351) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 2352) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void UnionTest::run2() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(100);
+  lby.add(300);
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+ 
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Card(Union(X,Y)) == 5 );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    // cout << "Card of " << X.get_solution_str_value() << " union " << Y.get_solution_str_value() 
+    //  	 << " = 5" << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 255) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 256) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void UnionTest::run3() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  Vector<int> lbz;
+  Vector<int> ubz;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(100);
+  lby.add(300);
+
+  
+  lbz.add(2);
+  lbz.add(10);
+
+  ubz.add(-3);
+  ubz.add(2);
+  ubz.add(5);
+  ubz.add(7);
+  ubz.add(10);
+  ubz.add(12);
+  ubz.add(15);
+  ubz.add(100);
+  ubz.add(123);
+  ubz.add(300);
+  ubz.add(1000);
+
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+  Variable Z = SetVariable(lbz,ubz,2,5);
+ 
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Union(X,Y) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    // cout << X.get_solution_str_value() << " union " << Y.get_solution_str_value() << " = " 
+    //  	 << Z.get_solution_str_value() << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 69) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 70) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+
+
+SymmetricDifferenceTest::SymmetricDifferenceTest() : UnitTest() {}
+SymmetricDifferenceTest::~SymmetricDifferenceTest() {}
+
+void SymmetricDifferenceTest::run() {
+
+  if(Verbosity) cout << "Run SymmetricDifference test: "; 
+  cout.flush();
+
+  run1();
+  cout << "1 ";
+  cout.flush();
+
+  run2();
+  cout << "2 ";
+  cout.flush();
+
+  run3();
+  cout << "3 ";
+
+}
+
+
+void SymmetricDifferenceTest::run1() {
+
+  Solver s;
+
+  Variable Z = SetVariable(1,9,2,3);
+  Variable Y = SetVariable(1,9,1,5);
+  Variable X = SetVariable(1,9,1,5);
+
+
+  s.add( SymmetricDifference(X,Y) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+  //cout << s << endl;
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+
+  //cout << s.sequence << std::endl;
+
+  //exit(1);
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+
+    // //cout << s.last_solution_lb << endl;
+    // cout << Z.get_solution_str_value() << " == " 
+    //  	 << X.get_solution_str_value() << " symdiff " 
+    //  	 << Y.get_solution_str_value() << endl;
+
+  }
+
+  //if(s.statistics.num_backtracks != 75215) {
+  if(s.statistics.num_backtracks != 40174) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 36360) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SymmetricDifferenceTest::run2() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(100);
+  lby.add(300);
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+ 
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( Card(SymmetricDifference(X,Y)) == 5 );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    // cout << "Card of " << X.get_solution_str_value() << " symdiff " << Y.get_solution_str_value() 
+    //  	 << " = 5" << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 3084) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 1853) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+void SymmetricDifferenceTest::run3() {
+
+  //if(Verbosity) cout << "Run Subset test: "; 
+
+  Solver s;
+
+  Vector<int> lbx;
+  Vector<int> ubx;
+  Vector<int> lby;
+  Vector<int> uby;
+  Vector<int> lbz;
+  Vector<int> ubz;
+  
+  ubx.add(-3);
+  ubx.add(2);
+  ubx.add(5);
+  ubx.add(10);
+  ubx.add(100);
+  ubx.add(123);
+  ubx.add(1000);
+  ubx.add(1001);
+
+  lbx.add(2);
+  lbx.add(100);
+
+
+  uby.add(-3);
+  uby.add(2);
+  uby.add(7);
+  uby.add(10);
+  uby.add(12);
+  uby.add(15);
+  uby.add(100);
+  uby.add(123);
+  uby.add(300);
+  uby.add(1000);
+  uby.add(1001);
+
+  lby.add(100);
+  lby.add(300);
+
+  
+  lbz.add(2);
+  lbz.add(10);
+
+  ubz.add(-3);
+  ubz.add(2);
+  ubz.add(5);
+  ubz.add(7);
+  ubz.add(10);
+  ubz.add(12);
+  ubz.add(15);
+  ubz.add(100);
+  ubz.add(123);
+  ubz.add(300);
+  ubz.add(1000);
+
+
+
+
+  Variable X = SetVariable(lbx,ubx,3,6);
+  Variable Y = SetVariable(lby,uby,2,5);
+  Variable Z = SetVariable(lbz,ubz,2,5);
+ 
+
+  //std::cout << X << " " << Y << std::endl;
+
+  s.add( SymmetricDifference(X,Y) == Z );
+
+  //std::cout << s << std::endl;
+
+  s.rewrite();
+  
+  //cout << "Rewrite\n" << s << endl;
+
+  s.consolidate();
+
+  
+  //cout << "Consolidate\n" << s << endl;  
+
+
+  s.initialise_search(s.variables,
+		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
+		      new NoRestart());
+
+  int num_solutions = 0;
+  while(s.get_next_solution() == SAT) {
+    ++num_solutions;
+    // cout << X.get_solution_str_value() << " symdiff " << Y.get_solution_str_value() << " = " 
+    //   	 << Z.get_solution_str_value() << endl;
+  }
+
+  //if(s.statistics.num_backtracks != 52) {
+  if(s.statistics.num_backtracks != 608) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (s.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+  if(num_solutions != 500) {
+    cout << "Error: wrong number of solutions! (" 
+	 << (num_solutions) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
+
 
 SetDifferenceTest::SetDifferenceTest() : UnitTest() {}
 SetDifferenceTest::~SetDifferenceTest() {}
@@ -5253,10 +6331,12 @@ void ElementTest::run1() {
   vals.add(-250);
   vals.add(-12);
   vals.add(250);
+
   Variable x4(vals);
   X.add(x4);
 
   Variable Y(0,3);
+  //X.add(Y);
 
   vals.add(12);
   Variable Z(vals);
@@ -5274,6 +6354,7 @@ void ElementTest::run1() {
 
   //cout << "Consolidate\n" << s << endl;  
 
+  //std::cout << s << std::endl;
 
 #ifdef _MONITOR
   s.monitor_list << X ;
@@ -5285,13 +6366,31 @@ void ElementTest::run1() {
 #endif
 
 
-  s.initialise_search(X, //s.variables,
+  s.initialise_search(s.variables,
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
 		      new NoRestart());
 
   int num_solutions = 0;
   while(s.get_next_solution() == SAT) {
     ++num_solutions;
+
+    int index = Y.get_solution_int_value();
+    int equal_value = Z.get_solution_int_value();
+    int array_value = X[index].get_solution_int_value();
+    
+    if(array_value != equal_value) {
+
+      cout << "[ ";
+      for(int i=0; i<4; ++i) {
+	std::cout << X[i].get_var().get_solution_str_value() << " " ;
+      }
+      cout  << "]: X[" << Y.get_var().get_solution_str_value() << "] = " << Z.get_var().get_solution_str_value() 
+	    << " (" << X[Y.get_var().get_solution_int_value()].get_var().get_solution_str_value() << ")" << endl;
+      
+      exit(1);
+
+    }
+
 //     cout << Y.get_solution_str_value() << endl;
 //     cout << Z.get_solution_str_value() << endl;
 //     //cout << X[0].get_solution_str_value() << endl;
@@ -5314,13 +6413,13 @@ void ElementTest::run1() {
 
   //cout << "After\n" << s << endl;  
 
-  if(s.statistics.num_backtracks != 432662) {
+  if(s.statistics.num_backtracks != 655388) {
     //if(s.statistics.num_backtracks != 428442) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (s.statistics.num_backtracks) << ")" << endl;
     //exit(1);
   }
-  if(num_solutions != 432663) {
+  if(num_solutions != 655389) {
   //if(num_solutions != 428442) {
     cout << "Error: wrong number of solutions! (" 
 	 << (num_solutions) << ")" << endl;
@@ -5499,6 +6598,7 @@ void MinMaxTest::run1() {
   Variable x3(-10,0);
   X.add(x3);
 
+
   Vector< int > vals;
   vals.add(-250);
   vals.add(-12);
@@ -5506,6 +6606,7 @@ void MinMaxTest::run1() {
   vals.add(2);
   vals.add(250);
   Variable x4(vals);
+
   X.add(x4);
 
   Variable x5(0,3);
@@ -5515,8 +6616,6 @@ void MinMaxTest::run1() {
 
 
   s.add( Min(X) == Z );
-
-  //std::cout << s << std::endl;
 
   s.rewrite();
   

@@ -191,7 +191,7 @@ namespace FlatZinc {
           Vector<int> e = arg2intvec(s, a->a[i]);
 
 
-          // std::cout << e << std::endl;
+           std::cout << e << std::endl;
 
           Variable ex = SetVariable(e,e,e.size,e.size);
 
@@ -288,6 +288,12 @@ namespace FlatZinc {
       return x0;
     }
 
+    // void fz_set2mistral_set(set<int>& from, Vector<int>& to) {
+    //   for(size_t i = 0; i < from.size(); ++i) {
+    //     to.add(from[i]);
+    //   }      
+    // }
+
     Variable getSetVar(Solver& s,
                        FlatZincModel& m,
                        AST::Node* n) {
@@ -305,12 +311,22 @@ namespace FlatZinc {
             x0 = SetVariable( 0, 0 );
             // x0.exclude(s, 0, NO_REASON); //empty!
           } else {
-            int umin = sl->s[0], umax = sl->s[0];
-            for(size_t i = 1; i != sl->s.size(); ++i) {
-              umin = std::min(umin, sl->s[i]);
-              umax = std::max(umax, sl->s[i]);
-            }
-            x0 = SetVariable( umin, umax );
+            Vector<int> elts = arg2intvec(s, n);
+            //fz_set2mistral_set(sl->s, elts);
+            x0 = SetVariable(elts, elts, elts.size, elts.size);
+
+            // for(size_t i = 0; i < sl->s.size(); ++i) {
+            //   elts.add(sl->s[0]);
+            // }
+
+            // int umin = sl->s[0], umax = sl->s[0];
+            // for(size_t i = 1; i != sl->s.size(); ++i) {
+            //   umin = std::min(umin, sl->s[i]);
+            //   umax = std::max(umax, sl->s[i]);
+            // }
+            // x0 = SetVariable( umin, umax );
+            
+
             // for(size_t i = 0; i != sl->s.size(); ++i)
             //   x0.include(s, sl->s[i], NO_REASON);
             // for(int i = x0.umin(s), iend = x0.umax(s); i <= iend; ++i)
@@ -1743,7 +1759,6 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
-      //report_unsupported("p_set_diff");
       
       s.add(SetDifference(A,B) == C);
     }
@@ -1753,8 +1768,8 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
-      report_unsupported("p_set_symdiff");
-      //s.add(SetSymDiff(A,B,C));
+            
+      s.add(SymmetricDifference(A,B) == C);
     }
 
     void p_set_eq(Solver& s, FlatZincModel& m,
@@ -1796,7 +1811,7 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[2]);
       report_unsupported("p_set_le_re");
       
-      //s.add( A <= B ); // Warning: this is lex leq (not set_le as defined in minizinc)
+      s.add( b == (A <= B) ); // Warning: this is lex leq (not set_le as defined in minizinc)
     }
 
     void p_set_lt_reif(Solver& s, FlatZincModel& m,
@@ -1806,7 +1821,7 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[2]);
       report_unsupported("p_set_lt_re");
       
-      //s.add( A < B ); // Warning: this is lex leq (not set_le as defined in minizinc)
+      s.add( b == (A < B) ); // Warning: this is lex leq (not set_le as defined in minizinc)
     }
 
     void p_set_eq_reif(Solver& s, FlatZincModel& m,
@@ -1814,8 +1829,7 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
-      //report_unsupported("p_set_eq_re");
-
+ 
       s.add( b == (A == B) );
     }
 
@@ -1825,27 +1839,44 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable b = getBoolVar(s, m, ce[2]);
 
-      report_unsupported("p_set_ne_re");
-      
-      //s.add( b == SetNotEqual(A,B) );
+      s.add( b == (A != B) );
     }
 
     void p_set_in(Solver &s, FlatZincModel& m,
                   const ConExpr& ce, AST::Node* ann) {
       Variable x = getIntVar(s, m, ce[0]);
-      Variable A = getSetVar(s, m, ce[1]);
+
+      // std::cout << ce[1]->isSetVar() << std::endl;
+
+      // std::cout << ce[1]->isSet() << std::endl;
       
-      //report_unsupported("Member");
-      s.add( Member(x,A));
+      
+      if(ce[1]->isSetVar()) {
+        Variable A = getSetVar(s, m, ce[1]);
+        
+        // std::cout << x << " should be in " << A.get_domain() << std::endl;
+        
+        // exit(1);
+        
+        s.add( Member(x,A));
+      } else if(ce[1]->isSet()) {
+        
+        Vector<int> elts = arg2intvec(s, ce[1]);
+
+
+        //std::cout << "elts: " << elts << std::endl;
+        //fz_set2mistral_set(ce[1], elts);
+
+        s.add( Member(x, elts) );
+      }
     }
+
 
     void p_set_in_reif(Solver &s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
        Variable x = getIntVar(s, m, ce[0]);
        Variable A = getSetVar(s, m, ce[1]);
        Variable b = getBoolVar(s, m, ce[2]);
-
-       //report_unsupported("reified Member");
 
        s.add( b == Member(x,A) );
     }
@@ -1856,8 +1887,6 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
 
-      //report_unsupported("Intersect");
-
       s.add( Intersection(A,B) == C );
     }
 
@@ -1867,9 +1896,7 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
 
-      report_unsupported("Union");
-
-      //s.add( Union(A,B,C) );
+      s.add( Union(A,B) == C );
     }
 
     /* Note that we subset in flatzinc is subseteq for us (and same
@@ -1896,29 +1923,15 @@ namespace FlatZinc {
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
       
-   //  report_unsupported("reified subset");
-
-   //   A.display(cout);
-
-     // s.add(Subset(A,B));
-      //s.add(p==true);
-
-      s.add( (Intersection(A,B)==A)==p);
-
-
+      s.add( Subset(A,B) == p );
     }
-
+ 
     void p_set_superset_reif(Solver &s, FlatZincModel& m,
                            const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable p = getBoolVar(s, m, ce[2]);
-      
-//     report_unsupported("reified subset");
-
-
-      s.add( (Intersection(A,B)==B)==p);
-      //s.add( p == Subset(B,A) );
+      s.add( p == Subset(B,A) );
     }
 
     class IntPoster {
@@ -2004,11 +2017,11 @@ namespace FlatZinc {
         registry().add("set_eq_reif", &p_set_eq_reif);
         registry().add("set_ne_reif", &p_set_ne_reif);
 
-        registry().add("set_le", &p_set_le);
-        registry().add("set_le_reif", &p_set_le_reif);
+        //registry().add("set_le", &p_set_le);
+        //registry().add("set_le_reif", &p_set_le_reif);
 
-        registry().add("set_lt", &p_set_le);
-        registry().add("set_lt_reif", &p_set_le_reif);
+        //registry().add("set_lt", &p_set_le);
+        //registry().add("set_lt_reif", &p_set_le_reif);
 
         registry().add("set_in", &p_set_in);
         registry().add("set_in_reif", &p_set_in_reif);

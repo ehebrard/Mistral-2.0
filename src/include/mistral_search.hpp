@@ -2342,6 +2342,37 @@ namespace Mistral {
    * Branching Decisions
    **********************************************/
 
+  /*! \class AnyValue
+    \brief  Class AnyValue
+
+    Assigns the variable to a value in its domain.
+  */
+   class AnyValue {
+
+  public: 
+    
+    AnyValue() {}
+    AnyValue(Solver *s) {}
+     //AnyValue(Solver *s, void *a) {}
+    virtual ~AnyValue() {};
+    
+    inline Decision make(Variable x) {
+      Decision d(x, Decision::ASSIGNMENT, x.get_first());
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to a value in its domain";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, AnyValue& x);
+
+  std::ostream& operator<<(std::ostream& os, AnyValue* x);
+
+
   /*! \class MinValue
     \brief  Class MinValue
 

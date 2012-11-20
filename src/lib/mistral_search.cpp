@@ -206,24 +206,37 @@ Mistral::Variable Mistral::NoOrder::select() {
 Mistral::Lexicographic::Lexicographic(Solver *s) 
   : solver(s) {
   index.initialise(s->variables.size);
+
+  int n = solver->variables.size;
+  std::fill(index.stack_, index.stack_+n, -1);
+
+  //std::cout << n << std::endl;
+ 
   solver->add(this);
   last.initialise(s,0);
 }
 
 void Mistral::Lexicographic::initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
-  int n = solver->variables.size;
-  std::fill(index.stack_, index.stack_+n, -1);
+  // int n = solver->variables.size;
+  // std::fill(index.stack_, index.stack_+n, -1);
   //for(int i=0; i<seq.size; ++i) {
-  for(int i=seq.size; --i>=0;) {
-    index[seq[i].id()] = order.size;
-    order.add(seq[i]);
-  }
+  if(order.empty())
+    for(int i=seq.size; --i>=0;) {
+      index[seq[i].id()] = order.size;
+      order.add(seq[i]);
+    }
 }
 
 //void Mistral::Lexicographic::initialise(Solver *s, void *a) {
 void Mistral::Lexicographic::initialise(Solver *s) {
   solver = s;
   index.initialise(s->variables.size);
+
+  int n = solver->variables.size;
+  std::fill(index.stack_, index.stack_+n, -1);
+
+  //std::cout << n << std::endl;
+
   solver->add(this);
   last.initialise(s,0);
 }
@@ -231,6 +244,16 @@ void Mistral::Lexicographic::initialise(Solver *s) {
 Mistral::Lexicographic::~Lexicographic() {}
 
 Mistral::Variable Mistral::Lexicographic::select() {
+
+  // for(int i=0; i<order.size; ++i) {
+  //   std::cout << order[i] << " in " << order[i].get_domain() << " ";
+  // }
+  // std::cout << std::endl << (int)last << std::endl;
+  // for(int i=last; i<order.size; ++i) {
+  //   std::cout << order[i] << " in " << order[i].get_domain() << " ";
+  // }
+  // std::cout << std::endl;
+
   while(last<(int)(order.size) && order[last].is_ground()) { 
     ++last;
   }
@@ -492,6 +515,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight& x) {
   return x.display(os);
 }
 
+std::ostream& operator<<(std::ostream& os, Mistral::AnyValue& x) {
+  return x.display(os);
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::MinValue& x) {
   return x.display(os);
 }
@@ -579,6 +606,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverNeighbo
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::AnyValue* x) {
   return x->display(os);
 }
 

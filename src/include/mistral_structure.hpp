@@ -416,39 +416,16 @@ namespace Mistral {
     {
       size = 0;
       capacity = c;
-
-      //std::cout << "init(c): " << capacity << std::endl;
-
-      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
-      
       stack_ = new DATA_TYPE[capacity];
-      
-      //int f = sizeof(DATA_TYPE)/sizeof(int);
-      //std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
       std::fill(stack_, stack_+capacity, DATA_TYPE());
-      
-
-      //DATA_TYPE x(0);
-      //std::fill(stack_, stack_+capacity, x);
     }
 
     void initialise(const unsigned int s, const unsigned int c)
     {
       size = s;
       capacity = c;
-      //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
       stack_ = new DATA_TYPE[capacity];
-
-      //std::cout << "init(s,c): " << capacity << std::endl;
-
-      // stack_ = new DATA_TYPE[capacity];
-      
       std::fill(stack_, stack_+capacity, DATA_TYPE());
-      // int f = sizeof(DATA_TYPE)/sizeof(int);
-      // std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
-      
-      //DATA_TYPE x(0);
-      //std::fill(stack_, stack_+capacity, x);
     }
 
     void extendStack( const unsigned int l=0 )
@@ -620,7 +597,7 @@ namespace Mistral {
 
     inline Vector< DATA_TYPE >& operator=(const Vector< DATA_TYPE >& x)
     {
-      if(!stack_) {
+      if(x.capacity && !stack_) {
 	initialise(0, x.capacity);
       } else if(capacity<x.size) {
 	extendStack(x.capacity-capacity);
@@ -658,6 +635,7 @@ template < int N, class T >
   
   T data[N];
   
+  Tuple() {}
   Tuple(T a) {data[0] = a;}
   Tuple(T a, T b) {data[0] = a; data[1] = b;}
   Tuple(T a, T b, T c) {data[0] = a; data[1] = b; data[2] = c;}
@@ -667,6 +645,20 @@ template < int N, class T >
   T operator[](const int i) const { return data[i]; }
   T& operator[](const int i) { return data[i]; }
   
+  /*!@name Printing*/
+  //@{
+  std::ostream& display(std::ostream& os) const {
+    os << "<";
+    if(N) os << data[0] ;
+    for(unsigned int i=1; i<N; ++i)
+      os << " " << data[i];
+    os << ">";
+    return os;
+  }
+  //@}
+
+
+
 };
 
   template <class T1, class T2, class T3>
@@ -1588,12 +1580,15 @@ template < int N, class T >
   {
   public:
 
+    //typedef int* iterator;
+
     /*!@name Parameters*/
     //@{
     /// list of values
     int *list_;
     /// current max capacity
-    unsigned int capacity;
+    unsigned int index_capacity;
+    unsigned int list_capacity;
     /// current size
     unsigned int size;
     /// values' indices
@@ -1606,242 +1601,454 @@ template < int N, class T >
     IntStack()
     {
       size = 0;
-      capacity = 0;
+      index_capacity = 0;
+      list_capacity = 0;
 
       list_ = NULL;
       index_ = NULL;
+      start_ = NULL;
     }
 
-    IntStack(const int lb, const int ub, bool full=true)
+    IntStack(const int lb, const int ub, const bool full=true)
     {
-      initialise(lb, ub, full);
+      initialise(lb, ub, ub-lb+1, full);
     }
 
+    IntStack(const int lb, const int ub, const int sz, const bool full)
+    {
+      initialise(lb, ub, sz, full);
+    }
+
+    IntStack(IntStack& shared, const int sz)
+    {
+      initialise(shared, sz);
+    }
+
+    void  neutralise() {
+      start_ = NULL;
+    }
+    
     virtual ~IntStack()
     {
       delete [] list_;
       delete [] start_;
     }
 
-    virtual void initialise(const int lb, const int ub, const bool full=true)
-    {
-      capacity = ub-lb+1;
-      list_ = new int[capacity];
-      start_ = new unsigned int[capacity];
-      index_ = start_ - lb;      
+    virtual void initialise(IntStack& shared, const int sz);
+    virtual void initialise(const int lb, const int ub, const int sz, const bool full);
+    // {
 
-      for(int i=lb; i<=ub; ++i) 
-	{
-	  index_[i] = i-lb;
-	  list_[i-lb] = i;
-	}
+    //   std::cout << sz << std::endl;
+
+    //   capacity = ub-lb+1;
+    //   list_ = new int[sz];
+    //   start_ = new unsigned int[capacity];
+    //   index_ = start_ - lb;      
+
+    //   for(int i=lb; i<=ub; ++i) 
+    // 	{
+    // 	  index_[i] = i-lb;
+    // 	  list_[i-lb] = i;
+    // 	}
       
-      size = (full ? capacity : 0);
-    }
+    //   size = (full ? sz : 0);
+    // }
 
-    void extend(const int new_elt)
-    {
-      int lb = (int)(start_-index_), new_lb = lb;
-      int ub = capacity+lb-1, new_ub = ub;
-      if(new_elt < lb) {
-	new_lb = new_elt;
-      } else if(new_elt > ub) {
-	new_ub = new_elt;
-      } else {
-	return;
-      }
+
+
+
+    // void extend_list()
+    // {
+    //   unsigned int increment = ((list_capacity+1) << 1);
+    //   list_capacity += increment;
+
+    //   int* new_list = new int[list_capacity];
+    //   memcpy(new_list, list_, (list_capacity-increment)*sizeof(int));
+
+    //   // for(unsigned int i=0; i<list_capacity-increment; ++i)
+    //   //  	new_list[i] = list_[i];
+
+    //   delete [] list_;
+    //   list_ = new_list;
+    // }
+
+    // void extend(const int new_elt)
+    // {
+    //   int lb = (int)(start_-index_), new_lb = lb;
+    //   int ub = index_capacity+lb-1, new_ub = ub;
+    //   if(new_elt < lb) {
+    // 	new_lb = new_elt;
+    //   } else if(new_elt > ub) {
+    // 	new_ub = new_elt;
+    //   } else {
+    // 	return;
+    //   }
       
-      unsigned int new_capacity = new_ub-new_lb+1;
-      if(new_capacity < capacity*2) new_capacity = capacity*2;
-      if(new_lb < lb) {
-	new_lb = ub-new_capacity+1;
-      } else {
-	new_ub = lb+new_capacity-1;
-      }
+    //   unsigned int new_index_capacity = new_ub-new_lb+1;
+    //   if(new_index_capacity < index_capacity*2) new_index_capacity = index_capacity*2;
+    //   if(new_lb < lb) {
+    // 	new_lb = ub-new_index_capacity+1;
+    //   } else {
+    // 	new_ub = lb+new_index_capacity-1;
+    //   }
 
-      int *aux_list = list_;
-      list_ = new int[new_capacity];
-      memcpy(list_, aux_list, capacity*sizeof(int));
-      delete [] aux_list;
 
-      unsigned int *aux_start = start_;
-      start_ = new unsigned int[new_capacity];
-      memcpy(start_+(lb-new_lb), aux_start, capacity*sizeof(unsigned int));
-      delete [] aux_start;
 
-      index_ = start_ - new_lb;
-      int k = 0;
-      for(int i=new_lb; i<lb; ++i) {
-	index_[i] = size+k;
-	list_[capacity+k++] = i;
-      }
-      for(int i=ub+1; i<=new_ub; ++i) {
-	index_[i] = size+k;
-	list_[capacity+k++] = i;
-      }
+    //   unsigned int *aux_start = start_;
+    //   start_ = new unsigned int[new_index_capacity];
+    //   memcpy(start_+(lb-new_lb), aux_start, index_capacity*sizeof(unsigned int));
+    //   delete [] aux_start;
 
-      capacity = new_capacity;
-    }
-    //@}    
+    //   index_ = start_ - new_lb;
+    //   int k = 0;
+    //   for(int i=new_lb; i<lb; ++i) {
+    // 	index_[i] = size+k;
+    // 	//list_[index_capacity+k++] = i;
+    //   }
+    //   for(int i=ub+1; i<=new_ub; ++i) {
+    // 	index_[i] = size+k;
+    // 	//list_[index_capacity+k++] = i;
+    //   }
+
+    //   index_capacity = new_index_capacity;
+    // }
+    // //@}    
+
+    // /*!@name Accessors*/
+    // //@{ 
+    // inline int get_min() const 
+    // {
+    //   int the_min = INFTY;
+    //   int offset = (index_ - start_);
+    //   unsigned int explored;
+    //   int stop_crit = size+offset;
+
+    //   for(explored = 0; explored < size 
+    // 	    //&& size - explored <= (the_min - offset); 
+    // 	    && the_min + (int)explored >= stop_crit; 
+    // 	  ++explored) {
+    // 	if(list_[explored] < the_min) the_min = list_[explored];
+    //   }
+    //   if(explored < size) {
+    // 	while(offset < the_min && index_[offset]>=size) ++offset;
+    // 	the_min = offset;
+    //   }
+
+
+
+    //   // int the_min = INFTY;
+    //   // if(size) {
+    //   // 	the_min = list_[0];
+    //   // 	// ratio size / index_capacity
+    //   // 	if(4*size < index_capacity) {
+    //   // 	  for(unsigned int i=1; i<size; ++i)
+    //   // 	    if(list_[i] < the_min) the_min = list_[i];
+    //   // 	} else {
+    //   // 	  int val=(index_ - start_);
+    //   // 	  while( val<the_min && index_[val] >= size )
+    //   // 	    ++val;
+    //   // 	  the_min = val;
+    //   // 	}
+    //   // }
+
+
+    //   return the_min;
+    // }
+
+    // inline int get_max() const 
+    // {
+    //   int the_max = -INFTY;
+    //   if(size) {
+    // 	the_max = list_[0];
+    // 	// ratio size / index_capacity
+    // 	if(4*size < index_capacity) {
+    // 	  for(unsigned int i=1; i<size; ++i)
+    // 	    if(list_[i] > the_max) the_max = list_[i];
+    // 	} else {
+    // 	  int val=(index_capacity + index_ - start_);
+    // 	  while( val>the_max && index_[val] >= size )
+    // 	    --val;
+    // 	  the_max = val;
+    // 	}
+    //   }
+    //   return the_max;
+    // }
+
+
+    // inline bool safe_contain(const int elt) const 
+    // {
+    //   return ((unsigned)(elt-(int)(start_-index_))<index_capacity && index_[elt]<size);
+    // } 
+ 
+    // inline bool contain(const int elt) const 
+    // {
+    //   return index_[elt]<size;
+    // } 
+  
+    // inline bool empty()const 
+    // {
+    //   return !size;
+    // } 
+
+    // inline int next(const int elt) const
+    // {
+    //   unsigned int idx = index_[elt]+1;
+    //   return (idx < size ? list_[idx] : elt);
+    // }
+    // inline int prev(const int elt) const
+    // {
+    //   unsigned int idx = index_[elt]-1;
+    //   return (idx >= 0 ? list_[idx] : elt);
+    // }
+    
+    // inline int operator[](const unsigned int idx) const
+    // {
+    //   return list_[idx];
+    // }
+
+    // inline int& operator[](const unsigned int idx)
+    // {
+    //   return list_[idx];
+    // }
+    // //@}
+
+    // /*!@name List Manipulation*/
+    // //@{
+    // inline int* begin() 
+    // {
+    //   return list_;
+    // }
+
+    // inline int* end() 
+    // {
+    //   return &(list_[size]);
+    // }
+
+    // inline int* end_mem() 
+    // {
+    //   return list_+list_capacity;
+    // }
+
+    // inline void fill()
+    // {
+    //   size = list_capacity;
+    // }
+
+    // inline void clear()
+    // {
+    //   size = 0;
+    // }
+  
+    // inline void set_to(const int elt)
+    // {
+    //   size=1;
+    //   index_[*list_] = index_[elt];
+    //   list_[index_[elt]] = *list_;
+    //   *list_ = elt;
+    //   index_[elt] = 0;
+    // }
+
+    // inline void remove(const int elt)
+    // {
+    //   --size;
+    //   index_[list_[size]] = index_[elt];
+    //   list_[index_[elt]] = list_[size];
+    //   list_[size] = elt;
+    //   index_[elt] = size;
+    // }
+
+    // inline int next()
+    // {
+    //   return list_[size];
+    // }
+
+    // inline int pop()
+    // {
+    //   return list_[--size];
+    // }
+
+    // inline int pop_head()
+    // {
+    //   --size;
+    //   index_[list_[size]] = 0;
+    //   const int elt = *list_;
+    //   *list_ = list_[size];
+    //   list_[size] = elt;
+    //   index_[elt] = size;
+    //   return elt;
+    // }
+
+    // inline int head() const
+    // {
+    //   return *list_;
+    // }
+    
+    // inline int back() const
+    // {
+    //   return list_[size-1];
+    // }
+
+    // inline void init_add(const int elt)
+    // {
+    //   if(size == list_capacity) extend_list();
+    //   if((unsigned)(elt-(int)(start_-index_)) >= index_capacity) {
+    // 	extend(elt);
+    //   }
+    //   list_[size] = elt;
+    //   index_[elt] = size;
+    //   ++size;
+    // }
+
+    // inline void add(const int elt)
+    // {
+    //   index_[list_[size]] = index_[elt];
+    //   list_[index_[elt]] = list_[size];
+    //   list_[size] = elt;
+    //   index_[elt] = size;
+    //   ++size;
+    // }
+
+    // inline void safe_add(const int elt)
+    // {
+    //   if(!safe_contain(elt)) extend(elt);
+    //   add(elt);
+    // }
+
+    // // create a new element that can potentially be outside the bounds
+    // inline void create(const int elt)
+    // {
+    //   extend(elt);
+    //   add(elt);
+    // }
+
+    // inline void ordered_add(const int elt)
+    // {
+    //   // the first non-element goes where elt was
+    //   index_[list_[size]] = index_[elt];
+    //   list_[index_[elt]] = list_[size];
+
+    //   int idx = size;
+    //   while(idx && list_[idx-1] > elt) { // push every values greater than elt above elt
+    // 	list_[idx] = list_[idx-1];
+    // 	index_[list_[idx-1]] = idx;
+    // 	--idx;
+    //   }
+
+    //   list_[idx] = elt;
+    //   index_[elt] = idx;
+    //   ++size;
+    // }
+
+
+    // inline void revert_to(const int level)
+    // {
+    //   size = level;
+    // }
+
+    // inline void index()
+    // {
+    //   for(unsigned int i=0; i<list_capacity; ++i)
+    // 	index_[list_[i]] = i;
+    // }
+    // //@}
+
+
+
+    void extend_list();
+    void extend(const int new_elt);
+
 
     /*!@name Accessors*/
     //@{ 
-    inline bool safe_contain(const int elt) const 
-    {
-      return ((unsigned)(elt-(int)(start_-index_))<capacity && index_[elt]<size);
-    } 
- 
-    inline bool contain(const int elt) const 
-    {
-      return index_[elt]<size;
-    } 
+     int get_min() const;
+
+     int get_max() const;
+
+     bool safe_contain(const int elt) const ;
+
+     bool contain(const int elt) const ;
   
-    inline bool empty()const 
-    {
-      return !size;
-    } 
+     bool empty()const ;
 
-    inline int next(const int elt) const
-    {
-      unsigned int idx = index_[elt]+1;
-      return (idx < size ? list_[idx] : elt);
-    }
+     int next(const int elt) const ;
+
+     int prev(const int elt) const ;
     
-    inline int operator[](const unsigned int idx) const
-    {
-      return list_[idx];
-    }
+     int operator[](const unsigned int idx) const ;
 
-    inline int& operator[](const unsigned int idx)
-    {
-      return list_[idx];
-    }
+     int& operator[](const unsigned int idx) ;
     //@}
 
     /*!@name List Manipulation*/
     //@{
-    inline void fill()
-    {
-      size = capacity;
-    }
+     int* begin() ;
 
-    inline void clear()
-    {
-      size = 0;
-    }
+     int* end() ;
+
+     int* end_mem() ;
+
+     void fill() ;
+
+     void clear() ;
   
-    inline void set_to(const int elt)
-    {
-      size=1;
-      index_[*list_] = index_[elt];
-      list_[index_[elt]] = *list_;
-      *list_ = elt;
-      index_[elt] = 0;
-    }
+     void set_to(const int elt) ;
 
-    inline void remove(const int elt)
-    {
-      --size;
-      index_[list_[size]] = index_[elt];
-      list_[index_[elt]] = list_[size];
-      list_[size] = elt;
-      index_[elt] = size;
-    }
+     void remove(const int elt) ;
 
-    inline int next()
-    {
-      return list_[size];
-    }
+     int next() ;
 
-    inline int pop()
-    {
-      return list_[--size];
-    }
+     int pop() ;
 
-    inline int pop_head()
-    {
-      --size;
-      index_[list_[size]] = 0;
-      const int elt = *list_;
-      *list_ = list_[size];
-      list_[size] = elt;
-      index_[elt] = size;
-      return elt;
-    }
+     int pop_head() ;
 
-    inline int head()
-    {
-      return *list_;
-    }
+     int head() const ;
     
-    inline int back()
-    {
-      return list_[size-1];
-    }
+     int back() const ;
 
-    inline void add(const int elt)
-    {
-      index_[list_[size]] = index_[elt];
-      list_[index_[elt]] = list_[size];
-      list_[size] = elt;
-      index_[elt] = size;
-      ++size;
-    }
+     void init_add(const int elt) ;
 
-    inline void safe_add(const int elt)
-    {
-      if(!safe_contain(elt)) extend(elt);
-      add(elt);
-    }
+     void add(const int elt) ;
+
+     void safe_add(const int elt) ;
 
     // create a new element that can potentially be outside the bounds
-    inline void create(const int elt)
-    {
-      extend(elt);
-      add(elt);
-    }
+     void create(const int elt) ;
 
-    inline void ordered_add(const int elt)
-    {
-      // the first non-element goes where elt was
-      index_[list_[size]] = index_[elt];
-      list_[index_[elt]] = list_[size];
+     void ordered_add(const int elt) ;
 
-      int idx = size;
-      while(idx && list_[idx-1] > elt) { // push every values greater than elt above elt
-	list_[idx] = list_[idx-1];
-	index_[list_[idx-1]] = idx;
-	--idx;
-      }
+     void revert_to(const int level) ;
 
-      list_[idx] = elt;
-      index_[elt] = idx;
-      ++size;
-    }
-
-
-    inline void revert_to(const int level)
-    {
-      size = level;
-    }
-
-    inline void index()
-    {
-      for(unsigned int i=0; i<capacity; ++i)
-	index_[list_[i]] = i;
-    }
+     void index() ;
     //@}
+
 
     /*!@name Miscellaneous*/
     //@{
-    std::ostream& display(std::ostream& os) const {
-      os << "(";
-      if(size) os << list_[0];
-      for(unsigned int i=1; i<size; ++i)
-	os << " " << list_[i];
-      os << ")";
-      return os;
-    }
+    std::ostream& display(std::ostream& os) const;
+    // std::ostream& display(std::ostream& os) const {
+    //   int min =  INFTY;
+    //   int max = -INFTY;
+
+    //   for(unsigned int i=0; i<size; ++i) {
+    // 	if(list_[i] < min) min = list_[i];
+    // 	if(list_[i] > max) max = list_[i];
+    //   }
+
+    //   Bitset< unsigned long int > elts(min, max, BitSet::empt);
+    //   for(unsigned int i=0; i<size; ++i) {
+    // 	elts.add(list_[i]);
+    //   }
+
+    //   os << elts;
+    //   // os << "(";
+    //   // bool not_empty = (size>0);
+
+    //   // if(not_empty) os << list_[0];
+    //   // for(unsigned int i=1; i<size; ++i)
+    //   // 	os << " " << list_[i];
+    //   // os << ")";
+    //   return os;
+    // }
     //@}
   };
 
@@ -2449,6 +2656,14 @@ template < int N, class T >
       delete [] index_;
     }
 
+    void point_to(VarStack< VAR_TYPE, SIZE_TYPE >& vs) {
+      capacity = vs.capacity;
+      size = vs.size;
+      list_ = vs.list_;
+      offset = vs.offset;
+      index_ = vs.index_;
+    }
+
     void initialise(Solver *s) {
       size.initialise(s);
     }
@@ -2546,9 +2761,17 @@ template < int N, class T >
     {
       return (int)(index_[elt.id()])<(int)size;
     } 
+    inline bool safe_contain(const VAR_TYPE elt) const 
+    {
+      return (elt.id()-offset <= (int)capacity && (int)(index_[elt.id()])<(int)size);
+    } 
     inline bool contain(const int elt) const 
     {
       return index_[elt]<(unsigned int)size;
+    } 
+    inline bool safe_contain(const int elt) const 
+    {
+      return (elt-offset <= capacity && index_[elt]<(unsigned int)size);
     } 
   
     inline bool empty()const 
@@ -2653,6 +2876,11 @@ template < int N, class T >
 
     inline void add(const VAR_TYPE elt)
     {
+      
+      // std::cout << "add " << elt <<  " to " ;
+      // display(std::cout);
+      // std::cout << " " << (int*)list_ << " " << index_ << std::endl;
+
       int idx = elt.id();
       index_[list_[size].id()] = index_[idx];
       list_[index_[idx]] = list_[size];
@@ -3656,15 +3884,41 @@ template < int N, class T >
 	add( elt[i] );
     }
 
-    void initialise(Vector< int >& elt) 
+    void initialise(const Vector< int >& elt) 
     {
-      int lb = elt.front();
-      int ub = elt.back();
+      int min = elt.front();
+      // int max = elt.front();
+      // for(unsigned int i=1; i<elt.size; ++i) {
+      // 	if(elt[i] < min) min = elt[i];
+      // 	if(elt[i] > max) max = elt[i];
+      // }
+      int max = elt.back();
+
+      initialise(min,max,empt);
+      
+      for(unsigned int i=0; i<elt.size; ++i) 
+	add( elt[i] );
+    }
+
+    void initialise(const int lb, const int ub, const Vector< int >& elt) 
+    {
+
+      // std::cout << "initialise bitset with " << lb << ".." << ub << ": " ;
+      // elt.display(std::cout);
+      // std::cout << std::endl; 
 
       initialise(lb,ub,empt);
 
-      for(unsigned int i=0; i<elt.size; ++i) 
+      // display(std::cout);
+      // std::cout << std::endl;
+
+      for(unsigned int i=0; i<elt.size; ++i) {
 	add( elt[i] );
+	
+	// display(std::cout);
+	// std::cout << std::endl;
+      }
+      
     }
 
     Bitset(const int lb, const int ub, const WORD_TYPE p)
@@ -3727,15 +3981,16 @@ template < int N, class T >
       table -= neg_words;
     }
 
-    void initialise(Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+    void initialise(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
       pos_words = s.pos_words;
       neg_words = s.neg_words;
   
       table = new WORD_TYPE[pos_words-neg_words];
       table -= neg_words;
-      for(unsigned int i=neg_words; i<pos_words; ++i) 
-	table[i].initialise(s.table+i, s.size(i));
+      for(int i=neg_words; i<pos_words; ++i) 
+	//table[i].initialise(s.table+i, s.size(i));
+	table[i] = s.table[i];
     }
 
     inline void declare(const int elt)
@@ -3864,6 +4119,101 @@ template < int N, class T >
       table = aux;
     }
 
+
+    void iterate_into_b(const int size, int *buffer) {
+      int elt;
+      int idx;
+      int nval;
+
+      union {FLOAT_TYPE f; WORD_TYPE i; } t;
+      WORD_TYPE b;
+      WORD_TYPE v; 
+
+      nval = 1;
+      elt = buffer[0];
+      idx = ((elt+1) >> EXP);
+      v = (table[idx] & (full << ((elt+1) & CACHE)));  
+      
+      while(nval < size) {
+	// find the next word that is not null
+	while(!v) v = table[++idx];
+
+	// find the first element in the set:
+	// remove all other element
+	b = v & -v;
+
+	// cast into float, which will be coded as 1*2^exp, and 'exp' is precisely the index of the first element 
+	t.f = (FLOAT_TYPE)b; // cast the least significant bit in v to a float
+	// keep only the exponant part
+	elt = t.i >> mantissa;
+
+	elt += idx * size_word_bit - float_offset;
+
+	do {
+	  // put the element in the buffer
+	  buffer[nval] = elt;
+	  ++nval;
+	
+	  // remove it from v
+	  v ^= b;
+	  
+	  do {
+	    
+	    // try the next element
+	    b <<= 1;
+	    ++elt;
+
+	  } while( b && !(v & b) );
+
+	} while(v);
+	
+      }
+      
+    }
+
+
+    void iterate_into(const int size, int *buffer) {
+      int elt;
+      int idx;
+      int nval;
+
+      union {FLOAT_TYPE f; WORD_TYPE i; } t;
+      WORD_TYPE b;
+      WORD_TYPE v; 
+
+      nval = 1;
+      elt = buffer[0];
+      idx = ((elt+1) >> EXP);
+      v = (table[idx] & (full << ((elt+1) & CACHE)));  
+      
+      elt = (idx * size_word_bit - float_offset);
+
+      while(nval < size) {
+	// find the next word that is not null
+	while(!v) {
+	  v = table[++idx];
+	  elt += size_word_bit;
+	}
+
+	// find the first element in the set:
+	do {
+	  // remove all other element
+	  b = v & -v;
+	  
+	  // cast into float, which will be coded as 1*2^exp, and 'exp' is precisely the index of the first element 
+	  t.f = (FLOAT_TYPE)b; // cast the least significant bit in v to a float
+	  	  	  
+	  // put the element in the buffer
+	  buffer[nval++] = (t.i >> mantissa)+elt;
+	  
+	  // remove it from v
+	  v ^= b;
+	  
+	} while(v);      
+      }
+    }
+
+      
     inline int minimum_element(int idx, WORD_TYPE v, const int def=NOVAL) const
     {
       while(v == 0) {
@@ -5672,6 +6022,11 @@ public:
 
   std::ostream& operator<< (std::ostream& os, const Queue& x);
 
+  template < int N, class T > 
+  std::ostream& operator<< (std::ostream& os, const Tuple< N, T >& x) {
+    return x.display(os);
+  }
+
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const TwoWayStack< DATA_TYPE >& x) {
     return x.display(os);
@@ -5754,6 +6109,11 @@ public:
   std::ostream& operator<< (std::ostream& os, const Queue* x);
 
   std::ostream& operator<< (std::ostream& os, const MultiSet* x);
+
+  template < int N, class T > 
+  std::ostream& operator<< (std::ostream& os, const Tuple< N, T >* x) {
+    return x->display(os);
+  }
 
   template < class DATA_TYPE > 
   std::ostream& operator<< (std::ostream& os, const TwoWayStack< DATA_TYPE >* x) {

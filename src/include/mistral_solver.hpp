@@ -356,6 +356,7 @@ namespace Mistral {
     //int level;
     bool     search_started;
     int      backtrack_level;
+    int      search_root;
     //Decision deduction;
 
     /// The set of variables, in the initial order, that is as loaded from the model
@@ -442,6 +443,45 @@ namespace Mistral {
     Vector< Expression* > expression_store;
 
     ConsolidateListener *consolidate_manager;
+
+    class MemoryManager : public Vector<int> {
+
+    private:
+      
+      Vector<int> allocation;
+
+    public:
+
+      MemoryManager() {
+	initialise(4096);
+	allocation.initialise(8);
+      }
+
+      int reserve(const int n, int*& beg, int*& end) {
+	if(size+n > capacity) {
+	  extendStack(size+n-capacity);
+	}
+	allocation.add(size);
+	beg = stack_ + size;
+	end = stack_ + size + n;
+
+	// return the id of the allocated space. 
+	return allocation.size;
+      }
+
+      void release(const int id) {
+	if((unsigned int)id == allocation.size) {
+	  do {
+	    size = allocation.pop();
+	  } while(size < 0);
+	} else {
+	  allocation[id-1] = -1;
+	}
+      }
+
+    };
+
+    MemoryManager iterator_space;
 
     Outcome satisfied();
     Outcome exhausted();
@@ -573,7 +613,7 @@ namespace Mistral {
     /// make a branching decision
     void branch_left();
     /// undo the previous branching decision and enforce the complementary constraint
-    void branch_right();
+    Outcome branch_right();
     void backjump();
 
     /// backtrack one level
@@ -588,6 +628,11 @@ namespace Mistral {
 			   RestartPolicy *pol=NULL,
 			   Goal *goal=NULL);
     
+    void initialise_search(VarStack < Variable, ReversibleNum<int> >& seq, 
+			   BranchingHeuristic *heu=NULL, 
+			   RestartPolicy *pol=NULL,
+			   Goal *goal=NULL);
+
     Outcome sequence_search(Vector< Vector< Variable > >& sequences,
 			    Vector< BranchingHeuristic * >& heuristics,
 			    Vector< RestartPolicy * >& policies,
@@ -685,6 +730,7 @@ namespace Mistral {
 
     void initialise_random_seed(const int seed);
     void set_time_limit(const double limit);
+
 
     /*!@name Printing*/
     //@{
