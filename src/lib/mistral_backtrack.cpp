@@ -482,6 +482,24 @@ void Mistral::ReversibleSet::restore() {
       remove(elt);
     }
 
+void Mistral::ReversibleSet::reversible_add(const Vector<int>& elts) {
+  save();
+  Vector<int>::iterator stop = elts.end();
+  for(Vector<int>::iterator elt = elts.begin(); elt!=stop; ++elt) {
+    add(*elt);
+  }
+}
+
+
+void Mistral::ReversibleSet::reversible_remove(const Vector<int>& elts) {
+  save();
+  Vector<int>::iterator stop = elts.end();
+  for(Vector<int>::iterator elt = elts.begin(); elt!=stop; ++elt) {
+    if(contain(*elt))
+      remove(*elt);
+  }
+}
+
 
      void Mistral::ReversibleSet::reversible_set_to(const int elt) {
       save();

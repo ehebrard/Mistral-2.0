@@ -711,9 +711,11 @@ namespace Mistral {
     //@{  
     // it's either 'add's...
     void reversible_add(const int elt);
+    void reversible_add(const Vector<int>& elt);
 
     // ...or remove, but not both!!
     void reversible_remove(const int elt);
+    void reversible_remove(const Vector<int>& elt);
 
     void reversible_set_to(const int elt);
     int reversible_pop();

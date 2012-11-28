@@ -354,6 +354,8 @@ namespace Mistral {
   template <class DATA_TYPE>
   class Vector {
   public:
+
+    typedef DATA_TYPE* iterator;
     
     /*!@name Parameters*/
     //@{
@@ -428,61 +430,34 @@ namespace Mistral {
       std::fill(stack_, stack_+capacity, DATA_TYPE());
     }
 
+    void copy(Vector<DATA_TYPE>& vec) {
+      size = vec.size;
+      capacity = vec.capacity;
+      stack_ = vec.stack_;
+    }
+
+    void neutralise() {
+      stack_ = NULL;
+    }
+
     void extendStack( const unsigned int l=0 )
     {
-
-      //std::cout << "extend stack!! " << this << std::endl;
-
       unsigned int increment = (l ? l : (capacity+1) << 1);
       capacity += increment;
 
-      // DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
-      // std::cout << (int*)new_stack << " " << (int*)stack_ << std::endl;
-      // stack_ = new_stack;
-
-
-      //DATA_TYPE* new_stack = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
       DATA_TYPE* new_stack = new DATA_TYPE[capacity];
       for(unsigned int i=0; i<capacity-increment; ++i)
        	new_stack[i] = stack_[i];
 
-      //memcpy(new_stack, stack_, (capacity-increment)*sizeof(DATA_TYPE));
-
-      //memcpy((int*)new_stack, (int*)stack_, (capacity-increment)*f);
-      //free(stack_); 
-
-      //std::cerr << size << " " << capacity << " " << (int*)stack_ << std::endl;
-
       delete [] stack_;
       stack_ = new_stack;
-
-      // std::cout << "extend: " << capacity << std::endl;
-     
-      // DATA_TYPE* new_stack_ = new DATA_TYPE[capacity];
-      // memcpy(new_stack_, stack_, capacity-increment);
-      // delete [] stack_; 
-      // stack_ = new_stack_;
       
       std::fill(stack_+capacity-increment, stack_+capacity, DATA_TYPE());
-      // int f = sizeof(DATA_TYPE)/sizeof(int);
-      // std::fill((int*)stack_+(capacity-increment)*f, (int*)stack_+(capacity*f), 0);
-
-
-      //std::cout << " ==> " << this << std::endl;
-
-      //DATA_TYPE x(0);
-      //std::fill(stack_+capacity-increment, stack_+capacity, x);
     }
 
     void resize( const unsigned int l )
     {
       if( capacity < l ) {
-	//capacity = l;
-	// DATA_TYPE* new_stack = (DATA_TYPE*) realloc(stack_, capacity*sizeof(DATA_TYPE));
-	// stack_ = new_stack;
-
-	// std::cout << "resize: " << l << std::endl;
-	
 	DATA_TYPE* new_stack_ = new DATA_TYPE[l];
 	memcpy(new_stack_, stack_, capacity);
 	delete [] stack_;
@@ -497,6 +472,13 @@ namespace Mistral {
 
     /*!@name Accessors*/
     //@{
+    inline iterator begin() const {
+      return stack_;
+    }
+    inline iterator end() const {
+      return stack_+size;
+    }
+
     inline int empty() const
     {
       return !size;

@@ -1635,6 +1635,8 @@ void SchedulingSolver::setup() {
 
   int i,j,k, lb, ub, ti, tj, rki, rkj, hi, hj, aux;
   
+
+
   lb_C_max = (params->LBinit<0 ? data->getMakespanLowerBound() : params->LBinit);
   ub_C_max = (params->UBinit<0 ? data->getMakespanUpperBound(params->InitBound) : params->UBinit);
   if(params->Objective == "tardiness") {
@@ -1667,6 +1669,9 @@ void SchedulingSolver::setup() {
     Variable t(lb, ub);
     tasks.add(t);
   }
+
+
+
 
   // precedence constraints
   for(i=0; i<data->nJobs(); ++i) 
@@ -1755,12 +1760,17 @@ void SchedulingSolver::setup() {
 
 //   //exit(1);
 
+
+
+
   Variable x_cmax(lb_C_max, ub_C_max);
   C_max = x_cmax;
   for(i=0; i<data->nJobs(); ++i) {
     ti = data->getLastTaskofJob(i);
     add(Precedence(tasks[ti], data->getDuration(ti), C_max));
   }
+
+
 
 //   if(data->hasJobDueDate()) {
 //     // early/late bools - whether the last tasks are early or late
@@ -1837,6 +1847,8 @@ void SchedulingSolver::setup() {
 //     }
 //     add(depth == Sum(scope));
 //   }
+
+  std::cout << *this << std::endl;
 }
 
 SchedulingSolver::~SchedulingSolver() {}

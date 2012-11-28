@@ -245,16 +245,20 @@ namespace CSPXMLParser {
 			     const string & domain, int idDomain)
     {
 
+      int dtype = 
+	LIST_VAR;
+	//BITSET_VAR;
+
       ++countI;
       //D[idVar] = idDomain;
       //solution[idVar] = domainMin[idDomain];
       if((int)(domains[idDomain].size) == (domainMax[idDomain] - domainMin[idDomain] + 1)) {
-	X.add( Variable(domainMin[idDomain], domainMax[idDomain], LIST_VAR) );
+	X.add( Variable(domainMin[idDomain], domainMax[idDomain], dtype) );
       } else {
-	X.add( Variable(domainMin[idDomain], domainMax[idDomain], domains[idDomain], LIST_VAR) );
+	X.add( Variable(domainMin[idDomain], domainMax[idDomain], domains[idDomain], dtype) );
       }
 
-      std::cout << X.back() << " in " << X.back().get_domain() << std::endl;
+      //std::cout << X.back() << " in " << X.back().get_domain() << std::endl;
 
 
       while(curCount < ((int)(10 * countI / maxCount))) {
@@ -473,7 +477,8 @@ namespace CSPXMLParser {
 	  ++numLargeExt;
 	
 	//ConstraintTable *tab = new ConstraintTable(constraintScope);
-	ConstraintTableGAC2001Allowed *tab = new ConstraintTableGAC2001Allowed(constraintScope);
+	//ConstraintTable *tab = new ConstraintGAC3(constraintScope);
+	ConstraintTable *tab = new ConstraintGAC2001(constraintScope);
 
 	for(int i=0; i<relations[idcur].get_table_size(); ++i) {
 	  tab->add( relations[idcur].get_tuple(i) );
@@ -568,7 +573,8 @@ namespace CSPXMLParser {
       
       std::cout << solver << std::endl;
       
-      BranchingHeuristic *heuristic = new GenericHeuristic< GenericDVO< MinDomainOverWeight, 1, FailureCountManager >, MinValue >(&solver);
+      //BranchingHeuristic *heuristic = new GenericHeuristic< GenericDVO< MinDomainOverWeight, 1, FailureCountManager >, MinValue >(&solver);
+      BranchingHeuristic *heuristic = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, MinValue >(&solver);
 
       RestartPolicy *restart = new Geometric();
       

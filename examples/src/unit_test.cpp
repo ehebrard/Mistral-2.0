@@ -1197,6 +1197,7 @@ public:
     cc9c.init();
     cc9c.run(100);
 
+
     ConChecker< PredicateWeightedSum > cc9d("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
       ((PredicateWeightedSum*)(cc9d.con1.propagator))->weight[i] = randint(4)+2;
@@ -1288,6 +1289,7 @@ public:
     cc9g.init();
     cc9g.run(100);
 
+
     ConChecker< PredicateWeightedSum > cc9h("sum(-)", false,true,12345,5,10,0);
     for(int i=3; i<5; ++i) {
       ((PredicateWeightedSum*)(cc9h.con1.propagator))->weight[i] = -(randint(4)+1);
@@ -1350,6 +1352,7 @@ public:
     cc9j.init();
     cc9j.run(100);
 
+
     ConChecker< PredicateWeightedSum > cc9k("sum(+/-)", false,true,12345,5,10,0);
     for(int i=1; i<3; ++i) {
       ((PredicateWeightedSum*)(cc9k.con1.propagator))->weight[i] = randint(4)+2;
@@ -1385,7 +1388,6 @@ public:
     ((PredicateWeightedSum*)(cc9k.con3.propagator))->upper_bound = 3;
     cc9k.init();
     cc9k.run(100);
-
 
 
     ConChecker< PredicateElement > cc10a("[]", true,false,12345,6,10,0);
@@ -1647,6 +1649,7 @@ public:
     ConChecker< PredicateDiv > cc22("%",true,true,12345,3,50,0,true);
     cc22.init();
     cc22.run(100);
+
 
    /*
 
@@ -2795,6 +2798,8 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 	
       Event evt1 = X.set_domain(vals);
 
+      X = X.get_var();
+
       if(Verbosity > MEDIUM) cout << X << " in " << X.get_domain() << endl;
 
       if(evt1 != FAIL_EVENT) {	
@@ -2833,6 +2838,9 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
 				      << m << "] from " << X << " in " 
 				      << X.get_domain() << ": ";
 	    Event evt2 = X.remove_interval(l,m);
+
+	    X = X.get_var();
+
 	    if(Verbosity > HIGH) cout << X << " in " << X.get_domain() << endl;
 	    if(evt2 != NO_EVENT && evt2 != FAIL_EVENT) {
 	      for(int v=l; v<=m; ++v) {
@@ -2851,6 +2859,11 @@ void RandomDomainRandomRemoveRangeAndRestore::run() {
       }
       
       s.restore();
+      
+      if(Verbosity > MEDIUM) {
+	std::cout << "restore" << std::endl << s << std::endl;
+      }
+
 	
       if(X.get_min() != lb || X.get_max() != ub || X.get_size() != (unsigned int)(ub-lb+1)) {
 	cout << X.get_min() << " " << lb << endl;

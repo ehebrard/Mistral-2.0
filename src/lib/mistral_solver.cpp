@@ -824,7 +824,8 @@ Mistral::Solver::Solver()
   heuristic = NULL; //new GenericHeuristic< GenericDVO< MinDomain >, MinValue >(this);
   policy = NULL; //new Geometric();
 
-  usrand(parameters.seed);
+  if(!random_generator_is_ready())
+    usrand(parameters.seed);
 
   wiped_idx = CONSISTENT;
 

@@ -25,8 +25,6 @@
 #include <mistral_constraint.hpp>
 
 
-//#define  _DEBUG_TABLE (id == 7)
-
 
 
 
@@ -458,7 +456,7 @@ Mistral::PropagationOutcome Mistral::BinaryConstraint::propagate(const int chang
 
   if(!support[0]) initialise_supports();
 
-  vnext = scope[revise_idx].get_min();
+  vnext = scope[revise_idx].get_first();
   do {
     vali = vnext;
     vnext = scope[revise_idx].next(vali);
@@ -508,7 +506,7 @@ bool Mistral::BinaryConstraint::find_support(const int revise_idx, const int vli
   int changed_idx = 1-revise_idx, vali = -INFTY; //, *solution = support[revise_idx][vli];
 
   solution[revise_idx] = vli;
-  solution[changed_idx] = scope[changed_idx].get_min();
+  solution[changed_idx] = scope[changed_idx].get_first();
 
   //std::cout << "   " << solution[0] << " " << solution[1] << std::endl;
 
@@ -869,7 +867,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate(const int chang
 
   for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
     if( (int)i != changed_idx ) { 
-      vnext = scope[i].get_min();
+      vnext = scope[i].get_first();
       do {
 	vali = vnext;
 	vnext = scope[i].next(vali);
@@ -894,20 +892,108 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
   unsigned int i, j;
   int vali, vnext;
 
+#ifdef _DEBUG_GENPROPAG
+  if(_DEBUG_GENPROPAG) {
+  std::cout << "propagate " << this << std::endl;
+  for(i=0; i<scope.size; ++i)
+    {
+      std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+      
+      vnext = scope[i].get_first();
+      do {
+  	vali = vnext;
+  	vnext = scope[i].next(vali);
+	
+  	std::cout << " " << vali ;
+	
+      } while( vali != vnext );
+      
+      std::cout << std::endl;
+
+      Domain dom_xi(scope[i]);
+      Domain::iterator xend = dom_xi.begin();
+      Domain::iterator xit = dom_xi.end();
+      
+      while(xit != xend) {
+  	--xit;
+
+  	std::cout << " " << dom_xi.get_value(xit) ;
+      }
+
+      std::cout << std::endl << std::endl;
+
+     }
+  }
+#endif
+
 
   while(!changes.empty()) {
     j = changes.pop();
     for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
       if( i != j ) { 
-	vnext = scope[i].get_min();
-	do {
-	  vali = vnext;
-	  vnext = scope[i].next(vali);
+
+	// std::cout << "std: " << scope[i] << " " << scope[i].get_domain(); 
+	// vnext = scope[i].get_first();
+	// do {
+	//   vali = vnext;
+	//   vnext = scope[i].next(vali);
+
+	//   std::cout << " " << vali ;
+
+	// } while( vali != vnext );
+	// std::cout << std::endl;
+
+
+	// std::cout << "itr: " << scope[i] << " " << scope[i].get_domain(); 
+	// Domain dom_x(scope[i]);
+	// Domain::iterator xt = dom_x.end();
+	// Domain::iterator xnd = dom_x.begin();
+
+	// while(xt != xnd) {
+	//   vali = dom_x.get_value(--xt);
+
+	//   std::cout << " " << vali ;
+
+	// }
+	// std::cout << std::endl << std::endl;
+
+
+// 	vnext = scope[i].get_first();
+// 	do {
+// 	  vali = vnext;
+// 	  vnext = scope[i].next(vali);
+
+// #ifdef _DEBUG_GENPROPAG
+// 	  if(_DEBUG_GENPROPAG) {
+// 	  // if(solver->parameters.verbosity) {
+// 	  std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
+// 	  // }
+// 	  }
+// #endif
+
+// 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
+// 	    if(IS_FAIL(scope[i].remove(vali))) {
+// 	      wiped = FAILURE(i);
+// 	    } else if(changes.list_ == events.list_) {
+// 	      if(!changes.contain(i)) changes.add(i);
+// 	    }
+// 	  }
+// 	} while( vali != vnext );
+
+
+	Domain dom_xi(scope[i]);
+	Domain::iterator xit = dom_xi.end();
+	Domain::iterator xend = dom_xi.begin();
+
+	while(xit != xend) {
+	  vali = dom_xi.get_value(--xit);
 
 #ifdef _DEBUG_GENPROPAG
-	  // if(solver->parameters.verbosity) {
-	  std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
-	  // }
+	  if(_DEBUG_GENPROPAG) {
+	    // if(solver->parameters.verbosity) {
+	    std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
+	    // }
+	  }
 #endif
 
 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
@@ -917,7 +1003,8 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
 	      if(!changes.contain(i)) changes.add(i);
 	    }
 	  }
-	} while( vali < vnext );
+	}
+
       }	
     }
   }
@@ -1085,7 +1172,7 @@ bool Mistral::GlobalConstraint::first_support(const int vri, const int vli)
   } 
   j=scope.size;
   while( j-- ) 
-    solution[j] = scope[j].get_min();
+    solution[j] = scope[j].get_first();
   solution[vri] = vli; 
 
   return false;
@@ -1101,6 +1188,7 @@ bool Mistral::GlobalConstraint::find_support(const int vri, const int vli)
   while(i >= 0) {
 
 #ifdef _DEBUG_GENPROPAG
+    if(_DEBUG_GENPROPAG) {
     // if(solver->parameters.verbosity) {
       std::cout << "\t<" << solution[0] ;
       for(unsigned int k=1; k<scope.size; ++k) {
@@ -1108,15 +1196,18 @@ bool Mistral::GlobalConstraint::find_support(const int vri, const int vli)
       }
       std::cout << "> ";
     // }
+    }
 #endif
 
     // check this assignment
     if( !check( solution ) ) {
 
 #ifdef _DEBUG_GENPROPAG
+      if(_DEBUG_GENPROPAG) {
       // if(solver->parameters.verbosity) {
       std::cout << "OK!" << std::endl;
       // }
+      }
 #endif
 
       found=true;
@@ -1130,8 +1221,10 @@ bool Mistral::GlobalConstraint::find_support(const int vri, const int vli)
 
 #ifdef _DEBUG_GENPROPAG
     else 
+      if(_DEBUG_GENPROPAG) {
       //if(solver->parameters.verbosity) {
       std::cout << "NO" << std::endl;
+      }
     //     }
 #endif
  
@@ -1144,11 +1237,11 @@ bool Mistral::GlobalConstraint::find_support(const int vri, const int vli)
 	continue;
       }
       vali = scope[i].next( solution[i] );
-      if(vali > solution[i]) {
+      if(vali != solution[i]) {
 	solution[i] = vali;
       	break;
       } else {
-	solution[i] = scope[i].get_min();
+	solution[i] = scope[i].get_first();
       }
       --i;
     }
@@ -7088,22 +7181,64 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 
 
 
-Mistral::ConstraintTable::ConstraintTable(Vector< Variable >& scp)
-  : GlobalConstraint(scp) { priority = 0; }
+Mistral::ConstraintGAC4::ConstraintGAC4(Vector< Variable >& scp)
+  : ConstraintTable(scp) { }
 
-void Mistral::ConstraintTable::initialise() {
-  ConstraintImplementation::initialise();
+Mistral::ConstraintGAC4::ConstraintGAC4(std::vector< Variable >& scp)
+  : ConstraintTable(scp) { }
+
+void Mistral::ConstraintGAC4::initialise() {
+  ConstraintTable::initialise();
+
   unsigned int arity = scope.size;
+  int n, m;
 
-  for(unsigned int i=0; i<arity; ++i)
-    trigger_on(_DOMAIN_, scope[i]);
+  // for(unsigned int i=0; i<arity; ++i)
+  //   trigger_on(_DOMAIN_, scope[i]);
 
   
-  support_of = new ReversibleSet*[arity];
-  values = new Vector<int>[arity];
-  for(unsigned int i=0; i<arity; ++i) {
 
-    support_of[i] = new ReversibleSet[scope[i].get_initial_max() - scope[i].get_initial_min() + 1];
+  values = new Vector<int>[arity];
+
+#ifdef _OS_PRUNING
+  list_map = new int*[arity];
+  support_of = new ReversibleSet**[arity];
+#else
+  support_of = new ReversibleSet*[arity];
+#endif
+
+
+  n = 0;
+  for(unsigned int i=0; i<arity; ++i) {
+    n += scope[i].get_size();
+  }
+
+#ifdef _OS_PRUNING
+  support_lists = new ReversibleSet[n];
+  var_map = new int[n];
+  val_map = new int[n];
+  pruned_lists.initialise(0, n-1, n, false);
+  list_pruning = new Vector<int>[n];
+#endif
+
+#ifdef _DEBUG_TABLE
+  init_support_size = new int[n];
+#endif
+
+  n = 0; 
+  for(unsigned int i=0; i<arity; ++i) {
+    
+    m = scope[i].get_initial_max() - scope[i].get_initial_min() + 1;
+
+#ifdef _OS_PRUNING
+    list_map[i] = new int[m];
+    support_of[i] = new ReversibleSet*[m];
+    std::fill(list_map[i], list_map[i]+m, -1);    
+    list_map[i] -= scope[i].get_initial_min();
+#else
+    support_of[i] = new ReversibleSet[m];
+#endif
+
     support_of[i] -= scope[i].get_initial_min();
     values[i].initialise(0,scope[i].get_size());
 
@@ -7111,28 +7246,50 @@ void Mistral::ConstraintTable::initialise() {
     do {
       val = vnxt;
 
+#ifdef _OS_PRUNING
+      if(values[i].empty()) {
+  	support_lists[n].initialise(solver, 
+				      0, table.size, 8, false);
+      } else {
+	support_lists[n].initialise(*(support_of[i][values[i][0]]), 8);
+      }
+      var_map[n] = i;
+      val_map[n] = val;
+      list_map[i][val] = n;
+      support_of[i][val] = &(support_lists[n]);
+#else
       if(values[i].empty()) {
   	support_of[i][val].initialise(solver, 
 				      0, table.size, 8, false);
       } else {
 	support_of[i][val].initialise(support_of[i][values[i][0]], 8);
       }
-
-
-      //std::cout << "support_of[" << i << "][" << val << "]: " << support_of[i][val].env << std::endl;
-
+#endif
+      
       values[i].add(val);
       
+      ++n;
       vnxt = scope[i].next(val);
     } while( val != vnxt );
   }
+  
 
   for(unsigned int k=0; k<table.size; ++k) {
     //std::cout << "add " << table[k] << std::endl;
     for(unsigned int i=0; i<arity; ++i) {
+#ifdef _OS_PRUNING
+      support_of[i][table[k][i]]->init_add(k);
+#else
       support_of[i][table[k][i]].init_add(k);
+#endif
     }
   }
+
+#ifdef _DEBUG_TABLE
+  for(int i=0; i<n; ++i) {
+    init_support_size[i] = support_lists[i].size;
+  }
+#endif
 
   //exit(1);
 
@@ -7154,40 +7311,63 @@ void Mistral::ConstraintTable::initialise() {
     Domain::iterator xstop = dom_xi.begin();
 
     int valj;
-    for(Domain::iterator xit = dom_xi.end(); --xit>=xstop; ) {
-      valj = dom_xi.get_value(xit); 
+    for(Domain::iterator xit = dom_xi.end(); xit != xstop; ) {
+      valj = dom_xi.get_value(--xit); 
 
+#ifdef _OS_PRUNING
+      if(support_of[xi][valj]->empty())  {
+	if(FAILED(scope[xi].remove(valj))) get_solver()->fail();
+      }
+#else
       if(support_of[xi][valj].empty())  {
 	if(FAILED(scope[xi].remove(valj))) get_solver()->fail();
-	//pruned.add( assignment(xi, valj) );
       }
-      // std::cout << scope[xi] << " = " << valj << ":" ;
-      // for(int k=0; k<support_of[xi][valj].size; ++k) {
-      // 	std::cout << " " << table[support_of[xi][valj][k]] ;
-      // }
-      // std::cout << std::endl;
+#endif
 
     }
   }
+
+  //if(!check_integrity()) exit(1);
 }
 
-Mistral::ConstraintTable::~ConstraintTable() 
+Mistral::ConstraintGAC4::~ConstraintGAC4() 
 {
 #ifdef _DEBUG_MEMORY
-  std::cout << "c delete table constraint" << std::endl;
+  std::cout << "c delete gac4 constraint" << std::endl;
 #endif
 
   for(unsigned int i=0; i<scope.size; ++i) {
     for(unsigned int j=1; j<values[i].size; ++j) {
-      support_of[i][values[i][j]].index_ = NULL;
-      support_of[i][values[i][j]].start_ = NULL;
+      // support_of[i][values[i][j]]->index_ = NULL;
+      // support_of[i][values[i][j]].start_ = NULL;
+
+#ifdef _OS_PRUNING
+      support_of[i][values[i][j]]->neutralise();
+#else
+      support_of[i][values[i][j]].neutralise();
+#endif
     }
     support_of[i] += scope[i].get_initial_min();
     delete [] support_of[i];
 
+#ifdef _OS_PRUNING
+    list_map[i] += scope[i].get_initial_min();
+    delete [] list_map[i];
+#endif 
+
     //delete value_delta[i].cleanup();
   }
+
   delete [] support_of;
+
+#ifdef _OS_PRUNING
+  delete [] var_map;
+  delete [] val_map;
+  delete [] list_map;
+  delete [] support_lists;
+  delete [] list_pruning;
+#endif
+
   delete [] value_delta;
   delete [] values;
 
@@ -7195,31 +7375,41 @@ Mistral::ConstraintTable::~ConstraintTable()
 
 
 
-Mistral::PropagationOutcome Mistral::ConstraintTable::propagate() 
+Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate() 
 {
   PropagationOutcome wiped = CONSISTENT;
-
+ 
   int xi, xj, vali, valj, sk, tk;
   Domain::iterator xstop;
   Domain::iterator xit;
 
   int arity = scope.size;
 
+#ifdef _OS_PRUNING
+  int asgn;
+#endif
+
 #ifdef _DEBUG_TABLE
-  std::cout << "propagate " << *this << std::endl;
-  std::cout << active << std::endl;
+  if(_DEBUG_TABLE) {
+  std::cout << "propagate " << id << " " << *this << std::endl;
+  //display_supports(std::cout);
+  }
 #endif
 
   while(!changes.empty()) {
 
 #ifdef _DEBUG_TABLE
+    if(_DEBUG_TABLE) {
     std::cout << "modified variables: " << changes << std::endl;
+    }
 #endif
 
     xi = changes.pop();
 
 #ifdef _DEBUG_TABLE
+    if(_DEBUG_TABLE) {
     std::cout << "  changes on " << scope[xi] << ":\n";
+    }
 #endif
 
     xstop = value_delta[xi].begin();
@@ -7227,21 +7417,20 @@ Mistral::PropagationOutcome Mistral::ConstraintTable::propagate()
       vali = *xit;
 
 #ifdef _DEBUG_TABLE
-      std::cout << "    lost " << vali << ": " << std::endl;
+      if(_DEBUG_TABLE) {
+	std::cout << "    lost " << vali << ": " << std::endl;
+      }
 #endif
 
-      for(sk = support_of[xi][vali].size; sk--;) {
-	tk = support_of[xi][vali][sk];
-
-#ifdef _DEBUG_TABLE
-	//std::cout << ".";
-
-	std::cout << "       remove " << tk << " <" << table[tk][0];
-	for(xj = 1; xj < arity; ++xj) {
-	  std::cout << " " << table[tk][xj];
-	}
-	std::cout << "> from " << std::endl;
+#ifdef _OS_PRUNING
+      ReversibleSet::iterator xit = support_of[xi][vali]->begin();
+      ReversibleSet::iterator xend = support_of[xi][vali]->end();
+#else
+      ReversibleSet::iterator xit = support_of[xi][vali].begin();
+      ReversibleSet::iterator xend = support_of[xi][vali].end();
 #endif
+      while(xit != xend) {
+	tk = *xit;
 
 	for(xj = arity; xj--;) {
 	  if(xj != xi
@@ -7249,88 +7438,178 @@ Mistral::PropagationOutcome Mistral::ConstraintTable::propagate()
 	     ) {
 	    valj = table[tk][xj];
 
-#ifdef _DEBUG_TABLE
-	    // std::cout << "revremove " << tk << " from support_of[" << xj << "][" << valj << "]\n";
-	    std::cout << "        " << scope[xj] << " = " << valj << ": " << support_of[xj][valj] << std::endl;
+#ifdef _OS_PRUNING
+	    asgn = list_map[xj][valj];
+	    if(!pruned_lists.contain(asgn)) pruned_lists.add(asgn);
+	    list_pruning[asgn].add(tk);
+#else
+	    support_of[xj][valj].reversible_remove(tk);
+	    if(support_of[xj][valj].empty()) {
+	      if(FAILED(scope[xj].remove(valj))) { wiped = FAILURE(xj); goto FAIL; }
+	    }
 #endif
-
-	    //if(support_of[xj][valj].contain(tk)) {
-	   
-	      // if(!(active.contain(xj))) {
-	      // 	std::cout << "ERROR 1" << std::endl;
-
-	      // 	std::cout << active << std::endl;
-
-	      // 	print_active();
-		
-	      // 	std::cout << scope[xj] << " in " << scope[xj].get_domain() << std::endl;
-		
-	      // 	std::cout << support_of[xj][valj] << std::endl;
-
-	      // 	std::cout << "try to remove " << tk << std::endl;
-
-	      // 	exit(1);
-	      // }
-
-	      support_of[xj][valj].reversible_remove(tk);
-
-#ifdef _DEBUG_TABLE
-	      std::cout << "        " << support_of[xj][valj] << " (" << support_of[xj][valj].empty() << ")" << std::endl;
-#endif	  
-	      
-	      if(support_of[xj][valj].empty()) {
-		
-#ifdef _DEBUG_TABLE
-		std::cout << "        [emptied " << scope[xj] << "'s support list]!!" << std::endl;
-#endif
-		
-		if(FAILED(scope[xj].remove(valj))) { wiped = FAILURE(xj); goto FAIL; }
-		//if(!changes.contain(xj)) changes.add(xj);
-	      }
-// 	    } 
-
-// #ifdef _DEBUG_TABLE
-// 	    else {
-// 	      //if(active.contain(xj)) {
-// 	    	std::cout << "ERROR 2" << std::endl;
-// 	    	exit(1);
-// 	    	//}
-// 	    }
-// #endif
-
 	  }
 	}
+	++xit;
       }
 
-// #ifdef _DEBUG_TABLE
-//       std::cout << std::endl; 
-// #endif
-
+#ifdef _DEBUG_TABLE
+    if(_DEBUG_TABLE) {
+      std::cout << " " << pruned_lists << std::endl;
+    }
+#endif
+    
     }
   }
+
+#ifdef _OS_PRUNING
+  for(sk=pruned_lists.size; --sk>=0;) {
+    tk = pruned_lists[sk];
+    
+#ifdef _DEBUG_TABLE
+    if(_DEBUG_TABLE) {
+    std::cout << "support[" << scope[var_map[tk]] << "][" << val_map[tk] << "] = " 
+	      << support_lists[tk] << "\n            - " 
+	      << list_pruning[tk] << std::endl;
+    }
+#endif
+
+    support_lists[tk].reversible_remove(list_pruning[tk]);
+    if(support_lists[tk].empty()) {
+
+#ifdef _DEBUG_TABLE
+      if(_DEBUG_TABLE) {
+      std::cout << "support[" << scope[var_map[tk]] << "][" << val_map[tk] << "] is emptied -> pruning!\n";  
+      }
+#endif
+
+      if(FAILED(scope[var_map[tk]].remove(val_map[tk]))) { wiped = FAILURE(var_map[tk]); goto FAIL; }
+    }
+
+    list_pruning[tk].clear();
+  }
+  pruned_lists.clear();
+#endif
 
   for(xi=0; xi<arity; ++xi) {
     value_delta[xi].close();
   }
   
  FAIL: 
+
+#ifdef _OS_PRUNING
+  for(sk=pruned_lists.size; --sk>=0;) {
+    tk = pruned_lists[sk];
+    list_pruning[tk].clear();
+  }
+  pruned_lists.clear();
+#endif
+
+#ifdef _DEBUG_TABLE
+  if(_DEBUG_TABLE) {
+    display_supports(std::cout);
+  }
+#endif
+
   return wiped;
 }
 
-int Mistral::ConstraintTable::check( const int* s ) const 
+#ifdef _DEBUG_TABLE
+bool Mistral::ConstraintGAC4::check_integrity( ) const 
+{
+  bool ok = true;
+  
+  int xi, vali, tk, xj;
+  int arity = scope.size;
+
+  bool entailed = active.size <= 1;
+  
+
+  for(xi=0; xi<arity; ++xi) {
+    Domain dom_xi(scope[xi]);
+    Domain::iterator xend = dom_xi.end();
+    for(Domain::iterator xit = dom_xi.begin(); xit != xend; ++xit) {
+      
+      vali = dom_xi.get_value(xit);
+      ReversibleSet::iterator first = support_of[xi][vali]->begin();
+      ReversibleSet::iterator last = support_of[xi][vali]->end();
+      ReversibleSet::iterator past = first+init_support_size[list_map[xi][vali]];
+	//support_of[xi][vali]->end_mem();
+
+
+      //std::cout << first << " " << last << " " << past << std::endl;
+      
+      // check that every "current" support is valid
+      if(!entailed) for(ReversibleSet::iterator sit = first; sit != last; ++sit) {
+	tk = *sit;
+	for(xj=0; xj<arity; ++xj) {
+	  if(!(scope[xj].contain(table[tk][xj]))) {
+	    std::cout << this << " " << id << ": tuple " << tk << ": <" << table[tk][0];
+	    for(int xk=1; xk<arity; ++xk) {
+	      std::cout << " " << table[tk][xk];
+	    }
+	    std::cout << "> is not valid! " << scope[0].get_domain();
+	    for(int xk=1; xk<arity; ++xk) {
+	      std::cout << "x" << scope[xk].get_domain();
+	    }
+	    std::cout << std::endl;
+	    //exit(1);
+	    ok = false;
+	  }
+	}
+      }
+      
+      // check that every "pruned" support is not valid
+      for(ReversibleSet::iterator sit = last; sit != past; ++sit) {
+	tk = *sit;
+	bool valid = true;
+	for(xj=0; xj<arity; ++xj) {
+	  valid &= scope[xj].contain(table[tk][xj]);
+	}
+	if(valid) {
+	  std::cout << this << " " << id << ": tuple " << tk << ": <" << table[tk][0];
+	  for(int xk=1; xk<arity; ++xk) {
+	    std::cout << " " << table[tk][xk];
+	  }
+	  std::cout << "> is valid!\n";
+	  //exit(1);
+	  ok =false;
+	}
+      }     
+    }
+  }
+  return ok;
+}
+#endif
+
+int Mistral::ConstraintGAC4::check( const int* s ) const 
 {
   int xmin=0, found = false;
   const int *support;
   unsigned int arity = scope.size, min = INFTY;
   for(unsigned int i=0; i<arity; ++i) {
+#ifdef _OS_PRUNING
+    if(support_of[i][s[i]]->list_capacity < min) {
+      xmin = i;
+      min = support_of[i][s[i]]->list_capacity;
+    }
+#else
     if(support_of[i][s[i]].list_capacity < min) {
       xmin = i;
       min = support_of[i][s[i]].list_capacity;
     }
+#endif
   }
 
+#ifdef _OS_PRUNING
+  ReversibleSet::iterator end = support_of[xmin][s[xmin]]->end_mem();
+  ReversibleSet::iterator it = support_of[xmin][s[xmin]]->begin();
+#else
   ReversibleSet::iterator end = support_of[xmin][s[xmin]].end_mem();
-  for(ReversibleSet::iterator it = support_of[xmin][s[xmin]].begin(); !found && it!=end; ++it) {
+  ReversibleSet::iterator it = support_of[xmin][s[xmin]].begin();
+#endif
+
+  for(; !found && it!=end; ++it) {
     support = table[*it];
     found = true;
     for(unsigned int i=0; found && i<arity; ++i) {
@@ -7341,7 +7620,7 @@ int Mistral::ConstraintTable::check( const int* s ) const
   return !found;
 }
 
-std::ostream& Mistral::ConstraintTable::display_supports(std::ostream& os) const {
+std::ostream& Mistral::ConstraintGAC4::display_supports(std::ostream& os) const {
   unsigned int arity = scope.size;
   for(unsigned int xi=0; xi<arity; ++xi) {
     
@@ -7352,13 +7631,91 @@ std::ostream& Mistral::ConstraintTable::display_supports(std::ostream& os) const
     Domain::iterator xstop = dom_xi.end();
     
     int valj;
-    for(Domain::iterator xit = dom_xi.begin(); xit<xstop; ++xit) {
+    for(Domain::iterator xit = dom_xi.begin(); xit!=xstop; ++xit) {
       valj = dom_xi.get_value(xit);   
-      os << "    = " << valj << ": " << support_of[xi][valj] << std::endl;
+      os << "    = " << valj << ":" ;
+      
+#ifdef _OS_PRUNING
+      ReversibleSet::iterator sit = support_of[xi][valj]->begin();
+      ReversibleSet::iterator send = support_of[xi][valj]->end();
+#else
+      ReversibleSet::iterator sit = support_of[xi][valj].begin();
+      ReversibleSet::iterator send = support_of[xi][valj].end();
+#endif
+      
+      while(sit != send) {
+	os << " <" << table[*sit][0];
+	for(unsigned int xj=1; xj<arity; ++xj) 	os << " " << table[*sit][xj];
+	os << ">";
+	++sit;
+      }
+
+      os << std::endl;
+	//<< support_of[xi][valj] << std::endl;
     }
     os << std::endl;  
   }
   return os;
+}
+
+std::ostream& Mistral::ConstraintGAC4::display(std::ostream& os) const {
+  os << "TABLE_GAC4(" << scope[0]/*.get_var()*/ ;
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << ", " << scope[i]/*.get_var()*/;
+  os << ")";
+  
+  //display_supports(os);
+
+  // os << ") in " ;
+  // for(unsigned int i=0; i<table.size; ++i) {
+  //   os << "<" << table[i][0] ;
+  //   for(unsigned int j=1; j<scope.size; ++j) {
+  //     os << " " << table[i][j] ;
+  //   }
+  //   os << ">";
+  // }
+  return os;
+}
+
+
+
+Mistral::ConstraintTable::ConstraintTable(Vector< Variable >& scp)
+  : GlobalConstraint(scp) { priority = 0; }
+
+Mistral::ConstraintTable::ConstraintTable(std::vector< Variable >& scp)
+  : GlobalConstraint(scp) { priority = 0; }
+
+Mistral::ConstraintTable::~ConstraintTable() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete table constraint" << std::endl;
+#endif
+}
+
+void Mistral::ConstraintTable::initialise() {
+  ConstraintImplementation::initialise();
+  unsigned int arity = scope.size;
+
+  for(unsigned int i=0; i<arity; ++i)
+    trigger_on(_DOMAIN_, scope[i]);
+}
+
+
+int Mistral::ConstraintTable::check( const int* s ) const 
+{
+  bool found = false;
+  unsigned int arity = scope.size;
+  const int* support;
+  Vector<const int*>::iterator end = table.end();
+  for(Vector<const int*>::iterator it = table.begin(); !found && it!=end; ++it) {
+    support = *it;
+    found = true;
+    for(unsigned int i=0; found && i<arity; ++i) {
+      if(support[i] != s[i]) found = false;
+    }
+  }
+
+  return !found;
 }
 
 std::ostream& Mistral::ConstraintTable::display(std::ostream& os) const {
@@ -7388,19 +7745,18 @@ void Mistral::ConstraintTable::add(const int* tuple) {
 
 
 
+Mistral::ConstraintGAC2001::ConstraintGAC2001(Vector< Variable >& scp)
+  : ConstraintTable(scp) { }
 
+Mistral::ConstraintGAC2001::ConstraintGAC2001(std::vector< Variable >& scp)
+  : ConstraintTable(scp) { }
 
-
-
-Mistral::ConstraintTableGAC2001Allowed::ConstraintTableGAC2001Allowed(Vector< Variable >& scp)
-  : GlobalConstraint(scp) { priority = 0; }
-
-void Mistral::ConstraintTableGAC2001Allowed::initialise() {
-  ConstraintImplementation::initialise();
+void Mistral::ConstraintGAC2001::initialise() {
+  ConstraintTable::initialise();
   unsigned int arity = scope.size;
 
-  for(unsigned int i=0; i<arity; ++i)
-    trigger_on(_DOMAIN_, scope[i]);
+  // for(unsigned int i=0; i<arity; ++i)
+  //   trigger_on(_DOMAIN_, scope[i]);
 
 
   unsigned int i, j;
@@ -7440,15 +7796,15 @@ void Mistral::ConstraintTableGAC2001Allowed::initialise() {
     supportList[i] -= themins[i];
   }
 
-  i=tuples.size;
+  i=table.size;
   while( i-- ) {
-    for(j=0; j<arity; ++j)
-      supportList[j][tuples[i][j]].add( tuples[i] );	   
+    for(j=0; j<arity; ++j) 
+      supportList[j][table[i][j]].add( table[i] );
   }
 
 }
 
-Mistral::ConstraintTableGAC2001Allowed::~ConstraintTableGAC2001Allowed() 
+Mistral::ConstraintGAC2001::~ConstraintGAC2001() 
 {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete table gac 2001 constraint" << std::endl;
@@ -7473,7 +7829,7 @@ Mistral::ConstraintTableGAC2001Allowed::~ConstraintTableGAC2001Allowed()
 
 
 
-Mistral::PropagationOutcome Mistral::ConstraintTableGAC2001Allowed::propagate() 
+Mistral::PropagationOutcome Mistral::ConstraintGAC2001::propagate() 
 {
   PropagationOutcome wiped = CONSISTENT;
 
@@ -7534,9 +7890,8 @@ Mistral::PropagationOutcome Mistral::ConstraintTableGAC2001Allowed::propagate()
 	  Domain::iterator xit = dom_xi.end();
 	  Domain::iterator xend = dom_xi.begin();
 
-	  while(xit > xend && IS_OK(wiped)) {
-	    --xit;
-	    j = dom_xi.get_value(xit);
+	  while(xit != xend && IS_OK(wiped)) {
+	    j = dom_xi.get_value(--xit);
 
 	    n = supportList[oi][j].size;
 	    supports_X = supportList[oi][j].stack_; // init the list of supports
@@ -7609,7 +7964,7 @@ Mistral::PropagationOutcome Mistral::ConstraintTableGAC2001Allowed::propagate()
   return wiped;
 }
 
-int Mistral::ConstraintTableGAC2001Allowed::check( const int* s ) const 
+int Mistral::ConstraintGAC2001::check( const int* s ) const 
 {
 
 
@@ -7618,11 +7973,11 @@ int Mistral::ConstraintTableGAC2001Allowed::check( const int* s ) const
   const int *support;
   unsigned int arity = scope.size, min = INFTY;
 
-  std::cout << "check " << *this << " (" << s[0];
-  for(unsigned int i=1; i<arity; ++i) {
-    std::cout << " " << s[i];
-  }
-  std::cout << ")" << std::endl;
+  // std::cout << "check " << *this << " (" << s[0];
+  // for(unsigned int i=1; i<arity; ++i) {
+  //   std::cout << " " << s[i];
+  // }
+  // std::cout << ")" << std::endl;
 
 
   for(unsigned int i=0; i<arity; ++i) {
@@ -7649,7 +8004,158 @@ int Mistral::ConstraintTableGAC2001Allowed::check( const int* s ) const
   return !found;
 }
 
-std::ostream& Mistral::ConstraintTableGAC2001Allowed::display_supports(std::ostream& os) const {
+std::ostream& Mistral::ConstraintGAC2001::display_supports(std::ostream& os) const {
+  unsigned int arity = scope.size;
+  for(unsigned int xi=0; xi<arity; ++xi) {
+    
+    os << scope[xi] << " in " << scope[xi].get_domain() << std::endl;
+
+    Domain dom_xi(scope[xi]);
+    
+    Domain::iterator xstop = dom_xi.end();
+    
+    int valj;
+    for(Domain::iterator xit = dom_xi.begin(); xit!=xstop; ++xit) {
+      valj = dom_xi.get_value(xit);   
+      os << "    = " << valj << ":" ;
+      Vector<const int*>::iterator send = supportList[xi][valj].end();
+      for(Vector<const int*>::iterator sit = supportList[xi][valj].begin(); sit != send; ++sit) {
+	os << " <" << (*sit)[0] ;
+	for(unsigned int xj=1; xj<arity; ++xj)
+	  os << " " << (*sit)[xj] ;
+	os << ">";
+      }
+      os << std::endl;
+      //<< support_of[xi][valj] << std::endl;
+    }
+    os << std::endl;  
+  }
+  return os;
+}
+
+std::ostream& Mistral::ConstraintGAC2001::display(std::ostream& os) const {
+  os << "TABLE_GAC2001(" << scope[0]/*.get_var()*/ ;
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << ", " << scope[i]/*.get_var()*/;
+  os << ")";
+  
+  display_supports(os);
+
+  // os << ") in " ;
+  // for(unsigned int i=0; i<table.size; ++i) {
+  //   os << "<" << table[i][0] ;
+  //   for(unsigned int j=1; j<scope.size; ++j) {
+  //     os << " " << table[i][j] ;
+  //   }
+  //   os << ">";
+  // }
+  return os;
+}
+
+// void Mistral::ConstraintTableGAC2001Allowed::add(const int* tuple) {
+//   tuples.add(tuple);
+// }
+
+
+
+
+int Mistral::ConstraintGAC3::getpos(const int *sol) const 
+{
+  int i = scope.size-1;
+  int pos = sol[i]; 
+  while( i-- ) pos += (sol[i])*var_sizes[i]; 
+  return pos;
+}
+
+//ConstraintGAC3::ConstraintGAC3() : ConstraintTable() {}
+
+Mistral::ConstraintGAC3::ConstraintGAC3(Vector< Variable >& scp) : ConstraintTable(scp) {}
+
+Mistral::ConstraintGAC3::ConstraintGAC3(std::vector< Variable >& scp) : ConstraintTable(scp) {}
+
+bool Mistral::ConstraintGAC3::isValid(const int *tuple) const
+{
+  int i=scope.size, valid=true;
+  while(valid && i--)
+    valid = scope[i].contain(tuple[i]);
+  return valid;
+}
+
+void Mistral::ConstraintGAC3::initialise() {
+  ConstraintTable::initialise();
+  int arity = scope.size;
+
+  int i;
+  int matrixmin = scope[arity-1].get_initial_min();
+  int matrixmax = scope[arity-1].get_initial_max();
+    
+  var_sizes = new int[arity-1];
+  var_sizes[arity-2] = (scope[arity-1].get_initial_max() - scope[arity-1].get_initial_min() + 1);
+  for(i=arity-3; i >= 0; --i) {
+    var_sizes[i] = var_sizes[i+1] * 
+      (scope[i+1].get_initial_max() - scope[i+1].get_initial_min() + 1);
+  }
+    
+  i = arity-1;
+  while( i-- ) {
+    matrixmax += (scope[i].get_initial_max())*var_sizes[i]; 
+    matrixmin += (scope[i].get_initial_min())*var_sizes[i]; 
+  }
+    
+  matrix.initialise(matrixmin, matrixmax, BitSet::empt);
+    
+  //if( spin ) {
+    matrix.fill();
+    i=table.size;
+    while( i-- ) {
+      if(isValid(table[i]))
+	matrix.remove(getpos(table[i]));
+    }
+    
+  // } else {
+  //   matrix.clear();
+  //   i=tuples.size;
+  //   while( i-- )
+  //     if(isValid(tuples[i]))
+  // 	matrix.insert(getpos(tuples[i]));
+  // }
+  
+  GlobalConstraint::initialise();
+
+}
+
+Mistral::ConstraintGAC3::~ConstraintGAC3() 
+{ 
+  delete [] var_sizes;
+}
+
+int Mistral::ConstraintGAC3::check( const int* s ) const 
+{
+  return matrix.contain(getpos(s));
+}
+
+// void Mistral::ConstraintGAC3::fillNogood() 
+// {
+//   matrix.fill();
+// }
+
+// void Mistral::ConstraintGAC3::fillSupport() 
+// {
+//   matrix.clear();
+// }
+
+// void Mistral::ConstraintGAC3::addNogood(const int* sol) 
+// {
+//   matrix.insert(getpos(sol));
+// }
+
+// void Mistral::ConstraintGAC3::addSupport(const int* sol) 
+// {
+//   matrix.erase(getpos(sol));
+// }
+
+
+std::ostream& Mistral::ConstraintGAC3::display_supports(std::ostream& os) const {
   // unsigned int arity = scope.size;
   // for(unsigned int xi=0; xi<arity; ++xi) {
     
@@ -7662,15 +8168,24 @@ std::ostream& Mistral::ConstraintTableGAC2001Allowed::display_supports(std::ostr
   //   int valj;
   //   for(Domain::iterator xit = dom_xi.begin(); xit<xstop; ++xit) {
   //     valj = dom_xi.get_value(xit);   
-  //     os << "    = " << valj << ": " << support_of[xi][valj] << std::endl;
+  //     os << "    = " << valj << ":" ;
+  //     Vector<const int*>::iterator send = supportList[xi][valj].end();
+  //     for(Vector<const int*>::iterator sit = supportList[xi][valj].begin(); sit != send; ++sit) {
+  // 	os << " <" << (*sit)[0] ;
+  // 	for(unsigned int xj=1; xj<arity; ++xj)
+  // 	  os << " " << (*sit)[xj] ;
+  // 	os << ">";
+  //     }
+  //     os << std::endl;
+  //     //<< support_of[xi][valj] << std::endl;
   //   }
   //   os << std::endl;  
   // }
   return os;
 }
 
-std::ostream& Mistral::ConstraintTableGAC2001Allowed::display(std::ostream& os) const {
-  os << "TABLE_GAC2001(" << scope[0]/*.get_var()*/ ;
+std::ostream& Mistral::ConstraintGAC3::display(std::ostream& os) const {
+  os << "TABLE_GAC3(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
     os << ", " << scope[i]/*.get_var()*/;
   os << ")";
@@ -7687,11 +8202,6 @@ std::ostream& Mistral::ConstraintTableGAC2001Allowed::display(std::ostream& os) 
   // }
   return os;
 }
-
-void Mistral::ConstraintTableGAC2001Allowed::add(const int* tuple) {
-  tuples.add(tuple);
-}
-
 
 
 

@@ -195,6 +195,7 @@ std::string Mistral::domain2str(int d) {
 
 static unsigned mistral_rand_x[56], mistral_rand_y[256], mistral_rand_z;
 static int mistral_rand_j, mistral_rand_k;
+static int rand_initialised = false;
 
 /**********************************************
  * Knuth's Random number generator (code from sp-1.4)
@@ -211,10 +212,16 @@ static int mistral_rand_j, mistral_rand_k;
    urand() is somewhat slower, and is presumably better
 */
 
+bool Mistral::random_generator_is_ready() {
+  return rand_initialised;
+}
+
 void Mistral::usrand (unsigned seed)
 {
   int j;
-  
+
+  rand_initialised = true;
+
   mistral_rand_x[1] = 1;
   if (seed) mistral_rand_x[2] = seed;
   else mistral_rand_x[2] = time (NULL);
@@ -225,6 +232,7 @@ void Mistral::usrand (unsigned seed)
   for (j=255; j>=0; --j) urand0 ();
   for (j=255; j>=0; --j) mistral_rand_y[j] = urand0 ();
   mistral_rand_z = urand0 ();
+
 }
 
 unsigned Mistral::urand0 (void)

@@ -2039,7 +2039,7 @@ Mistral::Expression::Expression(const std::vector< Variable >& args, const int l
   for(unsigned int i=0; i<args.size(); ++i)
     children.add(args[i]);
 }
-Mistral::Expression::Expression(Variable X, Variable Y) 
+Mistral::Expression::Expression(const Variable X, const Variable Y) 
   : VariableImplementation() {
      children.add(X);
      children.add(Y);
@@ -3857,7 +3857,7 @@ Mistral::Variable Mistral::Variable::operator>=(const int k) {
 }
 
 
-Mistral::DisjunctiveExpression::DisjunctiveExpression(Variable X, Variable Y, 
+Mistral::DisjunctiveExpression::DisjunctiveExpression(const Variable X, const Variable Y, 
 						      const int px, const int py) 
   : Expression(X,Y) { processing_time[0] = px; processing_time[1] = py; }
 Mistral::DisjunctiveExpression::~DisjunctiveExpression() {
@@ -3943,6 +3943,10 @@ Mistral::FreeExpression::~FreeExpression() {
   std::cout << "c delete free expression" << std::endl;
 #endif
 }
+
+void Mistral::FreeExpression::extract_constraint(Solver *s) {
+}
+
   
 const char* Mistral::FreeExpression::get_name() const {
   return "free";
@@ -3999,6 +4003,73 @@ Mistral::Variable Mistral::AllDiff(Vector< Variable >& args, const int ct) {
   Variable exp(new AllDiffExpression(args,ct));
   return exp;
 }
+
+
+
+Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>& rel, const AlgorithmType ct) 
+  : Expression(args) { 
+  propagator = ct; 
+  tuples.copy(rel);
+}
+
+Mistral::TableExpression::TableExpression(Vector< Variable >& args, const AlgorithmType ct) 
+  : Expression(args) { 
+  propagator = ct; 
+}
+
+void Mistral::TableExpression::add(int* tuple) 
+{
+  int n = children.size;
+  int *new_tuple = new int[n];
+  while(n--) new_tuple[n] = tuple[n];
+  tuples.add(new_tuple);
+}
+
+Mistral::TableExpression::~TableExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete table expression" << std::endl;
+#endif
+
+  tuples.neutralise();
+}
+
+void Mistral::TableExpression::extract_constraint(Solver *s) { 
+  ConstraintTable *tab;
+  switch(propagator) {
+  case GAC2001: {tab = new ConstraintGAC2001(children);} break;
+  case GAC3: {tab = new ConstraintGAC3(children);} break;
+    //case AC3: {tab = new ConstraintAC3(children);} break;
+  case GAC4: {tab = new ConstraintGAC4(children);} break;
+  default: {tab = new ConstraintGAC2001(children);}
+  }
+ 
+  tab->table.copy(tuples);
+
+  s->add(Constraint(tab)); 
+}
+
+void Mistral::TableExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: Table constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+void Mistral::TableExpression::extract_predicate(Solver *s) { 
+  std::cerr << "Error: Table constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::TableExpression::get_name() const {
+  return "alldiff";
+}
+
+Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>& rel, const Mistral::TableExpression::AlgorithmType ct) {
+  Variable exp(new TableExpression(args, rel, ct));
+  return exp;
+}
+// Mistral::Variable Mistral::Table(VarArray& args, const Mistral::TableExpression::AlgorithmType ct) {
+//   Variable exp(new TableExpression(args,ct));
+//   return exp;
+// }
 
 
 Mistral::LexExpression::LexExpression(Vector< Variable >& r1, Vector< Variable >& r2, const int st_)
@@ -4418,7 +4489,7 @@ void Mistral::MaxExpression::extract_predicate(Solver *s) {
 }
 
 
-Mistral::ElementExpression::ElementExpression(Vector< Variable >& args, 
+Mistral::ElementExpression::ElementExpression(const Vector< Variable >& args, 
 					      Variable X, int ofs) 
   : Expression(), offset(ofs) {
   for(unsigned int i=0; i<args.size; ++i) children.add(args[i]);
@@ -4771,29 +4842,29 @@ void Mistral::ElementExpression::extract_predicate(Solver *s) {
 //   //s->add(new PredicateElementSet(children, offset));
 // }
 
-Mistral::Variable Mistral::VarArray::operator[](Variable X) {
+Mistral::Variable Mistral::VarArray::operator[](Variable X) const {
   Variable exp( new ElementExpression(*this, X, 0) );
   return exp;
 }
 
-Mistral::Variable Mistral::VarArray::operator[](const int X) {
+Mistral::Variable Mistral::VarArray::operator[](const int X) const {
   return stack_[X];
 }
 
-// // Mistral::Variable& Mistral::VarArray::operator[](const int X) {
-// //   return &(stack_[X]);
-// // }
+Mistral::Variable& Mistral::VarArray::operator[](const int X) {
+  return stack_[X];
+}
 
 void Mistral::VarArray::set(const int X, Variable x) {
   stack_[X] = x;
 }
 
-Mistral::Variable Mistral::Element(Vector<Variable>& X, Variable selector, int offset) {
+Mistral::Variable Mistral::Element(const Vector<Variable>& X, Variable selector, int offset) {
   Variable exp( new ElementExpression(X, selector, offset) );
   return exp;
 }
 
-Mistral::Variable Mistral::Element(VarArray& X, Variable selector, int offset) {
+Mistral::Variable Mistral::Element(const VarArray& X, Variable selector, int offset) {
   Variable exp( new ElementExpression(X, selector, offset) );
   return exp;
 }

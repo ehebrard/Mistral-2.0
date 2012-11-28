@@ -56,6 +56,12 @@
   else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var); 
 
 
+//#define  _DEBUG_TABLE (id == 6)
+//((scope[0].id() == 9 || scope[1].id() == 9 || scope[2].id() == 9))
+//#define _OS_PRUNING true
+
+
+
 
 /**
  *Constraint:
@@ -3524,6 +3530,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
 
+
   /**********************************************
    *Table Constraint
    **********************************************/
@@ -3535,22 +3542,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
  
   public:
 
-    //typedef Tuple< 2, int > assignment;
-
     /**@name Parameters*/
     //@{
-    // for each variable and each value, the set of support. In fact, the rank of the support in $tabl$ is stored in the set.
-    // since support are partitioned between values, all set for a given variable share the same $index_$
-    ReversibleSet          **support_of;
-    // values initialy in the domains (used for memory deallocation)
-    Vector<int>                 *values;
-
     // the list of tuples
     Vector< const int* >          table;
-    
-    // Handlers for domain-delta
-    DomainDelta            *value_delta;
-
     //@}
 
     /**@name Constructors*/
@@ -3563,9 +3558,91 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
-    //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintTable();
     //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    //@}
+
+    void add(const int* tuple);
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "table"; }
+    //@}
+  };
+
+
+
+
+  /**********************************************
+   *GAC4 Constraint
+   **********************************************/
+  //  <x1 , ... , xn> == y
+  /// associate a value in y with each tuple in a given list
+  /// and ensures that the tuple corresponding to the value of y
+  /// is equal to <x1 , ... , xn>
+  class ConstraintGAC4 : public ConstraintTable {
+ 
+  public:
+
+    //typedef Tuple< 2, int > assignment;
+
+    /**@name Parameters*/
+    //@{
+    // for each variable and each value, the set of support. In fact, the rank of the support in $tabl$ is stored in the set.
+    // since support are partitioned between values, all set for a given variable share the same $index_$
+#ifdef _OS_PRUNING
+    ReversibleSet         ***support_of;
+#else
+    ReversibleSet          **support_of;
+#endif
+    // values initialy in the domains (used for memory deallocation)
+    Vector<int>                 *values;
+
+    // the list of tuples
+    //Vector< const int* >          table;
+    
+    // Handlers for domain-delta
+    DomainDelta            *value_delta;
+
+
+    // 
+    // 
+    
+#ifdef _OS_PRUNING
+    ReversibleSet        *support_lists;
+    int                      **list_map;
+    int                        *var_map;
+    int                        *val_map;
+    IntStack               pruned_lists;
+    Vector<int>           *list_pruning;
+#endif
+
+    //@}
+
+#ifdef _DEBUG_TABLE
+    int* init_support_size;
+#endif
+
+    /**@name Constructors*/
+    //@{
+    ConstraintGAC4() : ConstraintTable() { }
+    ConstraintGAC4(Vector< Variable >& scp);
+    ConstraintGAC4(std::vector< Variable >& scp);
+    virtual Constraint clone() { return Constraint(new ConstraintGAC4(scope)); }
+    virtual void initialise();
+    //virtual int idempotent() { return 1;}
+    //virtual int postponed() { return 1;}
+    //virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintGAC4();
+    //@}
+
+
 
     /**@name Solving*/
     //@{
@@ -3574,7 +3651,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual RewritingOutcome rewrite();
     //@}
 
-    void add(const int* tuple);
+#ifdef _DEBUG_TABLE
+    bool check_integrity( ) const ;
+#endif
   
     /**@name Miscellaneous*/
     //@{  
@@ -3586,13 +3665,13 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
   /**********************************************
-   *TableGAC2001Allowed Constraint
+   *GAC2001 Constraint
    **********************************************/
   //  <x1 , ... , xn> == y
   /// associate a value in y with each tuple in a given list
   /// and ensures that the tuple corresponding to the value of y
   /// is equal to <x1 , ... , xn>
-  class ConstraintTableGAC2001Allowed : public GlobalConstraint {
+  class ConstraintGAC2001 : public ConstraintTable {
  
   public:
 
@@ -3606,22 +3685,22 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //BitSet *D_X;
     const int** supports_X;
     int* themins;
-    Vector< const int* > tuples;
+    //Vector< const int* > tuples;
     //bool isClone;
     //@}
 
     /**@name Constructors*/
     //@{
-    ConstraintTableGAC2001Allowed() : GlobalConstraint() { }
-    ConstraintTableGAC2001Allowed(Vector< Variable >& scp);
-    ConstraintTableGAC2001Allowed(std::vector< Variable >& scp);
-    virtual Constraint clone() { return Constraint(new ConstraintTableGAC2001Allowed(scope)); }
+    ConstraintGAC2001() : ConstraintTable() { }
+    ConstraintGAC2001(Vector< Variable >& scp);
+    ConstraintGAC2001(std::vector< Variable >& scp);
+    virtual Constraint clone() { return Constraint(new ConstraintGAC2001(scope)); }
     virtual void initialise();
-    virtual int idempotent() { return 1;}
-    virtual int postponed() { return 1;}
-    virtual int pushed() { return 1;}
+    //virtual int idempotent() { return 1;}
+    //virtual int postponed() { return 1;}
+    //virtual int pushed() { return 1;}
     //virtual bool absorb_negation(const int var) { return true; }
-    virtual ~ConstraintTableGAC2001Allowed();
+    virtual ~ConstraintGAC2001();
     //@}
 
     /**@name Solving*/
@@ -3631,13 +3710,74 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual RewritingOutcome rewrite();
     //@}
 
-    void add(const int* tuple);
+    //void add(const int* tuple);
   
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display_supports(std::ostream&) const ;
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bsum=k"; }
+    virtual std::string name() const { return "gac2001"; }
+    //@}
+  };
+
+
+
+  /**********************************************
+   *GAC3 Constraint
+   **********************************************/
+   /*! \class ConstraintGAC3Valid
+    \brief  implementation of a n-ary extensional constraint
+
+    The conflicts are encoded using
+    a N-dimensional flatened matrix:
+    an entry of the matrix equal to 0
+    denotes an allowed combination (support), whilst
+    1 denotes a forbidden combination (conflict).
+  */
+  class ConstraintGAC3 : public ConstraintTable {
+ 
+  private:
+    /**@name Parameters*/
+    //@{ 
+    int *var_sizes; // NOTE: this has arity-1 elements
+    BitSet matrix;
+    //bool isClone;
+    //@}
+
+ public:
+ 
+    /**@name Constructors*/
+    //@{
+    ConstraintGAC3() : ConstraintTable() {}
+    ConstraintGAC3(Vector< Variable >& scp);
+    ConstraintGAC3(std::vector< Variable >& scp);
+    virtual Constraint clone() { return Constraint(new ConstraintGAC3(scope)); }
+    virtual void initialise();
+    //virtual int idempotent() { return 1;}
+    //virtual int postponed() { return 1;}
+    //virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintGAC3();
+    //@}
+
+    int getpos(const int *vals) const;
+    int getpos() const;
+    bool isValid(const int *tuple) const;
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    //virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    //void add(const int* tuple);
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display_supports(std::ostream&) const ;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "gac3"; }
     //@}
   };
 

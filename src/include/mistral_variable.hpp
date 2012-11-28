@@ -103,14 +103,6 @@ namespace Mistral {
     BitSet values;
   
     virtual std::ostream& display(std::ostream& os) const {
-      
-      // //os << "<" << min << "|" << values << "|" << max << "> " ;
-
-      // os << "min: "  << min  << std::endl;
-      // os << "max: "  << max  << std::endl;
-
-      // os << "values: "  << values  << std::endl;
-
       if(min == max-1) {
 	os << "[" << min << "," << max << "]";
       } else if(values.table && (max-min) >= size
@@ -153,13 +145,9 @@ namespace Mistral {
     /*!@name Constructors*/
     //@{
     VariableBitset() : VariableImplementation() {
-      // id = -1;
-      // solver = NULL;
     };
 
     VariableBitset(const int lb, const int ub) : VariableImplementation() {
-      // id = -1;
-      // solver = NULL;
       initialise(lb, ub);
     };
 
@@ -169,8 +157,6 @@ namespace Mistral {
     }
 
     VariableBitset(const Vector< int >& values) : VariableImplementation() {
-      // id = -1;
-      // solver = NULL;
       initialise(values);
     };
 
@@ -180,8 +166,6 @@ namespace Mistral {
     }
 
     VariableBitset(const int lb, const int ub, const Vector< int >& values) : VariableImplementation() {
-      // id = -1;
-      // solver = NULL;
       initialise(lb, ub, values);
     };
 
@@ -1812,6 +1796,7 @@ namespace Mistral {
     int      *_begin_ptr;
     int      *_end_ptr;
     int      id;
+    //int      offset;
 
     // int      *_begin_delta_ptr;
     // int      *_end_delta_ptr;
@@ -1824,7 +1809,7 @@ namespace Mistral {
     Domain(const Variable& x, const bool _open=true);
     virtual ~Domain();
 
-    inline int get_value(iterator it) { return( id<0 ? (size_t)(it)/4 : *it ); }
+    inline int get_value(iterator it) { return( id<0 ?(size_t)(it)/4 : *it ); }
     void update();
 
     void open();
@@ -2201,7 +2186,7 @@ namespace Mistral {
     
     Expression() : VariableImplementation() {  id=-1; }
     Expression(Variable X);
-    Expression(Variable X, Variable Y);
+    Expression(const Variable X, const Variable Y);
     Expression(const int lo, const int up);
     Expression(const Vector< Variable >& args);
     Expression(const Vector< Variable >& args, const int lo, const int up);
@@ -2578,8 +2563,8 @@ namespace Mistral {
 
     int processing_time[2];
 
-    DisjunctiveExpression(Variable X, 
-  			  Variable Y,
+    DisjunctiveExpression(const Variable X, 
+  			  const Variable Y,
   			  const int p0=1, 
   			  const int p1=1);
 
@@ -2625,6 +2610,7 @@ namespace Mistral {
     
     virtual ~FreeExpression();
 
+    virtual void extract_constraint(Solver*);
     virtual const char* get_name() const;
 
   };
@@ -2649,6 +2635,46 @@ namespace Mistral {
   };
 
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
+
+
+
+  class TableExpression : public Expression {
+
+  public:
+    
+    enum AlgorithmType {
+      GAC2001,
+      GAC3,
+      AC3,
+      GAC4,
+      Dynamic
+    };
+
+
+  private:
+
+    AlgorithmType    propagator;
+    Vector< const int* > tuples;
+
+  public:
+
+    TableExpression(Vector< Variable >& args, const AlgorithmType ct=Dynamic);
+    TableExpression(Vector< Variable >& args, Vector< const int* >&, const AlgorithmType ct=Dynamic);
+    virtual ~TableExpression();
+
+    void add(int *t);
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Table(Vector< Variable >& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+  Variable Table(Vector< Variable >& args, Vector< const int* >&, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+  //Variable Table(VarArray& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+
 
 
   class LexExpression : public Expression {
@@ -2736,7 +2762,7 @@ namespace Mistral {
     //BitSet domain;
     Vector< int > values;
 
-    ElementExpression(Vector< Variable >& args, Variable X, int ofs);
+    ElementExpression(const Vector< Variable >& args, Variable X, int ofs);
     virtual ~ElementExpression();
     void initialise_domain();
 
@@ -2747,8 +2773,8 @@ namespace Mistral {
 
   };
 
-  Variable Element(Vector<Variable>& X, Variable selector, int offset=0);
-  Variable Element(VarArray& X, Variable selector, int offset=0);
+  Variable Element(const Vector<Variable>& X, Variable selector, int offset=0);
+  Variable Element(const VarArray& X, Variable selector, int offset=0);
 
 
   class MinExpression : public Expression {
@@ -3135,19 +3161,21 @@ namespace Mistral {
     VarArray(const int n, int lb=NOVAL, int ub=NOVAL, int type=EXPRESSION) 
       : Vector< Variable >() 
     {
+      //initialise(0,n);
       if(lb==NOVAL) { lb=0; ub=1; }
       else if(ub==NOVAL) { lb=0; ub=lb-1; }
       
       for(int i=0; i<n; ++i) {
 	Variable x(lb, ub, type);
 	add(x);
+	//stack_[i] = x;
       }
     }
 
     virtual ~VarArray() {}
-    Variable operator[](Variable X);
-    Variable operator[](const int X);
-    //Variable& operator[](const int X);
+    Variable operator[](Variable X) const;
+    Variable operator[](const int X) const;
+    Variable& operator[](const int X);
     void set(const int i, Variable x);
 
 

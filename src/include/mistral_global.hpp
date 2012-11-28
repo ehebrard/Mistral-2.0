@@ -59,7 +59,7 @@ namespace Mistral {
   //#define _DEBUG_RESTORE true
   //#define _DEBUG_RELAX true
   //#define _DEBUG_HISTORY true  
-  //#define _DEBUG_GENPROPAG true
+  //#define _DEBUG_GENPROPAG (id == 5)
   //#define _DEBUG_MUL (id==7660)
   //#define _DEBUG_MAX (id==288)
   //#define _DEBUG_REWRITE true
@@ -401,6 +401,7 @@ uint64_t mem_used();
   //   Random(unsigned int seed=12345) { usrand(seed); }
   //   virtual ~Random() {}
 
+  bool random_generator_is_ready();
     void usrand (unsigned seed);
     unsigned urand0 (void);
     unsigned urand (void);
