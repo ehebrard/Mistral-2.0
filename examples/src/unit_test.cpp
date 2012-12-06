@@ -356,6 +356,16 @@ public:
   virtual void run();
 };
 
+class SatTest : public UnitTest {
+
+public:
+  
+  SatTest();
+  ~SatTest();
+
+  virtual void run();
+};
+
 class IntersectionTest : public UnitTest {
 
 public:
@@ -1852,6 +1862,7 @@ int main(int argc, char *argv[])
   tests.push_back(new OpshopTest());
   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
+  tests.push_back(new SatTest());
   tests.push_back(new Pigeons(N+2)); 
   tests.push_back(new CostasAllDiffAllSolutions(N+1, FORWARD_CHECKING));
   tests.push_back(new CostasAllDiffAllSolutions(N+1, BOUND_CONSISTENCY, RANGE_VAR));
@@ -4764,6 +4775,32 @@ void MemberTest::run2() {
 
 
 
+SatTest::SatTest() : UnitTest() {}
+SatTest::~SatTest() {}
+
+void SatTest::run() {
+
+  if(Verbosity) cout << "Run Sat test: "; 
+
+  Solver solver;
+
+  solver.parse_dimacs("cnf/gen-1.3/unif-c1000-v250-s542677735.cnf");
+  solver.parameters.verbosity = 0;
+  solver.parameters.backjump = 1;
+
+  solver.depth_first_search(solver.variables, 
+			    new VSIDS(&solver),
+			    new Geometric()
+			    );
+  
+  if(solver.statistics.num_backtracks != 26861) {
+    cout << "Error: wrong number of backtracks! (" 
+	 << (solver.statistics.num_backtracks) << ")" << endl;
+    //exit(1);
+  }
+}
+
+
 DivTest::DivTest() : UnitTest() {}
 DivTest::~DivTest() {}
 
@@ -5737,9 +5774,18 @@ void SetDifferenceTest::run1() {
   Variable X = SetVariable(1,9,1,5);
 
 
+  // Variable Z = SetVariable(1,3,2,3);
+  // Variable Y = SetVariable(1,3,1,3);
+  // Variable X = SetVariable(1,3,1,3);
+  
+  // //std::cout << X << " - " << Y << " = " << Z << std::endl;
+
+
   s.add( SetDifference(X,Y) == Z );
 
   //std::cout << s << std::endl;
+
+
 
   s.rewrite();
   
@@ -5749,7 +5795,9 @@ void SetDifferenceTest::run1() {
   
   //cout << "Consolidate\n" << s << endl;  
 
-  //cout << s << endl;
+  // cout << s << endl;
+
+  // exit(1);
 
   s.initialise_search(s.variables,
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 

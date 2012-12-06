@@ -1539,6 +1539,8 @@ namespace Mistral {
 
     ~Variable() { } //std::cout << "del "; this->display(std::cout); std::cout << std::endl; }
 
+    void free_object();
+
     // class iterator {
       
     // private:
@@ -1555,6 +1557,7 @@ namespace Mistral {
 
     // };
 
+    bool is_bool() { return (domain_type > DYN_VAR); }
     bool is_void() { return (domain_type != CONST_VAR && variable == NULL); }
     void initialise_domain(const int lo, const int up, const int type);
     void initialise_domain(const Vector< int >& values, const int type);
@@ -2028,6 +2031,15 @@ namespace Mistral {
   };
 
 
+  Literal literal(Variable x, const int val);//  {
+  //   return (x.id()*2+val);
+  // }
+
+  Literal literal(Variable x);//  {
+  //   return (x.id()*2+x.get_value());
+  // }
+
+
 
   /**********************************************
    * Decision
@@ -2125,6 +2137,9 @@ namespace Mistral {
   std::ostream& operator<< (std::ostream& os, const Decision* x);
 
 
+  typedef Array<Decision> ExtClause;
+
+
   /*
     Variables are created as expressions, with a pointer to a var object
     When expressions are added to the solver, the pointed vars are built
@@ -2213,6 +2228,10 @@ namespace Mistral {
 
     virtual std::ostream& display(std::ostream& os) const;    
   };
+
+
+  std::ostream& operator<< (std::ostream& os, const Expression& x);
+  std::ostream& operator<< (std::ostream& os, const Expression* x);
 
 
 
@@ -2409,6 +2428,8 @@ namespace Mistral {
 
   };
 
+  Variable NotAnd(Variable X, Variable Y);
+
   class OrExpression : public Expression {
 
   public:
@@ -2423,6 +2444,8 @@ namespace Mistral {
     virtual const char* get_name() const;
 
   };
+
+  Variable NotOr(Variable X, Variable Y);
 
   class NotExpression : public Expression {
 
@@ -2705,7 +2728,7 @@ namespace Mistral {
     int lb;
     int ub;
 
-    BoolSumExpression() : Expression() {}
+    BoolSumExpression() : Expression() {lb=0; ub=0;}
     BoolSumExpression(const int l, const int u);
     BoolSumExpression(Vector< Variable >& args, const int l, const int u);
     virtual ~BoolSumExpression();
@@ -2908,7 +2931,7 @@ namespace Mistral {
 
 
 
-    SetExpression() : BoolSumExpression() {}
+    SetExpression() : BoolSumExpression() { num_args = 0; }
     SetExpression(const int lelt, const int uelt, const int clb, const int cub);
     // SetExpression(const BitSet& lb, const BitSet& ub, const int clb, const int cub);
     SetExpression(const Vector<int>& lb, const Vector<int>& ub, const int clb, const int cub);
@@ -2934,7 +2957,7 @@ namespace Mistral {
     virtual std::string get_solution_str_value() const ;
   };
 
-
+  Variable SetVariable();
   Variable SetVariable(const int lelt, const int uelt, 
   		       const int clb=0, const int cub=INFTY);
   Variable SetVariable(const Vector<int>& lb, const Vector<int>& ub, 

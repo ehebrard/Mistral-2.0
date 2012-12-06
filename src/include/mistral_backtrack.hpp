@@ -93,6 +93,8 @@ namespace Mistral {
   };
 
 
+
+
   /*! \class Constraint
     \brief A wrapper class for constraints
   */
@@ -149,6 +151,8 @@ namespace Mistral {
     inline bool ternary()    const { return (data&TERNARY); }
     // [context-independent:] whether the constraint is idempotent (it should not be triggerred on its own changes)
     inline bool idempotent() const { return (data&IDEMPOTENT); }
+    // [context-independent:] whether the constraint is able to explain its pruning
+    inline bool explained() const { return (data&EXPLAINED); }
 
     //void set_idempotent(const bool flag);
 

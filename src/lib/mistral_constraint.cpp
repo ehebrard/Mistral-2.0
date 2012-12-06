@@ -208,6 +208,11 @@ void Mistral::GlobalConstraint::initialise_vars(Solver *s) {
 
 void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
+
+#ifdef _DEBUG_BUILD
+  std::cout << "[" << std::setw(4) << id << "]: post on: " ;
+#endif
+
 #ifdef _DEBUG_RELAX
   std::cout << "[" << std::setw(4) << id << "]: first post on: " ;
 #endif
@@ -242,6 +247,10 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
 	solver->save( c );
 
+#ifdef _DEBUG_BUILD
+	std::cout << _scope[i] << " " ;
+#endif
+
 #ifdef _DEBUG_RELAX
 	std::cout << _scope[i] << " " ;
 #endif
@@ -251,6 +260,10 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
       }  
     }
   }
+
+#ifdef _DEBUG_BUILD
+  std::cout << std::endl;
+#endif
 
 #ifdef _DEBUG_RELAX
   std::cout << std::endl;
@@ -890,7 +903,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate(const int chang
 Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
   PropagationOutcome wiped = CONSISTENT; 
   unsigned int i, j;
-  int vali, vnext;
+  int vali; //, vnext;
 
 #ifdef _DEBUG_GENPROPAG
   if(_DEBUG_GENPROPAG) {
@@ -1322,6 +1335,12 @@ void Mistral::GlobalConstraint::initialise() {
   // trail_.initialise(0,2*scope.size);
   // trail_.add(-1);
 
+#ifdef _DEBUG_BUILD
+  std::cout << "[" << std::setw(4) << id << "]: initialise (global)" << std::endl;
+#endif
+
+
+
   event_type = new Event[on.size];
   // self = new int[scope.size];
   // index = new Constraint**[scope.size];
@@ -1366,8 +1385,10 @@ void Mistral::ConstraintNotEqual::initialise() {
 }
 
 void Mistral::ConstraintNotEqual::mark_domain() {
-  get_solver()->mark_non_convex(scope[0].id());
-  get_solver()->mark_non_convex(scope[1].id());
+  get_solver()->forbid(scope[0].id(), RANGE_VAR);
+  get_solver()->forbid(scope[1].id(), RANGE_VAR);
+  // get_solver()->mark_non_convex(scope[0].id());
+  // get_solver()->mark_non_convex(scope[1].id());
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintNotEqual::rewrite() {
@@ -1472,6 +1493,13 @@ void Mistral::ConstraintEqual::initialise() {
   trigger_on(_DOMAIN_, scope[0]);
   trigger_on(_DOMAIN_, scope[1]);
   //set_idempotent(true);
+}
+
+void Mistral::ConstraintEqual::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+  // get_solver()->mark_non_convex(scope[0].id());
+  // get_solver()->mark_non_convex(scope[1].id());
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintEqual::rewrite() {
@@ -1652,6 +1680,11 @@ void Mistral::PredicateUpperBound::initialise() {
   trigger_on(_VALUE_, scope[1]);
 }
 
+void Mistral::PredicateUpperBound::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+}
+
+
 Mistral::Constraint Mistral::PredicateUpperBound::get_negation(const int var, Variable x) { 
   return Constraint( new PredicateLowerBound( scope[0], x, bound-1 ) );
 }
@@ -1711,6 +1744,11 @@ void Mistral::PredicateLowerBound::initialise() {
   trigger_on(_VALUE_, scope[1]);
 }
 
+void Mistral::PredicateLowerBound::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+}
+
+
 Mistral::PropagationOutcome Mistral::PredicateLowerBound::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
@@ -1765,6 +1803,11 @@ void Mistral::PredicateLess::initialise() {
   trigger_on(_RANGE_, scope[0]);
   trigger_on(_RANGE_, scope[1]);
   trigger_on(_VALUE_, scope[2]);
+}
+
+void Mistral::PredicateLess::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
 }
 
 //x0 + 3 > x1
@@ -1886,6 +1929,11 @@ void Mistral::ConstraintLess::initialise() {
   //set_idempotent(true);
 }
 
+void Mistral::ConstraintLess::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
+
 Mistral::PropagationOutcome Mistral::ConstraintLess::propagate() {
 
 //   std::cout << "changes: " << changes << std::endl;
@@ -1966,7 +2014,10 @@ void Mistral::ConstraintDisjunctive::initialise() {
   //stress = 0;
 }
 
-
+void Mistral::ConstraintDisjunctive::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
 
 void Mistral::ConstraintDisjunctive::decide(const int choice) {
 
@@ -2232,6 +2283,11 @@ void Mistral::ConstraintReifiedDisjunctive::initialise() {
 
 }
 
+void Mistral::ConstraintReifiedDisjunctive::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
+
 Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
   return CONSISTENT;
 }
@@ -2384,10 +2440,8 @@ void Mistral::PredicateEqual::initialise() {
 }
 
 void Mistral::PredicateEqual::mark_domain() {
-  if(!spin) {
-    get_solver()->mark_non_convex(scope[0].id());
-    get_solver()->mark_non_convex(scope[1].id());
-  }
+  get_solver()->forbid(scope[0].id(), RANGE_VAR|LIST_VAR);
+  get_solver()->forbid(scope[1].id(), RANGE_VAR|LIST_VAR);
 }
 
 Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
@@ -2515,7 +2569,8 @@ void Mistral::PredicateConstantEqual::initialise() {
 }
 
 void Mistral::PredicateConstantEqual::mark_domain() {
-  get_solver()->mark_non_convex(scope[0].id());
+  get_solver()->forbid(scope[0].id(), RANGE_VAR);
+  //get_solver()->mark_non_convex(scope[0].id());
 }
 
 Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate() {      
@@ -2574,7 +2629,8 @@ void Mistral::PredicateIntervalMember::initialise() {
 }
 
 void Mistral::PredicateIntervalMember::mark_domain() {
-  get_solver()->mark_non_convex(scope[0].id());
+  get_solver()->forbid(scope[0].id(), RANGE_VAR|LIST_VAR);
+  //get_solver()->mark_non_convex(scope[0].id());
 }
 
 Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate() {      
@@ -2646,7 +2702,8 @@ void Mistral::PredicateSetMember::initialise() {
 }
 
 void Mistral::PredicateSetMember::mark_domain() {
-  get_solver()->mark_non_convex(scope[0].id());
+  get_solver()->forbid(scope[0].id(), RANGE_VAR|LIST_VAR);
+  //get_solver()->mark_non_convex(scope[0].id());
 }
 
 Mistral::PropagationOutcome Mistral::PredicateSetMember::propagate() {      
@@ -2702,6 +2759,11 @@ void Mistral::PredicateOffset::initialise() {
   ConstraintImplementation::initialise();
   trigger_on(_RANGE_, scope[0]);
   trigger_on(_RANGE_, scope[1]);
+}
+
+void Mistral::PredicateOffset::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
 }
 
 Mistral::PropagationOutcome Mistral::PredicateOffset::propagate() {      
@@ -2814,6 +2876,12 @@ void Mistral::PredicateFactor::initialise() {
   trigger_on(_RANGE_, scope[1]);
 }
 
+void Mistral::PredicateFactor::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
+
+
 Mistral::PropagationOutcome Mistral::PredicateFactor::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
@@ -2895,6 +2963,12 @@ void Mistral::PredicateAbs::initialise() {
   
   buffer.initialise(lb, ub, BitSet::empt);
 }
+
+void Mistral::PredicateAbs::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
+
 
 Mistral::PropagationOutcome Mistral::PredicateAbs::propagate_change_on_X(const Event evt) {
   //if(DOMAIN_CHANGED(evt))
@@ -3138,6 +3212,12 @@ void Mistral::PredicateNeg::initialise() {
   trigger_on(_DOMAIN_, scope[0]);
   trigger_on(_DOMAIN_, scope[1]);
 }
+
+void Mistral::PredicateNeg::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
+
 
 Mistral::PropagationOutcome Mistral::PredicateNeg::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
@@ -3474,6 +3554,10 @@ void Mistral::ConstraintLex::initialise() {
   GlobalConstraint::initialise();
 }
 
+void Mistral::ConstraintLex::mark_domain() {
+  for(int i=0; i<4; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
 
 
 
@@ -3685,11 +3769,20 @@ std::ostream& Mistral::ConstraintLex::display(std::ostream& os) const {
 
 
 void Mistral::PredicateAdd::initialise() {
+
   ConstraintImplementation::initialise();
 
   trigger_on(_RANGE_, scope[0]);
   trigger_on(_RANGE_, scope[1]);
   trigger_on(_RANGE_, scope[2]);
+
+  //std::cout << "scope: " << _scope << std::endl;
+}
+
+
+void Mistral::PredicateAdd::mark_domain() {
+  for(int i=0; i<3; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
 }
 
 Mistral::PropagationOutcome Mistral::PredicateAdd::rewrite() {
@@ -4099,6 +4192,11 @@ void Mistral::PredicateModConstant::initialise() {
   trigger_on(_RANGE_, scope[1]);
 }
 
+void Mistral::PredicateModConstant::mark_domain() {
+  for(int i=0; i<2; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
 
 Mistral::PropagationOutcome Mistral::PredicateModConstant::filter() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
@@ -4269,6 +4367,12 @@ void Mistral::PredicateCModConstant::initialise() {
   trigger_on(_RANGE_, scope[0]);
   trigger_on(_RANGE_, scope[1]);
 }
+
+void Mistral::PredicateCModConstant::mark_domain() {
+  for(int i=0; i<2; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
 
 
 Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {      
@@ -4539,6 +4643,13 @@ void Mistral::PredicateMod::initialise() {
   trigger_on(_RANGE_, scope[1]);
   trigger_on(_RANGE_, scope[2]);
 }
+
+void Mistral::PredicateMod::mark_domain() {
+  for(int i=0; i<3; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
+
 
 Mistral::PropagationOutcome Mistral::PredicateMod::rewrite() {
    Mistral::PropagationOutcome wiped = propagate();
@@ -5174,6 +5285,12 @@ void Mistral::PredicateCMod::initialise() {
   trigger_on(_RANGE_, scope[2]);
 }
 
+void Mistral::PredicateCMod::mark_domain() {
+  for(int i=0; i<3; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
+
 Mistral::PropagationOutcome Mistral::PredicateCMod::rewrite() {
    Mistral::PropagationOutcome wiped = propagate();
 
@@ -5610,6 +5727,13 @@ void Mistral::PredicateDiv::initialise() {
   trigger_on(_RANGE_, scope[2]);
 }
 
+void Mistral::PredicateDiv::mark_domain() {
+  for(int i=0; i<3; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
+
+
 // Mistral::PropagationOutcome Mistral::PredicateDiv::rewrite() {
 //    Mistral::PropagationOutcome wiped = propagate();
 
@@ -5732,6 +5856,12 @@ void Mistral::PredicateDivConstant::initialise() {
   trigger_on(_RANGE_, scope[1]);
 }
 
+void Mistral::PredicateDivConstant::mark_domain() {
+  for(int i=0; i<2; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
+
 
 Mistral::PropagationOutcome Mistral::PredicateDivConstant::filter() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
@@ -5807,6 +5937,12 @@ void Mistral::PredicateMul::initialise() {
 
   enforce_nfc1 = false;
 }
+
+void Mistral::PredicateMul::mark_domain() {
+  for(int i=0; i<3; ++i)
+    get_solver()->forbid(scope[i].id(), LIST_VAR);
+}
+
 
 Mistral::PropagationOutcome Mistral::PredicateMul::rewrite() {
   // TODO: recode that
@@ -7379,7 +7515,7 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
 {
   PropagationOutcome wiped = CONSISTENT;
  
-  int xi, xj, vali, valj, sk, tk;
+  int xi, xj, vali, valj, tk;
   Domain::iterator xstop;
   Domain::iterator xit;
 
@@ -7698,6 +7834,11 @@ void Mistral::ConstraintTable::initialise() {
 
   for(unsigned int i=0; i<arity; ++i)
     trigger_on(_DOMAIN_, scope[i]);
+}
+
+void Mistral::ConstraintTable::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), RANGE_VAR);
 }
 
 
@@ -8219,6 +8360,11 @@ void Mistral::ConstraintBoolSumEqual::initialise() {
   GlobalConstraint::initialise();
 }
 
+void Mistral::ConstraintBoolSumEqual::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
+}
+
 Mistral::ConstraintBoolSumEqual::~ConstraintBoolSumEqual() 
 {
 #ifdef _DEBUG_MEMORY
@@ -8231,13 +8377,19 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumEqual::propagate()
   int _min_ = 0;
   int _max_ = 0;
   unsigned int i;
+  gap = 0;
 
   for( i=0; i<scope.size; ++i ) {
     _min_ += scope[i].get_min();
     _max_ += scope[i].get_max();
   }
-  if(_min_ > total || _max_ < total) return FAILURE(active[0]);
-  else if(_min_ == total ) {
+  if(_min_ > total )  gap = _min_-total;
+  else if(_max_ < total ) gap = _max_-total;
+
+  if(gap) {
+  // if(_min_ > total || _max_ < total) {
+    return FAILURE(active[0]);
+  } else if(_min_ == total ) {
     for( i=0; i<scope.size; ++i ) 
       if( !scope[i].is_ground() ) scope[i].set_domain(0);
   } else if(_max_ == total ) {
@@ -8250,9 +8402,54 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumEqual::propagate()
 int Mistral::ConstraintBoolSumEqual::check( const int* s ) const 
 {
   int i=scope.size, t=0;
-  while(--i) t+=s[i];
+  while(i--) t+=s[i];
   return total != t; 
 }
+
+Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::begin(Atom a) {
+  explanation.clear();
+  int i=scope.size;
+
+  if(a != NULL_ATOM) {
+    if(get_solver()->variables[a].get_value()) {
+      // the literal we try to explain is positive
+      while(i--) if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+    } else {
+      // the literal we try to explain is positive
+      while(i--) if(  scope[i].get_min() ) explanation.add(literal(scope[i]));
+    }
+  } else {
+
+    // for(i=0; i<scope.size; ++i) {
+    //   std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+    // }
+
+    // std::cout << "gap: " << gap << std::endl;
+
+    if(gap > 0) {
+      // too many ones
+      while(i-- && explanation.size <= total) {
+	if(scope[i].get_min()) explanation.add(literal(scope[i]));
+      }
+    } else {
+      // too many zeros
+      while(i-- && explanation.size <= scope.size-total) {
+	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+      }
+    }
+
+
+    // std::cout << this << " has failed because of "
+    // 	      << explanation << std::endl;
+  }
+
+
+  return explanation.begin();
+}
+Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::end  (Atom a) {
+  return explanation.end();
+}
+
 
 std::ostream& Mistral::ConstraintBoolSumEqual::display(std::ostream& os) const {
   os << "(" << scope[0]/*.get_var()*/ ;
@@ -8275,6 +8472,11 @@ void Mistral::ConstraintBoolSumInterval::initialise() {
   for(unsigned int i=0; i<scope.size; ++i)
     trigger_on(_VALUE_, scope[i]);
   GlobalConstraint::initialise();
+}
+
+void Mistral::ConstraintBoolSumInterval::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
 }
 
 Mistral::ConstraintBoolSumInterval::~ConstraintBoolSumInterval() 
@@ -8308,7 +8510,7 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 int Mistral::ConstraintBoolSumInterval::check( const int* s ) const 
 {
   int i=scope.size, t=0;
-  while(--i) t+=s[i];
+  while(i--) t+=s[i];
   return (t<lb || t>ub); 
 }
 
@@ -8351,6 +8553,11 @@ void Mistral::PredicateBoolSum::initialise() {
   }
   trigger_on(_RANGE_, scope[scope.size-1]);
   GlobalConstraint::initialise();
+}
+
+void Mistral::PredicateBoolSum::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
 }
 
 Mistral::PredicateBoolSum::~PredicateBoolSum() 
@@ -8528,6 +8735,11 @@ void Mistral::PredicateWeightedSum::initialise() {
 
   // exit(1);
 
+}
+
+void Mistral::PredicateWeightedSum::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
 }
 
 // void Mistral::PredicateWeightedSum::change_weight(const int i, const int w) {
@@ -9030,6 +9242,11 @@ void Mistral::PredicateElement::initialise() {
 
 }
 
+void Mistral::PredicateElement::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
+}
+
 Mistral::PredicateElement::~PredicateElement() 
 { 
 #ifdef _DEBUG_MEMORY
@@ -9385,8 +9602,9 @@ void Mistral::ConstraintCliqueNotEqual::initialise() {
 }
 
 void Mistral::ConstraintCliqueNotEqual::mark_domain() {
-  for(unsigned int i=0; i<scope.size; ++i) {
-    get_solver()->mark_non_convex(scope[i].id());
+  for(unsigned int i=scope.size; i;) {
+    //get_solver()->mark_non_convex(scope[i].id());
+    get_solver()->forbid(scope[--i].id(), RANGE_VAR);
   }
 }
 
@@ -9531,7 +9749,7 @@ int Mistral::ConstraintCliqueNotEqual::check( const int* s ) const
 std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const {
   os << "=/=(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " ," << scope[i]/*.get_var()*/;
+    os << ", " << scope[i]/*.get_var()*/;
   os << ")" ; //<< events << " " << event_type;
   return os;
 }
@@ -9586,10 +9804,10 @@ void Mistral::ConstraintAllDiff::initialise() {
 
 void Mistral::ConstraintAllDiff::mark_domain() {
   for(unsigned int i=0; i<scope.size; ++i) {
-    get_solver()->mark_non_convex(scope[i].id());
+    get_solver()->forbid(scope[i].id(), RANGE_VAR|LIST_VAR);
+    //get_solver()->mark_non_convex(scope[i].id());
   }
 }
-
 
 Mistral::ConstraintAllDiff::~ConstraintAllDiff() 
 {
@@ -9884,7 +10102,7 @@ int Mistral::ConstraintAllDiff::check( const int* s ) const
 std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
   os << "alldiff(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
-    os << " ," << scope[i]/*.get_var()*/;
+    os << ", " << scope[i]/*.get_var()*/;
   os << ")" ;
   return os;
 }
@@ -9923,6 +10141,12 @@ void Mistral::PredicateMin::initialise() {
   enforce_nfc1 = false;
   //set_idempotent(true);
 }
+
+void Mistral::PredicateMin::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
+}
+
 
 int Mistral::PredicateMin::check( const int* sol ) const {
   int i=scope.size-1, the_min=sol[0], smin = sol[i];
@@ -10398,6 +10622,11 @@ void Mistral::PredicateMax::initialise() {
 
   enforce_nfc1 = false;
   //set_idempotent(true);
+}
+
+void Mistral::PredicateMax::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR);
 }
 
 int Mistral::PredicateMax::check( const int* sol ) const {

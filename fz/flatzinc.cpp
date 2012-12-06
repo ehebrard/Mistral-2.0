@@ -49,7 +49,7 @@
 #include <mistral_variable.hpp>
 
 //#define _DEBUG_FLATZINC true
-#define _VERBOSE_PARSER 1000
+//#define _VERBOSE_PARSER 1000
 
 
 
@@ -867,6 +867,9 @@ FlatZincModel::set_annotations(const bool on) {
       cout << "% c sequence search on " << fz_search_sequences << std::endl;
 
       Variable obj = iv[_optVar].get_var();
+
+
+#ifdef _MONITOR
       for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
         solver.monitor_list << "[ " ;
         for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
@@ -877,7 +880,7 @@ FlatZincModel::set_annotations(const bool on) {
       }
       solver.monitor_list << "objective: " << obj ;
       solver.monitor_list << "\n" ;
-      
+#endif
 
       result = solver.sequence_search(fz_search_sequences, 
                                       fz_search_heuristics, 

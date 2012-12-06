@@ -160,6 +160,19 @@ namespace FlatZinc {
       return d;
     }
 
+    // inline Vector<int> arg2intvec(Solver& s, AST::Node* n) {
+    //   AST::SetLit* sl = n->getSet();
+    //   Vector<int> d;
+    //   if (sl->interval) {
+    //     for(int elt = sl->min; elt<=sl->max; ++elt)
+    //       d.add(elt);
+    //   } else {
+    //     for (unsigned int i=0; i<sl->s.size(); i++ )
+    //       d.add(sl->s[i]);
+    //   }
+    //   return d;
+    // } 
+
     inline vector<set<int> > arg2intsetargs(Solver& s,
                                             AST::Node* arg, int offset = 0) {
       AST::Array* a = arg->getArray();
@@ -293,7 +306,7 @@ namespace FlatZinc {
     //     to.add(from[i]);
     //   }      
     // }
-
+    
     Variable getSetVar(Solver& s,
                        FlatZincModel& m,
                        AST::Node* n) {
@@ -303,38 +316,27 @@ namespace FlatZinc {
       } else {
         AST::SetLit *sl = n->getSet();
         if( sl->interval ) {
-          x0 = SetVariable( sl->min, sl->max );
-          // for(int i = sl->min; i <= sl->max; ++i)
-          //   x0.include(s, i, NO_REASON);
+          
+          //std::cout << "build set from interval [" << sl->min << ".." << sl->max << "]\n";
+
+          x0 = SetVariable( sl->min, sl->max, (sl->max-sl->min+1), (sl->max-sl->min+1) );
         } else {
           if( sl->s.empty() ) {
-            x0 = SetVariable( 0, 0 );
-            // x0.exclude(s, 0, NO_REASON); //empty!
+            x0 = SetVariable();
           } else {
             Vector<int> elts = arg2intvec(s, n);
-            //fz_set2mistral_set(sl->s, elts);
+            elts.sort();
+
+            //std::cout << "build set from list " << elts << "\n";
+
+            //std::cout << elts << std::endl;
             x0 = SetVariable(elts, elts, elts.size, elts.size);
-
-            // for(size_t i = 0; i < sl->s.size(); ++i) {
-            //   elts.add(sl->s[0]);
-            // }
-
-            // int umin = sl->s[0], umax = sl->s[0];
-            // for(size_t i = 1; i != sl->s.size(); ++i) {
-            //   umin = std::min(umin, sl->s[i]);
-            //   umax = std::max(umax, sl->s[i]);
-            // }
-            // x0 = SetVariable( umin, umax );
-            
-
-            // for(size_t i = 0; i != sl->s.size(); ++i)
-            //   x0.include(s, sl->s[i], NO_REASON);
-            // for(int i = x0.umin(s), iend = x0.umax(s); i <= iend; ++i)
-            //   if( !x0.includes(s, i) )
-            //     x0.exclude(s, i, NO_REASON);
           }
         }
       }
+
+      //std::cout << x0 << std::endl;
+
       return x0;
     }
 
@@ -1759,6 +1761,8 @@ namespace FlatZinc {
       Variable A = getSetVar(s, m, ce[0]);
       Variable B = getSetVar(s, m, ce[1]);
       Variable C = getSetVar(s, m, ce[2]);
+
+      //std::cout << A << " - " << B << " = " << C << std::endl;
       
       s.add(SetDifference(A,B) == C);
     }
@@ -1877,6 +1881,11 @@ namespace FlatZinc {
        Variable x = getIntVar(s, m, ce[0]);
        Variable A = getSetVar(s, m, ce[1]);
        Variable b = getBoolVar(s, m, ce[2]);
+
+       // std::cout << x << std::endl;
+       // std::cout << " in " << A << std::endl;
+       // std::cout << " <-> " << b << std::endl; 
+
 
        s.add( b == Member(x,A) );
     }

@@ -721,6 +721,7 @@ namespace Mistral {
       choice = ValSelector(s);
     }
 
+    virtual ~GenericHeuristic() {}
 
     // GenericHeuristic(Solver *s, void *a) 
     //   : BranchingHeuristic(s) {
@@ -1179,7 +1180,7 @@ namespace Mistral {
       }
     }
 
-    virtual ~GenericDVO() {}
+    virtual ~GenericDVO() { delete manager; }
     //@}
 
     /**@name Utils*/

@@ -47,27 +47,34 @@ int main(int argc, char *argv[])
   }
 
 
-  //cout << s << endl;
+  cout << s << endl;
 
+  s.rewrite();
+
+  cout << s << endl;
 
   s.consolidate();
-  //cout << s << endl;
+  
+  cout << s << endl;
 
   s.parameters.verbosity = 2;
 
   if(s.depth_first_search(X, 
 			  new GenericHeuristic< 
-			    GenericNeighborDVO< 
-			      FailureCountManager, 
-			      //PruningCountManager, 
+			    // GenericNeighborDVO< 
+			    //   FailureCountManager, 
+			    //   //PruningCountManager, 
 
-			      SelfPlusAverage,
+			    //   SelfPlusAverage,
 
-			      MinDomainOverWeight 
-			      //MinNeighborDomainOverNeighborWeight
-			      , 1
+			    //   MinDomainOverWeight 
+			    //   //MinNeighborDomainOverNeighborWeight
+			    //   , 1
+
+			    GenericDVO< 
+			      MinDomainOverWeight, 1,
+			      FailureCountManager
 			      >,
-			    //GenericDVO< MinDomainOverDegree >,			    
 			    MinValue >(&s), 
 			  new Geometric()) == SAT) {
     for(i=0; i<N; ++i)

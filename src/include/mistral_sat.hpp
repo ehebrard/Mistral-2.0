@@ -45,15 +45,19 @@
 
 namespace Mistral {
 
-  // typedef unsigned int Lit;
+  // typedef unsigned int Literal;
   // typedef unsigned int Atom;
   // typedef unsigned int Value;
 
-  // typedef Array<Lit> Clause;
+  // typedef Array<Literal> Clause;
 
 
   std::ostream& operator<< (std::ostream& os, const Clause& x);
   std::ostream& operator<< (std::ostream& os, const Clause* x);
+
+
+  // std::ostream& operator<< (std::ostream& os, const ExtClause& x);
+  // std::ostream& operator<< (std::ostream& os, const ExtClause* x);
   
 
 #define SIGN(l) ((l)&1)
@@ -71,7 +75,7 @@ namespace Mistral {
 #define V_UNKNOWN 2
 
   void print_clause(std::ostream& o, Clause* cl) ;
-  void print_literal(std::ostream& o, Lit l, bool dir=true) ;
+  void print_literal(std::ostream& o, Literal l, bool dir=true) ;
 
   class RestartPolicy;
 
@@ -100,12 +104,12 @@ namespace Mistral {
       return LEVEL(state[a])<=assumptions.size;
     }
     
-    inline bool satisfied(Lit p) {
+    inline bool satisfied(Literal p) {
       unsigned int st = state[UNSIGNED(p)];
       return LEVEL(st) <= assumptions.size && SIGN(st) == SIGN(p);
     }
     
-    inline void make_assumption(Lit p) {
+    inline void make_assumption(Literal p) {
       
 
       // swap p and assumptions[assumptions.size]
@@ -137,16 +141,16 @@ namespace Mistral {
     /// pointers to the scope of the (learnt) clauses,
     Vector< Clause* > learnt;
 
-    /// for each Lit, the list of clauses it is watched by
+    /// for each Literal, the list of clauses it is watched by
     Vector< Vector< Clause*> > is_watched_by;
 
-    /// Lit Activity 
+    /// Literal Activity 
     Vector< double > activity;
 
   
     /// utils
     BitSet visited;
-    Vector< Lit > learnt_clause;
+    Vector< Literal > learnt_clause;
     int next_deduction;
 
     /// search statistics
@@ -187,20 +191,20 @@ namespace Mistral {
     /// Minisat style conflict directed search
     int iterative_search();
     /// Finds an explanation and uses it to backjump
-    int analyze( Clause *conflict, Lit& lit, const bool learn );
-    /// Chooses the next Lit to branch on
-    Lit choice();
+    int analyze( Clause *conflict, Literal& lit, const bool learn );
+    /// Chooses the next Literal to branch on
+    Literal choice();
     /// Create a choice point and add l to the clause base
-    void make_decision(const Lit l);
+    void make_decision(const Literal l);
     /// Backjump to the choice point where l was entailed
     void backtrack_to( const int backtrackLevel );
     /// Add l to the clause base
-    //void add_lit(const Atom a, const Lit l);
-    void add_lit(const Lit l);
+    //void add_lit(const Atom a, const Literal l);
+    void add_lit(const Literal l);
     /// Returns the conflict index, or -1 if there was no conflict
     Clause* unit_propagate();
     /// Returns the conflict index, or -1 if there was no conflict
-    Clause* update_watcher(const int cw, const Lit p);
+    Clause* update_watcher(const int cw, const Literal p);
     //@}
 
     /**@name Clause Base Methods*/
@@ -214,9 +218,9 @@ namespace Mistral {
     /// Reduces all clauses that can be
     void simplify_data_base();
     /// Add a clause to the base/learnt
-    void add_clause( Vector<Lit>& conflict );
+    void add_clause( Vector<Literal>& conflict );
     void add_clause( Vector<Clause*>& clauseList, 
-		    Vector<Lit>& conflict,
+		    Vector<Literal>& conflict,
 		    double& avgsize );
     /// Remove a clause from the base/learnt
     void remove_clause( Vector<Clause*>& clauseList, 
@@ -225,13 +229,13 @@ namespace Mistral {
     /// Forget learnt clauses that do not meet a given criterion
     void forget();
     /// Add a clause to the original base
-    void add_original_clause( Vector<Lit>& conflict );
+    void add_original_clause( Vector<Literal>& conflict );
     //@}
 
     /**@name Utils*/
     //@{
     int check_solution();
-    //int atom( const Lit l ) const;
+    //int atom( const Literal l ) const;
     void shuffle();
     bool rlimit_expired();
     bool limit_expired();
@@ -257,7 +261,10 @@ namespace Mistral {
     // if there was a conflict it is stored there:
     Clause* conflict;
     //Vector< Clause* > reason;
-    Clause** reason;
+    //Clause** reason;
+    //EXPL
+    //Explanation** reason_for;
+    Vector< Clause* > reason_for;
     Vector< double > lit_activity;
     Vector< double > var_activity;
     // list of clauses
@@ -281,8 +288,8 @@ namespace Mistral {
     virtual int pushed() { return 1;}
 
     void add( Variable x );
-    void add( Vector < Lit >& clause, double init_activity=0.0 );
-    void learn( Vector < Lit >& clause, double init_activity=0.0 );
+    void add( Vector < Literal >& clause, double init_activity=0.0 );
+    void learn( Vector < Literal >& clause, double init_activity=0.0 );
     void remove( const int cidx );
     void forget( double forgetfulness );
     //@}
@@ -292,9 +299,14 @@ namespace Mistral {
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
     //virtual PropagationOutcome propagate(const int changed_idx, const Event evt) { return CONSISTENT; }
-    Clause* update_watcher(const int cw, const Lit p, PropagationOutcome& o);
+    Clause* update_watcher(const int cw, const Literal p, PropagationOutcome& o);
     //virtual PropagationOutcome rewrite();
     //@}
+
+
+    virtual Explanation::iterator begin(Atom a) { return (a == NULL_ATOM ? conflict->begin(a) : reason_for[a]->begin(a)); }
+    virtual Explanation::iterator end  (Atom a) { return (a == NULL_ATOM ? conflict->end(a)   : reason_for[a]->end(a));   }
+
 
     /**@name Miscellaneous*/
     //@{  
@@ -303,6 +315,77 @@ namespace Mistral {
     //@}
     
   };
+
+
+  // typedef Decision ExtLiteral;
+  // typedef Array< ExtLitreal > ExtClause;
+
+
+  // /***********************************************
+  //  * ExtClauseBase Constraint (forward checking).
+  //  ***********************************************/
+  // /*! \class ConstraintExtClauseBase
+  //   \brief   Constraint.
+  // */
+  // class ConstraintExtClauseBase : public GlobalConstraint {
+
+  // public:
+
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   // if there was a conflict it is stored there:
+  //   ExtClause* conflict;
+  //   //Vector< ExtClause* > reason;
+  //   //ExtClause** reason;
+  //   //EXPL
+  //   Explanation** reason_for;
+  //   Vector< double > lit_activity;
+  //   Vector< double > var_activity;
+  //   // list of clauses
+  //   Vector< ExtClause* > clauses;
+  //   Vector< ExtClause* > learnt;
+  //   // the watched literals data structure
+  //   Vector< Vector< ExtClause* > > is_watched_by;
+  //   //@}
+    
+  //   /**@name Constructors*/
+  //   //@{
+  //   ConstraintExtClauseBase() : GlobalConstraint() { conflict = NULL; }
+  //   ConstraintExtClauseBase(Vector< Variable >& scp);
+  //   virtual void mark_domain();
+  //   virtual Constraint clone() { return Constraint(new ConstraintExtClauseBase(scope), type); }
+  //   virtual void initialise();
+  //   virtual ~ConstraintExtClauseBase();
+
+  //   virtual int idempotent() { return 1;}
+  //   virtual int postponed() { return 1;}
+  //   virtual int pushed() { return 1;}
+
+  //   void add( Variable x );
+  //   void add( Vector < Literal >& clause, double init_activity=0.0 );
+  //   void learn( Vector < Literal >& clause, double init_activity=0.0 );
+  //   void remove( const int cidx );
+  //   void forget( double forgetfulness );
+  //   //@}
+
+  //   /**@name Solving*/
+  //   //@{
+  //   virtual int check( const int* sol ) const ;
+  //   virtual PropagationOutcome propagate();
+  //   //virtual PropagationOutcome propagate(const int changed_idx, const Event evt) { return CONSISTENT; }
+  //   ExtClause* update_watcher(const int cw, const Literal p, PropagationOutcome& o);
+  //   //virtual PropagationOutcome rewrite();
+  //   //@}
+
+  //   /**@name Miscellaneous*/
+  //   //@{  
+  //   virtual std::ostream& display(std::ostream&) const ;
+  //   virtual std::string name() const { return "ext_clause_base"; }
+  //   //@}
+    
+  // };
+
+
 
 };
 
@@ -332,7 +415,7 @@ inline void SatSolver::shuffle()
 inline Clause* SatSolver::reduce(Clause* clause)
 {
   Atom x;
-  Lit* data = clause->data;
+  Literal* data = clause->data;
   int j, sz;
 
   // check the watchs first
@@ -378,22 +461,22 @@ inline void SatSolver::simplify_data_base()
   }
 }
 
-inline void SatSolver::add_original_clause( Vector<Lit>& conf )
+inline void SatSolver::add_original_clause( Vector<Literal>& conf )
 {
-  Clause *cl = Clause::Array_new(conf);
+  Clause *cl = (Clause*)(Clause::Array_new(conf));
   original.add( cl );
 }
 
-inline void SatSolver::add_clause( Vector<Lit>& conf )
+inline void SatSolver::add_clause( Vector<Literal>& conf )
 {
   if(conf.size > 1) {
-    Clause *cl = Clause::Array_new(conf);
+    Clause *cl = (Clause*)(Clause::Array_new(conf));
     base.add( cl );
     double size = base.size;
     stats.base_avg_size = (stats.base_avg_size*(size-1) + double(conf.size))/size;
     if( conf.size < 4 ) ++stats.small;
   } else {
-    Lit p = conf[0];
+    Literal p = conf[0];
     Atom x = ATOM(p);
     if(LEVEL(x) > decisions.size)
       add_lit(p);
@@ -403,11 +486,11 @@ inline void SatSolver::add_clause( Vector<Lit>& conf )
 }
 
 inline void SatSolver::add_clause( Vector<Clause*>& clauseList, 
-				  Vector<Lit>& conf,
+				  Vector<Literal>& conf,
 				  double& avgsize )
 {
   if(conf.size > 1) {
-    Clause *cl = Clause::Array_new(conf);
+    Clause *cl = (Clause*)(Clause::Array_new(conf));
     clauseList.add( cl );
     is_watched_by[conf[0]].add(cl);
     is_watched_by[conf[1]].add(cl);
@@ -416,7 +499,7 @@ inline void SatSolver::add_clause( Vector<Clause*>& clauseList,
     if( conf.size < 4 ) ++stats.small;
 
   } else {
-    Lit p = conf[0];
+    Literal p = conf[0];
     Atom x = ATOM(p);
     if(LEVEL(x) > decisions.size)
       add_lit(p);
@@ -493,7 +576,7 @@ inline bool SatSolver::limit_expired()
 inline int SatSolver::iterative_search()
 {
 
-  Lit p = 0;
+  Literal p = 0;
   Atom a;
   while(status == UNKNOWN) {
     
@@ -572,7 +655,7 @@ inline int SatSolver::iterative_search()
   return status;
 }
 
-inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
+inline int SatSolver::analyze( Clause *conflict, Literal& lit, const bool learn )
 {
 #ifdef _DEBUG_NOGOOD
 #ifdef _DEBUG_SEARCH
@@ -593,7 +676,7 @@ inline int SatSolver::analyze( Clause *conflict, Lit& lit, const bool learn )
 
   unsigned int j, backtrackLevel = 0;
   int pathC = 0, index = assumptions.size;
-  Lit p=0, q;
+  Literal p=0, q;
   Atom a;
   unsigned int lvl;
   
@@ -770,9 +853,9 @@ inline void SatSolver::decay_activity()
 #define RANDOM 4
 #define PERSISTENT 5
 
-inline Lit SatSolver::choice()
+inline Literal SatSolver::choice()
 {
-  Lit p;
+  Literal p;
 
   if(params.randomization) {
     unsigned int crd = 0;
@@ -864,7 +947,7 @@ inline Lit SatSolver::choice()
   return p;    
 }
 
-inline void SatSolver::make_decision(const Lit l)
+inline void SatSolver::make_decision(const Literal l)
 {
 
 
@@ -896,7 +979,7 @@ inline void SatSolver::backtrack_to( const int backtrackLevel )
   
 }
 
-inline void SatSolver::add_lit(const Lit l)
+inline void SatSolver::add_lit(const Literal l)
 {    
   if(!decisions.size) ++stats.literals;  
   make_assumption(l);
@@ -906,7 +989,7 @@ inline Clause* SatSolver::unit_propagate()
 {
   Clause* conflict = NULL;
   int cw;
-  Lit p;
+  Literal p;
   Atom a;
   while( next_deduction < (int)(assumptions.size) ) {
     ++stats.num_propagations;
@@ -936,12 +1019,12 @@ inline Clause* SatSolver::unit_propagate()
   return conflict;
 }
   
-inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
+inline Clause* SatSolver::update_watcher(const int cw, const Literal p)
 {
   Clause *cl = is_watched_by[p][cw];
   Clause& clause = *cl;
   unsigned int j;
-  Lit q, r;
+  Literal q, r;
   Atom v, w;
 
 #ifdef _DEBUG_WATCH
@@ -1052,7 +1135,7 @@ inline Clause* SatSolver::update_watcher(const int cw, const Lit p)
 	  add_lit(q);
 	  reason[UNSIGNED(q)] = cl;
 
-	  std::cout << "    -> b" << UNSIGNED(q) << " = " << SIGN(q) << std::endl;
+	  //std::cout << "    -> b" << UNSIGNED(q) << " = " << SIGN(q) << std::endl;
 
 #ifdef _DEBUG_WATCH
 	  std::cout << "    -> b" << UNSIGNED(q) << " in " << (SIGN(q) ? "{1}" : "{0}") << std::endl;

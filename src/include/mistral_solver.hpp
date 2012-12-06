@@ -362,7 +362,8 @@ namespace Mistral {
     /// The set of variables, in the initial order, that is as loaded from the model
     Vector< Variable >   variables;
     /// The set of variables, as originally declared (i.e., as expressions)
-    Vector< Variable >   declared_variables;
+    //Vector< Variable >   declared_variables;
+    Vector< Variable >   removed_variables;
     Vector< int >     domain_types;
     Vector< int > assignment_level;
 
@@ -411,8 +412,10 @@ namespace Mistral {
     //ReversibleNum<int> sequence_size;
 
     Vector< Decision > decisions;
-    Vector< Clause* > reason;
-    Vector< Lit > learnt_clause;
+    //Vector< Clause* > reason;
+    Vector< Explanation* > reason_for;
+    //Vector< DomainExplanation* > reason_for;
+    Vector< Literal > learnt_clause;
     BitSet visited;
     int num_search_variables;
     ConstraintClauseBase *base;
@@ -532,7 +535,7 @@ namespace Mistral {
     void remove(Variable x);
     void add(VarArray& x);
     void add(Constraint x); 
-    void add(Vector< Lit >& clause); 
+    void add(Vector< Literal >& clause); 
     //void add(ConstraintW x); 
     //void add(BranchingHeuristic* h);
 
@@ -552,8 +555,11 @@ namespace Mistral {
     void remove(VariableListener* l);
     void remove(ConstraintListener* l);
 
-    void mark_non_convex(const int i) { 
-      domain_types[i] &= (~RANGE_VAR); 
+    void forbid(const int var, const int m) {
+      domain_types[var] &= (~m);
+    }
+    void mark_non_convex(const int var) { 
+      domain_types[var] &= (~RANGE_VAR); 
     }
     //void add(Vector<Literal>& clause);
     //@}

@@ -392,6 +392,10 @@ void Mistral::IntStack::extend(const int new_elt)
 
 
 
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Explanation& x) {
+  return x.display(os);
+}
+
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Interval& x) {
   return x.display(os);
 }
@@ -415,6 +419,10 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet& x)
 // std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::VariableQueue& x) {
 //   return x.display(os);
 // }
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Explanation* x) {
+  return (x ? x->display(os) : os);
+}
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack* x) {
   return (x ? x->display(os) : os);

@@ -352,6 +352,13 @@ namespace Mistral {
   //int global = 0;
   
   template <class DATA_TYPE>
+  int increasing_order(const void *x, const void *y) {
+    DATA_TYPE& x_ = *((DATA_TYPE*)x);
+    DATA_TYPE& y_ = *((DATA_TYPE*)y);
+    return(x_ < y_ ? -1 : (x_ > y_ ? 1 : 0));
+  }
+  
+  template <class DATA_TYPE>
   class Vector {
   public:
 
@@ -472,6 +479,11 @@ namespace Mistral {
 
     /*!@name Accessors*/
     //@{
+
+    void sort() {
+      qsort(stack_, size, sizeof(DATA_TYPE), increasing_order<DATA_TYPE>);
+    }
+
     inline iterator begin() const {
       return stack_;
     }
@@ -1304,9 +1316,29 @@ template < int N, class T >
   /*! \class Array
     \brief Simple array class 
   */
+
+  typedef unsigned int Atom;
+  typedef unsigned int Literal;
+
+  //class Decision;
+  class Explanation {
+
+  public:
+    
+    typedef Literal* iterator;
+    //typedef Decision* iterator;
+
+    //virtual void generate_explanation_for(Atom a, const int lvl) = 0;
+
+    virtual iterator begin(Atom a) = 0;
+    virtual iterator end(Atom a) = 0;
+
+    virtual std::ostream& display(std::ostream& os) const = 0;
+    
+  };
   
   template <class DATA_TYPE>
-  class Array {
+  class Array : public Explanation {
 
   public: 
 
@@ -1325,14 +1357,17 @@ template < int N, class T >
 
     virtual ~Array() {}
 
+    virtual Explanation::iterator begin(Atom a) { return &(data[0]); }
+    virtual Explanation::iterator end  (Atom a) { return &(data[size]); }
+
     static Array<DATA_TYPE>* Array_new(const Vector<DATA_TYPE>& ps)
     {
       void* mem = malloc(sizeof(Array<DATA_TYPE>) + sizeof(DATA_TYPE)*(ps.size));
       return new (mem) Array<DATA_TYPE>(ps); 
     }
 
-    inline DATA_TYPE& operator [] (int i) { return data[i]; }
-    inline DATA_TYPE operator [] (int i) const { return data[i]; }
+    inline DATA_TYPE& operator [] (const int i) { return data[i]; }
+    inline DATA_TYPE operator [] (const int i) const { return data[i]; }
 
     std::ostream& display(std::ostream& os) const {
       os << "[";
@@ -5994,6 +6029,8 @@ public:
 
 
 
+  std::ostream& operator<< (std::ostream& os, const Explanation& x);  
+
   std::ostream& operator<< (std::ostream& os, const Interval& x);  
 
   std::ostream& operator<< (std::ostream& os, const BiInterval& x);
@@ -6085,6 +6122,8 @@ public:
     return x.display(os);
   }
 
+
+  std::ostream& operator<< (std::ostream& os, const Explanation* x);  
 
   std::ostream& operator<< (std::ostream& os, const IntStack* x);
 

@@ -173,7 +173,7 @@ namespace Mistral {
 
   
   class Variable;
-  class ConstraintImplementation {
+  class ConstraintImplementation : public Explanation {
     
   public:
     
@@ -213,6 +213,10 @@ namespace Mistral {
     //ConstraintImplementation(const int a);
     virtual Constraint clone() = 0;
     virtual ~ConstraintImplementation();
+
+
+    virtual Explanation::iterator begin(Atom a) { return NULL; }
+    virtual Explanation::iterator end  (Atom a) { return NULL; } 
 
     virtual void initialise() { type = get_type(); }
     virtual void initialise_vars(Solver*) = 0;
@@ -284,6 +288,7 @@ namespace Mistral {
      *  returned on success (there is still at least one consistent
      *  assignment) or a ptr to the wiped-out variable otherwise. 
      */
+    //virtual PropagationOutcome propagate_and_explain() { return CONSISTENT; }
     virtual PropagationOutcome propagate() = 0; // { return NULL; }
     virtual PropagationOutcome checker_propagate() = 0;
     virtual PropagationOutcome bound_checker_propagate() = 0;
@@ -1720,6 +1725,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new ConstraintEqual(scope[0], scope[1])// , type
 						   ); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual ~ConstraintEqual() {}
     //@}
@@ -1968,6 +1974,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateNeg(scope[0], scope[1])); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1; }
     virtual ~PredicateNeg() {}
     //@}
@@ -2021,9 +2028,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new PredicateIntervalMember( scope[0], x, lower_bound, upper_bound, !spin ) );
     }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1; }
     virtual bool absorb_negation(const int var) { return var==1; }
-    virtual void mark_domain();
     virtual ~PredicateIntervalMember() {}
     //@}
 
@@ -2077,9 +2084,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new PredicateSetMember( scope[0], x, values, !spin ) );
     }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1; }
     virtual bool absorb_negation(const int var) { return var==1; }
-    virtual void mark_domain();
     virtual ~PredicateSetMember() {}
     //@}
 
@@ -2127,6 +2134,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new ConstraintLess(scope[0], scope[1], offset)// , type
 						   ); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     // virtual bool absorb_negation(const int var) { 
     //   return (offset = 0 &&
@@ -2183,6 +2191,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new PredicateLess( scope[1], scope[0], x, 1-offset ) );
     }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual bool absorb_negation(const int var) { return var==2; }
     virtual ~PredicateLess() {}
@@ -2235,6 +2244,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //   return Constraint( new PredicateLowerBound( scope[0], x, bound-1 ) );
     // }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateUpperBound() {}
@@ -2286,6 +2296,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new PredicateUpperBound( scope[0], x, bound+1 ) );
     }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateLowerBound() {}
@@ -2334,6 +2345,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //   return Constraint( new PredicateUpperBound( scope[0], x, bound+1 ) );
     // }
     virtual void initialise();
+    //virtual void mark_domain();
     virtual int idempotent() { return 1;}
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateAnd() {}
@@ -2377,6 +2389,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new ConstraintAnd(scope[0], scope[1])); }
     virtual void initialise();
+    //virtual void mark_domain();
     virtual int idempotent() { return 1;}
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintAnd() {}
@@ -2421,6 +2434,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new ConstraintNotAnd(scope[0], scope[1])); }
     virtual void initialise();
+    //virtual void mark_domain();
     virtual int idempotent() { return 1;}
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintNotAnd() {}
@@ -2472,6 +2486,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 			  ) );
     }
     virtual void initialise();
+    //virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateOr() {}
@@ -2517,6 +2532,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new ConstraintLess( x, (var?scope[0]:scope[1]), 0 ) );
     }
     virtual void initialise();
+    //virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintOr() {}
@@ -2566,6 +2582,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : GlobalConstraint(scp) { priority=1; }
     virtual Constraint clone() { return Constraint(new ConstraintLex(scope)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -2619,6 +2636,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { offset=ofs; }
     virtual Constraint clone() { return Constraint(new PredicateOffset(scope[0], scope[1], offset)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual ~PredicateOffset() {}
     //@}
@@ -2663,6 +2681,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new PredicateAdd(scope[0], scope[1], scope[2])// , type
 						   ); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0;}
     virtual ~PredicateAdd() {}
     //@}
@@ -2710,6 +2729,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { factor=fct; }
     virtual Constraint clone() { return Constraint(new PredicateFactor(scope[0], scope[1], factor)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual ~PredicateFactor() {}
     //@}
@@ -2760,6 +2780,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { }
     virtual Constraint clone() { return Constraint(new PredicateAbs(scope[0], scope[1])); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual ~PredicateAbs() {}
     //@}
@@ -2805,6 +2826,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : TernaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateMod(scope[0], scope[1], scope[2])); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0; }
     virtual ~PredicateMod() {}
     //@}
@@ -2849,6 +2871,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : TernaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateCMod(scope[0], scope[1], scope[2])); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0; }
     virtual ~PredicateCMod() {}
     //@}
@@ -2897,6 +2920,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { modulo=mod; }
     virtual Constraint clone() { return Constraint(new PredicateModConstant(scope[0], scope[1], modulo)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0;}
     virtual ~PredicateModConstant() {}
     //@}
@@ -2948,6 +2972,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { modulo=mod; }
     virtual Constraint clone() { return Constraint(new PredicateCModConstant(scope[0], scope[1], modulo)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0;}
     virtual ~PredicateCModConstant() {}
     //@}
@@ -2999,6 +3024,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : BinaryConstraint(scp) { quotient=q; }
     virtual Constraint clone() { return Constraint(new PredicateDivConstant(scope[0], scope[1], quotient)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0;}
     virtual ~PredicateDivConstant() {}
     //@}
@@ -3045,6 +3071,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       : TernaryConstraint(scp) {}
     virtual Constraint clone() { return Constraint(new PredicateDiv(scope[0], scope[1], scope[2])); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 0; }
     virtual ~PredicateDiv() {}
     //@}
@@ -3097,6 +3124,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual Constraint clone() { return Constraint(new PredicateMul(scope[0], scope[1], scope[2])); }
     virtual Constraint clone() { return Constraint(new PredicateMul(scope)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -3157,6 +3185,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint(new ConstraintDisjunctive(scope[0], scope[1], 
 						  processing_time[0], processing_time[1])); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1; }
     virtual ~ConstraintDisjunctive() {}
     //@}
@@ -3214,6 +3243,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new ConstraintReifiedDisjunctive( scope[0], scope[1], x, processing_time[0], processing_time[1] ) );
     }
     virtual void initialise();
+    virtual void mark_domain();
     virtual ~ConstraintReifiedDisjunctive() {}
     virtual int idempotent() { return 1; }
     virtual bool absorb_negation(const int var) { return var==2; }
@@ -3555,6 +3585,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ConstraintTable(std::vector< Variable >& scp);
     virtual Constraint clone() { return Constraint(new ConstraintTable(scope)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -3794,9 +3825,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   public:
     /**@name Parameters*/
     //@{
+    int gap;
     int total;
     ReversibleNum<int> min_;
     ReversibleNum<int> max_;
+    Vector<Literal> explanation;
     //@}
 
     /**@name Constructors*/
@@ -3806,6 +3839,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ConstraintBoolSumEqual(std::vector< Variable >& scp, const int t);
     virtual Constraint clone() { return Constraint(new ConstraintBoolSumEqual(scope, total)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -3813,10 +3847,15 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~ConstraintBoolSumEqual();
     //@}
 
+
+    virtual Explanation::iterator begin(Atom a);// { return NULL; }
+    virtual Explanation::iterator end  (Atom a);// { return NULL; } 
+
     /**@name Solving*/
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome propagate_and_explain(Vector<Explanation*>);
     //virtual RewritingOutcome rewrite();
     //@}
   
@@ -3851,6 +3890,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ConstraintBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
     virtual Constraint clone() { return Constraint(new ConstraintBoolSumInterval(scope, lb, ub)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -3897,6 +3937,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     PredicateBoolSum(std::vector< Variable >& scp, Variable tot);
     virtual Constraint clone() { return Constraint(new PredicateBoolSum(scope)); }
     virtual void initialise();
+    virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -3942,6 +3983,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
     virtual void initialise();
+    virtual void mark_domain();
     //@}
 
     /**@name Solving*/
@@ -3983,6 +4025,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
     virtual void initialise();
+    virtual void mark_domain();
     //@}
 
     /**@name Solving*/
@@ -4025,6 +4068,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
     virtual void initialise();
+    virtual void mark_domain();
     //@}
 
     /**@name Solving*/
@@ -4067,6 +4111,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
     virtual void initialise();
+    virtual void mark_domain();
     //@}
 
     /**@name Solving*/
@@ -4135,6 +4180,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
     virtual void initialise();
+    virtual void mark_domain();
     //@}
 
     /**@name Solving*/

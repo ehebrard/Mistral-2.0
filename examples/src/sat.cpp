@@ -125,10 +125,46 @@ int main(int argc, char **argv)
 	solver.parameters.copy(params);
 
 	solver.parse_dimacs(argv[1]);
-	solver.parameters.verbosity = 1;
+
+	VarArray scope;
+	int n = (argc > 2 ? atoi(argv[2]) : 6);
+
+	scope.clear();
+	for(unsigned int i=0; i<10; ++i) {
+	  scope.add(solver.variables[i]);
+	}
+	solver.add(BoolSum(scope, n, n));
+
+	scope.clear();
+	for(unsigned int i=10; i<20; ++i) {
+	  scope.add(solver.variables[i]);
+	}
+	solver.add(BoolSum(scope, n, n));
+
+	scope.clear();
+	for(unsigned int i=20; i<30; ++i) {
+	  scope.add(solver.variables[i]);
+	}
+	solver.add(BoolSum(scope, n, n));
+
+	scope.clear();
+	for(unsigned int i=30; i<40; ++i) {
+	  scope.add(solver.variables[i]);
+	}
+	solver.add(BoolSum(scope, n, n));
+
+	scope.clear();
+	for(unsigned int i=40; i<50; ++i) {
+	  scope.add(solver.variables[i]);
+	}
+	solver.add(BoolSum(scope, n, n));
+	
+
+	solver.parameters.verbosity = 2;
 	solver.parameters.backjump = 1;
 
-
+	solver.consolidate();
+	
 	//solver.monitor(solver.variables);
 
 	//
@@ -137,12 +173,47 @@ int main(int argc, char **argv)
 
 	// std::cout << solver.base << std::endl;
 
+#ifdef _MONITOR
+	//for(unsigned int i = 0; i<solver.variables.size; ++i) {
+	solver.monitor_list << "b24: "; 
+	  Variable x1 = solver.variables[24];
+	solver.monitor_list << x1 ;
+	solver.monitor_list << " b240: "; 
+	  Variable x2 = solver.variables[240];
+	solver.monitor_list << x2 ;
+	solver.monitor_list << " b163: "; 
+	  Variable x3 = solver.variables[163];
+	solver.monitor_list << x3 ;
+	  //}
+	solver.monitor_list << "\n";
+#endif
 
-	solver.depth_first_search(solver.variables, 
+
+
+	Outcome result = solver.depth_first_search(solver.variables, 
 				  new VSIDS(&solver),
 				  new Geometric(params.restart_base,params.restart_factor)
 				  );
 
+	if(result == SAT) {
+	  Solution sol(solver.variables);
+
+	  cout << solver.statistics << endl << sol << endl;
+	
+	  int total = 0, subtotal = 0, count = 0;
+	  Vector<Variable>::iterator end = solver.variables.end(); 
+	  for(Vector<Variable>::iterator x = solver.variables.begin(); x != end; ++x) {
+	    subtotal += sol[*x];
+	    if(!(++count % 10)) {
+	      total += subtotal;
+	      cout << subtotal << endl;
+	      subtotal = 0;
+	    }
+	  }
+	
+
+	  cout << total << endl;
+	}
       }
     }
   return 0;

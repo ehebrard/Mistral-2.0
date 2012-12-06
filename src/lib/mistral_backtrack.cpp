@@ -98,9 +98,11 @@ void Mistral::Constraint::relax() {
 
 void Mistral::Constraint::initialise(Solver *s) {
   if(propagator) {
+    //if(propagator->solver != s) {
     propagator->solver = s;
     propagator->initialise_vars(s);
     propagator->initialise();
+    //}
   } else {
     std::cerr << "Should raise a contradiction!" << std::endl;
   }

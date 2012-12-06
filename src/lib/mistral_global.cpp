@@ -188,6 +188,7 @@ std::string Mistral::domain2str(int d) {
   case LIST_VAR: str_out = "list"; break;
   case VIRTUAL_VAR: str_out = "virtual"; break;
   case EXPRESSION: str_out = "expression"; break;
+  case DYN_VAR: str_out = "dynamic"; break;
   default: str_out = "bool";
   }
   return str_out;

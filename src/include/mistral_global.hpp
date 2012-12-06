@@ -47,11 +47,50 @@ namespace Mistral {
   typedef int RewritingOutcome;
 
 
-  typedef unsigned int Lit;
-  typedef unsigned int Atom;
+  //typedef unsigned int Literal;
+  //typedef unsigned int Atom;
   typedef unsigned int Value;
 
-  typedef Array<Lit> Clause;
+  typedef Array<Literal> Clause;
+
+
+  // typedef int ExtLiteral;
+  // typedef int LiteralType;
+  // typedef int LiteralVar;
+
+  // inline LiteralType get_type(ExtLiteral l) { return l&3; }
+  // inline LiteralVar get_variable(ExtLiteral l) { return l/4; }
+  // inline ExtLiteral get_literal(const LiteralType lt, const int LiteralVar lv) { return (lv*4) | lt; }
+
+
+  /** event */
+  
+
+
+
+
+  // class Explanation {
+
+  // public:
+    
+  //   typedef Literal* iterator;
+
+  //   virtual iterator begin() = 0;
+  //   virtual iterator end() = 0;
+    
+  // };
+
+  // class Clause : virtual public Explanation, public Array<Literal> {
+    
+  // public:
+
+  //   virtual Explanation::iterator begin() { return &(data[0]); }
+  //   virtual Explanation::iterator end  () { return &(data[size]); }
+
+  // //   inline Literal& operator [] (const int i)       { return Array<Literal>::data[i]; }
+  // //   inline Literal  operator [] (const int i) const { return Array<Literal>::data[i]; }
+  
+  // };
 
 
   //#define _DEBUG_BUILD true
@@ -80,6 +119,9 @@ namespace Mistral {
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
   //#define _DEBUG_SEARCH true
+  //#define _DEBUG_NOGOOD true
+  //#define _DEBUG_UNITPROP true
+  //#define _DEBUG_WATCH true
   //#define _DEBUG_CHECKER (cur_iteration > 39950) 
   //#define _DEBUG_CHECKER true
   //#define _DEBUG_MOD true  
@@ -101,6 +143,7 @@ namespace Mistral {
 #define MAXINT NOVAL
 #define MININT -NOVAL
 #define MIN_CAPACITY 16
+#define NULL_ATOM 0xffffffff
   
 #define BOUND_CONSISTENCY 1
 #define FORWARD_CHECKING 0
@@ -120,7 +163,8 @@ namespace Mistral {
 #define NUM_VARTYPES 6
 
 
-
+  // able to explain its pruning
+#define EXPLAINED  0x00800000
   // binary, must be propagated on event
 #define BINARY     0x80000000
   // ternary, must be propagated on event
@@ -139,8 +183,8 @@ namespace Mistral {
 // #define ITYPE      0xf8000000
 #define RELAXED    0x02000000
 #define POSTED     0x01000000
-#define CTYPE      0x00ffffff
-#define ITYPE      0xff000000
+#define CTYPE      0x007fffff
+#define ITYPE      0xff800000
 
   static const int size_byte[8] = {0,1,1,2,1,2,2,3};
 
@@ -327,6 +371,39 @@ namespace Mistral {
   std::string domain2str(int d);
 
 
+
+/**
+   This class stores information about the reason for pruning
+   1/ in the case of Boolean variables, we keep a pointer to the constraint/clause that entailed the pruning
+   2/ in the case of Range variables, we keep the last explanation for the upper bound 
+      and the last explanation for the lower bound [WRONG]
+   3/ otherwise [DONT KNOW]
+ */
+  class DomainExplanation {
+
+  public:
+
+    virtual void store_reason_for_change(const Event evt, const Explanation *expl) = 0;
+    virtual Explanation* get_explanation(const Event evt) = 0;
+
+  };
+
+  class BoolDomainExplanation : public DomainExplanation {
+
+  public:
+
+    BoolDomainExplanation() {reason = NULL;}
+    virtual ~BoolDomainExplanation() {}
+
+    Explanation *reason;
+    
+    virtual void store_reason_for_change(const Event evt, Explanation *expl) { reason = expl; };
+    virtual Explanation* get_explanation(const Event evt) { return reason; };
+
+  };
+
+
+
   //void print_trace(std::ostream& os, )
 
   /**********************************************
@@ -334,11 +411,11 @@ namespace Mistral {
    *********************************************/
 
   bool probe();
-double cpu_time(void);
+  double cpu_time(void);
 #if defined(__linux__)
-int mem_read_stat(int );
+  int mem_read_stat(int );
 #endif
-uint64_t mem_used();
+  uint64_t mem_used();
 
 
   double get_run_time();
