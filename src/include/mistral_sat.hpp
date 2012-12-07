@@ -304,9 +304,12 @@ namespace Mistral {
     //@}
 
 
-    virtual Explanation::iterator begin(Atom a) { return (a == NULL_ATOM ? conflict->begin(a) : reason_for[a]->begin(a)); }
-    virtual Explanation::iterator end  (Atom a) { return (a == NULL_ATOM ? conflict->end(a)   : reason_for[a]->end(a));   }
+    // virtual Explanation::iterator begin(Atom a) { return (a == NULL_ATOM ? conflict->begin(a) : reason_for[a]->begin(a)); }
+    // virtual Explanation::iterator end  (Atom a) { return (a == NULL_ATOM ? conflict->end(a)   : reason_for[a]->end(a));   }
 
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end) { 
+      return(a == NULL_ATOM ? conflict->get_reason_for(a, lvl, end) : reason_for[a]->get_reason_for(a, lvl, end));
+    }
 
     /**@name Miscellaneous*/
     //@{  

@@ -1326,16 +1326,17 @@ template < int N, class T >
   public:
     
     typedef Literal* iterator;
+
+ 
     //typedef Decision* iterator;
 
-    //virtual void generate_explanation_for(Atom a, const int lvl) = 0;
-
-    virtual iterator begin(Atom a) = 0;
-    virtual iterator end(Atom a) = 0;
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end) = 0;
 
     virtual std::ostream& display(std::ostream& os) const = 0;
     
   };
+
+
   
   template <class DATA_TYPE>
   class Array : public Explanation {
@@ -1357,8 +1358,10 @@ template < int N, class T >
 
     virtual ~Array() {}
 
-    virtual Explanation::iterator begin(Atom a) { return &(data[0]); }
-    virtual Explanation::iterator end  (Atom a) { return &(data[size]); }
+    // virtual Explanation::iterator begin(Atom a) { return &(data[0]); }
+    // virtual Explanation::iterator end  (Atom a) { return &(data[size]); }
+    
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end) { end = &(data[size]); return &(data[0]); }
 
     static Array<DATA_TYPE>* Array_new(const Vector<DATA_TYPE>& ps)
     {

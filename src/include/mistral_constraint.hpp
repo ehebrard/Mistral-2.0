@@ -215,9 +215,13 @@ namespace Mistral {
     virtual ~ConstraintImplementation();
 
 
-    virtual Explanation::iterator begin(Atom a) { return NULL; }
-    virtual Explanation::iterator end  (Atom a) { return NULL; } 
-
+    // virtual Explanation::iterator begin(Atom a) { return NULL; }
+    // virtual Explanation::iterator end  (Atom a) { return NULL; } 
+    // TODO: implement is for all constraints, and leave that one void
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end) {
+      return (end = NULL);
+    }
+    
     virtual void initialise() { type = get_type(); }
     virtual void initialise_vars(Solver*) = 0;
 
@@ -3848,8 +3852,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
 
 
-    virtual Explanation::iterator begin(Atom a);// { return NULL; }
-    virtual Explanation::iterator end  (Atom a);// { return NULL; } 
+    // virtual Explanation::iterator begin(Atom a);// { return NULL; }
+    // virtual Explanation::iterator end  (Atom a);// { return NULL; } 
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
     /**@name Solving*/
     //@{
@@ -3957,6 +3962,65 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual std::string name() const { return "bsum="; }
     //@}
   };
+
+
+
+  /**********************************************
+   * AtMostSeqCard Constraint
+   **********************************************/
+  //  
+  /// 
+  class ConstraintMultiAtMostSeqCard : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    int _k;
+    int _d;
+    int *_p;
+    int *_q;
+
+    int *wl; //[arity+2*_q];
+    int *wr; //[arity+2*_q];
+    int **occurrences; //[k*arity+_p+1];
+    int **cardinality; //[k*2*_q];
+    
+    int *lcumulated; //[arity+1];
+    int *rcumulated; //[arity+1];
+    VarArray reverse;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintMultiAtMostSeqCard();
+    ConstraintMultiAtMostSeqCard(Vector< Variable >& scp, const int k, const int d, const int* p, const int* q);
+    ConstraintMultiAtMostSeqCard(std::vector< Variable >& scp, const int k, const int d, const int* p, const int* q);
+    void initialise_struct(const int k=0, const int d=0, const int* p=NULL, const int* q=NULL);
+    virtual Constraint clone() { return Constraint(new ConstraintMultiAtMostSeqCard(scope, _k, _d, _p, _q)); }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual ~ConstraintMultiAtMostSeqCard();
+    //@}
+    
+    //virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+
+    /**@name Solving*/
+    //@{
+    bool greedy_assign(int *w, int *cumulated, Vector<Variable>& X) ;
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "bsum=k"; }
+    //@}
+  };
+
 
 
   /**********************************************

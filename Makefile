@@ -19,7 +19,7 @@ archive:
 	git archive master --format=tar | tar -x -C ./Mistral-2.0.$(DATE)
 	tar -cvjf Mistral-2.0.$(DATE).bz2 Mistral-2.0.$(DATE)
 
-test: unit_test
+test: bin/unit_test
 	cd fz; make; 
 	bin/unit_test
 	cd fz; ./test_fcts.sh passed

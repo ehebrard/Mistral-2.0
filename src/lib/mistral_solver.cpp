@@ -3411,9 +3411,11 @@ void Mistral::Solver::learn_nogood() {
     //++depth;
 #endif
 
-    Explanation::iterator lit = current_explanation->begin(a);
-    Explanation::iterator stop = current_explanation->end(a);
+    // Explanation::iterator lit = current_explanation->begin(a);
+    // Explanation::iterator stop = current_explanation->end(a);
 
+    Explanation::iterator stop;
+    Explanation::iterator lit = current_explanation->get_reason_for(a, assignment_level[a], stop);
 
     while(lit < stop) {
       q = *lit;
