@@ -131,6 +131,8 @@ namespace Mistral {
   //#define _DEBUG_ABS true  
   //#define _DEBUG_DIV true  
   //#define _DEBUG_OFFSET ((id==1309))
+  //#define _DEBUG_AMSC  ((id==2912))
+
 
   
 #define NORESTART 0

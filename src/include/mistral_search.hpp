@@ -482,6 +482,7 @@ namespace Mistral {
 
 
 
+
   // /*! \class ProgressSavingManager
   //   \brief ProgressSavingManager Class
 

@@ -4004,6 +4004,61 @@ Mistral::Variable Mistral::AllDiff(Vector< Variable >& args, const int ct) {
 
 
 
+
+Mistral::AtMostSeqCardExpression::AtMostSeqCardExpression(Vector< Variable >& args, const int d, const int p, const int q)
+: Expression(args), _k(1), _d(d) {  
+  _p = new int[1];
+  _q = new int[1];
+  _p[0] = p;
+  _q[0] = q;
+}
+
+Mistral::AtMostSeqCardExpression::AtMostSeqCardExpression(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c)
+: Expression(args), _k(c.size), _d(d) {  
+
+  _p = new int[_k];
+  _q = new int[_k];
+
+  for(int i=0; i<_k; ++i) {
+    _p[i] = c[i][0];
+    _q[i] = c[i][1];
+  }
+}
+
+Mistral::AtMostSeqCardExpression::~AtMostSeqCardExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete atmostseqcard expression" << std::endl;
+#endif
+
+  delete [] _p;
+  delete [] _q;
+}
+
+void Mistral::AtMostSeqCardExpression::extract_constraint(Solver *s) { 
+  s->add(Constraint(new ConstraintMultiAtMostSeqCard(children, _k, _d, _p, _q))); 
+}
+
+void Mistral::AtMostSeqCardExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: AtMostSeqCard constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::AtMostSeqCardExpression::get_name() const {
+  return "amsc";
+}
+
+Mistral::Variable Mistral::AtMostSeqCard(Vector< Variable >& args, const int d, const int p, const int q) {
+  Variable exp(new AtMostSeqCardExpression(args,d,p,q));
+  return exp;
+}
+
+Mistral::Variable Mistral::MultiAtMostSeqCard(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c) {
+  Variable exp(new AtMostSeqCardExpression(args,d,c));
+  return exp;
+}
+
+
+
 Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>& rel, const AlgorithmType ct) 
   : Expression(args) { 
   propagator = ct; 
@@ -4167,6 +4222,12 @@ Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const in
   ub = u;
 }
 
+Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, const int l, const int u) 
+  : Expression(args) {
+  lb = l;
+  ub = u;
+}
+
 Mistral::BoolSumExpression::~BoolSumExpression() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete boolsum expression" << std::endl;
@@ -4201,8 +4262,13 @@ const char* Mistral::BoolSumExpression::get_name() const {
   return "bool_sum";
 }
 
+Mistral::Variable Mistral::BoolSum(std::vector< Variable >& args, const int l, const int u) {
+  Variable exp(new BoolSumExpression(args,l,(u != -INFTY ? u : l)));
+  return exp;
+}
+
 Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const int l, const int u) {
-  Variable exp(new BoolSumExpression(args,l,u));
+  Variable exp(new BoolSumExpression(args,l,(u != -INFTY ? u : l)));
   return exp;
 }
 
@@ -6639,6 +6705,24 @@ Mistral::MemberExpression::MemberExpression(Variable X, const Vector<int>& s, co
   }
 }
 
+Mistral::MemberExpression::MemberExpression(Variable X, const std::vector<int>& s, const int sp) 
+  : Expression(X) {
+  //lb = s.front();
+  //ub = s.back();
+  size = s.size(); 
+  spin = sp;
+  lb = +INFTY;
+  ub = -INFTY;
+  for(unsigned int i=0; i<s.size(); ++i) {
+    if(s[i] < lb) lb = s[i];
+    if(s[i] > ub) ub = s[i];
+  }
+  values.initialise(lb, ub, BitSet::empt);
+  for(unsigned int i=0; i<s.size(); ++i) {
+    values.add(s[i]);
+  }
+}
+
 Mistral::MemberExpression::~MemberExpression() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete member expression" << std::endl;
@@ -6929,6 +7013,11 @@ Mistral::Variable Mistral::Member(Variable X, const BitSet& s) {
 }
 
 Mistral::Variable Mistral::Member(Variable X, const Vector<int>& s) {
+  Variable exp(new MemberExpression(X, s));
+  return exp;
+}
+
+Mistral::Variable Mistral::Member(Variable X, const std::vector<int>& s) {
   Variable exp(new MemberExpression(X, s));
   return exp;
 }

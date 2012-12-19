@@ -17,8 +17,9 @@ MOD=$(MAINDIR)/examples
 OBJ=$(MAINDIR)/src/obj
 INC=$(MAINDIR)/src/include
 DOC=$(MAINDIR)/doc
+TCL=$(MAINDIR)/tools/tclap/include
 
-CFLAGS = -I$(INC) #-Wall -ffloat-store 
+CFLAGS = -I$(INC) -I$(TCL) #-Wall -ffloat-store 
 LFLAGS = -L$(OBJ)
 
 
@@ -57,11 +58,11 @@ $(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
 # The examples
 $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<
-	@$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $@
+	$(CCC) $(CFLAGS)   $(PLIBOBJ) $< -lm -o $@
 
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
-	@$(CCC) $(CFLAGS) -c $< -o $@ 
+	$(CCC) $(CFLAGS) -c $< -o $@ 
 
 # Examples, one at a time
 %: $(MOD)/obj/%.o $(PLIBOBJ)

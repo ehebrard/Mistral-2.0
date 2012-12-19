@@ -84,9 +84,11 @@ Mistral::Solution::~Solution() {
 
 std::ostream& Mistral::Solution::display(std::ostream& os) const {
   if(!variables.empty()) {
-    os << variables[0] << ":" << values[variables[0].id()];
+    os // << variables[0] << ":" 
+       << values[variables[0].id()];
     for(unsigned int i=1; i<variables.size; ++i) {
-      os << " " << variables[i] << ":" << values[variables[i].id()];
+      os << " " // << variables[i] << ":" 
+	 << values[variables[i].id()];
     }
   }
   return os;
@@ -1057,8 +1059,13 @@ void Mistral::Solver::add(Constraint c) {
 
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
 
-  if(level <= 0 && !posted_constraints.safe_contain(c.id())) 
+  if(level <= 0 && !posted_constraints.safe_contain(c.id())) {
     posted_constraints.init_add(c.id());
+
+    //std::cout << "ADD " << c.id() << "?" << " yep " << posted_constraints << std::endl;
+  }//  else {
+  //   std::cout << "ADD " << c.id() << "?" << " nope " << std::endl;
+  // }
 }
 
 Mistral::Outcome Mistral::Solver::solve() {
@@ -2662,7 +2669,7 @@ bool Mistral::Solver::propagate()
 	  // idempotency, if the event was triggered by itself
 	  if(var_evt.third != culprit.propagator) {
 #ifdef _DEBUG_AC
-	    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	    std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
 	    std::cout << "  -awake " << culprit << ": "; 
 	    std::cout.flush();
 #endif
@@ -2715,7 +2722,7 @@ bool Mistral::Solver::propagate()
 	  } 
 #ifdef _DEBUG_AC
 	  else {
-	    std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	    std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
 	    std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
 	  }
 #endif
@@ -2751,7 +2758,7 @@ bool Mistral::Solver::propagate()
       culprit = active_constraints.select(constraints);
 
 #ifdef _DEBUG_AC
-      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+      std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
       std::cout << "  -propagate " << culprit << " (" ;
 
       if(culprit.global()) {
@@ -3315,7 +3322,7 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
     os << ")";
   }
 
-  os << "\nConstraints:\n" ; //<< posted_constraints << std::endl;
+  os << "\nConstraints:\n" << posted_constraints << std::endl;
   for(unsigned int i=0; i<posted_constraints.size; ++i) {
     
     //os << posted_constraints[i] << std::endl;

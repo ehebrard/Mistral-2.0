@@ -651,10 +651,11 @@ template < int N, class T >
   }
   //@}
 
-
-
 };
 
+
+  typedef Tuple< 2, int > Pair;
+  
   template <class T1, class T2, class T3>
   class Triplet {
   public:

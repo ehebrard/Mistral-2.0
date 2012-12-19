@@ -2660,6 +2660,55 @@ namespace Mistral {
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 
 
+  // class CardinalityExpression : public Expression {
+  //   // count the number of occurrences 
+
+  // public:
+    
+  //   int lb;
+  //   int ub;
+  //   Vector< int > values;
+    
+  //   CardinalityExpression(Vector< Variable >& args, const int d, const int p, const int q);
+  //   CardinalityExpression(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c);
+  //   virtual ~CardinalityExpression();
+
+  //   virtual void extract_constraint(Solver*);
+  //   virtual void extract_variable(Solver*);
+  //   //virtual void extract_predicate(Solver*);
+  //   virtual const char* get_name() const;
+
+  // };
+
+  // Variable Cardinality(Vector< Variable >& args, const int d, const int p, const int q);
+  // Variable MultiCardinality(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c);
+
+
+
+  class AtMostSeqCardExpression : public Expression {
+
+  public:
+    
+    int  _k;
+    int  _d;
+    int *_p;
+    int *_q;
+    
+    AtMostSeqCardExpression(Vector< Variable >& args, const int d, const int p, const int q);
+    AtMostSeqCardExpression(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c);
+    virtual ~AtMostSeqCardExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    //virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable AtMostSeqCard(Vector< Variable >& args, const int d, const int p, const int q);
+  Variable MultiAtMostSeqCard(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c);
+
+
 
   class TableExpression : public Expression {
 
@@ -2731,6 +2780,7 @@ namespace Mistral {
     BoolSumExpression() : Expression() {lb=0; ub=0;}
     BoolSumExpression(const int l, const int u);
     BoolSumExpression(Vector< Variable >& args, const int l, const int u);
+    BoolSumExpression(std::vector< Variable >& args, const int l, const int u);
     virtual ~BoolSumExpression();
 
     virtual void extract_constraint(Solver*);
@@ -2741,8 +2791,9 @@ namespace Mistral {
   };
 
   Variable BoolSum(Vector< Variable >& args);
-  Variable BoolSum(Vector< Variable >& args, const int l, const int u);
-  Variable BoolSum(std::vector< Variable >& args, const int l, const int u);
+  Variable BoolSum(Vector< Variable >& args, const int l, const int u=-INFTY);
+  Variable BoolSum(std::vector< Variable >& args, const int l, const int u=-INFTY);
+
 
 
 
@@ -3162,6 +3213,7 @@ namespace Mistral {
     MemberExpression(Variable X, const int lo, const int up, const int spin=1);
     MemberExpression(Variable X, const BitSet& s, const int spin=1);
     MemberExpression(Variable X, const Vector<int>& s, const int spin=1);
+    MemberExpression(Variable X, const std::vector<int>& s, const int spin=1);
     virtual ~MemberExpression();
 
     virtual void extract_constraint(Solver*);
@@ -3175,6 +3227,7 @@ namespace Mistral {
   Variable Member(Variable X, const int lo, const int up);
   Variable Member(Variable X, const BitSet& s);
   Variable Member(Variable X, const Vector<int>& s);
+  Variable Member(Variable X, const std::vector<int>& s);
 
 
   class VarArray : public Vector< Variable > {
@@ -3184,6 +3237,10 @@ namespace Mistral {
     VarArray(const int n, int lb=NOVAL, int ub=NOVAL, int type=EXPRESSION) 
       : Vector< Variable >() 
     {
+      initialise(n, lb, ub, type);
+    }
+
+    void initialise(const int n, int lb=NOVAL, int ub=NOVAL, int type=EXPRESSION) {
       //initialise(0,n);
       if(lb==NOVAL) { lb=0; ub=1; }
       else if(ub==NOVAL) { lb=0; ub=lb-1; }

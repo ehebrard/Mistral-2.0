@@ -102,12 +102,12 @@ void Mistral::IntStack::extend_list()
   int* new_list = new int[list_capacity];
   memcpy(new_list, list_, (list_capacity-increment)*sizeof(int));
   
-      // for(unsigned int i=0; i<list_capacity-increment; ++i)
-      //  	new_list[i] = list_[i];
-
-      delete [] list_;
-      list_ = new_list;
-    }
+  // for(unsigned int i=0; i<list_capacity-increment; ++i)
+  //  	new_list[i] = list_[i];
+  
+  delete [] list_;
+  list_ = new_list;
+}
 
 void Mistral::IntStack::extend(const int new_elt)
     {
@@ -133,17 +133,18 @@ void Mistral::IntStack::extend(const int new_elt)
 
       unsigned int *aux_start = start_;
       start_ = new unsigned int[new_index_capacity];
+      std::fill(start_+index_capacity, start_+new_index_capacity, INFTY);
       memcpy(start_+(lb-new_lb), aux_start, index_capacity*sizeof(unsigned int));
       delete [] aux_start;
 
       index_ = start_ - new_lb;
       int k = 0;
       for(int i=new_lb; i<lb; ++i) {
-	index_[i] = size+k;
+	index_[i] = size+k++;
 	//list_[index_capacity+k++] = i;
       }
       for(int i=ub+1; i<=new_ub; ++i) {
-	index_[i] = size+k;
+	index_[i] = size+k++;
 	//list_[index_capacity+k++] = i;
       }
 
@@ -214,6 +215,14 @@ void Mistral::IntStack::extend(const int new_elt)
 
      bool Mistral::IntStack::safe_contain(const int elt) const 
     {
+      
+      // std::cout << "does " << this << " contain " << elt << " (absolute index: " 
+      // 		<< ((unsigned)(elt-(int)(start_-index_))) << "/" << index_capacity ;
+      // if((unsigned)(elt-(int)(start_-index_))<index_capacity) {
+      // 	std::cout << "list index: " << index_[elt] ;
+      // }
+      // std::cout << ") => " << (((unsigned)(elt-(int)(start_-index_))<index_capacity && index_[elt]<size) ? "yep" : "no") << "\n";
+
       return ((unsigned)(elt-(int)(start_-index_))<index_capacity && index_[elt]<size);
     } 
  

@@ -9797,7 +9797,7 @@ std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const
  **********************************************/
 
 void Mistral::ConstraintMultiAtMostSeqCard::initialise_struct(const int k, const int d, const int* p, const int* q) {
-  priority = 1;  
+  priority = 0;  
 
   _k = k;
   _d = d;
@@ -9807,6 +9807,13 @@ void Mistral::ConstraintMultiAtMostSeqCard::initialise_struct(const int k, const
     memcpy(_p, p, _k*sizeof(int));    
     memcpy(_q, q, _k*sizeof(int));
   }
+
+  // std::cout << "initilialise structures of atmostseqcard(" << _k <<"):";
+  // for(int i=0; i<_k; ++i) {
+  //   std::cout << " " << _p[i] << "/" << _q[i] ;
+  // }
+  // std::cout << std::endl;
+
   
   wl = NULL; 
   wr = NULL; 
@@ -9884,7 +9891,7 @@ Mistral::ConstraintMultiAtMostSeqCard::~ConstraintMultiAtMostSeqCard()
   std::cout << "c delete atmostseqcard constraint" << std::endl;
 #endif
 
-  int max_q = _q[0];
+  int max_q = _q[0], arity=scope.size;
   for(int i=1; i<_k; ++i) if(max_q < _q[i]) max_q = _q[i];
   
   wl -= max_q;
@@ -9894,6 +9901,7 @@ Mistral::ConstraintMultiAtMostSeqCard::~ConstraintMultiAtMostSeqCard()
   delete [] wr;
   
   for(int i=1; i<_k; ++i) {
+    occurrences[i] -= arity;
     delete [] occurrences[i];
   }
   delete [] occurrences;
@@ -9982,6 +9990,7 @@ bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w, int *cumulated
     }
 
 #ifdef _DEBUG_AMSC
+    if(_DEBUG_AMSC) {
     _count[i] = count;
     for(k=0; k<_k; ++k) {
       _max_card[i*_k+k] = max_cardinality[k];
@@ -9997,6 +10006,7 @@ bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w, int *cumulated
 	_occ[k][(j*arity+i)] = occurrences[k][j-arity];
       }
     }
+    }
 #endif
 
     for(k=0; k<_k; ++k) {
@@ -10005,71 +10015,80 @@ bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w, int *cumulated
       cardinality[k][i%_q[k]] = n_c[k];
       
       if(o_c[k] != n_c[k]) {
-      ++occurrences[k][n_c[k]];
-      if((n_c[k]+cumulated[i+1])>max_cardinality[k]) ++max_cardinality[k];
-      if(!(--occurrences[k][o_c[k]]) && (o_c[k]+cumulated[i+1])==max_cardinality[k]) --max_cardinality[k];
+
+	if(n_c[k] > _p[k]) {
+	  std::cerr << id << " k=" << k << " / 1" << std::endl
+		    << id << " n_c[k]=" << n_c[k] << " / [" << (-arity) << "," << _p[k] << "]" << std::endl << std::endl;
+	}
+
+	++occurrences[k][n_c[k]];
+	if((n_c[k]+cumulated[i+1])>max_cardinality[k]) ++max_cardinality[k];
+	if(!(--occurrences[k][o_c[k]]) && (o_c[k]+cumulated[i+1])==max_cardinality[k]) --max_cardinality[k];
       }
     }
-
+    
   }
 
 
 #ifdef _DEBUG_AMSC
-  if(maybe_inconsistent) {
-    cout << endl << "propag " << _d-count  ;
-    for(k=0; k<_k; ++k)
-      cout << " " << _p[k] << "/" << _q[k] ;
-    cout << endl;
-    for(i=0; i<arity; ++i) {
-      if(_b[i].is_ground()) cout << _b[i].getMin();
-      else cout << ".";
-    }
-    std::cout << std::endl;
-    for(i=0; i<arity; ++i) {
-      std::cout << w[i];
-    }
-    std::cout << std::endl;
-    for(k=0; k<_k; ++k) {
-      std::cout << std::endl;
+  if(_DEBUG_AMSC) {
+    if(maybe_inconsistent) {
+      std::cerr << std::endl << "propag " << _d-count  ;
+      for(k=0; k<_k; ++k)
+	std::cerr << " " << _p[k] << "/" << _q[k] ;
+      std::cerr << std::endl;
       for(i=0; i<arity; ++i) {
-	std::cout << _max_card[_k*i+k];
+	if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+      else std::cerr << ".";
       }
-      std::cout << std::endl;
-      std::cout << std::endl;
-      for(j=0; j<_q[k]; ++j) {
+      std::cerr << std::endl;
+      for(i=0; i<arity; ++i) {
+	std::cerr << w[i];
+      }
+      std::cerr << std::endl;
+      for(k=0; k<_k; ++k) {
+	std::cerr << std::endl;
 	for(i=0; i<arity; ++i) {
-	  std::cout << _card[k][(j*arity+i)];
+	  std::cerr << _max_card[_k*i+k];
 	}
-	std::cout << std::endl;
-      }
-      std::cout << std::endl;
-      for(j=arity+_p[k]; j; --j) {
-	int tmax = 0;
-	for(i=0; i<arity; ++i) {
-	  if(cumulated[i+1]+j+1 == arity)
-	    std::cout << "-";
-	  else
-	    std::cout << _occ[k][(j*arity+i)];
-	  tmax = (cumulated[i+1]+j+1 > arity);
+	std::cerr << std::endl;
+	std::cerr << std::endl;
+	for(j=0; j<_q[k]; ++j) {
+	  for(i=0; i<arity; ++i) {
+	    std::cerr << _card[k][(j*arity+i)];
+	  }
+	  std::cerr << std::endl;
 	}
-	std::cout << std::endl;
-	if(!tmax) break;
+	std::cerr << std::endl;
+	for(j=arity+_p[k]; j; --j) {
+	  int tmax = 0;
+	  for(i=0; i<arity; ++i) {
+	    if(cumulated[i+1]+j+1 == arity)
+	      std::cerr << "-";
+	    else
+	      std::cerr << _occ[k][(j*arity+i)];
+	    tmax = (cumulated[i+1]+j+1 > arity);
+	  }
+	  std::cerr << std::endl;
+	  if(!tmax) break;
+	}
+	std::cerr << std::endl;
       }
-      std::cout << std::endl;
     }
-
-    for(k=0; k<_k; ++k) {
-      delete [] _card[k];
-      delete [] _occ[k];
-    }
-    delete [] _card;
-    delete [] _occ;
-
-    //exit(1);
   }
+  
+  for(k=0; k<_k; ++k) {
+    delete [] _card[k];
+    delete [] _occ[k];
+  }
+  delete [] _card;
+  delete [] _occ;
+  
+  //exit(1);
+  //}
 #endif
   
-   return maybe_inconsistent;
+  return maybe_inconsistent;
 }
 
 
@@ -10087,62 +10106,74 @@ Mistral::PropagationOutcome Mistral::ConstraintMultiAtMostSeqCard::propagate()
 
 
 #ifdef _DEBUG_AMSC
+  if(_DEBUG_AMSC) {
     int k;
-    cout << endl << "propag " << _d-count ;
+    std::cerr << std::endl << "propag (" << id << ") " << _d-count ;
     for(k=0; k<_k; ++k)
-      cout << " " << _p[k] << "/" << _q[k] ;
-    cout << endl;
+      std::cerr << " " << _p[k] << "/" << _q[k] ;
+    std::cerr << std::endl;
     for(int i=0; i<arity; ++i) {
-      if(scope[i].is_ground()) cout << scope[i].get_min();
-      else cout << ".";
+      if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+      else std::cerr << ".";
     }
-    cout << endl ;//<< endl;
+    std::cerr << std::endl ;//<< std::endl;
+  }
 #endif
 
 
 
   if(count < _d && greedy_assign(wl, lcumulated, scope)) {
 
-    if(lcumulated[arity]+count < _d) wiped = FAILURE(0);
-    else {
+    if(lcumulated[arity]+count < _d) {
+
+#ifdef _DEBUG_AMSC
+  if(_DEBUG_AMSC) {
+    std::cerr << "cannot reach the demand!!" << std::endl;
+  }
+#endif
+
+      wiped = FAILURE(0);
+    } else {
 
       greedy_assign(wr, rcumulated, reverse);
 
 #ifdef _DEBUG_AMSC
+  if(_DEBUG_AMSC) {
       int k;
-      cout << endl << "propag " << _d-count ;
+      std::cerr << std::endl << "propag " << _d-count ;
       for(k=0; k<_k; ++k)
-	cout << " " << _p[k] << "/" << _q[k] ;
-      cout << endl;
+	std::cerr << " " << _p[k] << "/" << _q[k] ;
+      std::cerr << std::endl;
       for(int i=0; i<arity; ++i) {
-	if(scope[i].is_ground()) cout << scope[i].get_min();
-	else cout << ".";
+	if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+	else std::cerr << ".";
       }
-      cout << endl ;//<< endl;
+      std::cerr << std::endl ;//<< std::endl;
       
       for(int i=0; i<arity; ++i) {
-	cout << wl[i] ;
+	std::cerr << wl[i] ;
       }
-      cout << endl;
+      std::cerr << std::endl;
       for(int i=0; i<arity; ++i) {
-	cout << (lcumulated[i] % 10) ;
+	std::cerr << (lcumulated[i] % 10) ;
       }
-      cout << endl << endl;
+      std::cerr << std::endl << std::endl;
       
       
       for(int i=0; i<arity; ++i) {
-	if(scope[i].is_ground()) cout << scope[i].get_min();
-	else cout << ".";
+	if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+	else std::cerr << ".";
       }
-      cout << endl ;
+      std::cerr << std::endl ;
       for(int i=arity; i--;) {
-	cout << wr[i] ;
+	std::cerr << wr[i] ;
       }
-      cout << endl;
+      std::cerr << std::endl;
       for(int i=arity; i--;) {
-	cout << (rcumulated[i] % 10) ;
+	std::cerr << (rcumulated[i] % 10) ;
       }
-      cout << endl << endl;
+      std::cerr << std::endl << std::endl;
+  }
       bool pruning = false;
 #endif
       
@@ -10151,40 +10182,50 @@ Mistral::PropagationOutcome Mistral::ConstraintMultiAtMostSeqCard::propagate()
 	if(!scope[i].is_ground() && lcumulated[i] + rcumulated[arity-i-1] + count < _d) {
 	  
 #ifdef _DEBUG_AMSC
-	  cout << "set " << scope[i] << " to 1" << endl;
+  if(_DEBUG_AMSC) {
+	  std::cerr << "set " << scope[i] << " to 1" << std::endl;
+  }
 #endif
 	  
 	  //if(FAILED(scope[i].set_domain(1))) wiped = FAILURE(i);
-	  scope[i].set_domain(0);
+	  scope[i].set_domain(1);
 	  
 #ifdef _DEBUG_AMSC
+  if(_DEBUG_AMSC) {
 	  pruning = true;
+  }
 #endif
 	}
 	
 	if(!scope[i].is_ground() && lcumulated[i+1] + rcumulated[arity-i] + count <= _d) {
 
 #ifdef _DEBUG_AMSC
-	  cout << "set " << scope[i] << " to 0" << endl;
+  if(_DEBUG_AMSC) {
+	  std::cerr << "set " << scope[i] << " to 0" << std::endl;
+  }
 #endif
 	  
 	  //if(FAILED(scope[i].set_domain(0))) wiped = FAILURE(i);
 	  scope[i].set_domain(0);
 	  
 #ifdef _DEBUG_AMSC
+  if(_DEBUG_AMSC) {
 	  pruning = true;
+  }
 #endif
 	}
       }
       
 #ifdef _DEBUG_AMSC
+      if(_DEBUG_AMSC) {
       if(pruning) {
-	cout << "pruning " << _d-count << " " << _p << "/" << _q << endl;
+	std::cerr << "pruning " << _d-count << " " << _p << "/" << _q << std::endl;
 	for(int i=0; i<arity; ++i) {
-	  if(scope[i].is_ground()) cout << scope[i].get_min();
-	  else cout << ".";
+	  if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+	  else std::cerr << ".";
 	}
-	cout << endl ;//<< endl;
+	std::cerr << std::endl ;//<< std::endl;
+      }
       }
 #endif
       
@@ -10197,18 +10238,33 @@ Mistral::PropagationOutcome Mistral::ConstraintMultiAtMostSeqCard::propagate()
 int Mistral::ConstraintMultiAtMostSeqCard::check( const int* s ) const 
 {
   bool ok = true;
-  unsigned int i, j, subseq_card[_k], total_card = 0, arity = scope.size;
+  int i, j, subseq_card[_k], total_card = 0, arity = scope.size;
   for(j=0; j<_k; ++j) 
     subseq_card[j] = 0;
 
+
   for(i=0; i<arity && ok; ++i) {
     total_card += s[i];
+
+    // std::cout << std::setw(3) << total_card << std::setw(2) << s[i];
+
     if(total_card > _d) ok = false;
     for(j=0; j<_k && ok; ++j) {
+
+      // std::cout << "[k=" << std::setw(1) << (j+1) << ": + " << s[i] ; 
+
       subseq_card[j] += s[i];
-      if(i - _q[j] >= 0) subseq_card[j] -= s[i - _q[j]];
+      if(i - _q[j] >= 0) {
+	// std::cout << " - s[" << (i - _q[j]) << "]=" ;
+	// std::cout.flush();
+	// std::cout << s[i - _q[j]];
+	subseq_card[j] -= s[i - _q[j]];
+      }
       if(subseq_card[j] > _p[j]) ok = false;
+
+      // std::cout << "] ";
     }
+    //    std::cout << std::endl;
   }
   if(total_card < _d) ok = false;
 
