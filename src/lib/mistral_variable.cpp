@@ -4228,6 +4228,24 @@ Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, con
   ub = u;
 }
 
+Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Vector< int >& wgts, const int l, const int u) 
+  : Expression(args) {
+  lb = l;
+  ub = u;
+  for(unsigned int i=0; i<wgts.size; ++i) {
+    weights.add(wgts[i]);
+  }
+}
+
+Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, const std::vector< int >& wgts, const int l, const int u) 
+  : Expression(args) {
+  lb = l;
+  ub = u;
+  for(unsigned int i=0; i<wgts.size(); ++i) {
+    weights.add(wgts[i]);
+  }
+}
+
 Mistral::BoolSumExpression::~BoolSumExpression() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete boolsum expression" << std::endl;
@@ -4235,10 +4253,14 @@ Mistral::BoolSumExpression::~BoolSumExpression() {
 }
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) { 
-  if(lb == ub) {
-    s->add(new ConstraintBoolSumEqual(children,lb)); 
+  if(weights.empty()) {
+    if(lb == ub) {
+      s->add(new ConstraintBoolSumEqual(children,lb)); 
+    } else {
+      s->add(new ConstraintBoolSumInterval(children,lb,ub)); 
+    }
   } else {
-    s->add(new ConstraintBoolSumInterval(children,lb,ub)); 
+    s->add(new ConstraintWeightedBoolSumInterval(children,weights,lb,ub)); 
   }
 }
 
@@ -4249,13 +4271,19 @@ void Mistral::BoolSumExpression::extract_variable(Solver *s) {
   
   _self.initialise(s, 1);
   _self = _self.get_var();
-  //children.add(_self);
+  if(!weights.empty()) {
+    children.add(_self);
+    weights.add(-1);
+  }
 }
 
 void Mistral::BoolSumExpression::extract_predicate(Solver *s) { 
   //s->add(new PredicateBoolSum(children, self)); 
 
-  s->add(new PredicateBoolSum(children, s->variables[id])); 
+  if(weights.empty()) 
+    s->add(new PredicateBoolSum(children, s->variables[id])); 
+  else
+    s->add(new PredicateWeightedSum(children, weights, 0, 0));
 }
 
 const char* Mistral::BoolSumExpression::get_name() const {
@@ -4276,6 +4304,23 @@ Mistral::Variable Mistral::BoolSum(Vector< Variable >& args) {
   Variable exp(new BoolSumExpression(args,0,args.size));
   return exp;
 }
+
+Mistral::Variable Mistral::BoolSum(std::vector< Variable >& args, std::vector< int >& w, const int l, const int u) {
+  Variable exp(new BoolSumExpression(args,w,l,(u != -INFTY ? u : l)));
+  return exp;
+}
+
+Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, Vector< int >& w, const int l, const int u) {
+  Variable exp(new BoolSumExpression(args,w,l,(u != -INFTY ? u : l)));
+  return exp;
+}
+
+// Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, Vector< int >& w) {
+//   Variable exp(new BoolSumExpression(args,w,0,args.size));
+//   return exp;
+// }
+
+
 
 
 Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 

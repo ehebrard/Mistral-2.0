@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 
 	// Ignore the names and comments!  These  args mean nothing (to this
 	// program) and are here solely to take up space.
-    ValueArg<int> gapCreate("f","gapCreate", "The cost of creating a gap",
-	                                 false, -10, "negative int");
+	ValueArg<int> gapCreate("f","gapCreate", "The cost of creating a gap",
+				false, -10, "negative int");
 	cmd.add( gapCreate );
 
 	ValueArg<int> gapExtend("g","gap-Extend",

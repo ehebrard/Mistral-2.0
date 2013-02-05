@@ -40,6 +40,15 @@
 namespace Mistral {
 
 
+  typedef int* BoolDomain;
+#define GET_MIN(d) (!(*d & 1))
+#define GET_MAX(d)   (*d >> 1)
+#define IS_GROUND(d) (*d != 3)
+#define IS_FREE(d)   (*d == 3)
+#define GET_VAL(d)   (*d-1)
+#define GET_SIZE(d) ((*d+1)/2)
+
+
 
   typedef int Event;
   typedef int Outcome;
@@ -107,7 +116,8 @@ namespace Mistral {
   //#define _DEBUG_LEX true
   //#define _DEBUG_ADD (id == 48505)
   //#define _DEBUG_DIV true
-  //#define _DEBUG_WEIGHTEDSUM (id == 32273)
+  //#define _DEBUG_WEIGHTEDSUM (id == 0)
+  //#define _DEBUG_WEIGHTEDBOOLSUM (id == 0)
   //#define _DEBUG_ELEMENT true
   //#define _DEBUG_ELEMENT ((id==0))
   //#define _DEBUG_CLIQUENOTEQUAL true

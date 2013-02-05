@@ -8651,6 +8651,7 @@ std::ostream& Mistral::PredicateBoolSum::display(std::ostream& os) const {
 
 
 
+
 Mistral::PredicateWeightedSum::PredicateWeightedSum(Vector< Variable >& scp, 
 						    const int L, const int U)
   : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
@@ -9229,6 +9230,585 @@ int Mistral::PredicateWeightedSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
+  if(lower_bound > -INFTY) 
+    os << lower_bound << " <= " ;
+  os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
+
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << " + " << weight[i] << "*" << scope[i]/*.get_var()*/;
+  
+  if(upper_bound < INFTY) 
+    os << " <= " << upper_bound;
+ 
+
+  return os;
+}
+
+
+
+
+
+
+
+Mistral::ConstraintWeightedBoolSumInterval::ConstraintWeightedBoolSumInterval(Vector< Variable >& scp, 
+									      const int L, const int U)
+  : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
+  priority = 1;
+  for(unsigned int i=0; i<scope.size; ++i) {
+    weight.add(1);
+  }
+}
+
+Mistral::ConstraintWeightedBoolSumInterval::ConstraintWeightedBoolSumInterval(Vector< Variable >& scp, 
+									      Vector< int >& wgt,
+									      const int L, const int U)
+  : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
+  priority = 1;
+  for(unsigned int i=0; i<scope.size; ++i) {
+    weight.add(wgt[i]);
+  }
+}
+
+Mistral::ConstraintWeightedBoolSumInterval::ConstraintWeightedBoolSumInterval(std::vector< Variable >& scp, 
+									      std::vector< int >& wgt,
+									      const int L, const int U)
+  : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
+  priority = 1;
+  for(unsigned int i=0; i<scope.size; ++i) {
+    weight.add(wgt[i]);
+  }
+}
+
+void Mistral::ConstraintWeightedBoolSumInterval::initialise() {
+  ConstraintImplementation::initialise();
+  //set_idempotent(true);
+  //set_idempotent(false);
+  
+  wpos = 0;
+  wneg = weight.size;
+
+   // display(std::cout);
+   // std::cout << std::endl;
+
+  
+  int aux_i;
+  Variable aux_v;
+
+  for(int i=0; i<wneg; ++i) {
+
+    //std::cout << weight << std::endl;
+
+    if(weight[i] == 1) { // swap i with wpos and increment wpos
+      if(i>wpos) {
+	weight[i] = weight[wpos];
+	weight[wpos] = 1;
+	
+	aux_v = scope[i];
+	scope[i] = scope[wpos];
+	scope[wpos] = aux_v;
+
+	--i;
+      }
+      ++wpos;
+    } else if(weight[i] < 0) { // decrement wneg and swap i with wneg 
+      --wneg;
+
+      aux_i = weight[i];
+      weight[i] = weight[wneg];
+      weight[wneg] = aux_i;
+
+      aux_v = scope[i];
+      scope[i] = scope[wneg];
+      scope[wneg] = aux_v;
+
+      --i;
+    }
+  }
+
+
+
+
+  for(unsigned int i=0; i<scope.size; ++i)
+    trigger_on(_RANGE_, scope[i]);
+  GlobalConstraint::initialise();
+
+
+  domains = new BoolDomain[scope.size];
+  for(unsigned int i=0; i<scope.size; ++i) {
+    Variable var = scope[i].get_var();
+    domains[i] = var.bool_domain;
+
+    //std::cout << domains[i] << " " << (*(domains[i])) << std::endl;
+  }
+  // lo_bound = new int[scope.size];
+  // up_bound = new int[scope.size];
+  // span = new int[scope.size];
+
+  // //std::cout << (int*)env << std::endl;
+  // std::cout  << "-- " << (int*)solver << std::endl;
+
+  // exit(1);
+
+
+  unknown_parity.initialise(solver, 0, scope.size-1, scope.size, true);
+  //parity.Reversible::initialise(scope[0].get_solver());
+  parity.initialise(solver, ((lower_bound%2)!=0));
+
+
+  //std::cout << "--parity-- " << parity << std::endl;
+
+
+
+
+
+  for(int i=0; i<wpos; ++i) {
+    if( IS_GROUND(domains[i]) ) {// scope[i].is_ground() ) {
+      // the parity  only if the only one val is odd
+      if( GET_VAL(domains[i])%2 ) // scope[i].get_min()%2 ) 
+	parity = 1-parity;
+      unknown_parity.reversible_remove(i);
+    }
+  }
+
+  for(unsigned int i=wpos; i<scope.size; ++i) {
+    if( weight[i]%2 == 0 )
+      unknown_parity.reversible_remove(i);
+    else if( IS_GROUND(domains[i]) ) { //scope[i].is_ground() ) {
+      unknown_parity.reversible_remove(i);
+      if( GET_VAL(domains[i]) ) //scope[i].get_min()%2 ) 
+	parity = 1-parity;
+    }
+  }
+
+   // display(std::cout);
+   // std::cout << std::endl;
+
+  // exit(1);
+
+}
+
+void Mistral::ConstraintWeightedBoolSumInterval::mark_domain() {
+  for(int i=scope.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR|BITSET_VAR|RANGE_VAR);
+}
+
+// void Mistral::ConstraintWeightedBoolSumInterval::change_weight(const int i, const int w) {
+//   if(weight[i]%2 =w%2))
+
+//   weight[i] = w;
+// }
+
+Mistral::ConstraintWeightedBoolSumInterval::~ConstraintWeightedBoolSumInterval() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete weightedsum constraint" << std::endl;
+#endif
+  // delete [] lo_bound;
+  // delete [] up_bound;
+  // delete [] span;
+  delete [] domains;
+}
+
+
+
+
+// Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::rewrite() {
+
+// #ifdef _DEBUG_REWRITE
+//       std::cout << "REWRITE SUM " ;
+//       display(std::cout);
+//       std::cout << std::endl;
+// #endif
+
+//   RewritingOutcome r_evt = NO_EVENT; 
+  
+//   return r_evt;
+// }
+
+
+
+
+Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+  /*
+    get explanation for the pruning of variables[a] at level lvl.
+    
+    for each pruning, the constraint has stored the reason with the following code:
+    1 -> parity 
+    2 -> lb
+    3 -> ub
+    
+    case 1: find the variables with odd 
+
+   */
+
+  explanation.clear();
+  int i=scope.size;
+
+  if(a != NULL_ATOM) {
+    if(get_solver()->variables[a].get_value()) {
+      // the literal we try to explain is positive
+      while(i--) {
+	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+      }
+    } else {
+      // the literal we try to explain is positive
+      while(i--) {
+	if(  scope[i].get_min() ) explanation.add(literal(scope[i]));
+      }
+    }
+  } else {
+    if(gap > 0) {
+      // too many ones
+      while(i-- && explanation.size <= total) {
+	if(scope[i].get_min()) explanation.add(literal(scope[i]));
+      }
+    } else {
+      // too many zeros
+      while(i-- && explanation.size <= scope.size-total) {
+	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+      }
+    }
+  }
+  end = explanation.end();
+  return explanation.begin();
+}
+
+
+
+
+Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagate() 
+{
+  
+  int i, j;
+  // compute the max and th min
+  int tmin, smin=0, tmax, smax=0// , maxspan=0
+    , arity=scope.size;
+  PropagationOutcome wiped = CONSISTENT;
+  
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+  if(_DEBUG_WEIGHTEDBOOLSUM) {
+    std::cout << std::endl << "propagate " << lower_bound << " <= " ;
+    for(i=0; i<arity; ++i) {
+      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+    }
+    std::cout << " <= " << upper_bound << std::endl << changes << std::endl;
+  }
+#endif
+  
+  for(i=0; i<wpos; ++i) {
+    smax += GET_MAX(domains[i]); //(up_bound[i] = scope[i].get_max());
+    smin += GET_MIN(domains[i]); //(lo_bound[i] = scope[i].get_min());
+    //span[i] = (up_bound[i]-lo_bound[i]);
+
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+    if(_DEBUG_WEIGHTEDBOOLSUM) {
+      if(i)
+	std::cout << " + [" << GET_MIN(domains[i]) << "," << GET_MAX(domains[i]) << "] = [" << smin << "," << smax << "] ";
+      else
+	std::cout << "[" << smin << "," << smax << "] ";
+    }
+#endif
+    
+  }
+  for(i=wpos; i<wneg; ++i) {
+    smax += weight[i] * GET_MAX(domains[i]); //(up_bound[i] = scope[i].get_max());
+    smin += weight[i] * GET_MIN(domains[i]); //(lo_bound[i] = scope[i].get_min());
+    //span[i] = weight[i] * (up_bound[i]-lo_bound[i]);
+    
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+    if(_DEBUG_WEIGHTEDBOOLSUM) {
+      if(i)
+	std::cout << " + [" << GET_MIN(domains[i]) << "," << GET_MAX(domains[i]) << "] = [" << smin << "," << smax << "] ";
+      else
+	std::cout << "[" << smin << "," << smax << "] ";
+    }
+#endif
+    
+  }
+  for(i=wneg; i<arity; ++i) {
+    smax += weight[i] * GET_MIN(domains[i]); //(lo_bound[i] = scope[i].get_min());
+    smin += weight[i] * GET_MAX(domains[i]); //(up_bound[i] = scope[i].get_max());
+    //span[i] = weight[i] * (lo_bound[i]-up_bound[i]);
+    
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+    if(_DEBUG_WEIGHTEDBOOLSUM) {
+      if(i)
+	std::cout << " + [" << GET_MIN(domains[i]) << "," << GET_MAX(domains[i]) << "] = [" << smin << "," << smax << "] ";
+      else
+	std::cout << "[" << smin << "," << smax << "] ";
+    }
+#endif
+  }
+
+  
+  while(IS_OK(wiped) && !events.empty()) {
+
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+    if(_DEBUG_WEIGHTEDBOOLSUM) {
+      std::cout << "\nprocessing events: " << events << std::endl;
+    }
+#endif
+
+    if(lower_bound == upper_bound) {
+
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+      if(_DEBUG_WEIGHTEDBOOLSUM) {
+	std::cout << "parity check" << std::endl;
+	display(std::cout);
+	std::cout << std::endl << unknown_parity << ": " << (parity ? "odd" : "even") << std::endl;
+      }
+#endif   
+
+
+      j = events.size;
+      while( j-- ) {
+	i = events[j];
+
+	//std::cout << i << ": " << (int)(*(domains[i])) << " " << (unknown_parity.contain(i)) << std::endl;
+
+
+	if(IS_GROUND(domains[i]) && unknown_parity.contain(i)) {
+	  unknown_parity.reversible_remove(i);
+	  if( GET_VAL(domains[i]) ) { //lo_bound[i]%2 )  
+
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+      if(_DEBUG_WEIGHTEDBOOLSUM) {
+	    std::cout << weight[i] << " * " << scope[i] << ":" << scope[i].get_domain() << " is odd, so the parity changes\n";
+      }
+#endif   
+
+	    parity = 1-parity;
+
+	    
+	  }
+	}
+      }
+      
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+      if(_DEBUG_WEIGHTEDBOOLSUM) {
+	display(std::cout);
+	std::cout << std::endl << unknown_parity << ": " << (parity ? "odd" : "even") << std::endl;
+      }
+#endif   
+      
+      
+      if(unknown_parity.size == 0) {
+
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+	if(_DEBUG_WEIGHTEDBOOLSUM) {
+	  std::cout << "parity failure " << std::endl;
+	}
+#endif
+
+	if(parity != 0) wiped = FAILURE(arity-1);
+      } else if(unknown_parity.size == 1) { // it needs to be of parity "parity"
+	i = unknown_parity[0];
+	
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+	if(_DEBUG_WEIGHTEDBOOLSUM) {
+	  std::cout << "parity pruning: " << (GET_MIN(domains[i])%2) << " " << parity << std::endl ;
+	}
+#endif
+       
+	  
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+	if(_DEBUG_WEIGHTEDBOOLSUM) {
+	  std::cout << scope[i] << " in " << scope[i].get_domain() << " => ";
+	}
+#endif
+
+	if( IS_FAIL(scope[i].set_domain(parity)) ) {
+	  wiped = FAILURE(i);
+	} else {
+	  if(i<wpos) {
+	    if(parity) ++smin;
+	    else --smax;
+	  } else if(i<wneg) {
+	    if(parity) smin += weight[i];
+	    else smax -= weight[i];
+	  } else {
+	    if(parity) smax += weight[i];
+	    else smin -= weight[i];
+	  }
+	}
+	
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+	if(_DEBUG_WEIGHTEDBOOLSUM) {
+	  std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	}
+#endif
+	
+      }
+    }
+
+
+    if(IS_OK(wiped)) {
+      
+      events.clear();
+      
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+      if(_DEBUG_WEIGHTEDBOOLSUM) {
+	std::cout << " [" << smin << "," << smax << "]" << std::endl;
+      }
+#endif
+      
+      if( smax < lower_bound || smin > upper_bound ) wiped = FAILURE(arity-1);
+      else {
+	tmax = (smax - lower_bound);
+	tmin = (upper_bound - smin);
+	
+	for(i=0; IS_OK(wiped) && i<wpos; ++i) {
+	  
+	  if( !(tmin || IS_GROUND(domains[i])) ) {
+	    // no freedom at all with the upper bound
+	    
+	    if(IS_FAIL(scope[i].set_domain( 0 ))) wiped = FAILURE(i);
+	    else {
+	      
+	      events.add(i);
+	      event_type[i] = UB_EVENT;
+	    
+	    }
+	  }
+	}
+	
+	for(i=wpos; IS_OK(wiped) && i<wneg; ++i) {
+	  	  
+	  if( tmin < (IS_FREE(domains[i])) * weight[i] ) {
+	  	   
+	    if(IS_FAIL(scope[i].set_domain( 0 ))) wiped = FAILURE(i); 
+	    
+	    else {
+	      events.add(i);
+	      event_type[i] = UB_EVENT;
+	    }
+	  }
+	}
+	
+	for(i=wneg; IS_OK(wiped) && i<arity; ++i) {
+	  
+	  if( tmin < -(IS_FREE(domains[i])) * weight[i] ) {
+
+	    if(IS_FAIL(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
+	    
+	    else {
+	      events.add(i);
+	      event_type[i] = LB_EVENT;
+	    }
+	  }
+	}
+	
+	for(i=0; IS_OK(wiped) && i<wpos; ++i) {
+	  
+	  if( !(tmax || (IS_GROUND(domains[i]))) ) {
+	    
+	    if(IS_FAIL(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
+	    
+	    else {
+	      
+	      if(events.contain(i)) {
+		event_type[i] |= LB_EVENT;
+	      } else {
+		events.add(i);
+		event_type[i] = LB_EVENT;
+	      }
+
+	    }
+	  }
+	}
+	
+	for(i=wpos; IS_OK(wiped) && i<wneg; ++i) {
+	  
+	  if( tmax < (IS_FREE(domains[i])) * weight[i] ) {
+	    
+	    if(IS_FAIL(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
+	    
+	    else {
+	      
+	      if(events.contain(i)) {
+		event_type[i] |= LB_EVENT;
+	      } else {
+		events.add(i);
+		event_type[i] = LB_EVENT;
+	      }
+	      
+	    }
+	  }
+	}
+
+
+	for(i=wneg; IS_OK(wiped) && i<arity; ++i) {
+	  
+	  if( tmax < -(IS_FREE(domains[i])) * weight[i] ) {  
+	    
+	    if(IS_FAIL(scope[i].set_domain( 0 ))) wiped = FAILURE(i);
+	    
+	    else {
+	      
+	      if(events.contain(i)) {
+		event_type[i] |= UB_EVENT;
+	      } else {
+		events.add(i);
+		event_type[i] = UB_EVENT;
+	      }
+
+	    }
+	  }
+	}
+      }
+      
+      /// update smin and smax
+      for(unsigned int j=0; IS_OK(wiped) && j<events.size; ++j) {
+	i = events[j];
+	if(i<wpos) {
+	  if(LB_CHANGED(event_type[i])){ 
+	    ++smin;
+	  } 
+	  if(UB_CHANGED(event_type[i])){ 
+	    --smax;
+	  }
+	} else if(i<wneg) {
+	  if(LB_CHANGED(event_type[i])){ 
+	    smin += weight[i];
+	  } 
+	  if(UB_CHANGED(event_type[i])){ 
+	    smax -= weight[i];
+	  }
+	} else {
+	  if(LB_CHANGED(event_type[i])){ 
+	    smax += weight[i];
+	  } 
+	  if(UB_CHANGED(event_type[i])){ 
+	    smin -= weight[i];
+	  }
+	}
+      }
+    }
+  }
+
+#ifdef _DEBUG_WEIGHTEDBOOLSUM
+  if(_DEBUG_WEIGHTEDBOOLSUM) {
+    std::cout << "result: ";
+    for(i=0; i<arity; ++i) {
+      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+    }
+    std::cout << std::endl;
+  }
+#endif
+
+  return wiped;
+}
+
+int Mistral::ConstraintWeightedBoolSumInterval::check( const int* s ) const 
+{
+  int i=scope.size, t=0;
+  while(i--) {
+    t+=(weight[i]*s[i]);
+  }
+  return (t < lower_bound || t > upper_bound); 
+}
+
+std::ostream& Mistral::ConstraintWeightedBoolSumInterval::display(std::ostream& os) const {
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
   os << weight[0] << "*" << scope[0]/*.get_var()*/ ;

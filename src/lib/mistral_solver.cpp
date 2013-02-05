@@ -837,6 +837,238 @@ Mistral::Solver::Solver()
   save();
 }
 
+void Mistral::Solver::parse_pbo(const char* filename) {
+  unsigned int LARGENUMBER = 131072;
+  std::ifstream infile( filename );
+  char c=' ';
+  std::string word;
+  int N, M, l=0;
+  Literal lit;
+  Vector< Vector< Literal > > clauses;
+  Vector< Literal > new_clause;
+  Vector< int >         weight;
+  Vector< Variable >     scope;
+
+  new_clause.initialise(0,10);
+
+
+  // skip comments
+  infile >> c;
+  while( c == '*' ) {
+    infile.ignore( LARGENUMBER, '\n' );
+    infile >> c;
+  }
+
+  infile.unget();
+
+  int aux;
+
+  bool should_continue = infile.good();
+
+  while(should_continue) {
+    weight.clear();
+    scope.clear();
+    new_clause.clear();
+
+    bool all_ones = true;
+
+    do {
+      infile >> c;
+
+      should_continue = infile.good();
+
+
+      if(should_continue) {
+	if(c == '+' || c == '-') {
+	  infile >> aux;
+	  weight.add((c == '+' ? aux : -aux));
+
+	  all_ones &= (weight.back() == 1);
+
+	  std::cout << " " << weight.back() << " " << (weight.back() == 1) << " " << all_ones << std::endl;
+
+	  
+	  infile.ignore( LARGENUMBER, ' ' );
+	  infile >> c;
+	  
+	  assert( c == 'x' );
+	  
+	  infile >> aux;
+	  while(aux > variables.size) {
+	    Variable x(0,1);
+	    add(x);
+	  }
+	  
+	  --aux;
+	  scope.add(variables[aux]);
+	} else  {
+	  
+	  infile.unget();
+	  
+	  infile >> word;
+	  infile >> aux;
+	  infile.ignore( LARGENUMBER, '\n' );
+
+
+	  // int lb = -INFTY;
+	  // int ub =  INFTY;
+
+	  int bounds[2] = {-INFTY, INFTY};
+	  
+	  if(word == ">=") {
+	    std::cout << ">=" << std::endl;
+	    bounds[0] = aux;
+	  } else if(word == ">") {
+	    std::cout << ">" << std::endl;
+	    bounds[0] = aux+1;
+	  } else if(word == "<=") {
+	    std::cout << "<=" << std::endl;
+	    bounds[1] = aux;
+	  } else if(word == "<") {
+	    std::cout << "<" << std::endl;
+	    bounds[1] = aux-1;
+	  } else if(word == "=") {
+	    std::cout << "=" << std::endl;
+	    bounds[0] = bounds[1] = aux;
+	  } else {
+	    std::cout << "unknown connector: " << word << " exiting" << std::endl;
+	    exit(1);
+	  }
+
+	  // is it a clause?
+	  bool is_clause = false;
+
+	  // compute the minimum
+	  int reachable[2] = {0,0}; // = 0, reachable[1] = 0;
+	  for(unsigned int i=0; i<weight.size; ++i) {
+	    if(weight[i] >= 0) reachable[1] += weight[i];
+	    else reachable[0] += weight[i];
+	  }
+	  
+	  // check that each variable can make it true
+	  if(bounds[1] == INFTY) {
+	    is_clause = true;
+	    for(unsigned int i=0; is_clause && i<weight.size; ++i) {
+	      if(weight[i] >= 0) {
+		is_clause = (reachable[0] + weight[i] >= bounds[0]);
+		lit = scope[i].id() * 2 + 1;
+		new_clause.add(lit);
+	      } else {
+		is_clause = (reachable[0] - weight[i] >= bounds[0]);
+		lit = scope[i].id() * 2;
+		new_clause.add(lit);
+	      }
+	    }
+	  } else if(bounds[0] == -INFTY) {
+	    is_clause = true;
+	    for(unsigned int i=0; is_clause && i<weight.size; ++i) {
+	      if(weight[i] >= 0) {
+		is_clause = (reachable[1] - weight[i] <= bounds[1]);
+		lit = scope[i].id() * 2;
+		new_clause.add(lit);
+	      } else {
+		is_clause = (reachable[1] + weight[i] <= bounds[1]);
+		lit = scope[i].id() * 2 + 1;
+		new_clause.add(lit);
+	      }
+	    }	  
+	  }
+
+	  if(is_clause) {
+
+	    std::cout << "clause <" << new_clause ;
+
+	    
+	      
+	    clauses.add(new_clause);
+
+	    std::cout << "> clause" << std::endl;
+
+	  } else {
+	    if(all_ones) {
+
+	      std::cout << "card <" ;
+
+	      add( BoolSum(scope, bounds[0], bounds[1]) );
+	    
+	      std::cout << "> card" << std::endl;
+	    
+	    } else {
+
+	      std::cout << "sum <" ;
+
+	      add( BoolSum(scope, weight, bounds[0], bounds[1]) );
+
+	      std::cout << "> sum" << std::endl;
+
+	    }
+	  }
+	  
+	  break;
+	} 
+      } 
+    } while( should_continue );
+  }
+  
+
+  std::cout << clauses << std::endl;
+
+  for(int i=0; i<clauses.size; ++i) {
+
+    add(clauses[i]);
+
+  }
+
+
+
+  // assert( word == "cnf" );
+  
+  // // get number of atoms and clauses
+  // infile >> N;
+  // infile >> M;
+
+  // for(int i=0; i<N; ++i) {
+  //   Variable x(0,1);
+  //   add(x);
+  // }
+
+  // new_clause.initialise(0,N);
+  // // ConstraintClauseBase *cbase = new ConstraintClauseBase(variables);
+  // // base->reason = reason.stack_;
+  // // add(cbase);
+
+  // for(int i=0; i<M; ++i)
+  //   {
+  //     new_clause.clear();
+  //     do {
+  // 	infile >> l;
+  // 	if(l!=0) {
+  // 	  if(l>0) lit = (l-1)*2+1;
+  // 	  else lit = (l+1)*-2;
+  // 	  new_clause.add(lit);
+  // 	  // if(parameters.init_activity == 1)
+  // 	  //   base->activity[lit] += parameters.activity_increment;
+  // 	}
+  //     } while(l && infile.good());
+  //     //cbase->add( new_clause );
+  //     add( new_clause );
+
+  //     //std::cout << new_clause << std::endl;
+      
+  //     //if(params.checked) add_original_clause( new_clause );
+  //   }
+  
+  // //init_watchers();
+  
+  // //if(params.normalize_activity != 0)
+  // //normalize_activity(params.normalize_activity);
+  
+  // //  std::cout << base << std::endl;
+
+  // //cbase->reason = reason.stack_;
+}
+
+
 void Mistral::Solver::parse_dimacs(const char* filename) {
   unsigned int LARGENUMBER = 131072;
   std::ifstream infile( filename );
@@ -909,7 +1141,11 @@ void Mistral::Solver::add(Vector< Literal >& clause) {
     //base->reason = reason.stack_;
     //EXPL
     //base->reason_for = reason_for.stack_;
-  }
+  } // else {
+  //   while(base->scope.size < variables.sizes) {
+  //     base->add()
+  //   }
+  // }
   base->add( clause, (parameters.init_activity ? parameters.activity_increment : 0.0) );
  }
 

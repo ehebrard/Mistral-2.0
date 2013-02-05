@@ -30,12 +30,12 @@ using namespace std;
 void Mistral::print_literal(ostream& o, Literal l, bool dir) 
 {
 
-  o << "b" << UNSIGNED(l) ;
-  if(dir)
-    o << " == " << (l%2) ; 
-  else
-    o << " =/= " << (1-(l%2)) ; 
-  //o << (l%2 ? "+" : "-") << UNSIGNED(l)+1;
+  o << (SIGN(l) ? "b" : "~b") << UNSIGNED(l) ;
+  // if(dir)
+  //   o << " == " << (l%2) ; 
+  // else
+  //   o << " =/= " << (1-(l%2)) ; 
+  // //o << (l%2 ? "+" : "-") << UNSIGNED(l)+1;
 }
 
 void Mistral::print_clause(ostream& o, Clause *cl) 
@@ -461,7 +461,7 @@ void Mistral::ConstraintClauseBase::add(Variable x) {
     while(scope.capacity <= idx)
       scope.extendStack();
     scope[idx] = x;
-
+    
     while(reason_for.capacity <= idx)
       reason_for.extendStack();
     reason_for[idx] = NULL;
@@ -474,13 +474,13 @@ void Mistral::ConstraintClauseBase::add(Variable x) {
     //   var_activity.extendStack();
   }
 
-    while(is_watched_by.capacity <= 2*idx)
-      is_watched_by.extendStack();
-    while(lit_activity.capacity <= 2*idx)
-      lit_activity.extendStack();
-    while(var_activity.capacity <= idx)
-      var_activity.extendStack();
-
+  while(is_watched_by.capacity <= 2*idx)
+    is_watched_by.extendStack();
+  while(lit_activity.capacity <= 2*idx)
+    lit_activity.extendStack();
+  while(var_activity.capacity <= idx)
+    var_activity.extendStack();
+  
   //reason = solver->reason.stack_;
 }
 
@@ -972,9 +972,17 @@ void Mistral::ConstraintClauseBase::forget(double forgetfulness)
 std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
   os << " (";
   if(clauses.size>0) {
-    os << clauses[0];
-    for(unsigned int i=1; i<clauses.size; ++i)
-      os << " " << clauses[i]  ;
+    print_clause(os, clauses[0]);
+
+    os << " v " ;
+    for(unsigned int i=1; i<clauses.size; ++i) {
+      print_clause(os, clauses[i]);
+    }
+
+
+    // os << clauses[0];
+    // for(unsigned int i=1; i<clauses.size; ++i)
+    //   os << " " << clauses[i]  ;
   }
   os << ")";
   //os << "nogoods";

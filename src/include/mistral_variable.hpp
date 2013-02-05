@@ -2776,11 +2776,14 @@ namespace Mistral {
 
     int lb;
     int ub;
+    Vector< int > weights;
 
     BoolSumExpression() : Expression() {lb=0; ub=0;}
     BoolSumExpression(const int l, const int u);
     BoolSumExpression(Vector< Variable >& args, const int l, const int u);
     BoolSumExpression(std::vector< Variable >& args, const int l, const int u);
+    BoolSumExpression(Vector< Variable >& args, const Vector< int >& w, const int l, const int u);
+    BoolSumExpression(std::vector< Variable >& args, const std::vector< int >& w, const int l, const int u);
     virtual ~BoolSumExpression();
 
     virtual void extract_constraint(Solver*);
@@ -2793,6 +2796,10 @@ namespace Mistral {
   Variable BoolSum(Vector< Variable >& args);
   Variable BoolSum(Vector< Variable >& args, const int l, const int u=-INFTY);
   Variable BoolSum(std::vector< Variable >& args, const int l, const int u=-INFTY);
+
+  //Variable BoolSum(Vector< Variable >& args, Vector< int >& w);
+  Variable BoolSum(Vector< Variable >& args, Vector< int >& w, const int l, const int u=-INFTY);
+  Variable BoolSum(std::vector< Variable >& args, std::vector< int >& w, const int l, const int u=-INFTY);
 
 
 
@@ -3241,6 +3248,9 @@ namespace Mistral {
     }
 
     void initialise(const int n, int lb=NOVAL, int ub=NOVAL, int type=EXPRESSION) {
+
+      //std::cout << "create var_array with " << n << " variables in [" << lb << ".." << ub << "]\n"; 
+
       //initialise(0,n);
       if(lb==NOVAL) { lb=0; ub=1; }
       else if(ub==NOVAL) { lb=0; ub=lb-1; }

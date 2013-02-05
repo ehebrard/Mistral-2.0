@@ -3822,17 +3822,19 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   /**********************************************
    * BoolSum Equal Constraint
    **********************************************/
-  //  lb <= x1 + ... + xn <= ub
+  //  b1 + ... + bn = k
   /// Constraint on the value of the sum of a set of variables.
   class ConstraintBoolSumEqual : public GlobalConstraint {
  
   public:
     /**@name Parameters*/
     //@{
+    // last "gap" from the tightest bound to the total, used to know what cause pruning/failure
     int gap;
     int total;
     ReversibleNum<int> min_;
     ReversibleNum<int> max_;
+    // used to stroe the explanation when "get_reason_for()" is called
     Vector<Literal> explanation;
     //@}
 
@@ -3875,7 +3877,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   /**********************************************
    * BoolSum Interval Constraint
    **********************************************/
-  //  lb <= x1 + ... + xn <= ub
+  //  lb <= b1 + ... + bn <= ub
   /// Constraint on the value of the sum of a set of variables.
   class ConstraintBoolSumInterval : public GlobalConstraint {
  
@@ -3918,9 +3920,81 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
   /**********************************************
+   * WeightedBoolSum Interval Constraint
+   **********************************************/
+  //  lb <= a1 * b1 + ... + an * bn <= ub
+  /// Constraint on the value of the sum of a set of variables.
+  class ConstraintWeightedBoolSumInterval : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    // Lower bound of the linear expression
+    int lower_bound;
+
+    // Upper bound of the linear expression
+    int upper_bound;
+
+    // coefficients should be in decreasing order
+    Vector< int > weight;
+    // from index 0 to wpos (not included), the coefficients are all 1s
+    int wpos;
+    // from index wpos to wneg (not included), the coefficients are all >0
+    int wneg;
+    // from index wneg to size (not included), the coefficients are all <0
+
+    // utils for the propagation
+    BoolDomain *domains;
+    ReversibleNum<int> parity;
+    //ReversibleIntStack unknown_parity;
+    ReversibleSet unknown_parity;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintWeightedBoolSumInterval() : GlobalConstraint() { priority = 1; }
+
+    ConstraintWeightedBoolSumInterval(Vector< Variable >& scp,
+				      const int L=0, const int U=0);
+    ConstraintWeightedBoolSumInterval(Vector< Variable >& scp,
+				      Vector< int >& coefs,
+				      const int L=0, const int U=0);
+    ConstraintWeightedBoolSumInterval(std::vector< Variable >& scp,
+				      std::vector< int >& coefs,
+				      const int L=0, const int U=0);
+    //ConstraintWeightedBoolSumInterval(Vector< Variable >& scp, const int l, const int u);
+    //ConstraintWeightedBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
+    virtual Constraint clone() { return Constraint(new ConstraintWeightedBoolSumInterval(scope, lower_bound, upper_bound)); }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintWeightedBoolSumInterval();
+    //@}
+
+
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "wbsum[]"; }
+    //@}
+  };
+
+
+  /**********************************************
    * BoolSum  Predicate
    **********************************************/
-  //  x1 + ... + xn-1 = xn
+  //  b1 + ... + bn-1 = xn
   /// predicate on the value of the sum of a set of variables.
   class PredicateBoolSum : public GlobalConstraint {
  
@@ -3960,6 +4034,75 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "bsum="; }
+    //@}
+  };
+
+
+  /**********************************************
+   * WeightedSum Constraint
+   **********************************************/
+  /*! \class ConstraintWeightedSum
+    \brief  Constraint on a sum of variables (a1 * x1 + ... + an * xn = total)
+  */
+  class PredicateWeightedSum : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    // Lower bound of the linear expression
+    int lower_bound;
+
+    // Upper bound of the linear expression
+    int upper_bound;
+
+    Vector< int > weight;
+    // from index 0 to wpos (not included), the coefficients are all 1s
+    int wpos;
+    // from index wpos to wneg (not included), the coefficients are all >0
+    int wneg;
+    // from index wneg to size (not included), the coefficients are all <0
+
+    // utils for the propagation
+    int *lo_bound;
+    int *up_bound;
+    int *span;
+    ReversibleNum<int> parity;
+    //ReversibleIntStack unknown_parity;
+    ReversibleSet unknown_parity;
+    
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateWeightedSum(Vector< Variable >& scp,
+			 const int L=0, const int U=0);
+    PredicateWeightedSum(Vector< Variable >& scp,
+			 Vector< int >& coefs,
+			 const int L=0, const int U=0);
+    PredicateWeightedSum(std::vector< Variable >& scp,
+			 std::vector< int >& coefs,
+			 const int L=0, const int U=0);
+    virtual ~PredicateWeightedSum();
+    virtual Constraint clone() { return Constraint(new PredicateWeightedSum(scope, weight)); }
+    virtual bool rewritable() { return true; }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    virtual void mark_domain();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "sum="; }
     //@}
   };
 
@@ -4192,74 +4335,6 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
   };
 
-
-  /**********************************************
-   * WeightedSum Constraint
-   **********************************************/
-  /*! \class ConstraintWeightedSum
-    \brief  Constraint on a sum of variables (a1 * x1 + ... + an * xn = total)
-  */
-  class PredicateWeightedSum : public GlobalConstraint {
-
-  public:
-    /**@name Parameters*/
-    //@{ 
-    // Lower bound of the linear experssion
-    int lower_bound;
-
-    // Upper bound of the linear experssion
-    int upper_bound;
-
-    Vector< int > weight;
-    // from index 0 to wpos (not included), the coefficients are all 1s
-    int wpos;
-    // from index wpos to wneg (not included), the coefficients are all >0
-    int wneg;
-    // from index wneg to size (not included), the coefficients are all <0
-
-    // utils for the propagation
-    int *lo_bound;
-    int *up_bound;
-    int *span;
-    ReversibleNum<int> parity;
-    //ReversibleIntStack unknown_parity;
-    ReversibleSet unknown_parity;
-    
-    //@}
-
-    /**@name Constructors*/
-    //@{
-    PredicateWeightedSum(Vector< Variable >& scp,
-			 const int L=0, const int U=0);
-    PredicateWeightedSum(Vector< Variable >& scp,
-			 Vector< int >& coefs,
-			 const int L=0, const int U=0);
-    PredicateWeightedSum(std::vector< Variable >& scp,
-			 std::vector< int >& coefs,
-			 const int L=0, const int U=0);
-    virtual ~PredicateWeightedSum();
-    virtual Constraint clone() { return Constraint(new PredicateWeightedSum(scope, weight)); }
-    virtual bool rewritable() { return true; }
-    virtual int idempotent() { return 1;}
-    virtual int postponed() { return 1;}
-    virtual int pushed() { return 1;}
-    virtual void initialise();
-    virtual void mark_domain();
-    //@}
-
-    /**@name Solving*/
-    //@{
-    virtual int check( const int* sol ) const ;
-    virtual PropagationOutcome propagate();
-    virtual RewritingOutcome rewrite();
-    //@}
-
-    /**@name Miscellaneous*/
-    //@{  
-    virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "sum="; }
-    //@}
-  };
 
 
   /***********************************************

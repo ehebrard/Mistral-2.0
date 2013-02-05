@@ -494,6 +494,8 @@ namespace Mistral {
     Solver();
 
     void parse_dimacs(const char* filename);
+    void parse_pbo(const char* filename);
+
     void set_parameters(SolverParameters& p);
 
     class BooleanMemoryManager {
