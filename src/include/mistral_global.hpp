@@ -129,7 +129,7 @@ namespace Mistral {
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
   //#define _DEBUG_SEARCH true
-  //#define _DEBUG_NOGOOD true
+  //#define _DEBUG_NOGOOD ((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738))
   //#define _DEBUG_UNITPROP true
   //#define _DEBUG_WATCH true
   //#define _DEBUG_CHECKER (cur_iteration > 39950) 
@@ -142,7 +142,7 @@ namespace Mistral {
   //#define _DEBUG_DIV true  
   //#define _DEBUG_OFFSET ((id==1309))
   //#define _DEBUG_AMSC  ((id==2912))
-
+  //#define _DEBUG_AC ((statistics.num_filterings >= 102454))
 
   
 #define NORESTART 0

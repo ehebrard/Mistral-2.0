@@ -135,15 +135,51 @@ void Mistral::ConsolidateListener::notify_change(const int idx) {
 //Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s, void *a) 
 Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
   : solver(s) {
-  lit_activity = s->base->lit_activity.stack_;
-  var_activity = s->base->var_activity.stack_;
+
+  lit_activity = solver->lit_activity.stack_;
+  var_activity = solver->var_activity.stack_;
+  n_vars = solver->variables.size;
+
+
+  //   n_vars = solver->base->scope.size;
+
+  // if(solver->base) {
+  //   lit_activity = solver->base->lit_activity.stack_;
+  //   var_activity = solver->base->var_activity.stack_;
+  //   n_vars = solver->base->scope.size;
+  // } else {
+  //   n_vars = solver->variables.size;
+  //   lit_activity = new double[2*n_vars];
+  //   var_activity = new double[n_vars];
+  //   std::fill(lit_activity, lit_activity+2*n_vars, 0.012);
+  //   std::fill(var_activity, var_activity+n_vars, 0.024);
+  // }
+
+
+  //double activity_increment = parameters.activity_increment / (1 << clause.size);
+  
+  // if(activity_increment > 0.0) {
+  //   int i=clause.size;
+   //   while(i--) {
+
+   //     //std::cout << clause << " " << activity_increment << std::endl;
+
+   //     lit_activity[clause[i]] += activity_increment;
+   //     var_activity[UNSIGNED(clause[i])] += activity_increment;
+   //   }
+   // }
+
+   
   decay = solver->parameters.activity_decay;
-  n_vars = solver->base->scope.size;
   solver->add((DecisionListener*)this);
 }
 
 Mistral::LiteralActivityManager::~LiteralActivityManager() {
   solver->remove((DecisionListener*)this);
+  // if(!solver->base) {
+  //   delete [] lit_activity;
+  //   delete [] var_activity;
+  // }
 }
 
 double *Mistral::LiteralActivityManager::get_weight() { return var_activity; }     

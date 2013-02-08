@@ -1875,9 +1875,9 @@ int main(int argc, char *argv[])
   tests.push_back(new RandomDomainRandomSetMaxAndRestore());
   tests.push_back(new RandomDomainRandomSetMinAndRestore());
   tests.push_back(new RandomDomainRandomRemove());
-  tests.push_back(new RandomRevNumAffectations<int>());
-  //tests.push_back(new ConstraintArrayTest());
-  tests.push_back(new RandomIntervalTest());
+  // tests.push_back(new RandomRevNumAffectations<int>());
+  // //tests.push_back(new ConstraintArrayTest());
+  // tests.push_back(new RandomIntervalTest());
 
 
   //tests[0]->Verbosity = HIGH;

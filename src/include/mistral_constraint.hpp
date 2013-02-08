@@ -322,6 +322,7 @@ namespace Mistral {
     /// Print the constraint
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "c"; }
+    virtual bool is_clause() {return false;}
     //@}
   };
 
@@ -3834,7 +3835,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     int total;
     ReversibleNum<int> min_;
     ReversibleNum<int> max_;
-    // used to stroe the explanation when "get_reason_for()" is called
+    // used to store the explanation when "get_reason_for()" is called
     Vector<Literal> explanation;
     //@}
 
@@ -3948,6 +3949,13 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ReversibleNum<int> parity;
     //ReversibleIntStack unknown_parity;
     ReversibleSet unknown_parity;
+
+
+    // used to store the explanation when "get_reason_for()" is called
+    // variable assignments that increase the value of the sum
+    Vector<Literal> positive_contributors;
+    // variable assignments that decrease the value of the sum
+    Vector<Literal> negative_contributors;
     //@}
 
     /**@name Constructors*/

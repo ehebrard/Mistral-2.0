@@ -281,6 +281,33 @@ namespace Mistral {
     }
   };
 
+  // /*! \class VarEvent
+  //   \brief Stores the variable id, the type of change, and the constraint that triggered this event
+  // */
+  // /********************************************
+  //  * Environment Objects
+  //  ********************************************/
+  // class VarEvent : public Triplet < int, Event, Constraint > {
+    
+  // public:
+
+  //   VarEvent(int t1, Event t2, Constraint t3) : Triplet < int, Event, Constraint >(t1, t2, t3) {}
+
+  //   operator int() {
+  //     return first;
+  //   }
+
+  //   void update(const Event evt, const Constraint con) {
+  //     second |= evt;
+  //     if(third != con) third.clear(); // = Constraint();
+  //   }
+
+  //   std::ostream& display(std::ostream& os) const {
+  //     os << event2strc(second) << "(" << first << ")";
+  //     return os;
+  //   }
+  // };
+
 
   typedef TwoWayStack< VarEvent > VariableQueue;
   //typedef TwoWayStack< Triplet < int, Event, ConstraintImplementation*> > VariableQueue;

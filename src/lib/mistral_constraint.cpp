@@ -20,6 +20,7 @@
 
 #include <math.h>
 
+#include <mistral_sat.hpp>
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
@@ -8455,6 +8456,13 @@ int Mistral::ConstraintBoolSumEqual::check( const int* s ) const
 
 
 Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+
+  // std::cout << "explain \n";
+  // for(int k=0; k<scope.size; ++k) {
+  //   std::cout << scope[k].get_domain() << " ";
+  // }
+  // std::cout << "\n" << gap << "\n" << std::endl;
+
   explanation.clear();
   int i=scope.size;
 
@@ -8462,19 +8470,19 @@ Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(c
     if(get_solver()->variables[a].get_value()) {
       // the literal we try to explain is positive
       while(i--) {
-	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+	if( !(scope[i].get_max()) ) explanation.add(literal(scope[i]));
       }
     } else {
       // the literal we try to explain is positive
       while(i--) {
-	if(  scope[i].get_min() ) explanation.add(literal(scope[i]));
+	if(  scope[i].get_min() ) explanation.add(NOT(literal(scope[i])));
       }
     }
   } else {
     if(gap > 0) {
       // too many ones
       while(i-- && explanation.size <= total) {
-	if(scope[i].get_min()) explanation.add(literal(scope[i]));
+	if(scope[i].get_min()) explanation.add(NOT(literal(scope[i])));
       }
     } else {
       // too many zeros
@@ -8483,6 +8491,9 @@ Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(c
       }
     }
   }
+
+  //  std::cout << explaantion << std::endl;
+
   end = explanation.end();
   return explanation.begin();
 }
@@ -9428,7 +9439,7 @@ Mistral::ConstraintWeightedBoolSumInterval::~ConstraintWeightedBoolSumInterval()
 
 
 
-Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+Mistral::Explanation::iterator Mistral::ConstraintWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
   /*
     get explanation for the pruning of variables[a] at level lvl.
     
@@ -9437,44 +9448,312 @@ Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(c
     2 -> lb
     3 -> ub
     
-    case 1: find the variables with odd 
+    case 1: find the variables with odd coefficients that are not variables[a]. They are necessarily bound to prune a
+    case 2: sum(max(w_x)) - w_a < lb ->
+                                        find a set of x, assigned before lvl and such that sum(max(w_x)) - w_a < lb
+
+					
+in fact, only parity pruning must be stored. Otherwise, we can deduce it from the value of a (and the sign of its weight).
 
    */
 
-  explanation.clear();
-  int i=scope.size;
-
+  //std::cout << "^^^^^^^^^" << std::endl;
+  /*
   if(a != NULL_ATOM) {
-    if(get_solver()->variables[a].get_value()) {
-      // the literal we try to explain is positive
-      while(i--) {
-	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+    std::cout << "extract a reason for " << get_solver()->variables[a] << " = " << get_solver()->variables[a].get_value() << " from: " << this << " with: " << std::endl;
+  } else {
+ std::cout << "extract a reason for failure of: " << this << " with: " << std::endl;
+  }
+
+  for(int i=0; i<scope.size; ++i) {
+    std::cout << std::setw(5) << scope[i].get_domain();
+  }
+  std::cout << std::endl;
+  for(int i=0; i<scope.size; ++i) {
+    if(!(IS_GROUND(domains[i])) || (a == NULL_ATOM) || get_solver()->assignment_order.stack_[a] > get_solver()->assignment_order.stack_[scope[i].id()])
+      std::cout << std::setw(5) << scope[i].get_domain();
+    else
+      std::cout << "{0,1}";
+  }
+  std::cout << std::endl;
+  */
+
+  //std::cout << 11 << std::endl;
+
+  //std::cerr << 22 << std::endl;
+
+  positive_contributors.clear();
+  negative_contributors.clear();
+  int i=scope.size, idx;
+  int *rank = get_solver()->assignment_order.stack_;
+  int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
+  bool direction;
+  int bounds[2] = {0,0};
+  int val, va=INFTY;
+
+  Vector<int> pweight;
+  Vector<int> nweight;
+  Vector<int> pvar;
+  Vector<int> nvar;
+
+  //std::cerr << 33 << std::endl;
+  
+  while(i--) {
+    idx = scope[i].id();
+
+    //std::cout << a_rank << " <> " << rank[idx] << std::endl;
+
+    if(idx == a) {
+      va = i;
+      // a=0 and coeff is positive or
+      // a=1 and coeff is negative => 1 <=> pushed toward the lower value (positive_contributors are the reason)
+
+      // a=1 and coeff is positive or
+      // a=0 and coeff is negative => 0 <=> pushed toward the upper value (negative_contributors are the reason)
+      direction = (GET_VAL(domains[i]) != weight[i]>0);
+
+    } else if(IS_GROUND(domains[i]) && rank[idx] < a_rank) {
+
+
+      val = GET_VAL(domains[i]);
+
+      //std::cout << "ground: " << val << " " << weight[i] << " " << std::endl;
+
+      if(val) {
+	bounds[0] += weight[i];
+	bounds[1] += weight[i];
+      }
+
+      if(val == weight[i]>0) {
+	positive_contributors.add(NOT(literal(scope[i])));
+	pweight.add(weight[i]);
+	pvar.add(i);
+      } else {
+	negative_contributors.add(NOT(literal(scope[i])));
+	nweight.add(weight[i]);
+	nvar.add(i);
       }
     } else {
-      // the literal we try to explain is positive
-      while(i--) {
-	if(  scope[i].get_min() ) explanation.add(literal(scope[i]));
+      if(weight[i] < 0) {
+	bounds[0] += weight[i];
+      } else {
+	bounds[1] += weight[i];
       }
     }
-  } else {
-    if(gap > 0) {
-      // too many ones
-      while(i-- && explanation.size <= total) {
-	if(scope[i].get_min()) explanation.add(literal(scope[i]));
-      }
-    } else {
-      // too many zeros
-      while(i-- && explanation.size <= scope.size-total) {
-	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
-      }
+
+    //std::cout << "+ " << weight[i] << "." << scope[i].get_domain() << ": [" << bounds[0] << "," << bounds[1] << "]\n";
+    
+  }
+
+  //std::cerr << 44 << std::endl;
+
+  if(a == NULL_ATOM) {
+    if(bounds[0] > upper_bound) direction = true;
+    else if(bounds[1] < lower_bound) direction = false;
+    else {
+      std::cout << "COULDN'T FIND THE CAUSE OF THE FAILURE!" << std::endl;
+      exit(1);
     }
   }
-  end = explanation.end();
-  return explanation.begin();
+
+
+  //std::cerr << 55 << std::endl;
+
+  // if(direction) {
+
+  //   int total = 0;
+  //   for(i=0; i<positive_contributors.size; ++i) {
+  //     total += pweight[i];
+  //   }
+
+  //   bool error = false;
+
+  //   if(va != INFTY) { 
+  //     int vala = GET_VAL(domains[va]);
+
+  //     if(total + (1-vala)*weight[va] <= upper_bound || total + vala*weight[va] > upper_bound) {
+  // 	std::cout << "ERROR!!" << std::endl;
+  // 	error = true;
+  //     }
+  //   } else {
+
+  //     if(total <= upper_bound)
+  // 	{
+  // 	  std::cout << "ERROR!!" << std::endl;
+  // 	  error = true;
+  // 	}
+      
+  //   }
+
+  //   if(error) {
+  //     std::cout << "pos: " << positive_contributors << std::endl;
+      
+  //     for(i=0; i<positive_contributors.size; ++i) {
+  // 	std::cout << std::setw(5) << get_solver()->variables[positive_contributors[i]/2];
+  //     }
+  //     std::cout << std::endl;
+      
+  //     std::cout << " when all these guys are set in this way, we have " << (bounds[0]-total) << " + " << total ;
+  //     if(va != INFTY) { 
+  // 	if(GET_VAL(domains[va])) 
+  // 	  std::cout << " + 0 > " << upper_bound << " hence we need " <<  scope[va] << " to be " << weight[va] << std::endl;
+  // 	else
+  // 	  std::cout << " + " << weight[va] << " > " << upper_bound << " hence we need " <<  scope[va] << " to be 0" << std::endl;
+  //     } else {
+	
+  // 	std::cout << " hence we need one of them to be assigne differently" << std::endl;
+	
+  //     }
+
+  //     exit(1);
+  //   }
+    
+  // } else {
+
+  //   int total = 0;
+  //   for(i=0; i<negative_contributors.size; ++i) {
+  //     total += nweight[i];
+  //   }
+
+  //   bool error = false;
+
+  //   if(va != INFTY) { 
+  //     int vala = GET_VAL(domains[va]);
+
+  //     if(total + (1-vala)*weight[va] >= lower_bound || total + vala*weight[va] < lower_bound) {
+  // 	std::cout << "ERROR!!" << std::endl;
+  // 	error = true;
+  //     }
+  //   } else {
+
+  //     if(total >= lower_bound)
+  // 	{
+  // 	  std::cout << "ERROR!!" << std::endl;
+  // 	  error = true;
+  // 	}
+      
+  //   }
+
+  //   if(error) {
+  //     std::cout << "neg: " << negative_contributors << std::endl;
+      
+  //     for(i=0; i<negative_contributors.size; ++i) {
+  // 	std::cout << std::setw(5) << get_solver()->variables[negative_contributors[i]/2];
+  //     }
+  //     std::cout << std::endl;
+      
+  //     std::cout << " when all these guys are set in this way, we have " << (bounds[1]-total) << " + " << total ;
+  //     if(va != INFTY) { 
+  // 	if(GET_VAL(domains[va])) 
+  // 	  std::cout << " + 0 < " << lower_bound << " hence we need " <<  scope[va] << " to be " << weight[va] << std::endl;
+  // 	else
+  // 	  std::cout << " + " << weight[va] << " < " << lower_bound << " hence we need " <<  scope[va] << " to be 0" << std::endl;
+  //     } else {
+	
+  // 	std::cout << " hence we need one of them to be assigne differently" << std::endl;
+	
+  //     }
+  //     exit(1);
+  //   }
+  // }
+
+
+  //std::cerr << 66 << std::endl;  
+
+  // /************** TEST THE NOGOOD *************/
+
+  // Solver s;
+  // VarArray X(scope.size, 0, 1);
+
+  // s.add( BoolSum(X, weight, lower_bound, upper_bound) );
+
+  // if(direction) {
+  //   for(i=0; i<pvar.size; ++i) {
+      
+  //     if(!(scope[pvar[i]].is_ground())) {
+  // 	std::cout << "NOGOOD INVOLVES AN OPEN VARIABLE!" << std::endl;
+  // 	exit(1);
+  //     } else if(rank[scope[pvar[i]].id()] >= a_rank) {
+  // 	std::cout << "NOGOOD INVOLVES A VARIABLE FIXED LATER THAN THE ATOM!" << std::endl;
+  // 	exit(1);
+  //     }
+
+  //     s.add( X[pvar[i]] == scope[pvar[i]].get_value() );
+  //   }
+    
+  // } else {
+  //  for(i=0; i<nvar.size; ++i) {
+      
+  //     if(!(scope[nvar[i]].is_ground())) {
+  // 	std::cout << "NOGOOD INVOLVES AN OPEN VARIABLE!" << std::endl;
+  // 	exit(1);
+  //     } else if(rank[scope[nvar[i]].id()] >= a_rank) {
+  // 	std::cout << "NOGOOD INVOLVES A VARIABLE FIXED LATER THAN THE ATOM!" << std::endl;
+  // 	exit(1);
+  //     }
+
+  //     s.add( X[nvar[i]] == scope[nvar[i]].get_value() );
+  //   }
+    
+  // }
+  
+  // if(a != NULL_ATOM) {
+  //   s.add( X[va] != scope[va].get_value() );
+  // }
+
+  // s.consolidate();
+
+  // Outcome result = s.depth_first_search(X);
+
+  // if(result != UNSAT) {
+
+  //   std::cout << "NOGOOD IS WRONG!" << std::endl;
+  //   exit(1);
+
+  // }
+
+
+
+  // /************** TEST THE NOGOOD *************/
+
+
+  // std::cout << " reason for linear equation failure: ";
+  // if(direction) {
+    
+  //   print_literal(std::cout, positive_contributors[0]);
+
+  //   for(i=1; i<positive_contributors.size; ++i) {
+  //     std::cout << " v ";
+  //     print_literal(std::cout, positive_contributors[i]);
+  //   }
+ 
+  // } else {
+
+  //   print_literal(std::cout, negative_contributors[0]);
+
+  //   for(i=1; i<negative_contributors.size; ++i) {
+  //     std::cout << " v ";
+  //     print_literal(std::cout, negative_contributors[i]);
+  //   }
+
+  // }
+
+  // std::cout << std::endl;
+
+
+
+  //nexit(1);
+
+  end = (direction ? positive_contributors.end() : negative_contributors.end());
+
+  //std::cout << 77 << std::endl;
+  //std::cout << "vvvvvvvvv" << std::endl;
+
+  return (direction ? positive_contributors.begin() : negative_contributors.begin());
 }
 
 
-
+//#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
 
 Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagate() 
 {
@@ -9594,21 +9873,21 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
       
       if(unknown_parity.size == 0) {
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-	if(_DEBUG_WEIGHTEDBOOLSUM) {
+// #ifdef _DEBUG_WEIGHTEDBOOLSUM
+// 	if(_DEBUG_WEIGHTEDBOOLSUM) {
 	  std::cout << "parity failure " << std::endl;
-	}
-#endif
+// 	}
+// #endif
 
 	if(parity != 0) wiped = FAILURE(arity-1);
       } else if(unknown_parity.size == 1) { // it needs to be of parity "parity"
 	i = unknown_parity[0];
 	
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-	if(_DEBUG_WEIGHTEDBOOLSUM) {
+// #ifdef _DEBUG_WEIGHTEDBOOLSUM
+// 	if(_DEBUG_WEIGHTEDBOOLSUM) {
 	  std::cout << "parity pruning: " << (GET_MIN(domains[i])%2) << " " << parity << std::endl ;
-	}
-#endif
+// 	}
+// #endif
        
 	  
 #ifdef _DEBUG_WEIGHTEDBOOLSUM

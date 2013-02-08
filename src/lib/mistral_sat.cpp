@@ -45,7 +45,7 @@ void Mistral::print_clause(ostream& o, Clause *cl)
     << "(";
   for(unsigned int i=0; i<clause.size-1; ++i) {
     print_literal(o,clause[i]);
-    o << " ";
+    o << " v ";
   }
   print_literal(o,clause[clause.size-1]);
   o << ")";
@@ -423,8 +423,8 @@ void Mistral::ConstraintClauseBase::initialise() {
   GlobalConstraint::initialise();
 
   is_watched_by.initialise(0,2*scope.size);
-  lit_activity.initialise(0,2*scope.size);
-  var_activity.initialise(0,scope.size);
+  // lit_activity.initialise(0,2*scope.size);
+  // var_activity.initialise(0,scope.size);
 
 
   //reason_for = new Explanation*[scope.size];
@@ -476,10 +476,10 @@ void Mistral::ConstraintClauseBase::add(Variable x) {
 
   while(is_watched_by.capacity <= 2*idx)
     is_watched_by.extendStack();
-  while(lit_activity.capacity <= 2*idx)
-    lit_activity.extendStack();
-  while(var_activity.capacity <= idx)
-    var_activity.extendStack();
+  // while(lit_activity.capacity <= 2*idx)
+  //   lit_activity.extendStack();
+  // while(var_activity.capacity <= idx)
+  //   var_activity.extendStack();
   
   //reason = solver->reason.stack_;
 }
@@ -491,19 +491,19 @@ void Mistral::ConstraintClauseBase::add( Vector < Literal >& clause, double acti
    is_watched_by[clause[0]].add(cl);
    is_watched_by[clause[1]].add(cl);
 
-   // should we split the increment?
-   activity_increment /= clause.size;
+   // // should we split the increment?
+   // activity_increment /= clause.size;
 
-   if(activity_increment > 0.0) {
-     int i=clause.size;
-     while(i--) {
+   // if(activity_increment > 0.0) {
+   //   int i=clause.size;
+   //   while(i--) {
 
-       //std::cout << clause << " " << activity_increment << std::endl;
+   //     //std::cout << clause << " " << activity_increment << std::endl;
 
-       lit_activity[clause[i]] += activity_increment;
-       var_activity[UNSIGNED(clause[i])] += activity_increment;
-     }
-   }
+   //     lit_activity[clause[i]] += activity_increment;
+   //     var_activity[UNSIGNED(clause[i])] += activity_increment;
+   //   }
+   // }
 
  } else {
    scope[UNSIGNED(clause[0])].set_domain(SIGN(clause[0]));
@@ -890,7 +890,7 @@ void Mistral::ConstraintClauseBase::remove( const int cidx )
 }
 
 
-void Mistral::ConstraintClauseBase::forget(double forgetfulness)
+void Mistral::ConstraintClauseBase::forget(const double forgetfulness, const Vector< double >& lit_activity)
 {
 
   //std::cout << "FORGET " << forgetfulness << std::endl;
@@ -974,8 +974,8 @@ std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
   if(clauses.size>0) {
     print_clause(os, clauses[0]);
 
-    os << " v " ;
     for(unsigned int i=1; i<clauses.size; ++i) {
+      os << " " ;
       print_clause(os, clauses[i]);
     }
 

@@ -366,6 +366,8 @@ namespace Mistral {
     Vector< Variable >   removed_variables;
     Vector< int >     domain_types;
     Vector< int > assignment_level;
+    Vector< int > assignment_order;
+    ReversibleNum<int> assignment_rank;
 
 #ifdef _MONITOR
     SearchMonitor monitor_list;
@@ -414,12 +416,16 @@ namespace Mistral {
     Vector< Decision > decisions;
     //Vector< Clause* > reason;
     Vector< Explanation* > reason_for;
+    // // stores the index of the variable in the guilty constraint
+    // Vector< int > reason_index;
     //Vector< DomainExplanation* > reason_for;
     Vector< Literal > learnt_clause;
     BitSet visited;
     int num_search_variables;
-    ConstraintClauseBase *base;
 
+    ConstraintClauseBase *base;
+    Vector< double > lit_activity;
+    Vector< double > var_activity;
 
     /// Variable selection and branching
     BranchingHeuristic *heuristic;

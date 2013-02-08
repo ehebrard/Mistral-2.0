@@ -1334,6 +1334,8 @@ template < int N, class T >
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end) = 0;
 
     virtual std::ostream& display(std::ostream& os) const = 0;
+
+    virtual bool is_clause() {return true;}
     
   };
 

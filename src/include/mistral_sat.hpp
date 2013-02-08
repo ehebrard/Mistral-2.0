@@ -265,8 +265,8 @@ namespace Mistral {
     //EXPL
     //Explanation** reason_for;
     Vector< Clause* > reason_for;
-    Vector< double > lit_activity;
-    Vector< double > var_activity;
+    // Vector< double > lit_activity;
+    // Vector< double > var_activity;
     // list of clauses
     Vector< Clause* > clauses;
     Vector< Clause* > learnt;
@@ -291,7 +291,7 @@ namespace Mistral {
     void add( Vector < Literal >& clause, double init_activity=0.0 );
     void learn( Vector < Literal >& clause, double init_activity=0.0 );
     void remove( const int cidx );
-    void forget( double forgetfulness );
+    void forget( const double forgetfulness, const Vector< double >& activity );
     //@}
 
     /**@name Solving*/

@@ -2838,7 +2838,10 @@ namespace Mistral {
   };
 
 
-
+  typedef GenericDVO< MinDomainOverWeight, 1, FailureCountManager > WDEG;
+  
+  typedef GenericDVO< MinDomainOverWeight, 1, PruningCountManager > ABS;
+  
 }
 
 #endif // __SEARCH_HPP
