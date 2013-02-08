@@ -1162,7 +1162,8 @@ void Mistral::Solver::add(Vector< Literal >& clause) {
   if(activity_increment > 0.0) {
     int i=clause.size;
     while(i--) {
-      lit_activity[clause[i]] += activity_increment;
+      lit_activity[NOT(clause[i])] += activity_increment;
+      //lit_activity[clause[i]] += activity_increment;
       var_activity[UNSIGNED(clause[i])] += activity_increment;
     }
   }

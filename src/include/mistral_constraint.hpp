@@ -3831,8 +3831,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     /**@name Parameters*/
     //@{
     // last "gap" from the tightest bound to the total, used to know what cause pruning/failure
-    int gap;
+    //int gap;
     int total;
+    int lower_bound;
+    int upper_bound;
     ReversibleNum<int> min_;
     ReversibleNum<int> max_;
     // used to store the explanation when "get_reason_for()" is called
@@ -3885,10 +3887,12 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   public:
     /**@name Parameters*/
     //@{
-    int lb;
-    int ub;
+    int lower_bound;
+    int upper_bound;
     ReversibleNum<int> min_;
     ReversibleNum<int> max_;
+    // used to store the explanation when "get_reason_for()" is called
+    Vector<Literal> explanation;
     //@}
 
     /**@name Constructors*/
@@ -3896,7 +3900,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ConstraintBoolSumInterval() : GlobalConstraint() { priority = 1; }
     ConstraintBoolSumInterval(Vector< Variable >& scp, const int l, const int u);
     ConstraintBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
-    virtual Constraint clone() { return Constraint(new ConstraintBoolSumInterval(scope, lb, ub)); }
+    virtual Constraint clone() { return Constraint(new ConstraintBoolSumInterval(scope, lower_bound, upper_bound)); }
     virtual void initialise();
     virtual void mark_domain();
     virtual int idempotent() { return 1;}
@@ -3910,6 +3914,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@{
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
     //@}
   
     /**@name Miscellaneous*/

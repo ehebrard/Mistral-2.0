@@ -1843,7 +1843,6 @@ int main(int argc, char *argv[])
   int N = 8; //atoi(argv[1]);
   if(argc>1) N=atoi(argv[1]);
 
-
   tests.push_back(new CheckerTest());
   tests.push_back(new SymmetricDifferenceTest());
   tests.push_back(new LexTest());
@@ -1860,7 +1859,7 @@ int main(int argc, char *argv[])
   tests.push_back(new MemberTest());
   tests.push_back(new RewriteTest1());
   tests.push_back(new OpshopTest());
-  tests.push_back(new BoolPigeons(N+1, EXPRESSION));
+   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
   tests.push_back(new SatTest());
   tests.push_back(new Pigeons(N+2)); 
@@ -1879,11 +1878,11 @@ int main(int argc, char *argv[])
   // //tests.push_back(new ConstraintArrayTest());
   // tests.push_back(new RandomIntervalTest());
 
-
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
   //tests[0]->Verbosity = EXTREME;
+
 
   while(tests.size() > 0) {
     UnitTest *t = tests.back();
@@ -3396,6 +3395,7 @@ void BoolPigeons::run() {
 		     << (var_type == BITSET_VAR ? "bitset" : "boolean")
 		     << ") of order " << size << ": "; 
 
+  cout.flush();
 
   VarArray X(size*(size-1), 0, 1, var_type);
   VarArray domain;
@@ -3403,13 +3403,17 @@ void BoolPigeons::run() {
   int i, j, k;
   for(i=0; i<size; ++i) {
     domain.clear();
-    for(j=i*(size-1); j<(i+1)*(size-1); ++j)
+    for(j=i*(size-1); j<(i+1)*(size-1); ++j) {
       domain.add( X[j] );
+    }
+
     s.add( BoolSum(domain, size-2, size-2) );
     //s.add( BoolSum(X[i*(size-1), (i+1)*(size-1)], size-2) );
-    for(j=i+1; j<size; ++j)
-      for(k=0; k<size-1; ++k)
+    for(j=i+1; j<size; ++j) {
+      for(k=0; k<size-1; ++k) {
 	s.add( X[i*(size-1)+k] || X[j*(size-1)+k] );
+      }
+    }
   }
   //s.initialise();
 
@@ -3417,7 +3421,16 @@ void BoolPigeons::run() {
   
     s.consolidate();
   
-  // std::cout << s << std::endl;
+    //std::cout << s << std::endl;
+
+#ifdef _MONITOR
+   for(i=0; i<size; ++i) {
+     for(j=i*(size-1); j<(i+1)*(size-1); ++j) {
+       s.monitor_list << X[j];
+     }
+     s.monitor_list << "\n";
+   }
+#endif
 
   //exit(1);
 
@@ -4793,7 +4806,7 @@ void SatTest::run() {
 			    new Geometric()
 			    );
   
-  if(solver.statistics.num_backtracks != 26861) {
+  if(solver.statistics.num_backtracks != 16550) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (solver.statistics.num_backtracks) << ")" << endl;
     //exit(1);
