@@ -368,6 +368,7 @@ namespace Mistral {
     Vector< int > assignment_level;
     Vector< int > assignment_order;
     ReversibleNum<int> assignment_rank;
+    Vector< int > assigned;
 
 #ifdef _MONITOR
     SearchMonitor monitor_list;
@@ -744,6 +745,7 @@ namespace Mistral {
 
     void initialise_random_seed(const int seed);
     void set_time_limit(const double limit);
+    void set_learning_on();
 
 
     /*!@name Printing*/

@@ -144,7 +144,8 @@ int main(int argc, char **argv)
       
       if(method) {
 
-	solver.parameters.backjump = 1;
+	//solver.parameters.backjump = 1;
+	solver.set_learning_on();
 	result = solver.depth_first_search(solver.variables, 
 					   //new VSIDS(&solver),
 					   new GenericHeuristic<

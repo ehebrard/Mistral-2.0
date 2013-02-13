@@ -33,6 +33,7 @@
 
 
 //#define _DEBUG_NOGOOD true
+//#define _DEBUG_SEARCH true
 
 //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738) || (statistics.num_filterings == 44368) || (statistics.num_filterings == 43659))
 
@@ -673,18 +674,22 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, co
   //int var = c.index();
   //GlobalConstraint *cons = (GlobalConstraint*)c.propagator;
 
-// #ifdef _DEBUG_AC
-//  if(_DEBUG_AC) {
-//   std::cout << "  triggers " << cons << " after a " 
-// 	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
-// 	    << " event on "
-// 	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
-// 	    << std::endl;
-// #endif
+#ifdef _DEBUG_AC
+ if(_DEBUG_AC) {
+  std::cout << "  triggers " << cons << " after a " 
+	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
+	    << " event on "
+	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
+	    << std::endl;
+ }
+#endif
 
   if(cons != solver->taboo_constraint) {
     int priority = cons->priority, cons_id = cons->id;
     if(_set_.fast_contain(cons_id)) {
+
+      //std::cout << "NOTIFY OTHER EVENT" << std::endl;
+
       cons->notify_other_event(var, evt);
       // if(cons->events.contain(var)) {
       // 	cons->event_type[var] |= evt;
@@ -802,6 +807,7 @@ Mistral::Solver::Solver()
   assignment_level.initialise(0,128);
   assignment_order.initialise(0,128);
   assignment_rank.initialise(this, 0);
+  assigned.initialise(0,128);
   visited.initialise(0,1023);
   //reason.initialise(0,128);
   //EXPL
@@ -883,7 +889,8 @@ void Mistral::Solver::parse_pbo(const char* filename) {
     scope.clear();
     new_clause.clear();
 
-    bool all_ones = true;
+    bool all_pones = true;
+    bool all_mones = true;
 
     do {
       infile >> c;
@@ -896,7 +903,8 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 	  infile >> aux;
 	  weight.add((c == '+' ? aux : -aux));
 
-	  all_ones &= (weight.back() == 1);
+	  all_pones &= (weight.back() ==  1);
+	  all_mones &= (weight.back() == -1);
 
 	  //std::cout << " " << weight.back() << " " << (weight.back() == 1) << " " << all_ones << std::endl;
 
@@ -950,13 +958,15 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
 	  // is it a clause?
 	  bool is_clause = false;
-	  //double mean_weight = 0;
+	  int max_weight = 0;
 
 	  // compute the minimum
 	  int reachable[2] = {0,0}; // = 0, reachable[1] = 0;
 	  for(unsigned int i=0; i<weight.size; ++i) {
 	    if(weight[i] >= 0) reachable[1] += weight[i];
 	    else reachable[0] += weight[i];
+	    int abs_weight = std::abs(weight[i]);
+	    if(max_weight < abs_weight) max_weight = abs_weight;
 	    //mean_weight = ((mean_weight*(double)i) + (double)(weight[i])) / (double)(i+1);
 	  }
 	  
@@ -989,22 +999,29 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 	    }	  
 	  }
 
+	  
 	  if(is_clause) {
 
 	    //std::cout << "clause <" << new_clause ;
-
-	    
 	      
 	    clauses.add(new_clause);
 
 	    //std::cout << "> clause" << std::endl;
 
 	  } else {
-	    if(all_ones) {
+
+	    if(all_mones) {
+	      int aux = -bounds[0];
+	      bounds[0] = -bounds[1];
+	      bounds[1] = aux;
+	      all_pones = true;
+	    }
+
+	    if(all_pones) {
 
 	      //std::cout << "card <" ;
 
-	      add( BoolSum(scope, weight,
+	      add( BoolSum(scope, //weight,
 			   bounds[0], bounds[1]) );
 	    
 	      int real_max = std::min((int)scope.size, bounds[1]);
@@ -1039,13 +1056,15 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 	      int exp = (int)(scope.size * (span)/(double)(reachable[1] - reachable[0] + 1));
 
 	      double activity_increment = parameters.activity_increment / (1 << exp);
-	      
+	      double ac_i; // = activity_increment;
+
 	      if(activity_increment > 0.0) {
 		int i=scope.size;
 		while(i--) {
-		  lit_activity[2*scope[i].id()+(weight[i]<0)] += (1-skew) * activity_increment;
-		  lit_activity[2*scope[i].id()+(weight[i]>=0)] += skew * activity_increment;
-		  var_activity[scope[i].id()] += activity_increment;
+		  ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)max_weight;
+		  lit_activity[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
+		  lit_activity[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
+		  var_activity[scope[i].id()] += ac_i;
 		}
 	      }
 
@@ -1067,8 +1086,10 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
   //std::cout << clauses << std::endl;
 
-  base = new ConstraintClauseBase(variables);
-  add(base);
+  if(parameters.backjump || clauses.size) {
+    base = new ConstraintClauseBase(variables);
+    add(base);
+  }
  
   for(int i=0; i<clauses.size; ++i) {
 
@@ -2914,6 +2935,8 @@ bool Mistral::Solver::propagate()
   }
 #endif
 
+  assigned.clear();
+
     // empty the var stack first
     while( IS_OK(wiped_idx) && 
 	   !active_variables.empty() ) {
@@ -2934,6 +2957,9 @@ bool Mistral::Solver::propagate()
 #endif      
 
       if(ASSIGNED(var_evt.second)) {
+
+	//assigned.add(vidx);
+
 	if(sequence.contain(variables[vidx]))
 	  sequence.remove(variables[vidx]);
 
@@ -2973,22 +2999,25 @@ bool Mistral::Solver::propagate()
 
 	  culprit = constraint_graph[vidx].on[trig][cons];
 
-
-	  if(ASSIGNED(var_evt.second)) {
-	    culprit.notify_assignment();
-	  }
 	  
 	  // idempotency, if the event was triggered by itself
 	  if(var_evt.third != culprit.propagator) {
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-	    std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	    std::cout << "  -awake " << culprit << ": "; 
-	    std::cout.flush();
-  }
+	    if(_DEBUG_AC) {
+	      std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	      std::cout << "  -awake " << culprit << ": "; 
+	      std::cout.flush();
+	    }
 #endif
+	    
+	    // if(ASSIGNED(var_evt.second)) {
+	    //   culprit.notify_assignment();
+	    // }
+
+
 	    // if the constraints asked to be pushed on the constraint stack we do that
 	    if(culprit.pushed()) {
+
 #ifdef _DEBUG_AC
   if(_DEBUG_AC) {
 	      std::cout << "pushed on the stack" ;
@@ -2996,9 +3025,18 @@ bool Mistral::Solver::propagate()
 #endif    
 	      active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
 					 culprit.index(), var_evt.second);
+
+	      //std::cout << " -> " << ((GlobalConstraint*)(culprit.propagator))->events << " " ;
 	    }
+
+
 	    // if the constraint is not postponed, we propagate it
 	    if(!culprit.postponed()) {
+
+	      if(ASSIGNED(var_evt.second)) {
+		culprit.notify_assignment();
+	      }
+
 #ifdef _DEBUG_AC
   if(_DEBUG_AC) {
 	      if(culprit.pushed()) std::cout << ", ";
@@ -3054,6 +3092,19 @@ bool Mistral::Solver::propagate()
       }
     }
 
+
+    
+    while(!assigned.empty()) {
+      vidx = assigned.pop();
+      for(trig = 0; trig<3; ++trig) {
+    	for(cons = constraint_graph[vidx].on[trig].size; --cons>=0;) {
+    	  culprit = constraint_graph[vidx].on[trig][cons];
+	  if(culprit.postponed()) {
+	    culprit.notify_assignment();
+	  }
+    	}
+      }
+    }
 
 // #ifdef _DEBUG_AC
 //  if(_DEBUG_AC) {
@@ -5494,6 +5545,13 @@ void Mistral::Solver::initialise_random_seed(const int seed) {
   usrand(seed);
 }
 
+void Mistral::Solver::set_learning_on() {
+  parameters.backjump = true;
+  if(!base) {
+    base = new ConstraintClauseBase(variables);
+    add(base);
+  }
+}
 
 void Mistral::Solver::set_time_limit(const double limit) {
   if(limit > 0) {

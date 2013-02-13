@@ -4252,6 +4252,8 @@ Mistral::BoolSumExpression::~BoolSumExpression() {
 #endif
 }
 
+#define _INCREMENTAL_WBOOLSUM
+
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) { 
   if(weights.empty()) {
     if(lb == ub) {
@@ -4260,7 +4262,12 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
       s->add(new ConstraintBoolSumInterval(children,lb,ub)); 
     }
   } else {
+   
+#ifdef _INCREMENTAL_WBOOLSUM
+    s->add(new ConstraintIncrementalWeightedBoolSumInterval(children,weights,lb,ub));  
+#else
     s->add(new ConstraintWeightedBoolSumInterval(children,weights,lb,ub)); 
+#endif
   }
 }
 

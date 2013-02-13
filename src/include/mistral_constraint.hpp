@@ -4004,6 +4004,80 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
+
+  /**********************************************
+   * WeightedBoolSum Interval Constraint
+   **********************************************/
+  //  lb <= a1 * b1 + ... + an * bn <= ub
+  /// Constraint on the value of the sum of a set of variables.
+  class ConstraintIncrementalWeightedBoolSumInterval : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+    // Lower bound of the linear expression
+    int lower_bound;
+
+    // Upper bound of the linear expression
+    int upper_bound;
+
+    // coefficients should be in decreasing order
+    Vector< int > weight;
+ 
+
+    // utils for the propagation
+    BoolDomain *domains;
+    ReversibleNum<int> bound_[2];
+    //ReversibleNum<int> max_;
+    // points to the unassigned variable with maximum coefficient (in absolute value)
+    ReversibleNum<int> index_;
+    //ReversibleNum<int> max_index;
+
+    // used to store the explanation when "get_reason_for()" is called
+    Vector<Literal> explanation;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintIncrementalWeightedBoolSumInterval() : GlobalConstraint() { priority = 1; }
+
+    ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp,
+				      const int L=0, const int U=0);
+    ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp,
+				      Vector< int >& coefs,
+				      const int L=0, const int U=0);
+    ConstraintIncrementalWeightedBoolSumInterval(std::vector< Variable >& scp,
+				      std::vector< int >& coefs,
+				      const int L=0, const int U=0);
+    //ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp, const int l, const int u);
+    //ConstraintIncrementalWeightedBoolSumInterval(std::vector< Variable >& scp, const int l, const int u);
+    virtual Constraint clone() { return Constraint(new ConstraintIncrementalWeightedBoolSumInterval(scope, lower_bound, upper_bound)); }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~ConstraintIncrementalWeightedBoolSumInterval();
+    //@}
+
+
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "wbsum[]"; }
+    //@}
+  };
+
+
   /**********************************************
    * BoolSum  Predicate
    **********************************************/
