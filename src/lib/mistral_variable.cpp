@@ -4210,39 +4210,49 @@ Mistral::Variable Mistral::VarArray::operator>=(VarArray& X) {
   return LexLeq(X, *this);
 }
 
+
 Mistral::BoolSumExpression::BoolSumExpression(const int l, const int u) 
   : Expression() {
-  lb = l;
-  ub = u;
+  lower_bound = l;
+  upper_bound = u;
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const int l, const int u) 
   : Expression(args) {
-  lb = l;
-  ub = u;
+  lower_bound = l;
+  upper_bound = u;
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, const int l, const int u) 
   : Expression(args) {
-  lb = l;
-  ub = u;
+  lower_bound = l;
+  upper_bound = u;
+}
+
+Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Vector< int >& wgts) 
+  : Expression(args) {
+  lower_bound = -INFTY;
+  upper_bound = INFTY;
+  for(unsigned int i=0; i<wgts.size; ++i) {
+    weight.add(wgts[i]);
+  }
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Vector< int >& wgts, const int l, const int u) 
   : Expression(args) {
-  lb = l;
-  ub = u;
+  lower_bound = l;
+  upper_bound = u;
   for(unsigned int i=0; i<wgts.size; ++i) {
-    weights.add(wgts[i]);
+    weight.add(wgts[i]);
   }
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, const std::vector< int >& wgts, const int l, const int u) 
   : Expression(args) {
-  lb = l;
-  ub = u;
+  lower_bound = l;
+  upper_bound = u;
   for(unsigned int i=0; i<wgts.size(); ++i) {
-    weights.add(wgts[i]);
+    weight.add(wgts[i]);
   }
 }
 
@@ -4255,42 +4265,79 @@ Mistral::BoolSumExpression::~BoolSumExpression() {
 #define _INCREMENTAL_WBOOLSUM
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) { 
-  if(weights.empty()) {
-    if(lb == ub) {
-      s->add(new ConstraintBoolSumEqual(children,lb)); 
+  if(weight.empty()) {
+    if(lower_bound == upper_bound) {
+      s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
     } else {
-      s->add(new ConstraintBoolSumInterval(children,lb,ub)); 
+      s->add(new ConstraintBoolSumInterval(children,lower_bound,upper_bound)); 
     }
   } else {
    
 #ifdef _INCREMENTAL_WBOOLSUM
-    s->add(new ConstraintIncrementalWeightedBoolSumInterval(children,weights,lb,ub));  
+    s->add(Constraint(new ConstraintIncrementalWeightedBoolSumInterval(children,weight,lower_bound,upper_bound)));  
 #else
-    s->add(new ConstraintWeightedBoolSumInterval(children,weights,lb,ub)); 
+    s->add(Constraint(new ConstraintWeightedBoolSumInterval(children,weight,lower_bound,upper_bound))); 
 #endif
   }
 }
 
-void Mistral::BoolSumExpression::extract_variable(Solver *s) {
 
-  Variable aux(lb, ub, DYN_VAR);
+void Mistral::BoolSumExpression::initialise_bounds() {
+  int tlb=0;
+  int tub=0;
+
+  int lb = children[0].get_min()*weight[0];
+  int ub = children[0].get_max()*weight[0];
+  
+  if(lb < ub) {
+    tlb += lb;
+    tub += ub;
+  } else {
+    tlb += ub;
+    tub += lb;
+  }
+
+  for(unsigned int i=1; i<children.size; ++i) {
+    lb = children[i].get_min()*weight[i];
+    ub = children[i].get_max()*weight[i];
+  
+    if(lb < ub) {
+      tlb += lb;
+      tub += ub;
+    } else {
+      tlb += ub;
+      tub += lb;
+    }
+  }
+
+  if(tlb > lower_bound) lower_bound = tlb;
+  if(tub < upper_bound) upper_bound = tub;
+}
+
+void Mistral::BoolSumExpression::extract_variable(Solver *s) {
+  initialise_bounds();
+
+  Variable aux(lower_bound, upper_bound, DYN_VAR);
   _self = aux;
   
   _self.initialise(s, 1);
   _self = _self.get_var();
-  if(!weights.empty()) {
+  if(!weight.empty()) {
     children.add(_self);
-    weights.add(-1);
   }
+  //   weight.add(-1);
+  // }
 }
 
 void Mistral::BoolSumExpression::extract_predicate(Solver *s) { 
   //s->add(new PredicateBoolSum(children, self)); 
 
-  if(weights.empty()) 
+  if(weight.empty()) 
     s->add(new PredicateBoolSum(children, s->variables[id])); 
-  else
-    s->add(new PredicateWeightedSum(children, weights, 0, 0));
+  else {
+    s->add(Constraint(new PredicateWeightedBoolSum(children, weight)));
+  }
+    //s->add(new PredicateWeightedSum(children, weight, 0, 0));
 }
 
 const char* Mistral::BoolSumExpression::get_name() const {
@@ -4312,12 +4359,17 @@ Mistral::Variable Mistral::BoolSum(Vector< Variable >& args) {
   return exp;
 }
 
-Mistral::Variable Mistral::BoolSum(std::vector< Variable >& args, std::vector< int >& w, const int l, const int u) {
+Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const Vector< int >& w) {
+  Variable exp(new BoolSumExpression(args,w));
+  return exp;
+}
+
+Mistral::Variable Mistral::BoolSum(std::vector< Variable >& args, const std::vector< int >& w, const int l, const int u) {
   Variable exp(new BoolSumExpression(args,w,l,(u != -INFTY ? u : l)));
   return exp;
 }
 
-Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, Vector< int >& w, const int l, const int u) {
+Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const Vector< int >& w, const int l, const int u) {
   Variable exp(new BoolSumExpression(args,w,l,(u != -INFTY ? u : l)));
   return exp;
 }
@@ -5189,11 +5241,11 @@ void Mistral::IntersectionExpression::initialise_domain() {
   }
 
 
-  lb = 0; //elts_lb.size;
-  ub = elts_var.size; //lb+elts_var.size;
+  lower_bound = 0; //elts_lb.size;
+  upper_bound = elts_var.size; //lb+elts_var.size;
 
   // std::cout << "intersection of " << children[0] << " and " << children[1] << ": " 
-  // 	    << elts_lb << " <= this <= " << elts_var << " (car=[" << lb << "," << ub << "])" << std::endl; 
+  // 	    << elts_lb << " <= this <= " << elts_var << " (car=[" << lb << "," << upper_bound << "])" << std::endl; 
 }
 
 const char* Mistral::IntersectionExpression::get_name() const {
@@ -5349,8 +5401,8 @@ void Mistral::UnionExpression::initialise_domain() {
   }
 
 
-  lb = 0; //elts_lb.size;
-  ub = elts_var.size; //lb+elts_var.size;
+  lower_bound = 0; //elts_lb.size;
+  upper_bound = elts_var.size; //lb+elts_var.size;
 
   // std::cout << "union of " << children[0] << " and " << children[1] << ": " 
   // 	    << elts_lb << " <= this <= " << elts_var << " (car=[" << lb << "," << ub << "])" << std::endl; 
@@ -5504,8 +5556,8 @@ void Mistral::SymmetricDifferenceExpression::initialise_domain() {
   }
 
 
-  lb = 0; //elts_lb.size;
-  ub = elts_var.size; //lb+elts_var.size;
+  lower_bound = 0; //elts_lb.size;
+  upper_bound = elts_var.size; //lb+elts_var.size;
 
   // std::cout << "union of " << children[0] << " and " << children[1] << ": " 
   // 	    << elts_lb << " <= this <= " << elts_var << " (car=[" << lb << "," << ub << "])" << std::endl; 
@@ -5783,8 +5835,8 @@ void Mistral::SetDifferenceExpression::initialise_domain() {
 
   //std::cout << " -> "
     
-  lb = 0; //elts_lb.size;
-  ub = elts_var.size; //lb+elts_var.size;
+  lower_bound = 0; //elts_lb.size;
+  upper_bound = elts_var.size; //lb+elts_var.size;
 }
 
 const char* Mistral::SetDifferenceExpression::get_name() const {
@@ -6012,7 +6064,7 @@ Mistral::SetExpression::SetExpression(const int lelt, const int uelt,
 
   //std::cout << lb << " < " << (uelt-lelt+1) << std::endl;
 
-  if(lb < uelt-lelt+1) {
+  if(lower_bound < uelt-lelt+1) {
     elts_var.initialise(0, uelt-lelt+1);
     for(int elt=lelt; elt<=uelt; ++elt) {
       elts_var.add(elt);
@@ -6053,11 +6105,11 @@ Mistral::SetExpression::SetExpression(const Vector<int>& l, const Vector<int>& u
     if(x >= y) ++j;
   }
 
-  lb -= elts_lb.size;
-  ub -= elts_lb.size;
+  lower_bound -= elts_lb.size;
+  upper_bound -= elts_lb.size;
 
-  if(lb<0) lb = 0;
-  if(ub>(int)(elts_var.size)) ub = elts_var.size;
+  if(lower_bound<0) lower_bound = 0;
+  if(upper_bound>(int)(elts_var.size)) upper_bound = elts_var.size;
 
   // std::cout << "elts_lb: " << elts_lb << std::endl; 
   // std::cout << "elts_var: " << elts_var << std::endl; 
@@ -6096,7 +6148,7 @@ void Mistral::SetExpression::extract_predicate(Solver *s) {
   if(elts_var.size) {
     s->add(new PredicateBoolSum(scp, s->variables[id])); 
   } else {
-    if(lb) s->fail();
+    if(lower_bound) s->fail();
   }
 
 }
@@ -7219,8 +7271,56 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
   if(type == OPTIMIZATION) {
     if(sub_type == MINIMIZATION) {
       upper_bound = objective.get_min();
-      if(!solver->level) lower_bound = upper_bound;
+    
+
+      //std::cout << "LEVEL: " << solver->level << std::endl;
+      // search the deepest level 
+      int level, search_root = solver->search_root;
+      do {
+	level = solver->level;
+	if(level == search_root) {
+	  lower_bound = upper_bound;
+	  return OPT;
+	}
+	solver->restore(level-1);
+      } while(upper_bound <= objective.get_min());
+	
+      Decision deduction(objective, Decision::UPPERBOUND, upper_bound-1);
+
+
+#ifdef _DEBUG_SEARCH
+    if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=solver->decisions.size; ++k) std::cout << " ";
+      std::cout << "backtrack to lvl " << solver->level << " and deduce " 
+		<< deduction << " (upper bound)" << std::endl;
+    }
+#endif
+
+      deduction.make();
+      return UNKNOWN;
+
+      // upper_bound = objective.get_min();
+      // if(!solver->level) lower_bound = upper_bound;
     } else { //if(sub_type == MAXIMIZATION) {
+
+      // lower_bound = objective.get_max();
+
+      // // search the deepest level 
+      // int level, search_root = solver->search_root;
+      // do {
+      // 	level = solver->level;
+      // 	if(level == search_root) {
+      // 	  upper_bound = lower_bound;
+      // 	  return OPT;
+      // 	}
+      // 	solver->restore(level-1);
+      // } while(lower_bound >= objective.get_max());
+	
+      // Decision deduction(objective, Decision::LOWERBOUND, lower_bound+1);
+      // deduction.make();
+      // return UNKNOWN;
+
       lower_bound = objective.get_max();
       if(!solver->level) upper_bound = lower_bound;
     }

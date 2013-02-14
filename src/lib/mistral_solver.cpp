@@ -32,7 +32,8 @@
 #include <mistral_constraint.hpp>
 
 
-//#define _DEBUG_NOGOOD true
+//#define _OLD_ true
+//#define _DEBUG_NOGOOD true //(statistics.num_filterings == 491)
 //#define _DEBUG_SEARCH true
 
 //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738) || (statistics.num_filterings == 44368) || (statistics.num_filterings == 43659))
@@ -616,14 +617,16 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
   Event evt;
   Variable x;
 
-  
   for(unsigned int i=0; i<cons->scope.size; ++i) {
     x = cons->_scope[i];
-    
-    evt = (// cons->scope[i].domain_type != BOOL_VAR &&
-	   x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
-    
-    if(cons->is_triggered_on(i, EVENT_TYPE(evt))) trigger(cons, i, evt);
+
+    if(!x.is_void()) {
+
+      evt = (// cons->scope[i].domain_type != BOOL_VAR &&
+	     x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
+      
+      if(cons->is_triggered_on(i, EVENT_TYPE(evt))) trigger(cons, i, evt);
+    }
   }
 }
 
@@ -674,15 +677,15 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, co
   //int var = c.index();
   //GlobalConstraint *cons = (GlobalConstraint*)c.propagator;
 
-#ifdef _DEBUG_AC
- if(_DEBUG_AC) {
-  std::cout << "  triggers " << cons << " after a " 
-	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
-	    << " event on "
-	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
-	    << std::endl;
- }
-#endif
+// #ifdef _DEBUG_AC
+//  if(_DEBUG_AC) {
+//   std::cout << "  triggers " << cons << " after a " 
+// 	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
+// 	    << " event on "
+// 	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
+// 	    << std::endl;
+//  }
+// #endif
 
   if(cons != solver->taboo_constraint) {
     int priority = cons->priority, cons_id = cons->id;
@@ -880,18 +883,22 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
   infile.unget();
 
-  int aux;
+  int aux, parse_objective;
 
   bool should_continue = infile.good();
 
   while(should_continue) {
+
+    //    std::cout << "DEBUT DE LIGNE! ";
+
     weight.clear();
     scope.clear();
     new_clause.clear();
 
     bool all_pones = true;
     bool all_mones = true;
-
+    
+    parse_objective = 0;
     do {
       infile >> c;
 
@@ -899,14 +906,34 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
 
       if(should_continue) {
+
+	if(c == 'm') {
+
+	  //std::cout << " obj" ;
+
+	  infile >> word;
+
+	  if(word == "in:") {
+	    parse_objective = 1;
+	  } else if(word == "ax:") {
+	    parse_objective = 2;
+	  }
+	  
+	  infile.ignore( LARGENUMBER, ' ' );
+	  infile >> c;
+	}
+	 
 	if(c == '+' || c == '-') {
+
+	  //std::cout << " trm" ;
+
 	  infile >> aux;
 	  weight.add((c == '+' ? aux : -aux));
 
 	  all_pones &= (weight.back() ==  1);
 	  all_mones &= (weight.back() == -1);
 
-	  //std::cout << " " << weight.back() << " " << (weight.back() == 1) << " " << all_ones << std::endl;
+	  //std::cout << " " << weight.back() << std::endl;
 
 	  
 	  infile.ignore( LARGENUMBER, ' ' );
@@ -923,159 +950,157 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 	  --aux;
 	  scope.add(variables[aux]);
 	} else  {
+
+	  //std::cout << " end" ;
 	  
 	  infile.unget();
 	  
-	  infile >> word;
-	  infile >> aux;
-	  infile.ignore( LARGENUMBER, '\n' );
+	  if(!parse_objective) {
+
+	    //std::cout << " CON" ;
 
 
-	  // int lb = -INFTY;
-	  // int ub =  INFTY;
-
-	  int bounds[2] = {-INFTY, INFTY};
-	  
-	  if(word == ">=") {
-	    //std::cout << ">=" << std::endl;
-	    bounds[0] = aux;
-	  } else if(word == ">") {
-	    //std::cout << ">" << std::endl;
-	    bounds[0] = aux+1;
-	  } else if(word == "<=") {
-	    //std::cout << "<=" << std::endl;
-	    bounds[1] = aux;
-	  } else if(word == "<") {
-	    //std::cout << "<" << std::endl;
-	    bounds[1] = aux-1;
-	  } else if(word == "=") {
-	    //std::cout << "=" << std::endl;
-	    bounds[0] = bounds[1] = aux;
-	  } else {
-	    std::cout << "unknown connector: " << word << " exiting" << std::endl;
-	    exit(1);
-	  }
-
-	  // is it a clause?
-	  bool is_clause = false;
-	  int max_weight = 0;
-
-	  // compute the minimum
-	  int reachable[2] = {0,0}; // = 0, reachable[1] = 0;
-	  for(unsigned int i=0; i<weight.size; ++i) {
-	    if(weight[i] >= 0) reachable[1] += weight[i];
-	    else reachable[0] += weight[i];
-	    int abs_weight = std::abs(weight[i]);
-	    if(max_weight < abs_weight) max_weight = abs_weight;
-	    //mean_weight = ((mean_weight*(double)i) + (double)(weight[i])) / (double)(i+1);
-	  }
-	  
-	  // check that each variable can make it true
-	  if(bounds[1] == INFTY) {
-	    is_clause = true;
-	    for(unsigned int i=0; is_clause && i<weight.size; ++i) {
-	      if(weight[i] >= 0) {
-		is_clause = (reachable[0] + weight[i] >= bounds[0]);
-		lit = scope[i].id() * 2 + 1;
-		new_clause.add(lit);
-	      } else {
-		is_clause = (reachable[0] - weight[i] >= bounds[0]);
-		lit = scope[i].id() * 2;
-		new_clause.add(lit);
-	      }
-	    }
-	  } else if(bounds[0] == -INFTY) {
-	    is_clause = true;
-	    for(unsigned int i=0; is_clause && i<weight.size; ++i) {
-	      if(weight[i] >= 0) {
-		is_clause = (reachable[1] - weight[i] <= bounds[1]);
-		lit = scope[i].id() * 2;
-		new_clause.add(lit);
-	      } else {
-		is_clause = (reachable[1] + weight[i] <= bounds[1]);
-		lit = scope[i].id() * 2 + 1;
-		new_clause.add(lit);
-	      }
-	    }	  
-	  }
-
-	  
-	  if(is_clause) {
-
-	    //std::cout << "clause <" << new_clause ;
-	      
-	    clauses.add(new_clause);
-
-	    //std::cout << "> clause" << std::endl;
-
-	  } else {
-
-	    if(all_mones) {
-	      int aux = -bounds[0];
-	      bounds[0] = -bounds[1];
-	      bounds[1] = aux;
-	      all_pones = true;
-	    }
-
-	    if(all_pones) {
-
-	      //std::cout << "card <" ;
-
-	      add( BoolSum(scope, //weight,
-			   bounds[0], bounds[1]) );
+	    infile >> word;
+	    infile >> aux;
+	    infile.ignore( LARGENUMBER, '\n' );
 	    
-	      int real_max = std::min((int)scope.size, bounds[1]);
-	      int real_min = std::max(0, bounds[0]);
-	      int span = (real_max - real_min);
-
-	      double center = (double)(real_min + real_max) / 2;
-	      double skew = center/(double)(scope.size);
-
-	      double activity_increment = parameters.activity_increment / (scope.size * (1 << span));
-	      
-	      if(activity_increment > 0.0) {
-		int i=scope.size;
-		while(i--) {
-		  lit_activity[2*scope[i].id()] += (1-skew) * activity_increment;
-		  lit_activity[2*scope[i].id()+1] += skew * activity_increment;
-		  var_activity[scope[i].id()] += activity_increment;
+	    int bounds[2] = {-INFTY, INFTY};
+	  
+	    if(word == ">=") {
+	      bounds[0] = aux;
+	    } else if(word == ">") {
+	      bounds[0] = aux+1;
+	    } else if(word == "<=") {
+	      bounds[1] = aux;
+	    } else if(word == "<") {
+	      bounds[1] = aux-1;
+	    } else if(word == "=") {
+	      bounds[0] = bounds[1] = aux;
+	    } else {
+	      std::cout << "unknown connector: " << word << " exiting" << std::endl;
+	      exit(1);
+	    }
+	    
+	    // is it a clause?
+	    bool is_clause = false;
+	    int max_weight = 0;
+	    
+	    // compute the minimum
+	    int reachable[2] = {0,0}; // = 0, reachable[1] = 0;
+	    for(unsigned int i=0; i<weight.size; ++i) {
+	      if(weight[i] >= 0) reachable[1] += weight[i];
+	      else reachable[0] += weight[i];
+	      int abs_weight = std::abs(weight[i]);
+	      if(max_weight < abs_weight) max_weight = abs_weight;
+	      //mean_weight = ((mean_weight*(double)i) + (double)(weight[i])) / (double)(i+1);
+	    }
+	    
+	    // check that each variable can make it true
+	    if(bounds[1] == INFTY) {
+	      is_clause = true;
+	      for(unsigned int i=0; is_clause && i<weight.size; ++i) {
+		if(weight[i] >= 0) {
+		  is_clause = (reachable[0] + weight[i] >= bounds[0]);
+		  lit = scope[i].id() * 2 + 1;
+		  new_clause.add(lit);
+		} else {
+		  is_clause = (reachable[0] - weight[i] >= bounds[0]);
+		  lit = scope[i].id() * 2;
+		  new_clause.add(lit);
 		}
 	      }
-
-	      //std::cout << "> card" << std::endl;
+	    } else if(bounds[0] == -INFTY) {
+	      is_clause = true;
+	      for(unsigned int i=0; is_clause && i<weight.size; ++i) {
+		if(weight[i] >= 0) {
+		  is_clause = (reachable[1] - weight[i] <= bounds[1]);
+		  lit = scope[i].id() * 2;
+		  new_clause.add(lit);
+		} else {
+		  is_clause = (reachable[1] + weight[i] <= bounds[1]);
+		  lit = scope[i].id() * 2 + 1;
+		  new_clause.add(lit);
+		}
+	      }	  
+	    }
 	    
+	    
+	    if(is_clause) {
+	      clauses.add(new_clause);
 	    } else {
 
-	      int real_max = std::min(reachable[1], bounds[1]);
-	      int real_min = std::max(reachable[0], bounds[0]);
-	      double span = (real_max - real_min);
-
-	      double center = (double)(real_min + real_max) / 2;
-	      double skew = center/(double)(reachable[1] - reachable[0] + 1);
-
-	      int exp = (int)(scope.size * (span)/(double)(reachable[1] - reachable[0] + 1));
-
-	      double activity_increment = parameters.activity_increment / (1 << exp);
-	      double ac_i; // = activity_increment;
-
-	      if(activity_increment > 0.0) {
-		int i=scope.size;
-		while(i--) {
-		  ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)max_weight;
-		  lit_activity[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
-		  lit_activity[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
-		  var_activity[scope[i].id()] += ac_i;
-		}
+	      if(all_mones) {
+		int aux = -bounds[0];
+		bounds[0] = -bounds[1];
+		bounds[1] = aux;
+		all_pones = true;
 	      }
 
-	      //std::cout << "sum <" ;
+	      if(all_pones) {
 
-	      add( BoolSum(scope, weight, bounds[0], bounds[1]) );
+		add( BoolSum(scope, //weight,
+			     bounds[0], bounds[1]) );
+	    
+		int real_max = std::min((int)scope.size, bounds[1]);
+		int real_min = std::max(0, bounds[0]);
+		int span = (real_max - real_min);
 
-	      //std::cout << "> sum" << std::endl;
+		double center = (double)(real_min + real_max) / 2;
+		double skew = center/(double)(scope.size);
 
+		double activity_increment = parameters.activity_increment / (scope.size * (1 << span));
+	      
+		if(activity_increment > 0.0) {
+		  int i=scope.size;
+		  while(i--) {
+		    lit_activity[2*scope[i].id()] += (1-skew) * activity_increment;
+		    lit_activity[2*scope[i].id()+1] += skew * activity_increment;
+		    var_activity[scope[i].id()] += activity_increment;
+		  }
+		}
+	    
+	      } else {
+
+		int real_max = std::min(reachable[1], bounds[1]);
+		int real_min = std::max(reachable[0], bounds[0]);
+		double span = (real_max - real_min);
+
+		double center = (double)(real_min + real_max) / 2;
+		double skew = center/(double)(reachable[1] - reachable[0] + 1);
+
+		int exp = (int)(scope.size * (span)/(double)(reachable[1] - reachable[0] + 1));
+
+		double activity_increment = parameters.activity_increment / (1 << exp);
+		double ac_i; // = activity_increment;
+
+		if(activity_increment > 0.0) {
+		  int i=scope.size;
+		  while(i--) {
+		    ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)max_weight;
+		    lit_activity[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
+		    lit_activity[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
+		    var_activity[scope[i].id()] += ac_i;
+		  }
+		}
+
+		add( BoolSum(scope, weight, bounds[0], bounds[1]) );
+
+	      }
 	    }
+	  }  else {
+
+	    //std::cout << " OBJ" ;
+
+	    minimize(BoolSum(scope, weight));
+	    //objective = new Goal(Goal::MINIMIZATION,  );
+
+	    infile.ignore( LARGENUMBER, '\n' );
+	    //std::cout << "OBJECTIVE!" << std::endl;
+	    //exit(1);
+	    
 	  }
+
+	  //std::cout << " END LINE" << std::endl;
 	  
 	  break;
 	} 
@@ -1307,6 +1332,8 @@ void Mistral::Solver::add(Constraint c) {
   std::cout << "add " << c << std::endl;
 #endif
 
+  //std::cout << "ADD " << c << std::endl;
+
   if(c.id() < 0) {
 
     c.initialise(this);
@@ -1331,6 +1358,7 @@ void Mistral::Solver::add(Constraint c) {
 
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
 
+  
   c.trigger();
   //active_constraints.trigger(c);
 
@@ -1375,7 +1403,17 @@ Mistral::Outcome Mistral::Solver::solve() {
 }
 
 
-Mistral::Outcome Mistral::Solver::minimize(Variable X) {
+void Mistral::Solver::minimize(Variable X) {
+  X.initialise(this,1);
+  objective = new Goal(Goal::MINIMIZATION, X.get_var());
+}
+
+void Mistral::Solver::maximize(Variable X) {
+  X.initialise(this,1);
+  objective = new Goal(Goal::MAXIMIZATION, X.get_var());
+}
+
+Mistral::Outcome Mistral::Solver::search_minimize(Variable X) {
   BranchingHeuristic *heu = new GenericHeuristic <
     GenericDVO < 
       MinDomainOverWeight, 1,
@@ -1391,7 +1429,7 @@ Mistral::Outcome Mistral::Solver::minimize(Variable X) {
 }
 
 
-Mistral::Outcome Mistral::Solver::maximize(Variable X) {
+Mistral::Outcome Mistral::Solver::search_maximize(Variable X) {
   BranchingHeuristic *heu = new GenericHeuristic <
     GenericDVO < 
       MinDomainOverWeight, 1,
@@ -1621,6 +1659,14 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
 
     ++statistics.num_restarts;
 
+
+    // std::cout << "seq: [";
+    // for(int i=sequence.size; i<variables.size; ++i) {
+    //   std::cout << (sequence[i].get_value() ? " +" : " -") << sequence[i]; 
+    // }
+    // std::cout << "]\n";
+
+
     satisfiability = //(parameters.backjump ? 
       //conflict_directed_backjump() :
       chronological_dfs(root); //_exit_on_solution_); //);
@@ -1720,7 +1766,8 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   //decisions.clear();
   for(unsigned int i=seq.size; i;) {
     Variable x = seq[--i].get_var();
-    if(!x.is_ground() && !sequence.contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) sequence.add(x);
+    if(!sequence.contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) sequence.add(x);
+    if(x.is_ground()) sequence.remove(x);
   }
   num_search_variables = sequence.size;
 
@@ -2886,7 +2933,7 @@ bool Mistral::Solver::propagate()
 
 #ifdef _DEBUG_AC
   if(_DEBUG_AC) {
-  std::cout << "c start propagation" << std::endl;
+    std::cout << "c start propagation" << std::endl;
   }
 #endif
 
@@ -2900,8 +2947,12 @@ bool Mistral::Solver::propagate()
   ++statistics.num_filterings;  
 
   // TODO, we shouldn't have to do that
-  if(IS_OK(wiped_idx) && objective && objective->enforce())
+  if(IS_OK(wiped_idx) && objective && objective->enforce()) {
+    //std::cout << "HERE" << std::endl;
     wiped_idx = objective->objective.id();
+  }
+
+  //std::cout << std::endl;
   
   fix_point =  (active_variables.empty() && active_constraints.empty());
 
@@ -3211,12 +3262,31 @@ bool Mistral::Solver::propagate()
 
   
   if(IS_OK(wiped_idx)) {
+#ifdef _DEBUG_SEARCH
+   if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+      std::cout << "success!" << std::endl;
+    }
+#endif
+    culprit.clear();
     notify_success();
     return true;
   } else {
     ++statistics.num_failures;
 
+#ifdef _DEBUG_SEARCH
+   if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+      std::cout << "failure!" << std::endl;
+    }
+#endif
+
     //std::cout << "solver: notify failure" << std::endl;
+
+    if(parameters.backjump)
+      close_propagation();
 
     notify_failure();
     wiped_idx = CONSISTENT;
@@ -3725,21 +3795,21 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
 //Mistral::Decision 
 void Mistral::Solver::learn_nogood() {
 
-  unsigned int vidx;
+   unsigned int vidx;
 
-  // first, resolve the unresolved events, so that 'reason_for' and 'assignment_level' are up to date
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
-  while(!active_variables.empty()) {
-    var_evt = active_variables.pop_front();
-    vidx = var_evt.first;
-    if(ASSIGNED(var_evt.second) && sequence.contain(variables[vidx])) {
-      sequence.remove(variables[vidx]);
-      assignment_level[vidx] = level;
-      assignment_order[vidx] = assignment_rank;
-      ++assignment_rank;
-      reason_for[vidx] = var_evt.third; //->explain();
-    }
-  }
+  // // first, resolve the unresolved events, so that 'reason_for' and 'assignment_level' are up to date
+  // Triplet < int, Event, ConstraintImplementation* > var_evt;
+  // while(!active_variables.empty()) {
+  //   var_evt = active_variables.pop_front();
+  //   vidx = var_evt.first;
+  //   if(ASSIGNED(var_evt.second) && sequence.contain(variables[vidx])) {
+  //     sequence.remove(variables[vidx]);
+  //     assignment_level[vidx] = level;
+  //     assignment_order[vidx] = assignment_rank;
+  //     ++assignment_rank;
+  //     reason_for[vidx] = var_evt.third; //->explain();
+  //   }
+  // }
 
 
   int pathC = 0, index = sequence.size-1;
@@ -3755,49 +3825,56 @@ void Mistral::Solver::learn_nogood() {
   Explanation *current_explanation = culprit.propagator;
 
 
+  // Variable *scope = culprit.get_scope();
+  // int arity = culprit.arity();
+  // for(int i=0; i<arity; ++i) {
+  //   var_activity[scope[i].id()] += 10 * parameters.activity_increment;
+  // }
+
+
 #ifdef _DEBUG_NOGOOD
   if(_DEBUG_NOGOOD) {
     //int depth = 0;
     std::cout << "\nExplain failure (sequence = [\n" ;
     for(vidx = sequence.size; vidx<variables.size; ++vidx) {
-    int var_idx = sequence[vidx].id();
-    std::cout << std::setw(3) << assignment_order[var_idx] << " " << std::setw(3) << assignment_level[var_idx]<< " " << sequence[vidx] << " == " << sequence[vidx].get_value() << " <- " ;
-
-    Explanation *expl = reason_for[sequence[vidx].id()];
-    
-    if(!expl) {
-      if(assignment_level[var_idx])
-	std::cout << "decision" ;
-      else
-	std::cout << "deduction" ;
-    } else if(expl->is_clause()) {
-      std::cout << "l: ";
-      print_clause(std::cout, (Clause*)expl);
-    } else if(expl != base) {
-      std::cout << "c" << ((ConstraintImplementation*)(expl))->id << ": (";
+      int var_idx = sequence[vidx].id();
+      std::cout << std::setw(3) << assignment_order[var_idx] << " " << std::setw(3) << assignment_level[var_idx]<< " " << sequence[vidx] << " == " << sequence[vidx].get_value() << " <- " ;
       
-      Explanation::iterator stop;
-      Explanation::iterator lit = expl->get_reason_for(var_idx, assignment_level[var_idx], stop);
+      Explanation *expl = reason_for[sequence[vidx].id()];
+    
+      if(!expl) {
+	if(assignment_level[var_idx])
+	  std::cout << "decision" ;
+	else
+	  std::cout << "deduction" ;
+      } else if(expl->is_clause()) {
+	std::cout << "l: ";
+	print_clause(std::cout, (Clause*)expl);
+      } else if(expl != base) {
+	std::cout << "c" << ((ConstraintImplementation*)(expl))->id << ": (";
+	
+	Explanation::iterator stop;
+	Explanation::iterator lit = expl->get_reason_for(var_idx, assignment_level[var_idx], stop);
   
-      print_literal(std::cout, *lit);
-      ++lit;
-
-      while(lit < stop) {
-	std::cout << " v ";
 	print_literal(std::cout, *lit);
 	++lit;
+	
+	while(lit < stop) {
+	  std::cout << " v ";
+	  print_literal(std::cout, *lit);
+	  ++lit;
+	}
+	std::cout << ")";
+	
+      } else {
+	std::cout << "b: ";
+	print_clause(std::cout, base->reason_for[var_idx]);
       }
-      std::cout << ")";
-
-    } else {
-      std::cout << "b: ";
-      print_clause(std::cout, base->reason_for[var_idx]);
+      
+      std::cout<< std::endl;
     }
-
-    std::cout<< std::endl;
-  }
-  std::cout << " ])\n";
-  //<< sequence << ")\n";
+    std::cout << " ])\n";
+    //<< sequence << ")\n";
   }
 #endif
 
@@ -3815,47 +3892,49 @@ void Mistral::Solver::learn_nogood() {
     if(_DEBUG_NOGOOD) {
      std::cout << " reason: ";
 
+     std::cout.flush();
+
      if(!current_explanation) {
-      if(assignment_level[a])
-	std::cout << "decision" ;
-      else
-	std::cout << "deduction" ;
-    } else if(current_explanation->is_clause()) {
-      std::cout << "l: ";
-      print_clause(std::cout, (Clause*)current_explanation);
-    } else if(current_explanation != base) {
-      std::cout << "c" << ((ConstraintImplementation*)(current_explanation))->id << ": (";
+       if(assignment_level[a])
+	 std::cout << "decision" ;
+       else
+	 std::cout << "deduction" ;
+     } else if(current_explanation->is_clause()) {
+       std::cout << "l: ";
+       print_clause(std::cout, (Clause*)current_explanation);
+     } else if(current_explanation != base) {
+       std::cout << "c" << ((ConstraintImplementation*)(current_explanation))->id << ": (";
       
-      // std::cout << "\nhere\n";
+       // std::cout << "\nhere\n";
 
-      // std::cout << current_explanation << std::endl;
+       // std::cout << current_explanation << std::endl;
 
-      Explanation::iterator stop;
-      Explanation::iterator lit = current_explanation->get_reason_for(a, ((a != NULL_ATOM) ? assignment_level[a] : level), stop);
+       Explanation::iterator stop;
+       Explanation::iterator lit = current_explanation->get_reason_for(a, ((a != NULL_ATOM) ? assignment_level[a] : level), stop);
 
-      //      std::cout << "\nthere\n";
+       //      std::cout << "\nthere\n";
 
-
-      std::cout.flush();
-  
-      print_literal(std::cout, *lit);
-      ++lit;
-
-      while(lit < stop) {
-	std::cout << " v ";
-	print_literal(std::cout, *lit);
-	++lit;
-      }
-      std::cout << ")";
-
+       
+       std::cout.flush();
+       
+       print_literal(std::cout, *lit);
+       ++lit;
+       
+       while(lit < stop) {
+	 std::cout << " v ";
+	 print_literal(std::cout, *lit);
+	 ++lit;
+       }
+       std::cout << ")";
+       
     } else {
-      
-      std::cout << "b: " ;
-      if(a == NULL_ATOM)
-	print_clause(std::cout, base->conflict);
-      else
-	print_clause(std::cout, base->reason_for[a]);
-    }
+       
+       std::cout << "b: " ;
+       if(a == NULL_ATOM)
+	 print_clause(std::cout, base->conflict);
+       else
+	 print_clause(std::cout, base->reason_for[a]);
+     }
 
     std::cout<< std::endl;
 
@@ -4031,41 +4110,44 @@ void Mistral::Solver::learn_nogood() {
 
 
 
-
+  
   if( learnt_clause.size != 1 ) {
     base->learn(learnt_clause, (parameters.init_activity ? parameters.activity_increment : 0.0));
     //add_clause( learnt, learnt_clause, stats.learnt_avg_size );
     //reason[UNSIGNED(p)] = base->learnt.back();
-
+    
     // EXPL
     //base->reason_for[UNSIGNED(p)] = base->learnt.back();
     
     //base->reason_for[UNSIGNED(p)] = base->learnt.back();
     //reason_for[UNSIGNED(p)] = base;
     //taboo_constraint = base;
-
+    
     taboo_constraint = (ConstraintImplementation*)(base->learnt.back());
     //reason_for[UNSIGNED(p)].store_reason_for_change(VALUE_EVENT, base->learnt.back());
+  } else {
+    taboo_constraint = NULL;
   }
   visited.clear();
 
-
+  
   //backjump_decision = decision(variables[UNSIGNED(p)], Decision::REMOVAL, SIGN(p));
-
+  
 #ifdef _DEBUG_NOGOOD
-	if(_DEBUG_NOGOOD) {
-  //for(int i=0; i<level; ++i) std::cout << " "; 
-  std::cout << "backtrackLevel = " << backtrack_level << "/" << (decisions.size) << std::endl;
-	}
+  if(_DEBUG_NOGOOD) {
+    //for(int i=0; i<level; ++i) std::cout << " "; 
+    std::cout << "backtrackLevel = " << backtrack_level << "/" << (decisions.size) << std::endl;
+  }
 #endif
-
-//   while(level>backtrack_level) {
-//     restore();
-//     decisions.pop();
-//   }
-
+  
+  //   while(level>backtrack_level) {
+  //     restore();
+  //     decisions.pop();
+  //   }
+  
   //return decision;
-
+  
+  //exit(1);
 }
 
 void Mistral::Solver::forget() {
@@ -4073,12 +4155,43 @@ void Mistral::Solver::forget() {
 }
 
 
+void Mistral::Solver::close_propagation() {
+  unsigned int vidx;
+
+  // first, resolve the unresolved events, so that 'reason_for' and 'assignment_level' are up to date
+  Triplet < int, Event, ConstraintImplementation* > var_evt;
+  while(!active_variables.empty()) {
+    var_evt = active_variables.pop_front();
+    vidx = var_evt.first;
+    if(ASSIGNED(var_evt.second) && sequence.contain(variables[vidx])) {
+      sequence.remove(variables[vidx]);
+      assignment_level[vidx] = level;
+      assignment_order[vidx] = assignment_rank;
+      ++assignment_rank;
+      reason_for[vidx] = var_evt.third; //->explain();
+    }
+  }
+}
+
+
 Mistral::Outcome Mistral::Solver::branch_right() {
   //std::cout << "BR" << std::endl;
 
   int status = UNKNOWN;
+
+
   if( level == search_root ) status = exhausted(); //objective);
+
+#ifdef _OLD_
+
+#else
+  else if( limits_expired() ) {
+    status = LIMITOUT;
+  }
+#endif
   else {
+
+
 
     Mistral::Decision deduction;
     //backtrack_level = level-1;
@@ -4094,7 +4207,17 @@ Mistral::Outcome Mistral::Solver::branch_right() {
     // } else {
     
     
-    if(parameters.backjump) {
+    if(parameters.backjump && !culprit.empty()) {
+
+#ifdef _OLD_
+
+#else
+
+      //std::cout << "LEARN " << culprit.empty() << std::endl;
+      //if( parameters.backjump ) 
+      learn_nogood();
+#endif
+
       //decisions.size += (backtrack_level-level);
       Literal p = learnt_clause[0];
       deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NOT(SIGN(p)));
@@ -4409,6 +4532,20 @@ Mistral::Outcome Mistral::Solver::exhausted() {
 
  bool Mistral::Solver::limits_expired() {
   
+#ifdef _DEBUG_SEARCH
+  if(_DEBUG_SEARCH) {
+    if(parameters.limit && 
+	  ((parameters.time_limit > 0.0 && (get_run_time() - statistics.start_time) > parameters.time_limit) ||
+	   (parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit)) ||
+	   (parameters.fail_limit > 0 && (statistics.num_failures > parameters.fail_limit)) ||
+	   (parameters.restart_limit > 0 && (statistics.num_failures > parameters.restart_limit)) ||
+	   (parameters.propagation_limit > 0 && (statistics.num_propagations > parameters.propagation_limit)) // ||
+	   // (parameters.backtrack_limit > 0 && (statistics.num_backtracks > parameters.backtrack_limit))
+	   ))
+      std::cout << "c LIMIT REACHED, RESTART!" << std::endl; 
+  }
+#endif
+
   return (parameters.limit && 
 	  ((parameters.time_limit > 0.0 && (get_run_time() - statistics.start_time) > parameters.time_limit) ||
 	   (parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit)) ||
@@ -4484,11 +4621,14 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
       else branch_left();
 
     } else {
+#ifdef _OLD_
       if( parameters.backjump ) learn_nogood();
       if( limits_expired() ) {
-	status = LIMITOUT;
+      	status = LIMITOUT;
       } else status = branch_right();
-
+#else
+      status = branch_right();
+#endif	
 
       // if( parameters.backjump ) learn_nogood();
       // //if( decisions.empty() ) status = exhausted(); //objective);

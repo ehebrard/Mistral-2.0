@@ -2076,7 +2076,7 @@ namespace Mistral {
     inline void set_value(const int val) {_data_ = (_data_&3)|(val<<2); }
     
     Decision() {
-      init_data(ASSIGNMENT,NOVAL);
+      init_data(ASSIGNMENT,INFTY);
     }
 
     Decision(Variable x, const int t, const int v) {
@@ -2096,6 +2096,8 @@ namespace Mistral {
 
     virtual ~Decision() {
     }
+
+    inline bool is_void() { return value()==INFTY; }
 
     inline void invert() { _data_^=1; }
     
@@ -2774,17 +2776,19 @@ namespace Mistral {
 
   public:
 
-    int lb;
-    int ub;
-    Vector< int > weights;
+    int lower_bound;
+    int upper_bound;
+    Vector< int > weight;
 
-    BoolSumExpression() : Expression() {lb=0; ub=0;}
+    BoolSumExpression() : Expression() {lower_bound=0; upper_bound=0;}
     BoolSumExpression(const int l, const int u);
     BoolSumExpression(Vector< Variable >& args, const int l, const int u);
     BoolSumExpression(std::vector< Variable >& args, const int l, const int u);
+    BoolSumExpression(Vector< Variable >& args, const Vector< int >& w);
     BoolSumExpression(Vector< Variable >& args, const Vector< int >& w, const int l, const int u);
     BoolSumExpression(std::vector< Variable >& args, const std::vector< int >& w, const int l, const int u);
     virtual ~BoolSumExpression();
+    void initialise_bounds();
 
     virtual void extract_constraint(Solver*);
     virtual void extract_variable(Solver*);
@@ -2794,12 +2798,13 @@ namespace Mistral {
   };
 
   Variable BoolSum(Vector< Variable >& args);
+  Variable BoolSum(Vector< Variable >& args, const Vector< int >& w);
   Variable BoolSum(Vector< Variable >& args, const int l, const int u=-INFTY);
   Variable BoolSum(std::vector< Variable >& args, const int l, const int u=-INFTY);
 
   //Variable BoolSum(Vector< Variable >& args, Vector< int >& w);
-  Variable BoolSum(Vector< Variable >& args, Vector< int >& w, const int l, const int u=-INFTY);
-  Variable BoolSum(std::vector< Variable >& args, std::vector< int >& w, const int l, const int u=-INFTY);
+  Variable BoolSum(Vector< Variable >& args, const Vector< int >& w, const int l, const int u=-INFTY);
+  Variable BoolSum(std::vector< Variable >& args, const std::vector< int >& w, const int l, const int u=-INFTY);
 
 
 

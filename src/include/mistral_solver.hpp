@@ -548,6 +548,10 @@ namespace Mistral {
     //void add(ConstraintW x); 
     //void add(BranchingHeuristic* h);
 
+
+    void minimize(Variable X);
+    void maximize(Variable X);
+
     void add(SolutionListener* l);
     void add(RestartListener* l);
     void add(SuccessListener* l);
@@ -680,8 +684,8 @@ namespace Mistral {
       Black box search.
     */
     Outcome solve();
-    Outcome minimize(Variable X);
-    Outcome maximize(Variable X);
+    Outcome search_minimize(Variable X);
+    Outcome search_maximize(Variable X);
 
     ///
     bool limits_expired();
@@ -746,6 +750,7 @@ namespace Mistral {
     void initialise_random_seed(const int seed);
     void set_time_limit(const double limit);
     void set_learning_on();
+    void close_propagation();
 
 
     /*!@name Printing*/

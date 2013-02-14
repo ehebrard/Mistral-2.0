@@ -35,14 +35,15 @@ const char* int_man[nia] = {
 			      
 int int_param[nia];
 
-const int nsa = 6;
+const int nsa = 7;
 const char* str_ident[nsa] = {
   "-factor",
   "-decay",
   "-forget",
   "-policy",
   "-normalize",
-  "-algo"
+  "-algo",
+  "-display"
 };
 const char* str_man[nsa] = {
   "restart factor",
@@ -50,7 +51,8 @@ const char* str_man[nsa] = {
   "forgetfulness ratio",
   "restart policy {luby, geom}",
   "activity is normalized before search",
-  "method: pbo / cp"
+  "method: pbo / cp",
+  "whether the model should be displayed"
 };
 const char* str_param[nsa];
 
@@ -106,18 +108,105 @@ int main(int argc, char **argv)
       params.activity_increment = 0.012;
 
       int method = strcmp(str_param[5],"cp");
+      bool display_model = ( strcmp(str_param[6],"yes") ? false : true );
      
       Outcome result = UNKNOWN;
 
+
+      usrand(params.seed);
+
       Solver solver;
+
+      
       solver.parameters.copy(params);
       solver.parse_pbo(argv[1]);
       solver.parameters.verbosity = 2;
 
+      solver.set_time_limit(params.time_limit);
 
 
-       
+#ifdef _MONITOR
       Variable *X = solver.variables.stack_;
+
+      solver.monitor_list << "1*" ;
+      solver.monitor_list << X[82];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[83];
+      solver.monitor_list << "+ 1*"; 
+      solver.monitor_list << X[84];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[85];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[86];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[87];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[88];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[89];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[90];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[91];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[92];
+      solver.monitor_list << " + 1*"; 
+      solver.monitor_list << X[93];
+      solver.monitor_list << " + 2*"; 
+      solver.monitor_list << X[94];
+      solver.monitor_list << " + 3*"; 
+      solver.monitor_list << X[95];
+      solver.monitor_list << " + 5*"; 
+      solver.monitor_list << X[96];
+      solver.monitor_list << " + 9*"; 
+      solver.monitor_list << X[97];
+      solver.monitor_list << " + 17*"; 
+      solver.monitor_list << X[98];
+      solver.monitor_list << " + 33*"; 
+      solver.monitor_list << X[99];
+      solver.monitor_list << " + 65*"; 
+      solver.monitor_list << X[100];
+      solver.monitor_list << " + 129*"; 
+      solver.monitor_list << X[101];
+      solver.monitor_list << " + 257*"; 
+      solver.monitor_list << X[102];
+      solver.monitor_list << " + 513*"; 
+      solver.monitor_list << X[103];
+      solver.monitor_list << " + 1025*"; 
+      solver.monitor_list << X[104];
+      solver.monitor_list << " + 2049*"; 
+      solver.monitor_list << X[105];
+      solver.monitor_list << " + 4097*"; 
+      solver.monitor_list << X[106];
+      solver.monitor_list << " + 8193*"; 
+      solver.monitor_list << X[107];
+      solver.monitor_list << " + 16385*"; 
+      solver.monitor_list << X[108];
+      solver.monitor_list << " + 32769*"; 
+      solver.monitor_list << X[109];
+      solver.monitor_list << " + 65537*"; 
+      solver.monitor_list << X[110];
+      solver.monitor_list << " + 131073*"; 
+      solver.monitor_list << X[111];
+      solver.monitor_list << " + 262145*"; 
+      solver.monitor_list << X[112];
+      solver.monitor_list << " = ";
+      solver.monitor_list << X[113];
+      solver.monitor_list << "\n";
+
+      // solver.monitor_list << " b60 = " ;
+      // solver.monitor_list << X[60] ;
+      // solver.monitor_list << "\n" ;
+  //     solver.monitor_list << X[201] ;
+  //     solver.monitor_list << " + " ;
+  // solver.monitor_list << X[225] ;
+  //     solver.monitor_list << " + " ;
+  // solver.monitor_list << X[265] ;
+  //     solver.monitor_list << " + " ;
+  // solver.monitor_list << X[313] ;
+  //     solver.monitor_list << " - 4*" ;
+  // solver.monitor_list << X[4] ;
+  //     solver.monitor_list << "\n" ;
 
       //solver.add(X[3] == 1);
       // solver.add(X[20] == 1);
@@ -132,6 +221,7 @@ int main(int argc, char **argv)
       // solver.add(X[140] == 1);
       // solver.add(X[155] == 1);
       // solver.add(X[160] == 1);
+#endif
 
 
       solver.consolidate();
@@ -139,9 +229,10 @@ int main(int argc, char **argv)
 
 
 
-
-      std::cout << solver << std::endl;
+      if(display_model)
+	std::cout << solver << std::endl;
       
+
       if(method) {
 
 	//solver.parameters.backjump = 1;
@@ -149,7 +240,7 @@ int main(int argc, char **argv)
 	result = solver.depth_first_search(solver.variables, 
 					   //new VSIDS(&solver),
 					   new GenericHeuristic<
-					   GenericDVO< MaxWeight, 1, LiteralActivityManager >, MinValue >(&solver),
+					   GenericDVO< MaxWeight, 2, LiteralActivityManager >, MinValue >(&solver),
 					   new Geometric(params.restart_base,params.restart_factor)
 					   );
 
@@ -165,7 +256,11 @@ int main(int argc, char **argv)
 
       if(result == SAT) {
 	Solution sol(solver.variables);
-	cout << solver.statistics << endl << sol << endl;
+	cout << solver.statistics  << " c  " << sol << endl;
+
+	// for(int i=0; i<solver.variables.size; ++i) {
+	//   cout << solver.variables[i] << " = " << solver.variables[i].get_solution_int_value() << endl;
+	// }
       }
     }
   return 0;

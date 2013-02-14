@@ -102,6 +102,7 @@ namespace Mistral {
   // };
 
 
+
   //#define _DEBUG_BUILD true
   //#define _DEBUG_BACKTRACK true
   //#define _DEBUG_RESTORE true
@@ -117,7 +118,7 @@ namespace Mistral {
   //#define _DEBUG_ADD (id == 48505)
   //#define _DEBUG_DIV true
   //#define _DEBUG_WEIGHTEDSUM (id == 0)
-  //#define _DEBUG_WEIGHTEDBOOLSUM (id == 0)
+  //#define _DEBUG_WEIGHTEDBOOLSUM (id == 4)
   //#define _DEBUG_ELEMENT true
   //#define _DEBUG_ELEMENT ((id==0))
   //#define _DEBUG_CLIQUENOTEQUAL true
@@ -129,7 +130,9 @@ namespace Mistral {
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
   //#define _DEBUG_SEARCH true
-  //#define _DEBUG_NOGOOD ((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738))
+  //#define _DEBUG_NOGOOD true
+  //(statistics.num_filterings > 640)
+  //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738))
   //#define _DEBUG_UNITPROP true
   //#define _DEBUG_WATCH true
   //#define _DEBUG_CHECKER (cur_iteration > 39950) 
@@ -142,7 +145,7 @@ namespace Mistral {
   //#define _DEBUG_DIV true  
   //#define _DEBUG_OFFSET ((id==1309))
   //#define _DEBUG_AMSC  ((id==2912))
-  //#define _DEBUG_AC ((statistics.num_filterings >= 102454))
+  //#define _DEBUG_AC ((statistics.num_filterings == 38666))
 
   
 #define NORESTART 0

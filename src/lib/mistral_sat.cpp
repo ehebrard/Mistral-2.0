@@ -416,7 +416,8 @@ void Mistral::ConstraintClauseBase::initialise() {
   //solver->base = this;
 
   for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_VALUE_, scope[i]);
+    if(scope[i].is_bool())
+      trigger_on(_VALUE_, scope[i]);
   }
   //set_idempotent(true);
 

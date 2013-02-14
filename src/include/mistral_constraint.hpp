@@ -4078,6 +4078,72 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
+
+  /**********************************************
+   * WeightedBoolSum Predicate
+   **********************************************/
+  //  lb <= a1 * b1 + ... + an * bn <= ub
+  /// Constraint on the value of the sum of a set of variables.
+  class PredicateWeightedBoolSum : public GlobalConstraint {
+ 
+  public:
+    /**@name Parameters*/
+    //@{
+
+    // coefficients should be in decreasing order
+    Vector< int > weight;
+ 
+
+    // utils for the propagation
+    BoolDomain *domains;
+    ReversibleNum<int> bound_[2];
+    //ReversibleNum<int> max_;
+    // points to the unassigned variable with maximum coefficient (in absolute value)
+    ReversibleNum<int> index_;
+    //ReversibleNum<int> max_index;
+
+    // used to store the explanation when "get_reason_for()" is called
+    Vector<Literal> explanation;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateWeightedBoolSum() : GlobalConstraint() { priority = 1; }
+
+    PredicateWeightedBoolSum(Vector< Variable >& scp);
+    PredicateWeightedBoolSum(Vector< Variable >& scp,
+				      Vector< int >& coefs);
+    PredicateWeightedBoolSum(std::vector< Variable >& scp,
+				      std::vector< int >& coefs);
+    //PredicateWeightedBoolSum(Vector< Variable >& scp, const int l, const int u);
+    //PredicateWeightedBoolSum(std::vector< Variable >& scp, const int l, const int u);
+    virtual Constraint clone() { return Constraint(new PredicateWeightedBoolSum(scope)); }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    //virtual bool absorb_negation(const int var) { return true; }
+    virtual ~PredicateWeightedBoolSum();
+    //@}
+
+
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+  
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "wbsum[]"; }
+    //@}
+  };
+
+
   /**********************************************
    * BoolSum  Predicate
    **********************************************/

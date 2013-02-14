@@ -1879,6 +1879,7 @@ int main(int argc, char *argv[])
   // //tests.push_back(new ConstraintArrayTest());
   // tests.push_back(new RandomIntervalTest());
 
+
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
@@ -4808,7 +4809,7 @@ void SatTest::run() {
 			    new Geometric()
 			    );
   
-  if(solver.statistics.num_backtracks != 16550) {
+  if(solver.statistics.num_backtracks != 21391) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (solver.statistics.num_backtracks) << ")" << endl;
     //exit(1);

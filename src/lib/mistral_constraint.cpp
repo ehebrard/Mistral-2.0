@@ -8585,6 +8585,7 @@ int Mistral::ConstraintBoolSumEqual::check( const int* s ) const
 // }
 
 
+
 Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
 
   // std::cout << "explain \n";
@@ -10414,11 +10415,11 @@ std::ostream& Mistral::ConstraintWeightedBoolSumInterval::display(std::ostream& 
 
 
 
-//#define _DEBUG_WEIGHTEDBOOLSUM true
+//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 1)
 
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp, 
-									      const int L, const int U)
+												    const int L, const int U)
   : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
   priority = 1;
   for(unsigned int i=0; i<scope.size; ++i) {
@@ -10427,21 +10428,21 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeig
 }
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp, 
-									      Vector< int >& wgt,
-									      const int L, const int U)
+												    Vector< int >& wgt,
+												    const int L, const int U)
   : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
   priority = 1;
-  for(unsigned int i=0; i<scope.size; ++i) {
+  for(unsigned int i=0; i<wgt.size; ++i) {
     weight.add(wgt[i]);
   }
 }
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeightedBoolSumInterval(std::vector< Variable >& scp, 
-									      std::vector< int >& wgt,
-									      const int L, const int U)
+												    std::vector< int >& wgt,
+												    const int L, const int U)
   : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
   priority = 1;
-  for(unsigned int i=0; i<scope.size; ++i) {
+  for(unsigned int i=0; i<wgt.size(); ++i) {
     weight.add(wgt[i]);
   }
 }
@@ -10462,21 +10463,19 @@ int increasing_weight(const void *x, const void *y) {
 
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
   ConstraintImplementation::initialise();
-
-  //std::cout << scope << std::endl << weight << "\nSORT =>\n";
   
 
-  int ordering[scope.size];
-  for(unsigned int i=0; i<scope.size; ++i) {
+  int ordering[weight.size];
+  for(unsigned int i=0; i<weight.size; ++i) {
     ordering[i] = i;
   }
 
   sort_array = weight.stack_;
-  qsort(ordering, scope.size, sizeof(int), increasing_weight);
+  qsort(ordering, weight.size, sizeof(int), increasing_weight);
 
-  Vector<Variable> X;//(scope.size);
-  Vector<int> w;//(scope.size);
-  for(unsigned int i=0; i<scope.size; ++i) {
+  Vector<Variable> X;//(weight.size);
+  Vector<int> w;//(weight.size);
+  for(unsigned int i=0; i<weight.size; ++i) {
      X.add(scope[ordering[i]]);
      w.add(weight[ordering[i]]);
   }
@@ -10487,7 +10486,7 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
 
   int _min_ = 0;
   int _max_ = 0;
-  for(unsigned int i=0; i<scope.size; ++i) {
+  for(unsigned int i=0; i<weight.size; ++i) {
     scope[i] = X[i];
     weight[i] = w[i];
 
@@ -10525,15 +10524,15 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
   //std::cout << scope << std::endl << weight << "\n";
 
   //min_index.initialise(get_solver(), 0);
-  index_.initialise(get_solver(), scope.size-1);
+  index_.initialise(get_solver(), weight.size-1);
   bound_[0].initialise(get_solver(), _min_);
   bound_[1].initialise(get_solver(), _max_);
 
   GlobalConstraint::initialise();
 
 
-  domains = new BoolDomain[scope.size];
-  for(unsigned int i=0; i<scope.size; ++i) {
+  domains = new BoolDomain[weight.size];
+  for(unsigned int i=0; i<weight.size; ++i) {
     Variable var = scope[i].get_var();
     domains[i] = var.bool_domain;
   }
@@ -10541,7 +10540,7 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
 }
 
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::mark_domain() {
-  for(int i=scope.size; i;)
+  for(int i=weight.size; i;)
     get_solver()->forbid(scope[--i].id(), LIST_VAR|BITSET_VAR|RANGE_VAR);
 }
 
@@ -10563,31 +10562,59 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWei
 }
 
 
-
+//#define _DEBUG_REASONIWBS true
 
 
 Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
   explanation.clear();
-  int i=scope.size, idx;
+  int i, idx;
   int *rank = get_solver()->assignment_order.stack_;
   int a_rank = INFTY-1;
-  
+  Explanation **reason = get_solver()->reason_for.stack_;
+
+
+#ifdef _DEBUG_REASONIWBS
+  std::cout << "compute reason for " << a << std::endl;
+#endif
+
+
   // direction is 1 iff the constraint pushed toward ub and 0 otherwise
   bool direction = 1; 
 
   if(a != NULL_ATOM) {
     a_rank = rank[a];
-    direction = (get_solver()->variables[a].get_value() == weight[i]>0);
+    for(i=active.size; i<weight.size; ++i) {
+      if(active[i] == a) {
+	i = active[i];
+	direction = (GET_VAL(domains[i]) == weight[i]>0);
+      }
+    }
   } else {
     direction = (bound_[1] < lower_bound);
   }
 
+// #ifdef _DEBUG_REASONIWBS
+//   if(direction) {
+//     std::cout << " -> because otherwise the maximum would be too low" << a << std::endl;
+//   } else {
+//     std::cout << " -> because otherwise the maximum would be too low" << a << std::endl;
+//   }
+
+// #endif
+
+
   // finds all the assignment that decreased the maximum reachable value
-  while(i--) {
+      i = weight.size;
+      while(i--) {
     idx = scope[i].id();
     if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
       if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
+
+	// if(reason[idx] == this) {
+	//   std::cout << "!!!!" << std::endl;
+	// }
+
 	explanation.add(NOT(literal(scope[i])));
       }
     }
@@ -10608,10 +10635,10 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 
 
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-  if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+  if(_DEBUG_IWEIGHTEDBOOLSUM) {
     std::cout << std::endl << "propagate " << lower_bound << " <= " ;
-    for(i=0; i<scope.size; ++i) {
+    for(i=0; i<weight.size; ++i) {
       std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
     }
     std::cout << " <= " << upper_bound << std::endl << changes << std::endl;
@@ -10619,8 +10646,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 #endif
 
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+    if(_DEBUG_IWEIGHTEDBOOLSUM) {
       std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
     }
 #endif
@@ -10632,8 +10659,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     w = weight[i]<0;
     
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+    if(_DEBUG_IWEIGHTEDBOOLSUM) {
       std::cout << "\nprocessing events: " << event2str(event_type[i]) << " on " 
 		<< scope[i] << " in " << scope[i].get_domain() << std::endl;
     }
@@ -10646,38 +10673,20 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     }    
 
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+    if(_DEBUG_IWEIGHTEDBOOLSUM) {
       std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
     }
 #endif
 
-
-    // if(LB_CHANGED(event_type[i])) {
-    //   if(weight[i]<0) {
-    // 	// lose the possibility of a negative weight -> increase min
-    // 	bound_[0]-=weight[i];
-    //    } else {
-    // 	// lose the possibility of a positive weight -> decrease max
-    // 	bound_[1]-=weight[i];
-    //   }
-    // } else {
-    //   if(weight[i]<0) {
-    // 	// lose the possibility of not chosing a negative weight -> decrease max
-    // 	 bound_[1]+=weight[i];
-    //   } else {
-    // 	// lose the possibility of not chosing a positive weight -> increase min
-    // 	bound_[0]+=weight[i];
-    //   }	
-    // }
   }
 
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+  if(_DEBUG_IWEIGHTEDBOOLSUM) {
     int real_min = 0;
     int real_max = 0;
-    for(i=0; i<scope.size; ++i) {
+    for(i=0; i<weight.size; ++i) {
       if(scope[i].is_ground()) {
 	if(scope[i].get_value()) {
 	  real_min += weight[i];
@@ -10691,18 +10700,19 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     }
 
     if(real_min != bound_[0]) {
-      std::cout << "(1) mistmatch on lower bound: real = " << real_min << ", incremental = " << bound_[0] << std::endl;
+      std::cout << "(1) mismatch on lower bound: real = " << real_min << ", incremental = " << bound_[0] << std::endl;
       exit(1);
     }
 
     if(real_max != bound_[1]) {
-      std::cout << "(1) mistmatch on upper bound: real = " << real_max << ", incremental = " << bound_[1] << std::endl;
+      std::cout << "(1) mismatch on upper bound: real = " << real_max << ", incremental = " << bound_[1] << std::endl;
       exit(1);
     }
 
-    if(_DEBUG_WEIGHTEDBOOLSUM) {
+    if(_DEBUG_IWEIGHTEDBOOLSUM) {
       std::cout << "\ntarget bounds: [" << lower_bound << ".." << upper_bound << "]" << std::endl;
     }
+  }
 #endif
 
   
@@ -10734,8 +10744,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
    
       if(i>=0) {
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-      if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+      if(_DEBUG_IWEIGHTEDBOOLSUM) {
 	std::cout << "\nnext index: "<< i << ": " << scope[i] << " in " << scope[i].get_domain() 
 		  << " * " << weight[i] << std::endl;
       }
@@ -10746,8 +10756,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 	  // if set to 1, this variable decreases the max by -weight[i]
 	  if(bound_[1]+weight[i] < lower_bound) {
 	    
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-	    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+	    if(_DEBUG_IWEIGHTEDBOOLSUM) {
 	      std::cout << scope[i] << " cannot be set to 1 because " 
 			<< bound_[1] << " + " << weight[i] << " < " 
 			<< lower_bound << std::endl;
@@ -10760,8 +10770,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 	  // if set to 0, this variable increases the min by -weight[i]
 	  else if(bound_[0]-weight[i] > upper_bound) {
 	    
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-	    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+	    if(_DEBUG_IWEIGHTEDBOOLSUM) {
 	      std::cout << scope[i] << " cannot be set to 0 because " 
 			<< bound_[1] << " - " << weight[i] << " > " 
 			<< upper_bound << std::endl;
@@ -10776,8 +10786,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 	  // if set to 1, this variable increases the min by weight[i]
 	  if(bound_[0]+weight[i] > upper_bound) {
 	    
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-	    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+	    if(_DEBUG_IWEIGHTEDBOOLSUM) {
 	      std::cout << scope[i] << " cannot be set to 1 because " 
 			<< bound_[1] << " + " << weight[i] << " > " 
 			<< upper_bound << std::endl;
@@ -10790,8 +10800,8 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 	  // if set to 0, this variable decreases the max by weight[i]
 	  else if(bound_[1]-weight[i] < lower_bound) {
 	    
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-	    if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+	    if(_DEBUG_IWEIGHTEDBOOLSUM) {
 	      std::cout << scope[i] << " cannot be set to 0 because " 
 			<< bound_[1] << " - " << weight[i] << " < " 
 			<< lower_bound << std::endl;
@@ -10807,22 +10817,34 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
  
      --i;
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-      if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+      if(_DEBUG_IWEIGHTEDBOOLSUM) {
 	std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
       }
 #endif
       
     }
     index_ = i;
+
+
+    if(bound_[0]>upper_bound || bound_[1]<lower_bound) {
+      
+#ifdef _DEBUG_CARD
+      if(_DEBUG_CARD) {
+	std::cout << "FAILURE!\n";
+      }
+#endif
+      
+    wiped_idx = FAILURE(changes[0]);
+    }
   }
 
 
-#ifdef _DEBUG_WEIGHTEDBOOLSUM
-  if(_DEBUG_WEIGHTEDBOOLSUM) {
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+  if(_DEBUG_IWEIGHTEDBOOLSUM) {
     int real_min = 0;
     int real_max = 0;
-    for(i=0; i<scope.size; ++i) {
+    for(i=0; i<weight.size; ++i) {
       if(scope[i].is_ground()) {
 	if(scope[i].get_value()) {
 	  real_min += weight[i];
@@ -10836,23 +10858,26 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     }
     
     if(real_min != bound_[0]) {
-      std::cout << "(2) mistmatch on lower bound: real = " << real_min << ", incremental = " << bound_[0] << std::endl;
+      std::cout << "(2) mismatch on lower bound: real = " << real_min << ", incremental = " << bound_[0] << std::endl;
       exit(1);
     }
     
     if(real_max != bound_[1]) {
-      std::cout << "(2) mistmatch on upper bound: real = " << real_max << ", incremental = " << bound_[1] << std::endl;
+      std::cout << "(2) mismatch on upper bound: real = " << real_max << ", incremental = " << bound_[1] << std::endl;
       exit(1);
     }
   }
 #endif
+
+
+
   
   return wiped_idx;
 }
 
 int Mistral::ConstraintIncrementalWeightedBoolSumInterval::check( const int* s ) const 
 {
-  int i=scope.size, t=0;
+  int i=weight.size, t=0;
   while(i--) {
     t+=(weight[i]*s[i]);
   }
@@ -10862,15 +10887,433 @@ int Mistral::ConstraintIncrementalWeightedBoolSumInterval::check( const int* s )
 std::ostream& Mistral::ConstraintIncrementalWeightedBoolSumInterval::display(std::ostream& os) const {
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
+
   os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
 
-  for(unsigned int i=1; i<scope.size; ++i) 
+  for(unsigned int i=1; i<weight.size; ++i) 
     os << " + " << weight[i] << "*" << scope[i]/*.get_var()*/;
   
   if(upper_bound < INFTY) 
     os << " <= " << upper_bound;
  
 
+  return os;
+}
+
+
+
+
+
+
+//#define _DEBUG_PWEIGHTEDBOOLSUM true
+
+
+Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& scp)
+  : GlobalConstraint(scp) { 
+  priority = 1;
+  for(unsigned int i=1; i<scope.size; ++i) {
+    weight.add(1);
+  }
+}
+
+Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& scp, 
+							    Vector< int >& wgt)
+  : GlobalConstraint(scp) { 
+  priority = 1;
+  for(unsigned int i=0; i<wgt.size; ++i) {
+    weight.add(wgt[i]);
+  }
+}
+
+Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(std::vector< Variable >& scp, 
+							    std::vector< int >& wgt)
+  : GlobalConstraint(scp) { 
+  priority = 1;
+  for(unsigned int i=0; i<wgt.size(); ++i) {
+    weight.add(wgt[i]);
+  }
+}
+
+void Mistral::PredicateWeightedBoolSum::initialise() {
+  ConstraintImplementation::initialise();
+  
+
+  int ordering[weight.size];
+  for(unsigned int i=0; i<weight.size; ++i) {
+    ordering[i] = i;
+  }
+
+  sort_array = weight.stack_;
+  qsort(ordering, weight.size, sizeof(int), increasing_weight);
+
+  Vector<Variable> X;//(weight.size);
+  Vector<int> w;//(weight.size);
+  for(unsigned int i=0; i<weight.size; ++i) {
+     X.add(scope[ordering[i]]);
+     w.add(weight[ordering[i]]);
+  }
+
+  int _min_ = 0;
+  int _max_ = 0;
+  for(unsigned int i=0; i<weight.size; ++i) {
+    scope[i] = X[i];
+    weight[i] = w[i];
+
+    trigger_on(_VALUE_, scope[i]);
+
+    if(weight[i]<0) {
+      _min_ += weight[i];
+    } else {
+      _max_ += weight[i];
+    }
+  }
+  trigger_on(_RANGE_, scope[weight.size]);
+
+  //min_index.initialise(get_solver(), 0);
+  index_.initialise(get_solver(), weight.size-1);
+  bound_[0].initialise(get_solver(), _min_);
+  bound_[1].initialise(get_solver(), _max_);
+
+  GlobalConstraint::initialise();
+
+
+  domains = new BoolDomain[weight.size];
+  for(unsigned int i=0; i<weight.size; ++i) {
+    Variable var = scope[i].get_var();
+    domains[i] = var.bool_domain;
+  }
+
+}
+
+void Mistral::PredicateWeightedBoolSum::mark_domain() {
+  for(int i=weight.size; i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR|BITSET_VAR|RANGE_VAR);
+}
+
+
+Mistral::PredicateWeightedBoolSum::~PredicateWeightedBoolSum() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete weightedsum constraint" << std::endl;
+#endif
+  delete [] domains;
+}
+
+Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+ 
+  explanation.clear();
+  int i, idx;
+  int *rank = get_solver()->assignment_order.stack_;
+  int a_rank = INFTY-1;
+  Explanation **reason = get_solver()->reason_for.stack_;
+
+
+#ifdef _DEBUG_REASONIWBS
+  std::cout << "compute reason for " << a << std::endl;
+#endif
+
+
+  // direction is 1 iff the constraint pushed toward ub and 0 otherwise
+  bool direction = 1; 
+
+  if(a != NULL_ATOM) {
+    a_rank = rank[a];
+    for(i=active.size; i<weight.size; ++i) {
+      if(active[i] == a) {
+	i = active[i];
+	direction = (GET_VAL(domains[i]) == weight[i]>0);
+      }
+    }
+  } else {
+    direction = (bound_[1] < scope.back().get_min());
+  }
+
+  // finds all the assignment that decreased the maximum reachable value
+      i = weight.size;
+      while(i--) {
+    idx = scope[i].id();
+    if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
+      if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
+	explanation.add(NOT(literal(scope[i])));
+      }
+    }
+  }
+
+  end = explanation.end();
+  return explanation.begin();
+}
+
+
+//#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
+
+Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate() 
+{
+  
+  PropagationOutcome wiped_idx = CONSISTENT;
+  int w, i;
+
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+  if(_DEBUG_PWEIGHTEDBOOLSUM) {
+    std::cout << std::endl << "propagate " ;
+    for(i=0; i<weight.size; ++i) {
+      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+    }
+    std::cout << " = " << scope.back().get_domain() << std::endl << changes << std::endl;
+  }
+#endif
+
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+    }
+#endif
+
+
+
+  while(!changes.empty()) {
+    i = changes.pop();
+
+    if(i<weight.size) {
+
+      w = weight[i]<0;
+    
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+      if(_DEBUG_PWEIGHTEDBOOLSUM) {
+	std::cout << "\nprocessing events: " << event2str(event_type[i]) << " on " 
+		  << scope[i] << " in " << scope[i].get_domain() << std::endl;
+      }
+#endif
+      
+      if(LB_CHANGED(event_type[i])) {
+	bound_[w]+=weight[i];
+      } else {
+	bound_[1-w]-=weight[i];
+      }    
+    }
+
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+    }
+#endif
+
+  }
+
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+  if(_DEBUG_PWEIGHTEDBOOLSUM) {
+    int real_min = 0;
+    int real_max = 0;
+    for(i=0; i<weight.size; ++i) {
+      if(scope[i].is_ground()) {
+	if(scope[i].get_value()) {
+	  real_min += weight[i];
+	  real_max += weight[i];
+	}
+      } else if(weight[i] < 0) {
+	real_min += weight[i];
+      } else {
+	real_max += weight[i];
+      }
+    }
+
+    if(real_min != bound_[0]) {
+      std::cout << "(1) mismatch on lower bound: real = " << real_min << ", incremental = " << bound_[0] << std::endl;
+      exit(1);
+    }
+
+    if(real_max != bound_[1]) {
+      std::cout << "(1) mismatch on upper bound: real = " << real_max << ", incremental = " << bound_[1] << std::endl;
+      exit(1);
+    }
+
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "\ntarget bounds: " << scope.back().get_domain() << std::endl;
+    }
+  }
+#endif
+
+
+
+  
+   
+  if(bound_[0]>scope.back().get_max() || bound_[1]<scope.back().get_min()) {
+    
+#ifdef _DEBUG_CARD
+    if(_DEBUG_CARD) {
+       std::cout << "FAILURE!\n";
+    }
+#endif
+    
+    wiped_idx = FAILURE(weight.size);
+  } // else if(bound_[0] >= scope.back().get_min() && bound_[1] <= scope.back().get_max()) {
+    
+// #ifdef _DEBUG_CARD
+//     if(_DEBUG_CARD) {
+// 	std::cout << "ENTAILED!\n";
+//       }
+// #endif
+    
+//     relax();
+//   } 
+  else {
+
+    scope.back().set_domain(bound_[0], bound_[1]);
+
+
+    if(!scope.back().includes(bound_[0], bound_[1])) {
+
+
+      i = index_;
+      
+      while(i>=0) {
+	// 
+	while(i>=0 && scope[i].is_ground()) --i;
+	
+	if(i>=0) {
+	  
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	  if(_DEBUG_PWEIGHTEDBOOLSUM) {
+	    std::cout << "\nnext index: "<< i << ": " << scope[i] << " in " << scope[i].get_domain() 
+		      << " * " << weight[i] << std::endl;
+	  }
+#endif
+	  
+	  if(weight[i]<0) {
+	    // if set to 1, this variable decreases the max by -weight[i]
+	    if(bound_[1]+weight[i] < scope.back().get_min()) {
+	      
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	      if(_DEBUG_PWEIGHTEDBOOLSUM) {
+		std::cout << scope[i] << " cannot be set to 1 because " 
+			  << bound_[1] << " + " << weight[i] << " < " 
+			  << scope.back().get_domain() << std::endl;
+	      }
+#endif
+	      
+	    if(FAILED(scope[i].set_domain(0))) wiped_idx = FAILURE(i);
+	    else bound_[0] -= weight[i];
+	    }
+	    // if set to 0, this variable increases the min by -weight[i]
+	    else if(bound_[0]-weight[i] > scope.back().get_max()) {
+	      
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	      if(_DEBUG_PWEIGHTEDBOOLSUM) {
+		std::cout << scope[i] << " cannot be set to 0 because " 
+			  << bound_[1] << " - " << weight[i] << " > " 
+			  << scope.back().get_domain() << std::endl;
+	      }
+#endif
+	      
+	      if(FAILED(scope[i].set_domain(1))) wiped_idx = FAILURE(i);
+	      else bound_[1] += weight[i];
+	    }
+	    else break;
+	  } else {
+	    // if set to 1, this variable increases the min by weight[i]
+	    if(bound_[0]+weight[i] > scope.back().get_max()) {
+	      
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	      if(_DEBUG_PWEIGHTEDBOOLSUM) {
+		std::cout << scope[i] << " cannot be set to 1 because " 
+			<< bound_[1] << " + " << weight[i] << " > " 
+			  << scope.back().get_domain() << std::endl;
+	      }
+#endif
+	      
+	      if(FAILED(scope[i].set_domain(0))) wiped_idx = FAILURE(i);
+	      else bound_[1] -= weight[i];
+	  }
+	    // if set to 0, this variable decreases the max by weight[i]
+	    else if(bound_[1]-weight[i] < scope.back().get_min()) {
+	      
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	      if(_DEBUG_PWEIGHTEDBOOLSUM) {
+		std::cout << scope[i] << " cannot be set to 0 because " 
+			  << bound_[1] << " - " << weight[i] << " < " 
+			  << scope.back().get_domain() << std::endl;
+	      }
+#endif
+	      
+	      if(FAILED(scope[i].set_domain(1))) wiped_idx = FAILURE(i);
+	      else bound_[0] += weight[i];
+	    }
+	  else break;
+	  }
+	}
+ 
+
+	scope.back().set_domain(bound_[0], bound_[1]);
+	--i;
+	
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+      if(_DEBUG_PWEIGHTEDBOOLSUM) {
+	std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+      }
+#endif
+      
+      }
+      index_ = i;
+    }
+  }
+    
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+  if(_DEBUG_PWEIGHTEDBOOLSUM) {
+    int real_min = 0;
+    int real_max = 0;
+    for(i=0; i<weight.size; ++i) {
+      if(scope[i].is_ground()) {
+	if(scope[i].get_value()) {
+	  real_min += weight[i];
+	  real_max += weight[i];
+	}
+      } else if(weight[i] < 0) {
+	real_min += weight[i];
+      } else {
+	real_max += weight[i];
+      }
+    }
+    
+    if(real_min != bound_[0]) {
+      std::cout << "(2) mismatch on lower bound: real = " << real_min << ", incremental = " << bound_[0] << std::endl;
+      exit(1);
+    }
+    
+    if(real_max != bound_[1]) {
+      std::cout << "(2) mismatch on upper bound: real = " << real_max << ", incremental = " << bound_[1] << std::endl;
+      exit(1);
+    }
+  }
+#endif
+  
+  return wiped_idx;
+}
+
+int Mistral::PredicateWeightedBoolSum::check( const int* s ) const 
+{
+  int i=weight.size, t=0;
+  while(i--) {
+    t+=(weight[i]*s[i]);
+  }
+
+  //std::cout << t << " =? " << s[weight.size] << std::endl;
+
+  return t != s[weight.size]; //(t < s[weight.size] || t > s[weight.size]);
+}
+
+std::ostream& Mistral::PredicateWeightedBoolSum::display(std::ostream& os) const {
+  os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
+
+  for(unsigned int i=1; i<weight.size; ++i) 
+    os << " + " << weight[i] << "*" << scope[i]/*.get_var()*/;
+  
+  os << " = " << scope[weight.size];
+  
   return os;
 }
 
