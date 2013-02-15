@@ -10461,8 +10461,14 @@ int increasing_weight(const void *x, const void *y) {
 
 
 
+//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 75)
+
+
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
   ConstraintImplementation::initialise();
+
+
+  //std::cout << "INITIALISE C" << id << std::endl; 
   
 
   int ordering[weight.size];
@@ -10499,6 +10505,12 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
       _max_ += weight[i];
     }
 
+// #ifdef _DEBUG_IWEIGHTEDBOOLSUM
+//     if(_DEBUG_IWEIGHTEDBOOLSUM) {
+//      std::cout << "COMPUTE INITIAL BOUNDS: [" << _min_ << ".." << _max_ << "]\n";
+//     }
+// #endif
+
 
     // if(scope[i].is_ground()) {
     //   if(scope[i].get_value()) {
@@ -10527,6 +10539,9 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
   index_.initialise(get_solver(), weight.size-1);
   bound_[0].initialise(get_solver(), _min_);
   bound_[1].initialise(get_solver(), _max_);
+
+
+
 
   GlobalConstraint::initialise();
 
@@ -10562,11 +10577,17 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWei
 }
 
 
-//#define _DEBUG_REASONIWBS true
+//#define _DEBUG_REASONIWBS (id == 2)
 
 
 Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
+#ifdef _DEBUG_REASONIWBS
+  if(_DEBUG_REASONIWBS) {
+  std::cout << "compute reason for " << a << " with respect to " << this << std::endl;
+  }
+#endif
+
   explanation.clear();
   int i, idx;
   int *rank = get_solver()->assignment_order.stack_;
@@ -10574,9 +10595,9 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   Explanation **reason = get_solver()->reason_for.stack_;
 
 
-#ifdef _DEBUG_REASONIWBS
-  std::cout << "compute reason for " << a << std::endl;
-#endif
+
+
+
 
 
   // direction is 1 iff the constraint pushed toward ub and 0 otherwise
@@ -10584,29 +10605,66 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
 
   if(a != NULL_ATOM) {
     a_rank = rank[a];
-    for(i=active.size; i<weight.size; ++i) {
-      if(active[i] == a) {
-	i = active[i];
+    // WE CANNOT USE ACTIVE, BECAUSE IT IS NOT UPDATED AFTER A FAILURE (YET)
+    //for(i=active.size; i<weight.size; ++i) {
+    //if(active[i] == a) {
+    for(i=weight.size; i--;) {
+      idx = scope[i].id();
+      if(idx == a) {
 	direction = (GET_VAL(domains[i]) == weight[i]>0);
+	break;
       }
     }
   } else {
     direction = (bound_[1] < lower_bound);
   }
 
+
+
+
+#ifdef _DEBUG_REASONIWBS
+  if(_DEBUG_REASONIWBS) {
+    
+    if(direction) {
+      std::cout << scope[i] << " was set to a high value (" << (GET_VAL(domains[i]) * weight[i]) << ") because otherwise the maximum would be too low " << a << std::endl;
+    } else {
+      std::cout << scope[i] << " was set to a low value (" << (GET_VAL(domains[i]) * weight[i]) << ") because otherwise the minimum would be too high" << a << std::endl;
+    }
+    for(i=0; i<weight.size; ++i) {
+      
+      idx = scope[i].id();
+      std::cout << scope[i] << ": " << scope[i].get_domain() ;
+      if( !(IS_GROUND(domains[i])) )
+	std::cout << " [active]" ;
+      else {
+	std::cout << " rank: " << rank[idx] ;
+	std::cout << " val: " << (GET_VAL(domains[i])) ;
+	std::cout << " weight " << weight[i] ;
+      }
+      
+      
+      if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank)
+	std::cout << " => IN!";
+      else 
+	std::cout << " => OUT!";
+      
+      std::cout << std::endl;
+    }
+  }
+#endif
+
+
+
+
 // #ifdef _DEBUG_REASONIWBS
-//   if(direction) {
-//     std::cout << " -> because otherwise the maximum would be too low" << a << std::endl;
-//   } else {
-//     std::cout << " -> because otherwise the maximum would be too low" << a << std::endl;
-//   }
+
 
 // #endif
 
 
   // finds all the assignment that decreased the maximum reachable value
-      i = weight.size;
-      while(i--) {
+  i = weight.size;
+  while(i--) {
     idx = scope[i].id();
     if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
       if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
@@ -10614,18 +10672,25 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
 	// if(reason[idx] == this) {
 	//   std::cout << "!!!!" << std::endl;
 	// }
-
+	
 	explanation.add(NOT(literal(scope[i])));
       }
     }
   }
 
   end = explanation.end();
+
+#ifdef _DEBUG_REASONIWBS
+  if(_DEBUG_REASONIWBS) {
+  std::cout << explanation << std::endl;
+  }
+#endif
+
   return explanation.begin();
 }
 
 
-//#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
+
 
 Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterval::propagate() 
 {

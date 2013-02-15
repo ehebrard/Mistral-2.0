@@ -874,6 +874,9 @@ void Mistral::Solver::parse_pbo(const char* filename) {
   new_clause.initialise(0,10);
 
 
+  Variable Goal;
+  int obj_dir;
+
   // skip comments
   infile >> c;
   while( c == '*' ) {
@@ -1091,7 +1094,10 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
 	    //std::cout << " OBJ" ;
 
-	    minimize(BoolSum(scope, weight));
+	    //minimize(BoolSum(scope, weight));
+
+	    Goal = BoolSum(scope,weight);
+	    obj_dir = parse_objective;
 	    //objective = new Goal(Goal::MINIMIZATION,  );
 
 	    infile.ignore( LARGENUMBER, '\n' );
@@ -1108,7 +1114,6 @@ void Mistral::Solver::parse_pbo(const char* filename) {
     } while( should_continue );
   }
   
-
   //std::cout << clauses << std::endl;
 
   if(parameters.backjump || clauses.size) {
@@ -1122,6 +1127,12 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
   }
 
+
+  if(!Goal.is_void())
+    if(obj_dir == 1)
+      minimize(Goal);
+    else
+      maximize(Goal);
 
 }
 
@@ -3027,6 +3038,12 @@ bool Mistral::Solver::propagate()
 
 	//std::cout << "reason for " << variables[vidx] << ": " << (Explanation*)(var_evt.third) << std::endl;
 
+	// std::cout << "REASON FOR x" << vidx << ":";
+	// if(var_evt.third)
+	//   std::cout << " c" << var_evt.third->id << std::endl;
+	// else
+	//   std::cout << " decision" << std::endl;
+
 	reason_for[vidx] = var_evt.third; //->explain();
 	//reason_index[vidx] = var_evt.third; //->explain();
 	  //}
@@ -3839,6 +3856,8 @@ void Mistral::Solver::learn_nogood() {
     for(vidx = sequence.size; vidx<variables.size; ++vidx) {
       int var_idx = sequence[vidx].id();
       std::cout << std::setw(3) << assignment_order[var_idx] << " " << std::setw(3) << assignment_level[var_idx]<< " " << sequence[vidx] << " == " << sequence[vidx].get_value() << " <- " ;
+
+      std::cout.flush();
       
       Explanation *expl = reason_for[sequence[vidx].id()];
     
@@ -3853,17 +3872,24 @@ void Mistral::Solver::learn_nogood() {
       } else if(expl != base) {
 	std::cout << "c" << ((ConstraintImplementation*)(expl))->id << ": (";
 	
+
+	std::cout.flush();
+
 	Explanation::iterator stop;
 	Explanation::iterator lit = expl->get_reason_for(var_idx, assignment_level[var_idx], stop);
   
-	print_literal(std::cout, *lit);
-	++lit;
-	
-	while(lit < stop) {
-	  std::cout << " v ";
+	if(lit != stop) {
+
 	  print_literal(std::cout, *lit);
 	  ++lit;
+	  
+	  while(lit < stop) {
+	    std::cout << " v ";
+	    print_literal(std::cout, *lit);
+	    ++lit;
+	  }
 	}
+
 	std::cout << ")";
 	
       } else {
@@ -3917,14 +3943,18 @@ void Mistral::Solver::learn_nogood() {
        
        std::cout.flush();
        
-       print_literal(std::cout, *lit);
-       ++lit;
+       if(lit != stop) {
        
-       while(lit < stop) {
-	 std::cout << " v ";
 	 print_literal(std::cout, *lit);
 	 ++lit;
+	 
+	 while(lit < stop) {
+	   std::cout << " v ";
+	   print_literal(std::cout, *lit);
+	   ++lit;
+	 }
        }
+
        std::cout << ")";
        
     } else {
@@ -4168,6 +4198,13 @@ void Mistral::Solver::close_propagation() {
       assignment_level[vidx] = level;
       assignment_order[vidx] = assignment_rank;
       ++assignment_rank;
+
+      // std::cout << "REASON FOR x" << vidx << ":";
+      // if(var_evt.third)
+      // 	std::cout << " c" << var_evt.third->id << std::endl;
+      // else
+      // 	std::cout << " decision" << std::endl;
+      
       reason_for[vidx] = var_evt.third; //->explain();
     }
   }
@@ -4325,6 +4362,9 @@ void Mistral::Solver::branch_left() {
 
   //reason[decision.var.id()] = NULL;
   //EXPL
+
+  //std::cout << "REASON FOR x" << decision.var.id() << ": decision" << std::endl;
+
   reason_for[decision.var.id()] = NULL;
   //reason_for[decision.var.id()].store_reason_for_change();
 
