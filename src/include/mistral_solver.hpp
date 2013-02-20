@@ -32,6 +32,7 @@
 
 #include <mistral_constraint.hpp>
 
+#include <tclap/CmdLine.h>
 
 
 
@@ -425,8 +426,10 @@ namespace Mistral {
     int num_search_variables;
 
     ConstraintClauseBase *base;
-    Vector< double > lit_activity;
-    Vector< double > var_activity;
+    // Vector< double > lit_activity;
+    // Vector< double > var_activity;
+    double * lit_activity;
+    double * var_activity;
 
     /// Variable selection and branching
     BranchingHeuristic *heuristic;
@@ -761,6 +764,284 @@ namespace Mistral {
     virtual std::ostream& display(std::ostream&, const int current=0)  ;
     //@}
   };
+
+
+
+
+
+
+  class SolverCmdLine : public TCLAP::CmdLine {
+
+  private:
+    
+    TCLAP::ValueArg<std::string> *fileArg;
+    TCLAP::ValueArg<int>         *seedArg;
+    TCLAP::ValueArg<double>      *timeArg;
+    //TCLAP::MultiArg<std::string> *printArg;
+    //TCLAP::MultiArg<std::string> *nameArg;
+    TCLAP::ValueArg<int>         *verbosityArg;
+    TCLAP::ValueArg<int>         *randomizationArg;
+    TCLAP::SwitchArg             *rewriteArg;
+    TCLAP::ValueArg<std::string> *restartArg;
+    TCLAP::ValueArg<double>      *factorArg;
+    TCLAP::ValueArg<int>         *baseArg;
+    TCLAP::ValueArg<double>      *decayArg;
+    TCLAP::ValueArg<double>      *forgetArg;
+    TCLAP::ValueArg<double>      *incrementArg;
+    TCLAP::SwitchArg             *learningArg;
+    TCLAP::ValueArg<std::string> *branchingArg;
+     TCLAP::SwitchArg             *printsolArg;
+     TCLAP::SwitchArg             *printparArg;
+     TCLAP::SwitchArg             *printmodArg;
+     TCLAP::SwitchArg             *printinsArg;
+     TCLAP::SwitchArg             *printstaArg;
+
+    // int print_sol;
+    // int print_sta;
+    // int print_mod;
+    // int print_par;
+    // int print_ins;
+
+    // void init_print() {
+    //   if(print_sol<0) {
+
+    // 	print_sol = print_sta = print_mod = print_ins = print_par = 0;
+	
+    // 	// std::vector<std::string> to_print = printArg->getValue();
+    // 	// for(std::vector<std::string>::iterator it=to_print.begin(); it!=to_print.end(); ++it) {
+	  
+    // 	//   if(*it == "sol") {
+    // 	//     print_sol = 1;
+    // 	//   } else if(*it == "model") {
+    // 	//     print_mod = 1;
+    // 	//   } else if(*it == "instance") {
+    // 	//     print_ins = 1;
+    // 	//   } else if(*it == "stat") {
+    // 	//     print_sta = 1;
+    // 	//   } else if(*it == "params") {
+    // 	//     print_par = 1;
+    // 	//   }
+    // 	// }
+    //   }
+    //   std::cout << print_sol << print_mod << print_sta << print_ins << print_par << std::endl;
+
+    // }
+    
+public:
+    
+    SolverCmdLine(const std::string& message,
+		  const char delimiter = ' ',
+		  const std::string& version = "none",
+		  bool helpAndVersion = true) 
+    // : CmdLine(message, delimiter, version, helpAndVersion)//  {
+    //   initialise();
+    // }
+	;
+    
+    ~SolverCmdLine()//  {
+    //   delete fileArg;
+    //   delete seedArg;
+    //   delete timeArg;
+    //   //delete printArg;
+    //   // delete printsolArg;
+    //   // delete printstaArg;
+    //   // delete printmodArg;
+    //   // delete printparArg;
+    //   // delete printinsArg;
+    //   delete verbosityArg;
+    //   delete randomizationArg;
+    //   delete rewriteArg;
+    //   delete restartArg;
+    //   delete factorArg;
+    //   delete baseArg;
+    //   delete decayArg;
+    //   delete forgetArg;
+    //   delete incrementArg;
+    //   delete learningArg;
+    //   delete branchingArg;
+    // }
+      ;
+
+  void initialise()//  {
+
+  //   // INPUT FILE
+  //   fileArg = new TCLAP::ValueArg<std::string>("f","file","instance file",true,"data/example.opb","string");
+  //   add( *fileArg );
+
+  //   // DECAY FACTOR
+  //   timeArg = new TCLAP::ValueArg<double>("t","time_limit","time limit",false,0,"double");
+  //   add( *timeArg );
+
+
+
+  //   // // PRINTING OPTIONS
+  //   // std::vector<std::string> pallowed;
+  //   // pallowed.push_back("params");
+  //   // pallowed.push_back("instance");
+  //   // pallowed.push_back("model");
+  //   // pallowed.push_back("sol");
+  //   // pallowed.push_back("stat");
+  //   // TCLAP::ValuesConstraint<std::string> p_allowed( pallowed );
+  //   // printArg = new TCLAP::MultiArg<std::string>("p","print","objects to print",false,&p_allowed);
+  //   // add( *printArg );
+
+  //   // VERBOSITY LEVEL
+  //   verbosityArg = new TCLAP::ValueArg<int>("v","verbosity","verbosity level",false,1,"int");
+  //   add( *verbosityArg );
+    
+  //   // RANDOM SEED
+  //   seedArg = new TCLAP::ValueArg<int>("s","seed","random seed",false,12345,"int");
+  //   add( *seedArg );
+    
+  //   // HEURISTIC RANDOMIZATION
+  //   randomizationArg = new TCLAP::ValueArg<int>("z","randomization","randomization level",false,0,"int");
+  //   add( *randomizationArg );
+    
+  //   // WHETHER WE USE REWRITING OPTIONS
+  //   rewriteArg = new TCLAP::SwitchArg("w","rewrite","use rewriting during preprocessing", false);
+  //   add( *rewriteArg );
+    
+  //   // RESTART POLICY
+  //   std::vector<std::string> rallowed;
+  //   rallowed.push_back("no");
+  //   rallowed.push_back("geom");
+  //   rallowed.push_back("luby");
+  //   TCLAP::ValuesConstraint<std::string> r_allowed( rallowed );
+  //   restartArg = new TCLAP::ValueArg<std::string>("r","restart","restart policy",false,"no",&r_allowed);
+  //   add( *restartArg );
+    
+  //   // RESTART FACTOR
+  //   factorArg = new TCLAP::ValueArg<double>("m","factor","restart factor",false,1.05,"double");
+  //   add( *factorArg );
+    
+  //   // RESTART BASE
+  //   baseArg = new TCLAP::ValueArg<int>("e","base","restart base",false,200,"int");
+  //   add( *baseArg );
+    
+  //   // DECAY FACTOR
+  //   decayArg = new TCLAP::ValueArg<double>("d","decay","decay factor",false,.96,"double");
+  //   add( *decayArg );
+    
+  //   // FORGETFULNESS
+  //   forgetArg = new TCLAP::ValueArg<double>("g","forget","clause forgetfulness",false,.75,"double");
+  //   add( *forgetArg );
+    
+  //   // ACTIVITY INCREMENT
+  //   incrementArg = new TCLAP::ValueArg<double>("i","increment","activity increment",false,.012,"double");
+  //   add( *incrementArg );
+    
+  //   // USE CLAUSE LEARNING
+  //   learningArg = new TCLAP::SwitchArg("l","learning","Switch on clause learning (CDCL)", false);
+  //   add( *learningArg );
+
+  // // // PRINT SOLUTION
+  // //   printsolArg = new TCLAP::SwitchArg("p", "print_sol","Print the solution, if found", false);
+  // //   add( *printsolArg );
+
+  // // // PRINT MODEL
+  // //  printmodArg = new TCLAP::SwitchArg("x", "print_mod","Print the model", false);
+  // //   add( *printmodArg );
+
+  // // // PRINT STATISTICS
+  // //  printstaArg = new TCLAP::SwitchArg("y", "print_sta","Print the statistics", false);
+  // //   add( *printstaArg );
+
+  // // // PRINT INSTANCE
+  // //  printinsArg = new TCLAP::SwitchArg("w", "print_ins","Print the instance", false);
+  // //   add( *printinsArg );
+
+  // // // PRINT PARAMETERS
+  // //  printparArg = new TCLAP::SwitchArg("q", "print_par","Print the parameters", false);
+  // //   add( *printparArg );
+
+  //   // // VARIABLE ORDERING
+  //   // std::vector<std::string> voallowed;
+  //   // rallowed.push_back("dom/deg");
+  //   // rallowed.push_back("dom/wdeg");
+  //   // rallowed.push_back("dom/pruning");
+  //   // rallowed.push_back("dom/activity");
+  //   // rallowed.push_back("activity");
+  //   // TCLAP::ValuesConstraint<std::string> vo_allowed( voallowed );
+  //   // TCLAP::ValueArg<std::string> choiceArg("c","choice","variable ordering",false,"dom/activity",&vo_allowed);
+  //   // add( *choiceArg ); 
+
+  //   // VALUE ORDERING
+  //   std::vector<std::string> boallowed;
+  //   boallowed.push_back("min");
+  //   boallowed.push_back("max");
+  //   boallowed.push_back("boand");
+  //   boallowed.push_back("halfsplit");
+  //   boallowed.push_back("boandsplit");
+  //   boallowed.push_back("guided");
+  //   TCLAP::ValuesConstraint<std::string> bo_allowed( boallowed );
+  //   branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided",&bo_allowed);
+  //   add( *branchingArg );    
+
+  // }
+
+    ;
+
+
+  void set_parameters(Solver& s)//  {
+
+  //   s.parameters.verbosity = verbosityArg->getValue();
+  //   s.parameters.restart_factor = factorArg->getValue();
+  //   s.parameters.restart_base = baseArg->getValue();
+  //   s.parameters.restart_limit = s.parameters.restart_base;
+  //   s.parameters.time_limit = timeArg->getValue();
+  //   s.parameters.activity_decay = decayArg->getValue();
+  //   s.parameters.backjump = learningArg->getValue();
+
+  // }
+    ;
+
+    const char* get_filename()//  {
+    //   return fileArg->getValue().c_str();
+    // }
+      ;
+    int get_seed() // { 
+    //   return seedArg->getValue();
+    // }
+      ;
+    bool print_model() // {
+    //   //init_print();
+    //   //return printmodArg->getValue();
+    //   return true;
+    // }
+      ;
+
+    bool print_solution() // {
+    //   //init_print();
+    //   //return printsolArg->getValue();
+    //   return true;
+    // }
+      ;
+
+    bool print_parameters() // {
+    //   //init_print();
+    //   //return printparArg->getValue();
+    //   return true;
+    // }
+      ;
+
+    bool print_instance() // {
+    //   //init_print();
+    //   //return printinsArg->getValue();
+    //   return true;
+    // }
+      ;
+
+    bool print_statistics()//  {
+    //   //init_print();
+    //   //return printstaArg->getValue();
+    //   return true;
+    // }
+      ;
+
+
+};
+
+
 
   std::ostream& operator<< (std::ostream& os, Solution& x);
   std::ostream& operator<< (std::ostream& os, Solution* x);

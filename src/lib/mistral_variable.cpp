@@ -4266,11 +4266,11 @@ Mistral::BoolSumExpression::~BoolSumExpression() {
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) { 
   if(weight.empty()) {
-    if(lower_bound == upper_bound) {
-      s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
-    } else {
+    // if(lower_bound == upper_bound) {
+    //   s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
+    // } else {
       s->add(new ConstraintBoolSumInterval(children,lower_bound,upper_bound)); 
-    }
+      //}
   } else {
    
 #ifdef _INCREMENTAL_WBOOLSUM

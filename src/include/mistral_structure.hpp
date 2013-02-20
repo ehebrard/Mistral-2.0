@@ -437,6 +437,14 @@ namespace Mistral {
       std::fill(stack_, stack_+capacity, DATA_TYPE());
     }
 
+    void initialise(const unsigned int s, const unsigned int c, DATA_TYPE x)
+    {
+      size = s;
+      capacity = c;
+      stack_ = new DATA_TYPE[capacity];
+      std::fill(stack_, stack_+capacity, x);
+    }
+
     void copy(Vector<DATA_TYPE>& vec) {
       size = vec.size;
       capacity = vec.capacity;
@@ -449,6 +457,11 @@ namespace Mistral {
 
     void extendStack( const unsigned int l=0 )
     {
+
+      //std::cerr << "extend " << size << std::endl;
+      // display(std::cout);
+      // std::cout << std::endl;
+
       unsigned int increment = (l ? l : (capacity+1) << 1);
       capacity += increment;
 
@@ -460,6 +473,13 @@ namespace Mistral {
       stack_ = new_stack;
       
       std::fill(stack_+capacity-increment, stack_+capacity, DATA_TYPE());
+
+
+    // std::cout << "extended " ;
+    //   display(std::cout);
+    //   std::cout << std::endl << std::endl;
+
+
     }
 
     void resize( const unsigned int l )

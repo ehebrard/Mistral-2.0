@@ -503,7 +503,7 @@ namespace Mistral {
 
   /// Other utils:
 
-  int log2( const unsigned int v );
+  int log2_( const unsigned int v );
 
 }
 

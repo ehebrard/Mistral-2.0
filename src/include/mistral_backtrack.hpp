@@ -194,6 +194,11 @@ namespace Mistral {
     // return the constraint C such that C(x1,..,xi-1,not(xi),i+1,..,xk) <=> this(x1,..,xk)
     // and where the occurrence of not(xi) is taken by x
     Constraint get_negation(const int i, Variable x);
+    // get weights for vars/literals
+    // the weight represents (sometimes roughly) the probability that 
+    // a random assignment of the constraint containing this literal will not be allowed
+    // The variable weight is the sum of all the weights of its values/literal
+    void initialise_activity(double *lvact, double *vact, double norm);
 
     // to be called before propagation, returns the constraint itself if it is idempotent and the NULL pointer otherwise
     ConstraintImplementation *freeze();

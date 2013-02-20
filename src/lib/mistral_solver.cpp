@@ -836,9 +836,10 @@ Mistral::Solver::Solver()
   // con_trail_.add(0);
   // con_trail_.add(-1);
 
-  lit_activity.initialise(0,8192);
-  var_activity.initialise(0,4096);
-
+ // lit_activity.initialise(0,8192);
+ //  var_activity.initialise(0,4096);
+  lit_activity = NULL;
+  var_activity = NULL;
 
   active_variables.initialise(4096);
 
@@ -1044,47 +1045,47 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 		add( BoolSum(scope, //weight,
 			     bounds[0], bounds[1]) );
 	    
-		int real_max = std::min((int)scope.size, bounds[1]);
-		int real_min = std::max(0, bounds[0]);
-		int span = (real_max - real_min);
+		// int real_max = std::min((int)scope.size, bounds[1]);
+		// int real_min = std::max(0, bounds[0]);
+		// int span = (real_max - real_min);
 
-		double center = (double)(real_min + real_max) / 2;
-		double skew = center/(double)(scope.size);
+		// double center = (double)(real_min + real_max) / 2;
+		// double skew = center/(double)(scope.size);
 
-		double activity_increment = parameters.activity_increment / (scope.size * (1 << span));
+		// double activity_increment = parameters.activity_increment / (scope.size * (1 << span));
 	      
-		if(activity_increment > 0.0) {
-		  int i=scope.size;
-		  while(i--) {
-		    lit_activity[2*scope[i].id()] += (1-skew) * activity_increment;
-		    lit_activity[2*scope[i].id()+1] += skew * activity_increment;
-		    var_activity[scope[i].id()] += activity_increment;
-		  }
-		}
+		// if(activity_increment > 0.0) {
+		//   int i=scope.size;
+		//   while(i--) {
+		//     lit_activity[2*scope[i].id()] += (1-skew) * activity_increment;
+		//     lit_activity[2*scope[i].id()+1] += skew * activity_increment;
+		//     var_activity[scope[i].id()] += activity_increment;
+		//   }
+		// }
 	    
 	      } else {
 
-		int real_max = std::min(reachable[1], bounds[1]);
-		int real_min = std::max(reachable[0], bounds[0]);
-		double span = (real_max - real_min);
+		// int real_max = std::min(reachable[1], bounds[1]);
+		// int real_min = std::max(reachable[0], bounds[0]);
+		// double span = (real_max - real_min);
 
-		double center = (double)(real_min + real_max) / 2;
-		double skew = center/(double)(reachable[1] - reachable[0] + 1);
+		// double center = (double)(real_min + real_max) / 2;
+		// double skew = center/(double)(reachable[1] - reachable[0] + 1);
 
-		int exp = (int)(scope.size * (span)/(double)(reachable[1] - reachable[0] + 1));
+		// int exp = (int)(scope.size * (span)/(double)(reachable[1] - reachable[0] + 1));
 
-		double activity_increment = parameters.activity_increment / (1 << exp);
-		double ac_i; // = activity_increment;
+		// double activity_increment = parameters.activity_increment / (1 << exp);
+		// double ac_i; // = activity_increment;
 
-		if(activity_increment > 0.0) {
-		  int i=scope.size;
-		  while(i--) {
-		    ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)max_weight;
-		    lit_activity[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
-		    lit_activity[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
-		    var_activity[scope[i].id()] += ac_i;
-		  }
-		}
+		// if(activity_increment > 0.0) {
+		//   int i=scope.size;
+		//   while(i--) {
+		//     ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)max_weight;
+		//     lit_activity[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
+		//     lit_activity[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
+		//     var_activity[scope[i].id()] += ac_i;
+		//   }
+		// }
 
 		add( BoolSum(scope, weight, bounds[0], bounds[1]) );
 
@@ -1215,15 +1216,15 @@ void Mistral::Solver::add(Vector< Literal >& clause) {
   //   }
   // }
 
-  double activity_increment = parameters.activity_increment / (1 << clause.size);
-  if(activity_increment > 0.0) {
-    int i=clause.size;
-    while(i--) {
-      lit_activity[NOT(clause[i])] += activity_increment;
-      //lit_activity[clause[i]] += activity_increment;
-      var_activity[UNSIGNED(clause[i])] += activity_increment;
-    }
-  }
+  // double activity_increment = parameters.activity_increment / (1 << clause.size);
+  // if(activity_increment > 0.0) {
+  //   int i=clause.size;
+  //   while(i--) {
+  //     lit_activity[NOT(clause[i])] += activity_increment;
+  //     //lit_activity[clause[i]] += activity_increment;
+  //     var_activity[UNSIGNED(clause[i])] += activity_increment;
+  //   }
+  // }
 
   base->add( clause, (parameters.init_activity ? parameters.activity_increment : 0.0) );
  }
@@ -1314,9 +1315,9 @@ int Mistral::Solver::declare(Variable x) {
   // while(var_activity.capacity < variable.size)
   //   var_activity.extendStack();
 
-  lit_activity.add(0);
-  lit_activity.add(0);
-  var_activity.add(0);
+  // lit_activity.add(0);
+  // lit_activity.add(0);
+  // var_activity.add(0);
 
   
 
@@ -3776,7 +3777,9 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
 	       << "]";
 	  }
 	}
-      os << lit_activity[2*i] << "/" << lit_activity[2*i+1] << ": " << var_activity[i] << "\n";
+      if(lit_activity)
+	os << lit_activity[2*i] << "/" << lit_activity[2*i+1] << ": " << var_activity[i] ;
+      os << "\n";
     
     } else {
 
@@ -4020,8 +4023,10 @@ void Mistral::Solver::learn_nogood() {
 #endif
 	
 	if( !visited.fast_contain(a) ) {
-	  lit_activity[q] += parameters.activity_increment;
-	  var_activity[a] += parameters.activity_increment;
+	  if(lit_activity) {
+	    lit_activity[NOT(q)] += parameters.activity_increment;
+	    var_activity[a] += parameters.activity_increment;
+	  }
 	  visited.fast_add(a);
 	  
 	  if(lvl >= level) {
@@ -4704,9 +4709,9 @@ Mistral::Outcome Mistral::Solver::conflict_directed_backjump()
   return status;
 }
 
-double *Mistral::Solver::get_literal_activity() {
-  return lit_activity.stack_;
-}
+// double *Mistral::Solver::get_literal_activity() {
+//   return lit_activity.stack_;
+// }
 
 std::ostream& Mistral::operator<< (std::ostream& os, Mistral::Solution& x) {
   return x.display(os);
@@ -5277,7 +5282,7 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 //     } else if(branching == "minweight") {
 //       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
 //     } else if(branching == "guided") {
-//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, Guided > (this); 
+//       heu = new GenericHeuristic < GenericWeightedDVO < FailureCountManager, MinDomainOverWeight >, Guided< MinValue > > (this); 
 //     } 
 //   } else if(var_ordering == "dom/activity") {
 //     if(branching == "minval") {
@@ -5291,7 +5296,7 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 //     } else if(branching == "minweight") {
 //       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
 //     } else if(branching == "guided") {
-//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+//       heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided< MinValue > > (this); 
 //     } 
 //   } else if(var_ordering == "neighbor") {
 //     if(branching == "minval") {
@@ -5310,8 +5315,8 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 //       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, MinWeightValue > (this);
 //       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, MinWeightValue > (this); 
 //     } else if(branching == "guided") {
-//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, Guided > (this);
-//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+//       heu = new GenericHeuristic< GenericNeighborDVO< FailureCountManager, SelfPlusAverage, MinDomainOverWeight, 1>, Guided< MinValue > > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided< MinValue > > (this); 
 //     } 
 //   } else if(var_ordering == "mindomain") {
 //     if(branching == "minval") {
@@ -5327,8 +5332,8 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 //       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
 //       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, RandomMinMax > (this); 
 //     } else if(branching == "guided") {
-//       heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided > (this);
-//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided > (this); 
+//       heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided< MinValue > > (this);
+//       //heu = new GenericHeuristic < GenericWeightedDVO < PruningCountManager, MinDomainOverWeight >, Guided< MinValue > > (this); 
 //     } 
 //   } else if(var_ordering == "lexicographic") {
 //     if(branching == "minval") {
@@ -5340,7 +5345,7 @@ Mistral::Constraint** Mistral::RangeTrigger::declare(Mistral::Constraint *c, con
 //     } else if(branching == "randminmax") {
 //       heu = new GenericHeuristic < Lexicographic, RandomMinMax > (this); 
 //     } else if(branching == "guided") {
-//       heu = new GenericHeuristic < Lexicographic, Guided > (this); 
+//       heu = new GenericHeuristic < Lexicographic, Guided< MinValue > > (this); 
 //     } 
 //   }	
 
@@ -5369,7 +5374,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
       } 
     } else if(randomness == 2) {
       if(branching == "minval") {
@@ -5383,7 +5388,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
       } 
     } else if(randomness == 3) {
       if(branching == "minval") {
@@ -5397,7 +5402,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
       } 
     } else {
       if(branching == "minval") {
@@ -5411,7 +5416,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
       } 
     }
   } else if(var_ordering == "dom/activity") {
@@ -5427,7 +5432,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< MinValue > > (this); 
       } 
     } else if(randomness == 2) {
       if(branching == "minval") {
@@ -5441,7 +5446,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, Guided< MinValue > > (this); 
       } 
     } else if(randomness == 3) {
       if(branching == "minval") {
@@ -5455,7 +5460,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, Guided< MinValue > > (this); 
       } 
     } else {
       if(branching == "minval") {
@@ -5469,7 +5474,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinWeightValue > (this); 
       } else if(branching == "guided") {
-	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, Guided > (this); 
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, Guided< MinValue > > (this); 
       } 
     }
   } else if(var_ordering == "neighbor") {
@@ -5484,7 +5489,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "minweight") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this);
     } else if(branching == "guided") {
-      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, Guided > (this);
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, Guided< MinValue > > (this);
     } 
   } else if(var_ordering == "mindomain") {
     if(branching == "minval") {
@@ -5496,7 +5501,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "randminmax") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
     } else if(branching == "guided") {
-      heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided > (this);
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided< MinValue > > (this);
     } 
   } else if(var_ordering == "maxdegree") {
     if(branching == "minval") {
@@ -5508,7 +5513,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "randminmax") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, RandomMinMax > (this);
     } else if(branching == "guided") {
-      heu = new GenericHeuristic< GenericDVO< MaxDegree >, Guided > (this);
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, Guided< MinValue > > (this);
     } 
   } else if(var_ordering == "dom/deg") {
     if(branching == "minval") {
@@ -5520,7 +5525,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "randminmax") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, RandomMinMax > (this);
     } else if(branching == "guided") {
-      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, Guided > (this);
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, Guided< MinValue > > (this);
     } 
   } else if(var_ordering == "lexicographic") {
     if(branching == "minval") {
@@ -5532,7 +5537,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "randminmax") {
       heu = new GenericHeuristic < Lexicographic, RandomMinMax > (this); 
     } else if(branching == "guided") {
-      heu = new GenericHeuristic < Lexicographic, Guided > (this); 
+      heu = new GenericHeuristic < Lexicographic, Guided< MinValue > > (this); 
     } 
   } else if(var_ordering == "input_order") {
     if(branching == "indomain_min") {
@@ -5803,3 +5808,206 @@ void Mistral::Solver::check_constraint_graph_integrity() {
     }
   }
 }
+
+
+
+Mistral::SolverCmdLine::SolverCmdLine(const std::string& message,
+				      const char delimiter,
+				      const std::string& version,
+				      bool helpAndVersion)
+  : CmdLine(message, delimiter, version, helpAndVersion) {
+  initialise();
+}
+    
+Mistral::SolverCmdLine::~SolverCmdLine() {
+  delete fileArg;
+  delete seedArg;
+  delete timeArg;
+  //delete printArg;
+  // delete printsolArg;
+   delete printstaArg;
+   delete printmodArg;
+   delete printparArg;
+   delete printinsArg;
+  delete verbosityArg;
+  delete randomizationArg;
+  delete rewriteArg;
+  delete restartArg;
+  delete factorArg;
+  delete baseArg;
+  delete decayArg;
+  delete forgetArg;
+  delete incrementArg;
+  delete learningArg;
+  delete branchingArg;
+}
+
+void Mistral::SolverCmdLine::initialise() {
+
+    // INPUT FILE
+    fileArg = new TCLAP::ValueArg<std::string>("f","file","instance file",true,"data/example.opb","string");
+    add( *fileArg );
+
+    // DECAY FACTOR
+    timeArg = new TCLAP::ValueArg<double>("t","time_limit","time limit",false,0,"double");
+    add( *timeArg );
+
+
+
+    // // PRINTING OPTIONS
+    // std::vector<std::string> pallowed;
+    // pallowed.push_back("params");
+    // pallowed.push_back("instance");
+    // pallowed.push_back("model");
+    // pallowed.push_back("sol");
+    // pallowed.push_back("stat");
+    // TCLAP::ValuesConstraint<std::string> p_allowed( pallowed );
+    // printArg = new TCLAP::MultiArg<std::string>("p","print","objects to print",false,&p_allowed);
+    // add( *printArg );
+
+    // VERBOSITY LEVEL
+    verbosityArg = new TCLAP::ValueArg<int>("v","verbosity","verbosity level",false,1,"int");
+    add( *verbosityArg );
+    
+    // RANDOM SEED
+    seedArg = new TCLAP::ValueArg<int>("s","seed","random seed",false,12345,"int");
+    add( *seedArg );
+    
+    // HEURISTIC RANDOMIZATION
+    randomizationArg = new TCLAP::ValueArg<int>("z","randomization","randomization level",false,0,"int");
+    add( *randomizationArg );
+    
+    // WHETHER WE USE REWRITING OPTIONS
+    rewriteArg = new TCLAP::SwitchArg("w","rewrite","use rewriting during preprocessing", false);
+    add( *rewriteArg );
+    
+    // RESTART POLICY
+    std::vector<std::string> rallowed;
+    rallowed.push_back("no");
+    rallowed.push_back("geom");
+    rallowed.push_back("luby");
+    TCLAP::ValuesConstraint<std::string> r_allowed( rallowed );
+    restartArg = new TCLAP::ValueArg<std::string>("r","restart","restart policy",false,"no",&r_allowed);
+    add( *restartArg );
+    
+    // RESTART FACTOR
+    factorArg = new TCLAP::ValueArg<double>("m","factor","restart factor",false,1.05,"double");
+    add( *factorArg );
+    
+    // RESTART BASE
+    baseArg = new TCLAP::ValueArg<int>("e","base","restart base",false,200,"int");
+    add( *baseArg );
+    
+    // DECAY FACTOR
+    decayArg = new TCLAP::ValueArg<double>("d","decay","decay factor",false,.96,"double");
+    add( *decayArg );
+    
+    // FORGETFULNESS
+    forgetArg = new TCLAP::ValueArg<double>("g","forget","clause forgetfulness",false,.75,"double");
+    add( *forgetArg );
+    
+    // ACTIVITY INCREMENT
+    incrementArg = new TCLAP::ValueArg<double>("i","increment","activity increment",false,.012,"double");
+    add( *incrementArg );
+    
+    // USE CLAUSE LEARNING
+    learningArg = new TCLAP::SwitchArg("l","learning","Switch on clause learning (CDCL)", false);
+    add( *learningArg );
+
+
+  // PRINT MODEL
+   printmodArg = new TCLAP::SwitchArg("", "print_mod","Print the model", false);
+    add( *printmodArg );
+
+    // PRINT STATISTICS
+   printstaArg = new TCLAP::SwitchArg("", "print_sta","Print the statistics", false);
+    add( *printstaArg );
+
+  // PRINT INSTANCE
+    printinsArg = new TCLAP::SwitchArg("", "print_ins","Print the instance", false);
+    add( *printinsArg );
+
+  // PRINT PARAMETERS
+   printparArg = new TCLAP::SwitchArg("", "print_par","Print the parameters", false);
+    add( *printparArg );
+
+  // PRINT SOLUTION
+    printsolArg = new TCLAP::SwitchArg("", "print_sol", "Print the solution, if found", false);
+    add( *printsolArg );
+
+    // // VARIABLE ORDERING
+    // std::vector<std::string> voallowed;
+    // rallowed.push_back("dom/deg");
+    // rallowed.push_back("dom/wdeg");
+    // rallowed.push_back("dom/pruning");
+    // rallowed.push_back("dom/activity");
+    // rallowed.push_back("activity");
+    // TCLAP::ValuesConstraint<std::string> vo_allowed( voallowed );
+    // TCLAP::ValueArg<std::string> choiceArg("c","choice","variable ordering",false,"dom/activity",&vo_allowed);
+    // add( *choiceArg ); 
+
+    // VALUE ORDERING
+    std::vector<std::string> boallowed;
+    boallowed.push_back("min");
+    boallowed.push_back("max");
+    boallowed.push_back("boand");
+    boallowed.push_back("halfsplit");
+    boallowed.push_back("boandsplit");
+    boallowed.push_back("guided");
+    TCLAP::ValuesConstraint<std::string> bo_allowed( boallowed );
+    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided",&bo_allowed);
+    add( *branchingArg );    
+
+  }
+
+
+void Mistral::SolverCmdLine::set_parameters(Mistral::Solver& s) {
+
+    s.parameters.verbosity = verbosityArg->getValue();
+    s.parameters.restart_factor = factorArg->getValue();
+    s.parameters.restart_base = baseArg->getValue();
+    s.parameters.restart_limit = s.parameters.restart_base;
+    s.parameters.time_limit = timeArg->getValue();
+    s.parameters.activity_decay = decayArg->getValue();
+    s.parameters.backjump = learningArg->getValue();
+    s.parameters.activity_increment = incrementArg->getValue();
+
+  }
+
+    const char* Mistral::SolverCmdLine::get_filename() {
+      return fileArg->getValue().c_str();
+    }
+
+    int Mistral::SolverCmdLine::get_seed() { 
+      return seedArg->getValue();
+    }
+
+    bool Mistral::SolverCmdLine::print_model() {
+      //init_print();
+      return printmodArg->getValue();
+      //return true;
+    }
+
+    bool Mistral::SolverCmdLine::print_solution() {
+      //init_print();
+      return printsolArg->getValue();
+      //return true;
+    }
+
+    bool Mistral::SolverCmdLine::print_parameters() {
+      //init_print();
+      return printparArg->getValue();
+      //return true;
+    }
+
+    bool Mistral::SolverCmdLine::print_instance() {
+      //init_print();
+      return printinsArg->getValue();
+      //return true;
+    }
+
+    bool Mistral::SolverCmdLine::print_statistics() {
+      //init_print();
+      return printstaArg->getValue();
+      //return true;
+    }

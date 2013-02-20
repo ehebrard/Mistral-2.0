@@ -228,6 +228,7 @@ namespace Mistral {
     \brief FailureCountManager Class
 
     * Listener interface for weighted degree *
+    * Counts the number of failures for each constraint *
   */
   //template< float DECAY > 
   class FailureCountManager : public FailureListener, public ConstraintListener {
@@ -235,6 +236,7 @@ namespace Mistral {
   public:
 
     Solver *solver;
+    double weight_unit;
 
     /*\ TODO: make it a variable listener \*/
     Vector<double> constraint_weight;
@@ -243,11 +245,13 @@ namespace Mistral {
     //FailureCountManager(Solver *s, void *a=NULL) : solver(s) {// }
     FailureCountManager(Solver *s) : solver(s) {// }
 
+      weight_unit = solver->parameters.activity_increment;
+
       for(unsigned int i=0; i<solver->variables.size; ++i) {
-	variable_weight.add(solver->variables[i].get_degree());
+	variable_weight.add(weight_unit * solver->variables[i].get_degree());
       }
       for(unsigned int i=0; i<solver->constraints.size; ++i) {
-	constraint_weight.add(1);
+	constraint_weight.add(weight_unit);
       }
 
       solver->add((FailureListener*)this);
@@ -265,11 +269,8 @@ namespace Mistral {
     virtual void check_consistency() {
       
       double xweight;
-
-      //std::cout << solver << std::endl;
       
       solver->display(std::cout, 1);
-
 
       for(unsigned int i=0; i<variable_weight.size; ++i) {
 	
@@ -299,27 +300,9 @@ namespace Mistral {
 
     virtual void notify_failure() {
       int i;
-
-      // if(DECAY >= 0) {
-      // 	for(i=variable_weight.size; --i>=0;)
-      // 	  variable_weight[i] *= DECAY;
-      // 	for(i=constraint_weight.size; --i>=0;)
-      // 	  constraint_weight[i] *= DECAY;
-      // }
-
-
-      //std::cout << "increment weight of ";
-
       Constraint con = solver->culprit;
 
-
-
-
       if(!con.empty()) {
-
-
-	// std::cout << "--failure on [" << con.id() << "] " << con << "--\n";
-
 	Variable *scope = con.get_scope();
 	int idx;
 	i = con.arity();
@@ -327,32 +310,10 @@ namespace Mistral {
 	while(i--) {
 	  idx = scope[i].id();
 	  if(idx>=0) {
-
-	    // std::cout << scope[i] << " (" << variable_weight[idx] << " => ";
-
-	    ++variable_weight[idx];
-
-	    // std::cout << variable_weight[idx] << ") ";
-	    
+	    variable_weight[idx] += weight_unit;
 	  }
 	}
       } 
-
-      // else {
-
-      // 	std::cout << "--failure on [nill]?? " << solver->wiped_idx << "--\n";
-	
-      // }
-
-      // std::cout << std::endl;
-
-
-      // display(std::cout);
-
-      // std::cout << std::endl;
-
-      //check_consistency();
-
     }
 
     virtual void notify_post(Constraint con) {
@@ -374,10 +335,12 @@ namespace Mistral {
     }
 
     virtual void notify_add_con(Constraint con) {
-      unsigned int idx = con.id();
-      //Variable *scope = con.get_scope();
-      while(constraint_weight.size <= idx) {
-	constraint_weight.add(1.0);
+      while(constraint_weight.size < solver->constraints.size) {
+	constraint_weight.add(weight_unit);
+      }
+
+      while(variable_weight.size < solver->variables.size) {
+	variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
       }
     }
 
@@ -428,53 +391,115 @@ namespace Mistral {
     \brief PruningCountManager Class
 
     * Listener interface for ABS *
+    * Counts the number of nodes in which at least one pruning event occurred for each variable *
   */
-  class PruningCountManager : public SuccessListener {
+  class PruningCountManager : public SuccessListener// , public VariableListener
+  {
 
   public:
 
     Solver *solver;
+    double weight_unit;
 
     Vector<double> variable_weight;
 
     //PruningCountManager(Solver *s, void *a=NULL) : solver(s) {
     PruningCountManager(Solver *s) : solver(s) {
       for(unsigned int i=0; i<solver->variables.size; ++i) {
-	variable_weight.add(solver->variables[i].get_degree());
+	variable_weight.add(weight_unit * solver->variables[i].get_degree());
       }
       solver->add((SuccessListener*)this);
+      //solver->add((VariableListener*)this);
     }
 
     virtual ~PruningCountManager() {
       solver->remove((SuccessListener*)this);
+      //solver->remove((VariableListener*)this);
     }
 
     double *get_weight() { return variable_weight.stack_; }     
 
     virtual void notify_success() {
-      int // last_decision = solver->decisions.back().var.id(),
-	id;
+      int id;
       int i = solver->trail_.back(), n=solver->saved_vars.size;
 
-
-      // if(DECAY >= 0) {
-      // 	for(i=variable_weight.size; --i>=0;)
-      // 	  variable_weight[i] *= DECAY;
-      // }
-
-
       //std::cout << "increment weight of ";
-      while(++i<n) {
-	
-	id = solver->saved_vars[i]; //.id();
-
-	//std::cout << solver->variables[solver->saved_vars[i]] << " ";
-	
-	//if(id != last_decision) 
-	++variable_weight[id];
+      while(++i<n) {	
+	id = solver->saved_vars[i]; 
+	variable_weight[id] += weight_unit;
       }
-      
-      //std::cout << std::endl;
+    }
+
+   // virtual void notify_add_variable() {
+   //   while(variable_weight.size < solver->variables.size) {
+   //     variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
+   //   }
+   // }
+
+    virtual std::ostream& display(std::ostream& os, const bool all) const ;
+  };
+
+
+
+  /*! \class PruningActivityManager
+    \brief PruningActivityManager Class
+    
+    * Listener interface for ABS *
+    * Activitys the number of times each variable was visited when computing a nogood *
+    */
+  class LearningActivityManager : public DecisionListener {
+
+  public:
+
+    Solver *solver;
+    double weight_unit;
+
+    Vector<double> var_activity;
+    Vector<double> lit_activity;
+
+    double decay;
+
+    //LearningActivityManager(Solver *s, void *a=NULL) : solver(s) {
+    LearningActivityManager(Solver *s) : solver(s) {
+      weight_unit = solver->parameters.activity_increment;
+      decay = solver->parameters.activity_decay;
+
+      var_activity.initialise(solver->variables.size, solver->variables.size, 0);
+      lit_activity.initialise(2*solver->variables.size, 2*solver->variables.size, 0);
+
+      int i = solver->constraints.size;
+      Constraint *cons = solver->constraints.stack_;
+      while(i--) {
+
+	//std::cout << "\ninitialise with respect to " << cons[i] << std::endl;
+
+       	cons[i].initialise_activity(lit_activity.stack_, var_activity.stack_, weight_unit);
+
+	//display(std::cout, true);
+      }
+
+      solver->lit_activity = lit_activity.stack_;
+      solver->var_activity = var_activity.stack_;
+
+      solver->add((DecisionListener*)this);
+      //solver->add((VariableListener*)this);
+    }
+
+    virtual ~LearningActivityManager() {
+      solver->remove((DecisionListener*)this);
+      //solver->remove((VariableListener*)this);
+    }
+
+    double *get_weight() { return var_activity.stack_; }     
+
+    virtual void notify_decision() {
+      if(decay > 0 && decay < 1) {
+	int i=var_activity.size;
+	while(i--) var_activity[i] *= decay;
+	i=lit_activity.size;
+	while(i--) lit_activity[i] *= decay;
+      }
+
     }
 
     virtual std::ostream& display(std::ostream& os, const bool all) const ;
@@ -620,7 +645,7 @@ namespace Mistral {
   private:
     
     unsigned int luby_seq(const int iter) {
-      unsigned int thelog = log2(iter);
+      unsigned int thelog = log2_(iter);
       if( iter == (1 << (thelog + 1))-1 )
 	return (1 << thelog);
       return luby_seq(iter - (1 << thelog) + 1);
@@ -2317,10 +2342,7 @@ namespace Mistral {
     inline double value() { return wei_ ; } 
     inline bool operator<( const MaxWeight& x ) const { return x.wei_ < wei_; }
     inline void operator=( const MaxWeight& x ) { wei_ = x.wei_; }
-    inline void operator=( const Variable x ) { 
-      //std::cout << "activity of " << x << " = " << weight[x.id()] << std::endl;
-      wei_ = weight[x.id()]; 
-    }
+    inline void operator=( const Variable x ) { wei_ = weight[x.id()]; }
     //@}  
 
 
@@ -2732,16 +2754,55 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, MinWeightValue* x);
 
 
+  // /*! \class Guided
+  //   \brief  Class Guided
+
+  //   Assigns the variable to its minimum value.
+  // */
+  // class Guided {
+    
+  // public: 
+    
+  //   Solver *solver;
+    
+  //   Guided() {}
+  //   Guided(Solver *s) {solver=s;}
+  //   virtual ~Guided() {};
+    
+  //   inline Decision make(Variable x) {
+  //     int val = solver->last_solution_lb[x.id()];
+  //     Decision d(x, Decision::ASSIGNMENT, val);
+  //     if(val == -INFTY || !x.contain(val)) 
+  // 	//d.set_value((randint(2) ? x.get_min() : x.get_max()));
+  // 	d.set_value(x.get_min());
+  //     return d;
+  //   }
+
+
+  //    std::ostream& display(std::ostream& os) const {
+  //      os << "assign it to the value of this variable in the last solution";
+  //      return os;
+  //    }
+
+  // };
+
+  // std::ostream& operator<<(std::ostream& os, Guided& x);
+
+  // std::ostream& operator<<(std::ostream& os, Guided* x);
+
+
   /*! \class Guided
     \brief  Class Guided
 
     Assigns the variable to its minimum value.
   */
+  template< class Default >
   class Guided {
     
   public: 
     
     Solver *solver;
+    Default init_choice;
     
     Guided() {}
     Guided(Solver *s) {solver=s;}
@@ -2749,24 +2810,83 @@ namespace Mistral {
     
     inline Decision make(Variable x) {
       int val = solver->last_solution_lb[x.id()];
-      Decision d(x, Decision::ASSIGNMENT, val);
+      Decision d;
       if(val == -INFTY || !x.contain(val)) 
-	//d.set_value((randint(2) ? x.get_min() : x.get_max()));
-	d.set_value(x.get_min());
+	d = init_choice.make(x);
+      else 
+	d = Decision(x, Decision::ASSIGNMENT, val);
       return d;
     }
-
-
-     std::ostream& display(std::ostream& os) const {
-       os << "assign it to the value of this variable in the last solution";
-       return os;
-     }
-
+    
+    std::ostream& display(std::ostream& os) const {
+      os << "assign it to the value of this variable in the last solution";
+      return os;
+    }
+    
   };
 
-  std::ostream& operator<<(std::ostream& os, Guided& x);
+  template< class Default >
+  std::ostream& operator<<(std::ostream& os, Guided<Default>& x) {
+    return x.display(os);
+  }
 
-  std::ostream& operator<<(std::ostream& os, Guided* x);
+
+  template< class Default >
+  std::ostream& operator<<(std::ostream& os, Guided<Default>* x) {
+    return x->display(os);
+  }
+
+
+
+
+  /*! \class Guided
+    \brief  Class GuidedSplit
+
+    Restricts the variable to the half that contains the solution value
+  */
+  template< class Default >
+  class GuidedSplit {
+    
+  public: 
+    
+    Solver *solver;
+    Default init_choice;
+    
+    GuidedSplit() {}
+    GuidedSplit(Solver *s) {solver=s;}
+    virtual ~GuidedSplit() {};
+    
+    inline Decision make(Variable x) {
+      int val = solver->last_solution_lb[x.id()];
+      Decision d;
+      if(val == -INFTY || !x.contain(val)) 
+	d = init_choice.make(x);
+      else {
+	int half = (x.get_min()+x.get_max())/2;
+	d = Decision(x, (half < val ? Decision::LOWERBOUND : Decision::UPPERBOUND), half);
+      }
+      return d;
+    }
+    
+    std::ostream& display(std::ostream& os) const {
+      os << "halves the domain so that it keeps the value of this variable in the last solution";
+      return os;
+    }
+    
+  };
+
+
+  template< class Default >
+  std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>& x) {
+    return x.display(os);
+  }
+
+  template< class Default >
+  std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>* x) {
+    return x->display(os);
+  }
+
+
 
 
 #define NEG(a) ((2*a))
@@ -2825,18 +2945,19 @@ namespace Mistral {
 
   
   
-  class VSIDS : public GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
-					 //MinValue > {
-					 BoolMinWeightValue > {
-  public:
+  // class VSIDS : public GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
+  // 					 //MinValue > {
+  // 					 BoolMinWeightValue > {
+  // public:
     
-    VSIDS(Solver *s) : GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
-					 //MinValue >(s) {
-					 BoolMinWeightValue >(s) {
-      choice.weight = s->get_literal_activity();
-    }
-  };
+  //   VSIDS(Solver *s) : GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
+  // 					 //MinValue >(s) {
+  // 					 BoolMinWeightValue >(s) {
+  //     choice.weight = s->get_literal_activity();
+  //   }
+  // };
 
+  typedef GenericDVO< MaxWeight, 1, LearningActivityManager > VSIDS;
 
   typedef GenericDVO< MinDomainOverWeight, 1, FailureCountManager > WDEG;
   

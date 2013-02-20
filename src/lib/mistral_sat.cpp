@@ -534,6 +534,26 @@ void Mistral::ConstraintClauseBase::learn( Vector < Literal >& clause, double ac
  }
 }
 
+void Mistral::ConstraintClauseBase::initialise_activity(double *lact, double *vact, double norm) {
+  
+  int i=clauses.size, j;
+
+  // there are 2^n assignments in a clause, only one that falsifies it.
+  double activity_increment;
+
+  while(i--) {
+    Clause& clause = *(clauses[i]);
+    
+    activity_increment = norm / (1 << (clause.size-1));
+    j=clause.size;
+    while(j--) {
+      lact[NOT(clause[j])] += activity_increment;
+      vact[UNSIGNED(clause[j])] += activity_increment;
+    }
+  }
+
+}
+
 int Mistral::ConstraintClauseBase::check( const int* sol ) const {
   unsigned int i, j;
   bool falsified=false;
@@ -891,7 +911,10 @@ void Mistral::ConstraintClauseBase::remove( const int cidx )
 }
 
 
-void Mistral::ConstraintClauseBase::forget(const double forgetfulness, const Vector< double >& lit_activity)
+void Mistral::ConstraintClauseBase::forget(const double forgetfulness, 
+					   const double *lit_activity
+					   //const Vector< double >& lit_activity
+					   )
 {
 
   //std::cout << "FORGET " << forgetfulness << std::endl;
@@ -905,32 +928,49 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness, const Vec
     for(i=0; i<nlearnt; ++i)
       {
 	order[i] = i;
-	sa[i] = 0.0;
-	Clause& clause = *(learnt[i]);
-	real_size = j = clause.size;
-	while(j--) // THE ACTIVITY OF A LITERAL IS A MEASURE OF HOW MUCH IT IS "WANTED" BY THE FORMULA - SHORT CLAUSE WITH UNWANTED LITERALS ARE THEREFORE GOOD
-	  {
-	    // real_size is the number of free literal in hte clause.
-	    // For correcteness, we need to not forget any clause that currently explains a literal.
-	    // It seems like a good idea to keep clauses with small real size anyway (they matter the most right now)
-	    if(scope[UNSIGNED(clause[j])].is_ground()) --real_size;
-	    else 
-	      sa[i] += lit_activity[NOT(clause[j])];
-	  }
-	if(real_size)
-	  sa[i] /= (real_size * real_size); //
-	//(clause.size * clause.size);
-	else
-	  sa[i] = INFTY;
+
+	if(lit_activity) {
+	  sa[i] = 0.0;
+	  Clause& clause = *(learnt[i]);
+	  real_size = j = clause.size;
+	  while(j--) // THE ACTIVITY OF A LITERAL IS A MEASURE OF HOW MUCH IT IS "WANTED" BY THE FORMULA - SHORT CLAUSE WITH UNWANTED LITERALS ARE THEREFORE GOOD
+	    {
+	      // real_size is the number of free literal in hte clause.
+	      // For correcteness, we need to not forget any clause that currently explains a literal.
+	      // It seems like a good idea to keep clauses with small real size anyway (they matter the most right now)
+	      if(scope[UNSIGNED(clause[j])].is_ground()) --real_size;
+	      else 
+		sa[i] += lit_activity[NOT(clause[j])];
+	    }
+	  if(real_size)
+	    sa[i] /= (real_size * real_size); //
+	  //(clause.size * clause.size);
+	  else
+	    sa[i] = INFTY;
+	}
       }
-    qsort(order, nlearnt, sizeof(int), compar);
+
+    int keep = (int)((double)nlearnt * (1.0-forgetfulness));
+
+    if(lit_activity)
+      qsort(order, nlearnt, sizeof(int), compar);
+    else {
+      int swap;
+      for(i=0; i<keep; ++i) {
+	j = i + randint(nlearnt-i);
+	swap = order[i];
+	order[i] = order[j];
+	order[j] = swap;
+      }
+    }
+
     for(i=0; i<nlearnt; ++i)
       tmp[i] = learnt[order[i]]; 
     for(i=0; i<nlearnt; ++i) {
       learnt[i] = tmp[i];
     }
     
-    int keep = (int)((double)nlearnt * (1.0-forgetfulness));
+
     
     for(i=nlearnt; i>keep && sa[order[i-1]] != INFTY;) {
       

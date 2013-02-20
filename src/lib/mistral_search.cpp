@@ -132,68 +132,68 @@ void Mistral::ConsolidateListener::notify_change(const int idx) {
 
 
 
-//Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s, void *a) 
-Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
-  : solver(s) {
+// //Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s, void *a) 
+// Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
+//   : solver(s) {
 
-  lit_activity = solver->lit_activity.stack_;
-  var_activity = solver->var_activity.stack_;
-  n_vars = solver->variables.size;
-
-
-  //   n_vars = solver->base->scope.size;
-
-  // if(solver->base) {
-  //   lit_activity = solver->base->lit_activity.stack_;
-  //   var_activity = solver->base->var_activity.stack_;
-  //   n_vars = solver->base->scope.size;
-  // } else {
-  //   n_vars = solver->variables.size;
-  //   lit_activity = new double[2*n_vars];
-  //   var_activity = new double[n_vars];
-  //   std::fill(lit_activity, lit_activity+2*n_vars, 0.012);
-  //   std::fill(var_activity, var_activity+n_vars, 0.024);
-  // }
+//   lit_activity = solver->lit_activity.stack_;
+//   var_activity = solver->var_activity.stack_;
+//   n_vars = solver->variables.size;
 
 
-  //double activity_increment = parameters.activity_increment / (1 << clause.size);
+//   //   n_vars = solver->base->scope.size;
+
+//   // if(solver->base) {
+//   //   lit_activity = solver->base->lit_activity.stack_;
+//   //   var_activity = solver->base->var_activity.stack_;
+//   //   n_vars = solver->base->scope.size;
+//   // } else {
+//   //   n_vars = solver->variables.size;
+//   //   lit_activity = new double[2*n_vars];
+//   //   var_activity = new double[n_vars];
+//   //   std::fill(lit_activity, lit_activity+2*n_vars, 0.012);
+//   //   std::fill(var_activity, var_activity+n_vars, 0.024);
+//   // }
+
+
+//   //double activity_increment = parameters.activity_increment / (1 << clause.size);
   
-  // if(activity_increment > 0.0) {
-  //   int i=clause.size;
-   //   while(i--) {
+//   // if(activity_increment > 0.0) {
+//   //   int i=clause.size;
+//    //   while(i--) {
 
-   //     //std::cout << clause << " " << activity_increment << std::endl;
+//    //     //std::cout << clause << " " << activity_increment << std::endl;
 
-   //     lit_activity[clause[i]] += activity_increment;
-   //     var_activity[UNSIGNED(clause[i])] += activity_increment;
-   //   }
-   // }
+//    //     lit_activity[clause[i]] += activity_increment;
+//    //     var_activity[UNSIGNED(clause[i])] += activity_increment;
+//    //   }
+//    // }
 
    
-  decay = solver->parameters.activity_decay;
-  solver->add((DecisionListener*)this);
-}
+//   decay = solver->parameters.activity_decay;
+//   solver->add((DecisionListener*)this);
+// }
 
-Mistral::LiteralActivityManager::~LiteralActivityManager() {
-  solver->remove((DecisionListener*)this);
-  // if(!solver->base) {
-  //   delete [] lit_activity;
-  //   delete [] var_activity;
-  // }
-}
+// Mistral::LiteralActivityManager::~LiteralActivityManager() {
+//   solver->remove((DecisionListener*)this);
+//   // if(!solver->base) {
+//   //   delete [] lit_activity;
+//   //   delete [] var_activity;
+//   // }
+// }
 
-double *Mistral::LiteralActivityManager::get_weight() { return var_activity; }     
+// double *Mistral::LiteralActivityManager::get_weight() { return var_activity; }     
 
-void Mistral::LiteralActivityManager::notify_decision() {
-  int i=n_vars;
-  while(i--) {
-    //std::cout << i << " " << var_activity[i] << " -> ";
-    var_activity[i] *= decay;
-    //std::cout << var_activity[i] << std::endl;
-  }    
-  i=2*n_vars;
-  while(i--) lit_activity[i] *= decay;
-}    
+// void Mistral::LiteralActivityManager::notify_decision() {
+//   int i=n_vars;
+//   while(i--) {
+//     //std::cout << i << " " << var_activity[i] << " -> ";
+//     var_activity[i] *= decay;
+//     //std::cout << var_activity[i] << std::endl;
+//   }    
+//   i=2*n_vars;
+//   while(i--) lit_activity[i] *= decay;
+// }    
 
 Mistral::RestartPolicy::RestartPolicy(const unsigned int b) {
   base = b;
@@ -511,6 +511,86 @@ std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool
       return os;
     }    
 
+
+std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const bool all) const {
+
+
+     int *all_variables = new int[var_activity.size];
+
+
+      int w, 
+	xwidth; //, // = log10(solver->variables[var_activity.size-1].id()),
+	//cwidth; // = log10(solver->constraints[constraint_weight.size-1].id());
+    
+      for(unsigned int i=0; i<var_activity.size; ++i) {
+	all_variables[i] = i;
+
+	// w = log10(var_activity[i]);
+	// if(w>xwidth) xwidth = w;
+
+      }
+
+
+      weight_sorting_array = var_activity.stack_;
+      qsort(all_variables, var_activity.size, sizeof(int), decreasing_weight);
+
+      os << " c variable weight: \n c id: ";
+      for(unsigned int i=0; i<var_activity.size; ++i) {
+	if(all || solver->sequence.contain(all_variables[i])) {
+	  xwidth = log10(var_activity[all_variables[i]])+7;
+	  w = log10(all_variables[i]);
+	  if(w>xwidth) xwidth = w;
+	  
+	  os << std::setw(xwidth) << all_variables[i] << " ";
+	}
+      }
+      os << "\n c va: ";
+      for(unsigned int i=0; i<var_activity.size; ++i) {
+	if(all || solver->sequence.contain(all_variables[i])) {
+	  xwidth = log10(var_activity[all_variables[i]])+7;
+	  w = log10(all_variables[i]);
+	  if(w>xwidth) xwidth = w;
+	  
+	  long long int intval = (long long int)(100000 * var_activity[all_variables[i]]);
+	  double outputval = ((double)intval)/100000;
+
+	  os << std::setw(xwidth) << outputval << " ";
+	}
+      }
+     os << "\n c  0: ";
+      for(unsigned int i=0; i<var_activity.size; ++i) {
+	if(all || solver->sequence.contain(all_variables[i])) {
+	  xwidth = log10(var_activity[2*all_variables[i]])+7;
+	  w = log10(all_variables[i]);
+	  if(w>xwidth) xwidth = w;
+	  
+	  long long int intval = (long long int)(100000 * lit_activity[2*all_variables[i]]);
+	  double outputval = ((double)intval)/100000;
+
+	  os << std::setw(xwidth) << outputval << " ";
+	}
+      }
+     os << "\n c  1: ";
+      for(unsigned int i=0; i<var_activity.size; ++i) {
+	if(all || solver->sequence.contain(all_variables[i])) {
+	  xwidth = log10(lit_activity[2*all_variables[i]+1])+7;
+	  w = log10(all_variables[i]);
+	  if(w>xwidth) xwidth = w;
+	  
+	  long long int intval = (long long int)(100000 * lit_activity[2*all_variables[i]+1]);
+	  double outputval = ((double)intval)/100000;
+
+	  os << std::setw(xwidth) << outputval << " ";
+	}
+      }
+      os << std::endl;
+
+    delete [] all_variables;
+
+
+  return os;
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomain& x) {
   return x.display(os);
 }
@@ -595,9 +675,9 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinWeightValue& x) {
   return x.display(os);
 }
 
-std::ostream& operator<<(std::ostream& os, Mistral::Guided& x) {
-  return x.display(os);
-}
+// std::ostream& operator<<(std::ostream& os, Mistral::Guided& x) {
+//   return x.display(os);
+// }
 
 std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue& x) {
   return x.display(os);
@@ -689,9 +769,9 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinWeightValue* x) {
   return x->display(os);
 }
 
-std::ostream& operator<<(std::ostream& os, Mistral::Guided* x) {
-  return x->display(os);
-}
+// std::ostream& operator<<(std::ostream& os, Mistral::Guided* x) {
+//   return x->display(os);
+// }
 
 std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue* x) {
   return x->display(os);

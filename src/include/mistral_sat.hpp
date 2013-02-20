@@ -291,7 +291,8 @@ namespace Mistral {
     void add( Vector < Literal >& clause, double init_activity=0.0 );
     void learn( Vector < Literal >& clause, double init_activity=0.0 );
     void remove( const int cidx );
-    void forget( const double forgetfulness, const Vector< double >& activity );
+    //void forget( const double forgetfulness, const Vector< double >& activity );
+    void forget( const double forgetfulness, const double * activity );
     //@}
 
     /**@name Solving*/
@@ -313,6 +314,9 @@ namespace Mistral {
 
     /**@name Miscellaneous*/
     //@{  
+
+    virtual void initialise_activity(double *lvact, double *vact, double norm);
+
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "clause_base"; }
     //@}

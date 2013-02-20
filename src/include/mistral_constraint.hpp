@@ -310,6 +310,7 @@ namespace Mistral {
     virtual void consolidate() = 0; 
     virtual void consolidate_var(const int idx) = 0; 
 
+    virtual void initialise_activity(double *lact, double *vact, double norm) = 0;
     //virtual int get_backtrack_level();// {return solver->level-1;}
     //virtual Decision get_decision();// { return solver->decisions.back(0); }
     //@}
@@ -457,6 +458,17 @@ namespace Mistral {
     virtual void initialise_vars(Solver *s) {
       for(unsigned int i=0; i<ARITY; ++i) {
 	scope[i].initialise(s, false);
+      }
+    }
+
+    virtual void initialise_activity(double *lact, double *vact, double norm) {
+      double w = norm/ARITY;
+      int idx, i = ARITY;
+      while(i--) {
+	idx = scope[i].id();
+	vact[idx] += w;
+	lact[2*idx] += w/2;
+	lact[2*idx+1] += w/2;
       }
     }
 
@@ -1283,6 +1295,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int postponed() = 0;
     virtual int idempotent() = 0;
     virtual ~GlobalConstraint();
+
+
+    virtual void initialise_activity(double *lact, double *vact, double norm);
 
     virtual void initialise_vars(Solver*);
 
@@ -3860,6 +3875,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     // virtual Explanation::iterator begin(Atom a);// { return NULL; }
     // virtual Explanation::iterator end  (Atom a);// { return NULL; } 
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+    virtual void initialise_activity(double *lact, double *vact, double norm);
 
     /**@name Solving*/
     //@{
@@ -3915,6 +3931,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int check( const int* sol ) const ;
     virtual PropagationOutcome propagate();
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+    virtual void initialise_activity(double *lact, double *vact, double norm);
     //@}
   
     /**@name Miscellaneous*/
@@ -3989,6 +4006,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+    //virtual void initialise_activity(double *lact, double *vact, double norm);
 
     /**@name Solving*/
     //@{
@@ -4063,6 +4081,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+    virtual void initialise_activity(double *lact, double *vact, double norm);
 
     /**@name Solving*/
     //@{
@@ -4127,7 +4146,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~PredicateWeightedBoolSum();
     //@}
 
-
+    virtual void initialise_activity(double *lact, double *vact, double norm);
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
     /**@name Solving*/

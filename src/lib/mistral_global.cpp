@@ -359,7 +359,7 @@ void Mistral::get_command_line(const char** int_ident,
 }
 
 
-int Mistral::log2( const unsigned int v ) {
+int Mistral::log2_( const unsigned int v ) {
 //   union {float f; unsigned int i; } t;
 //   unsigned int b = v & -v;
   

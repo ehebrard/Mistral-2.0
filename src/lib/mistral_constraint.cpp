@@ -18,7 +18,7 @@
   The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 */
 
-#include <math.h>
+#include <cmath>
 
 #include <mistral_sat.hpp>
 #include <mistral_solver.hpp>
@@ -1360,6 +1360,18 @@ void Mistral::GlobalConstraint::initialise() {
 
   GlobalConstraint::set_idempotent();
 }
+
+void Mistral::GlobalConstraint::initialise_activity(double *lact, double *vact, double norm) {
+  int i=scope.size, idx;;
+  double w = norm/i;
+  while(i--) {
+    idx = scope[i].id();
+    vact[idx] += w;
+    lact[2*idx] += w/2;
+    lact[2*idx+1] += w/2;
+  }
+}
+
 
 
 std::ostream& Mistral::ConstraintImplementation::display(std::ostream& os) const {
@@ -8584,6 +8596,25 @@ int Mistral::ConstraintBoolSumEqual::check( const int* s ) const
 //   return explanation.end();
 // }
 
+void Mistral::ConstraintBoolSumEqual::initialise_activity(double *lact, double *vact, double norm) {
+
+  int n = scope.size;
+  int real_max = std::min(n, (int)max_);
+  int real_min = std::max(0, (int)min_);
+  int span = (real_max - real_min);
+
+  double center = (double)(real_min + real_max) / 2;
+  double skew = center/(double)(n);
+
+  double activity_increment = norm / (scope.size * (1 << span));
+	      
+  int i=n;
+  while(i--) {
+    lact[2*scope[i].id()] += (1-skew) * activity_increment;
+    lact[2*scope[i].id()+1] += skew * activity_increment;
+    vact[scope[i].id()] += activity_increment;
+  }
+}
 
 
 Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
@@ -8814,6 +8845,90 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
   //     if( !scope[i].is_ground() ) scope[i].set_domain(1);
   // }
   // return CONSISTENT;
+}
+
+double factorial(const int n) {
+
+  //std::cout << "factorial(" << n << ") = ";
+
+  double fact = 1.0;
+  for(int i=1; i<n;) fact *= ++i;
+
+  //std::cout << fact << std::endl;
+
+  return fact;
+}
+
+double bi_coeff(const int n, const int k) {
+  //std::cout << "(" << n << " choose " << k << ") = ";
+  double res = factorial(n);
+  res /= factorial(k);
+  res /= factorial(n-k);
+
+  //std::cout << res << std::endl;
+
+  return res;
+}
+
+
+void Mistral::ConstraintBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
+
+  int n = scope.size;
+  int center = n/2;
+  int real_max = std::min(n, upper_bound);
+  int real_min = std::max(0, lower_bound);
+
+  double total_asgn = pow(2.0, n);
+
+  //std::cout << "total_asgn: " << total_asgn << std::endl;
+
+  double total_sol = 0;
+  for(int k=real_min; k<=real_max; ++k) {
+    total_sol += bi_coeff(n, k);
+  }
+  
+  //std::cout << "total_sol: " << total_sol << std::endl;
+
+  // case x = 0;
+  double sol_0 = 0;
+  for(int k=real_min; k<=real_max; ++k) {
+    sol_0 += bi_coeff(n-1, k);
+  }
+
+  //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
+
+  // case x = 1;
+  double sol_1 = 0;
+  for(int k=real_min-1; k<real_max; ++k) {
+    sol_1 += bi_coeff(n-1, k);
+  }
+
+  //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
+
+  double ratio_0 = 2*(sol_0/total_asgn);
+  double ratio_1 = 2*(sol_1/total_asgn);
+
+  //std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
+
+  //std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
+  
+  double incr_0 = norm*(1-ratio_0);
+  double incr_1 = norm*(1-ratio_1);
+
+  // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
+
+  // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
+  
+
+	      
+  int i=n, idx;
+  while(i--) {
+    idx = scope[i].id();
+     lact[2*idx] += incr_0;
+     lact[2*idx+1] += incr_1;
+     vact[idx] += incr_0;
+     vact[idx] += incr_1;
+  }
 }
 
 
@@ -9749,6 +9864,7 @@ Mistral::ConstraintWeightedBoolSumInterval::~ConstraintWeightedBoolSumInterval()
 
 
 
+
 Mistral::Explanation::iterator Mistral::ConstraintWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
   /*
     get explanation for the pruning of variables[a] at level lvl.
@@ -10580,6 +10696,148 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWei
 //#define _DEBUG_REASONIWBS (id == 2)
 
 
+void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
+  
+  int n = scope.size;
+  
+  double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
+
+  int real_max = std::min((int)(bound_[1]), upper_bound);
+  int real_min = std::max((int)(bound_[0]), lower_bound);
+
+  double total_asgn = pow(2.0, n);
+
+  int k;
+
+  // std::cout << "arity: " << n << std::endl;
+
+  // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
+
+  // std::cout << "bounds [" << lower_bound << " .. " << upper_bound << "]\n"; 
+
+  // std::cout << "avg_weight: " << avg_weight << std::endl;
+
+  // std::cout << "total_asgn: " << total_asgn << std::endl;
+
+  // double total_sol = 0;
+  //  k = (int)((double)(real_min - bound_[0])/avg_weight);
+  // for(double val=real_min; val<=real_max; val+=avg_weight) {
+  //   total_sol += bi_coeff(n, k);
+  //   ++k;
+  // }
+  
+  // std::cout << "total_sol: " << total_sol << std::endl;
+
+  // case x = 0;
+  double sol_0 = 0;
+   k = (int)((double)(real_min - bound_[0])/avg_weight);
+  for(double val=real_min; val<=real_max; val+=avg_weight) {
+    sol_0 += bi_coeff(n-1, k);
+    ++k;
+  }
+
+  //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
+
+  // case x = 1;
+  double sol_1 = 0;
+   k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
+  for(double val=real_min; val<=real_max; val+=avg_weight) {
+    sol_1 += bi_coeff(n-1, k);
+    ++k;
+  }
+
+  //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
+
+  double ratio_0 = 2*(sol_0/total_asgn);
+  double ratio_1 = 2*(sol_1/total_asgn);
+
+  // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
+
+  // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
+  
+  double incr_0 = norm*(1-ratio_0);
+  double incr_1 = norm*(1-ratio_1);
+
+   // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
+
+   // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
+  
+
+	      
+  int i=n, idx;
+  while(i--) {
+    idx = scope[i].id();
+    lact[2*idx] += incr_0 * (double)(weight[i]) / avg_weight;
+     lact[2*idx+1] += incr_1 * (double)(weight[i]) / avg_weight;
+     vact[idx] += (incr_0+incr_1) * (double)(weight[i]) / avg_weight;
+  }
+
+  // std::cout << "HERE" << std::endl;
+
+  // exit(1);
+
+
+  /*
+  // std::cerr << "initialise activity for " << this << std::endl;
+  
+  // std::cerr << lact << " " << vact << std::endl;
+
+  int n = weight.size;
+  int real_max = std::min((int)(bound_[1]), upper_bound);
+  int real_min = std::max((int)(bound_[0]), lower_bound);
+
+  //std::cerr << real_min << " .. " << real_max << std::endl;
+
+  double span = (real_max - real_min);
+
+  double center = (double)(real_min + real_max) / 2;
+  double skew = center/(double)(bound_[1] - bound_[0] + 1);
+  if(skew<0) skew = -skew;
+
+  int log_n = 0, j=n;
+  while(j) {
+    j>>=1;
+    ++log_n;
+  }
+
+  int exp = (int)(log_n * (span)/(double)(bound_[1] - bound_[0] + 1));
+
+
+  std::cout << "exp: " << exp << std::endl;
+
+  std::cout << "skew: " << skew << std::endl;
+
+  double activity_increment = norm / (1 << exp);
+  double ac_i; 
+
+  std::cout << activity_increment << std::endl;
+
+
+  int i=n;
+  while(i--) {
+    //std::cerr << i << std::endl;
+    ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)(std::abs(weight.back()));
+
+    // std::cerr << 11111 << "  " << (scope[i]) << " " << (2*scope[i].id()+(weight[i]<0)) << std::endl ;
+
+    // std::cerr << lact << " " << lact[(2*scope[i].id()+(weight[i]<0))] << std::endl;
+
+    lact[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
+
+    //std::cerr << 22222 << std::endl;
+
+    lact[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
+
+    //std::cerr << 33333 << std::endl;
+
+    vact[scope[i].id()] += ac_i;
+
+    std::cout << scope[i] << " * " << weight[i] << ": " << ac_i << " (" << skew*ac_i << "/" << (1-skew)*ac_i << ")" << std::endl;
+  }
+  */
+}
+
+
 Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
 #ifdef _DEBUG_REASONIWBS
@@ -11063,6 +11321,150 @@ Mistral::PredicateWeightedBoolSum::~PredicateWeightedBoolSum()
 #endif
   delete [] domains;
 }
+
+
+
+void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double *vact, double norm) {
+  
+  int n = weight.size;
+  
+  double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
+
+  int real_max = std::min((int)(bound_[1]), scope[n].get_max());
+  int real_min = std::max((int)(bound_[0]), scope[n].get_min());
+
+  double total_asgn = pow(2.0, n);
+
+  int k;
+
+  // std::cout << "arity: " << n << std::endl;
+
+  // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
+
+  // std::cout << "bounds [" << lower_bound << " .. " << upper_bound << "]\n"; 
+
+  // std::cout << "avg_weight: " << avg_weight << std::endl;
+
+  // std::cout << "total_asgn: " << total_asgn << std::endl;
+
+  // double total_sol = 0;
+  //  k = (int)((double)(real_min - bound_[0])/avg_weight);
+  // for(double val=real_min; val<=real_max; val+=avg_weight) {
+  //   total_sol += bi_coeff(n, k);
+  //   ++k;
+  // }
+  
+  // std::cout << "total_sol: " << total_sol << std::endl;
+
+  // case x = 0;
+  double sol_0 = 0;
+   k = (int)((double)(real_min - bound_[0])/avg_weight);
+  for(double val=real_min; val<=real_max; val+=avg_weight) {
+    sol_0 += bi_coeff(n-1, k);
+    ++k;
+  }
+
+  //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
+
+  // case x = 1;
+  double sol_1 = 0;
+   k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
+  for(double val=real_min; val<=real_max; val+=avg_weight) {
+    sol_1 += bi_coeff(n-1, k);
+    ++k;
+  }
+
+  //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
+
+  double ratio_0 = 2*(sol_0/total_asgn);
+  double ratio_1 = 2*(sol_1/total_asgn);
+
+  // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
+
+  // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
+  
+  double incr_0 = norm*(1-ratio_0);
+  double incr_1 = norm*(1-ratio_1);
+
+   // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
+
+   // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
+  
+
+	      
+  int i=n, idx;
+  while(i--) {
+    idx = scope[i].id();
+    lact[2*idx] += incr_0 * (double)(weight[i]) / avg_weight;
+     lact[2*idx+1] += incr_1 * (double)(weight[i]) / avg_weight;
+     vact[idx] += (incr_0+incr_1) * (double)(weight[i]) / avg_weight;
+  }
+
+  // std::cout << "HERE" << std::endl;
+
+  // exit(1);
+
+
+  /*
+  // std::cerr << "initialise activity for " << this << std::endl;
+  
+  // std::cerr << lact << " " << vact << std::endl;
+
+  int n = weight.size;
+  int real_max = std::min((int)(bound_[1]), upper_bound);
+  int real_min = std::max((int)(bound_[0]), lower_bound);
+
+  //std::cerr << real_min << " .. " << real_max << std::endl;
+
+  double span = (real_max - real_min);
+
+  double center = (double)(real_min + real_max) / 2;
+  double skew = center/(double)(bound_[1] - bound_[0] + 1);
+  if(skew<0) skew = -skew;
+
+  int log_n = 0, j=n;
+  while(j) {
+    j>>=1;
+    ++log_n;
+  }
+
+  int exp = (int)(log_n * (span)/(double)(bound_[1] - bound_[0] + 1));
+
+
+  std::cout << "exp: " << exp << std::endl;
+
+  std::cout << "skew: " << skew << std::endl;
+
+  double activity_increment = norm / (1 << exp);
+  double ac_i; 
+
+  std::cout << activity_increment << std::endl;
+
+
+  int i=n;
+  while(i--) {
+    //std::cerr << i << std::endl;
+    ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)(std::abs(weight.back()));
+
+    // std::cerr << 11111 << "  " << (scope[i]) << " " << (2*scope[i].id()+(weight[i]<0)) << std::endl ;
+
+    // std::cerr << lact << " " << lact[(2*scope[i].id()+(weight[i]<0))] << std::endl;
+
+    lact[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
+
+    //std::cerr << 22222 << std::endl;
+
+    lact[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
+
+    //std::cerr << 33333 << std::endl;
+
+    vact[scope[i].id()] += ac_i;
+
+    std::cout << scope[i] << " * " << weight[i] << ": " << ac_i << " (" << skew*ac_i << "/" << (1-skew)*ac_i << ")" << std::endl;
+  }
+  */
+}
+
 
 Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  

@@ -87,6 +87,10 @@ Mistral::Constraint Mistral::Constraint::get_negation(const int i, Variable x) {
   return propagator->get_negation(i, x); 
 }
 
+void Mistral::Constraint::initialise_activity(double *lvact, double *vact, double norm) {
+  propagator->initialise_activity(lvact, vact, norm);
+}
+
 void Mistral::Constraint::relax() {
   if(binary()) 
     ((BinaryConstraint*)propagator)->relax(); 
