@@ -4805,11 +4805,11 @@ void SatTest::run() {
   solver.parameters.backjump = 1;
 
   solver.depth_first_search(solver.variables, 
-			    new VSIDS(&solver),
+			    new GenericHeuristic< VSIDS<1>, BoolMinWeightValue >(&solver),
 			    new Geometric()
 			    );
   
-  if(solver.statistics.num_backtracks != 21391) {
+  if(solver.statistics.num_backtracks != 18445) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (solver.statistics.num_backtracks) << ")" << endl;
     //exit(1);

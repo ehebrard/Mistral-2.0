@@ -4286,21 +4286,10 @@ void Mistral::BoolSumExpression::initialise_bounds() {
   int tlb=0;
   int tub=0;
 
-  int lb = children[0].get_min()*weight[0];
-  int ub = children[0].get_max()*weight[0];
-  
-  if(lb < ub) {
-    tlb += lb;
-    tub += ub;
-  } else {
-    tlb += ub;
-    tub += lb;
-  }
-
-  for(unsigned int i=1; i<children.size; ++i) {
-    lb = children[i].get_min()*weight[i];
-    ub = children[i].get_max()*weight[i];
-  
+  if(weight.size) {
+    int lb = children[0].get_min()*weight[0];
+    int ub = children[0].get_max()*weight[0];
+    
     if(lb < ub) {
       tlb += lb;
       tub += ub;
@@ -4308,6 +4297,22 @@ void Mistral::BoolSumExpression::initialise_bounds() {
       tlb += ub;
       tub += lb;
     }
+    
+    for(unsigned int i=1; i<children.size; ++i) {
+      lb = children[i].get_min()*weight[i];
+      ub = children[i].get_max()*weight[i];
+      
+      if(lb < ub) {
+	tlb += lb;
+	tub += ub;
+      } else {
+	tlb += ub;
+	tub += lb;
+      }
+    }
+  } else {
+    tlb = 0;
+    tub = children.size;
   }
 
   if(tlb > lower_bound) lower_bound = tlb;

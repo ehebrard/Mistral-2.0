@@ -1092,6 +1092,11 @@ namespace Mistral {
     void initialise(Solver *s) { solver = s; }
     //void initialise(Solver *s, void *a) { solver = s; }
     void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
+
+    double *get_variable_weight() { return NULL; }
+    double **get_value_weight() { return NULL; }
+    double *get_bound_weight() { return NULL; }
+
     
     Variable select();
 
@@ -2683,31 +2688,31 @@ namespace Mistral {
   }
 
   
-  
-  // class VSIDS : public GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
-  // 					 //MinValue > {
-  // 					 BoolMinWeightValue > {
-  // public:
-    
-  //   VSIDS(Solver *s) : GenericHeuristic< GenericDVO< MaxWeight, 1, LiteralActivityManager >, 
-  // 					 //MinValue >(s) {
-  // 					 BoolMinWeightValue >(s) {
-  //     choice.weight = s->get_literal_activity();
-  //   }
-  // };
-
-  template < int R >
+  template < int R = 1 >
   class VSIDS : public GenericDVO< MaxWeight, R, LearningActivityManager > {
   public:
     VSIDS() : GenericDVO< MaxWeight, R, LearningActivityManager >() {}
     VSIDS(Solver *s) : GenericDVO< MaxWeight, R, LearningActivityManager >(s) {}
   };
 
-  //typedef GenericDVO< MaxWeight, R, LearningActivityManager > VSIDS;
+  template < int R = 1 >
+  class WDEG : public GenericDVO< MaxWeight, R, FailureCountManager > {
+  public:
+    WDEG() : GenericDVO< MaxWeight, R, FailureCountManager >() {}
+    WDEG(Solver *s) : GenericDVO< MaxWeight, R, FailureCountManager >(s) {}
+  };
 
-  typedef GenericDVO< MinDomainOverWeight, 1, FailureCountManager > WDEG;
+  template < int R = 1 >
+  class ABS : public GenericDVO< MaxWeight, R, PruningCountManager > {
+  public:
+    ABS() : GenericDVO< MaxWeight, R, PruningCountManager >() {}
+    ABS(Solver *s) : GenericDVO< MaxWeight, R, PruningCountManager >(s) {}
+  };
+
+
+  // typedef GenericDVO< MinDomainOverWeight, 1, FailureCountManager > WDEG;
   
-  typedef GenericDVO< MinDomainOverWeight, 1, PruningCountManager > ABS;
+  // typedef GenericDVO< MinDomainOverWeight, 1, PruningCountManager > ABS;
   
 }
 
