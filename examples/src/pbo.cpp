@@ -67,7 +67,7 @@ int main(int argc, char **argv)
       exit(1);
     }
   } else { 
-    strategy = new GenericHeuristic< WDEG, RandomMinMax >(&solver);
+    strategy = new GenericHeuristic< WDEG<2>, RandomMinMax >(&solver);
   }
 
 
