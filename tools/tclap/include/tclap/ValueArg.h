@@ -404,7 +404,7 @@ void ValueArg<T>::_extractValue( const std::string& val )
     } catch( ArgParseException &e) {
 	throw ArgParseException(e.error(), toString());
     }
-    
+
     if ( _constraint != NULL )
 	if ( ! _constraint->check( _value ) )
 	    throw( CmdLineParseException( "Value '" + val + 

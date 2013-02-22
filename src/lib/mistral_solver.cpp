@@ -5820,15 +5820,16 @@ Mistral::SolverCmdLine::SolverCmdLine(const std::string& message,
 }
     
 Mistral::SolverCmdLine::~SolverCmdLine() {
+
   delete fileArg;
   delete seedArg;
   delete timeArg;
   //delete printArg;
   // delete printsolArg;
-   delete printstaArg;
-   delete printmodArg;
-   delete printparArg;
-   delete printinsArg;
+  delete printstaArg;
+  delete printmodArg;
+  delete printparArg;
+  delete printinsArg;
   delete verbosityArg;
   delete randomizationArg;
   delete rewriteArg;
@@ -5840,6 +5841,9 @@ Mistral::SolverCmdLine::~SolverCmdLine() {
   delete incrementArg;
   delete learningArg;
   delete branchingArg;
+
+  delete r_allowed;
+  delete bo_allowed;
 }
 
 void Mistral::SolverCmdLine::initialise() {
@@ -5886,8 +5890,8 @@ void Mistral::SolverCmdLine::initialise() {
     rallowed.push_back("no");
     rallowed.push_back("geom");
     rallowed.push_back("luby");
-    TCLAP::ValuesConstraint<std::string> r_allowed( rallowed );
-    restartArg = new TCLAP::ValueArg<std::string>("r","restart","restart policy",false,"no",&r_allowed);
+    r_allowed = new TCLAP::ValuesConstraint<std::string>( rallowed );
+    restartArg = new TCLAP::ValueArg<std::string>("r","restart","restart policy",false,"no",r_allowed);
     add( *restartArg );
     
     // RESTART FACTOR
@@ -5950,12 +5954,14 @@ void Mistral::SolverCmdLine::initialise() {
     std::vector<std::string> boallowed;
     boallowed.push_back("min");
     boallowed.push_back("max");
-    boallowed.push_back("boand");
-    boallowed.push_back("halfsplit");
-    boallowed.push_back("boandsplit");
-    boallowed.push_back("guided");
-    TCLAP::ValuesConstraint<std::string> bo_allowed( boallowed );
-    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided",&bo_allowed);
+    boallowed.push_back("weight");
+    boallowed.push_back("rand");
+    boallowed.push_back("guided+weight");
+    boallowed.push_back("guided+min");
+    boallowed.push_back("guided+max");
+    boallowed.push_back("guided+rand");
+    bo_allowed = new TCLAP::ValuesConstraint<std::string>( boallowed );
+    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided+min",bo_allowed);
     add( *branchingArg );    
 
   }
@@ -5974,9 +5980,13 @@ void Mistral::SolverCmdLine::set_parameters(Mistral::Solver& s) {
 
   }
 
-    const char* Mistral::SolverCmdLine::get_filename() {
-      return fileArg->getValue().c_str();
-    }
+std::string Mistral::SolverCmdLine::get_value_ordering() {
+  return branchingArg->getValue();
+}
+
+const char* Mistral::SolverCmdLine::get_filename() {
+  return fileArg->getValue().c_str();
+}
 
     int Mistral::SolverCmdLine::get_seed() { 
       return seedArg->getValue();

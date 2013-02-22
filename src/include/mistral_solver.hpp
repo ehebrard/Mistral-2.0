@@ -790,12 +790,15 @@ namespace Mistral {
     TCLAP::ValueArg<double>      *incrementArg;
     TCLAP::SwitchArg             *learningArg;
     TCLAP::ValueArg<std::string> *branchingArg;
-     TCLAP::SwitchArg             *printsolArg;
-     TCLAP::SwitchArg             *printparArg;
-     TCLAP::SwitchArg             *printmodArg;
-     TCLAP::SwitchArg             *printinsArg;
-     TCLAP::SwitchArg             *printstaArg;
+    TCLAP::SwitchArg             *printsolArg;
+    TCLAP::SwitchArg             *printparArg;
+    TCLAP::SwitchArg             *printmodArg;
+    TCLAP::SwitchArg             *printinsArg;
+    TCLAP::SwitchArg             *printstaArg;
 
+
+    TCLAP::ValuesConstraint<std::string> * r_allowed;
+    TCLAP::ValuesConstraint<std::string> *bo_allowed;
     // int print_sol;
     // int print_sta;
     // int print_mod;
@@ -994,6 +997,10 @@ public:
 
   // }
     ;
+
+
+    std::string get_value_ordering();
+
 
     const char* get_filename()//  {
     //   return fileArg->getValue().c_str();

@@ -536,6 +536,9 @@ std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const 
 
       os << " c variable weight: \n c id: ";
       for(unsigned int i=0; i<var_activity.size; ++i) {
+
+	if(!(i%1000)) {
+
 	if(all || solver->sequence.contain(all_variables[i])) {
 	  xwidth = log10(var_activity[all_variables[i]])+7;
 	  w = log10(all_variables[i]);
@@ -543,9 +546,15 @@ std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const 
 	  
 	  os << std::setw(xwidth) << all_variables[i] << " ";
 	}
+
+	}
+
       }
       os << "\n c va: ";
       for(unsigned int i=0; i<var_activity.size; ++i) {
+
+	if(!(i%1000)) {
+
 	if(all || solver->sequence.contain(all_variables[i])) {
 	  xwidth = log10(var_activity[all_variables[i]])+7;
 	  w = log10(all_variables[i]);
@@ -556,9 +565,15 @@ std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const 
 
 	  os << std::setw(xwidth) << outputval << " ";
 	}
+
+	}
+
       }
      os << "\n c  0: ";
       for(unsigned int i=0; i<var_activity.size; ++i) {
+
+	if(!(i%1000)) {
+
 	if(all || solver->sequence.contain(all_variables[i])) {
 	  xwidth = log10(var_activity[2*all_variables[i]])+7;
 	  w = log10(all_variables[i]);
@@ -569,9 +584,15 @@ std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const 
 
 	  os << std::setw(xwidth) << outputval << " ";
 	}
+
+	}
+
       }
      os << "\n c  1: ";
       for(unsigned int i=0; i<var_activity.size; ++i) {
+
+	if(!(i%1000)) {
+
 	if(all || solver->sequence.contain(all_variables[i])) {
 	  xwidth = log10(lit_activity[2*all_variables[i]+1])+7;
 	  w = log10(all_variables[i]);
@@ -582,6 +603,9 @@ std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const 
 
 	  os << std::setw(xwidth) << outputval << " ";
 	}
+
+	}
+
       }
       os << std::endl;
 
@@ -672,6 +696,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::RandomMinMax& x) {
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinWeightValue& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinWeightBound& x) {
   return x.display(os);
 }
 
@@ -766,6 +794,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::RandomMinMax* x) {
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinWeightValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinWeightBound* x) {
   return x->display(os);
 }
 
