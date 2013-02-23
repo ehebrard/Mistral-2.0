@@ -90,9 +90,13 @@ int main(int argc, char **argv)
     Solution sol(solver.variables);
     
     if(cmd.print_solution())
-      cout << " c  " << sol << endl;
+      cout << " c  " << solver.variables.size << " " << sol << endl;
   }
 
+#ifdef _CHECK_NOGOOD
+  solver.read_solution("sol.txt");
+  solver.check_nogoods();
+#endif
 
     } catch (TCLAP::ArgException &e)  // catch any exceptions
     { cerr << "error: " << e.error() << " for arg " << e.argId() << endl; }

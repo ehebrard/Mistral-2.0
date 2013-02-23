@@ -4003,6 +4003,15 @@ void Mistral::Solver::learn_nogood() {
 
       // std::cerr << assignment_level[a] << std::endl;
 
+#ifdef _CHECK_NOGOOD
+
+      // std::cout << (int*)current_explanation << " " ;
+      // std::cout.flush();
+      // std::cout << current_explanation << std::endl;
+
+      store_reason(current_explanation, a);
+#endif
+
       Explanation::iterator lit = current_explanation->get_reason_for(a, (a != NULL_ATOM ? assignment_level[a] : level), stop);
   
       while(lit < stop) {
@@ -4143,6 +4152,9 @@ void Mistral::Solver::learn_nogood() {
         
   //exit(1);
 
+#ifdef _CHECK_NOGOOD
+  store_nogood(learnt_clause);
+#endif
 
 
   
@@ -6021,3 +6033,83 @@ const char* Mistral::SolverCmdLine::get_filename() {
       return printstaArg->getValue();
       //return true;
     }
+
+
+
+
+#ifdef _CHECK_NOGOOD
+
+void Mistral::Solver::store_reason(Explanation *expl, Atom a) {
+  Explanation::iterator stop;
+  Explanation::iterator lit = expl->get_reason_for(a, ((a != NULL_ATOM) ? assignment_level[a] : level), stop);
+  
+  Vector< Literal > ng;
+  while(lit < stop) {
+    ng.add(*lit);
+    ++lit;
+  }
+  
+  if(a != NULL_ATOM) {
+
+    Literal l = literal(variables[a]);
+
+    // if(l == 83) {
+    //   std::cout << variables[a].get_domain() << " " << a << std::endl;
+    //   exit(1);
+    // }
+
+    ng.add(l);
+  }
+
+  if(expl->is_clause()) nogood_origin.add(NULL);
+  else nogood_origin.add(expl);
+  nogood_clause.add(ng);
+  atom.add(a);
+  node_num.add(statistics.num_filterings);
+}
+
+void Mistral::Solver::store_nogood(Vector< Literal >& lc) {
+  atom.add(NULL_ATOM);
+  node_num.add(statistics.num_filterings);
+  nogood_clause.add(lc);
+  nogood_origin.add(NULL);
+}
+
+
+void Mistral::Solver::read_solution(const char* fname) {
+  std::ifstream fsol(fname);
+
+  int val;
+  int nvars = 0;
+  fsol >> nvars;
+
+  while(nvars--) {
+    fsol >> val;
+    solution.add(val);
+  }
+}
+
+void Mistral::Solver::check_nogoods() {
+  for(int i=0; i<nogood_clause.size; ++i) {
+    std::cout << "check " << node_num[i] << " " << atom[i] << " " << nogood_clause[i].size << " " << nogood_clause[i] << " produced by ";
+    std::cout << " " << ((int*)(nogood_origin[i])) << " ";
+    std::cout.flush();
+
+    if(nogood_origin[i]) 
+      std::cout << nogood_origin[i];
+    else
+      std::cout << "learning";
+
+    bool ok = false;
+    for(int j=0; j<nogood_clause[i].size; ++j) {
+      ok |= (solution[UNSIGNED(nogood_clause[i][j])] == SIGN(nogood_clause[i][j]));
+    }
+
+    if(!ok) {
+      std::cout << " WRONG NOGOOD!!\n";
+      exit(1);
+    }
+    std::cout << " ok\n";
+  }
+}
+#endif

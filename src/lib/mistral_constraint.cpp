@@ -10984,11 +10984,26 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
 }
 
 
+//#define _DEBUG_REASONIWBS (this == (ConstraintIncrementalWeightedBoolSumInterval*)0x10034d310)
+
+
 Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
 #ifdef _DEBUG_REASONIWBS
   if(_DEBUG_REASONIWBS) {
-  std::cout << "compute reason for " << a << " with respect to " << this << std::endl;
+    std::cout << "compute reason for " << a << " with respect to " << this << std::endl;
+  }
+  if(a != NULL_ATOM) {
+    bool a_exists = false;
+    for(int i=0; !a_exists && i<scope.size; ++i) {
+      a_exists |= (scope[i].id() == a);
+    }
+
+    if(!a_exists) {
+      std::cout << "request reason for " << a << " not constrained by " << this << std::endl;
+      exit(1);
+    }
+
   }
 #endif
 
@@ -11089,6 +11104,7 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   std::cout << explanation << std::endl;
   }
 #endif
+
 
   return explanation.begin();
 }
@@ -11677,6 +11693,7 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
   */
 }
 
+//#define _DEBUG_REASONRIWBS (get_solver()->statistics.num_filterings == 10037)
 
 Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
@@ -11687,29 +11704,86 @@ Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for
   Explanation **reason = get_solver()->reason_for.stack_;
 
 
-#ifdef _DEBUG_REASONIWBS
-  std::cout << "compute reason for " << a << std::endl;
+#ifdef _DEBUG_REASONRIWBS
+  int total_nog = 0;
+  if(_DEBUG_REASONRIWBS) {
+    std::cout << "compute reason for " << a << std::endl;
+
+    std::cout << "[" << bound_[0] << "," << bound_[1] << "] in " << scope[weight.size].get_domain() << std::endl;
+  }
 #endif
 
 
   // direction is 1 iff the constraint pushed toward ub and 0 otherwise
   bool direction = 1; 
-
+  
   if(a != NULL_ATOM) {
     a_rank = rank[a];
-    for(i=active.size; i<weight.size; ++i) {
-      if(active[i] == a) {
-	i = active[i];
+    for(i=weight.size; i--;) {
+      idx = scope[i].id();
+      if(idx == a) {
 	direction = (GET_VAL(domains[i]) == weight[i]>0);
+	break;
       }
     }
+    // for(i=active.size; i<weight.size; ++i) {
+    //   if(active[i] == a) {
+    // 	i = active[i];
+    // 	direction = (GET_VAL(domains[i]) == weight[i]>0);
+    //   }
+    // }
   } else {
     direction = (bound_[1] < scope.back().get_min());
   }
 
+
+
+
+#ifdef _DEBUG_REASONRIWBS
+  if(_DEBUG_REASONRIWBS) {
+    
+    if(direction) {
+      if(a == NULL_ATOM)
+	std::cout << " the lower bound was reached " << a << std::endl;
+      else
+	std::cout << scope[i] << " was set to a high value (" << (GET_VAL(domains[i]) * weight[i]) << ") because otherwise the maximum would be too low " << a << std::endl;
+    } else {
+     if(a == NULL_ATOM)
+	std::cout << " the upper bound was reached " << a << std::endl;
+      else
+	std::cout << scope[i] << " was set to a low value (" << (GET_VAL(domains[i]) * weight[i]) << ") because otherwise the minimum would be too high" << a << std::endl;
+    }
+    for(i=0; i<weight.size; ++i) {
+      
+      idx = scope[i].id();
+      std::cout << scope[i] << ": " << scope[i].get_domain() ;
+      if( !(IS_GROUND(domains[i])) )
+	std::cout << " [active]" ;
+      else {
+	std::cout << " rank: " << rank[idx] ;
+	std::cout << " val: " << (GET_VAL(domains[i])) ;
+	std::cout << " weight " << weight[i] ;
+      }
+      
+      
+      if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank && (((GET_VAL(domains[i]) == weight[i]>0) != direction))) {
+	
+	total_nog += (GET_VAL(domains[i]) * weight[i]);
+
+	std::cout << " => IN!";
+      } else 
+	std::cout << " => OUT!";
+      
+      std::cout << std::endl;
+    }
+  }
+#endif
+
+
+
   // finds all the assignment that decreased the maximum reachable value
-      i = weight.size;
-      while(i--) {
+  i = weight.size;
+  while(i--) {
     idx = scope[i].id();
     if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
       if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
@@ -11717,6 +11791,16 @@ Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for
       }
     }
   }
+  
+#ifdef _DEBUG_REASONRIWBS
+  if(_DEBUG_REASONRIWBS) {
+    std::cout << " ==> " << total_nog << " in? [" << scope[weight.size].get_min() << "," << scope[weight.size].get_max() << "]\n";
+    std::cout << explanation << std::endl << std::endl;
+
+    //if(explanation.size == (32 + (a == NULL_ATOM)) && explanation[0] == 465 && explanation[1] == 541)
+    exit(1);
+  }
+#endif
 
   end = explanation.end();
   return explanation.begin();
@@ -11841,15 +11925,36 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 //   } 
   else {
 
-    scope.back().set_domain(bound_[0], bound_[1]);
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "\nprune total: " << scope.back().get_domain() << " => " ;
+    }
+#endif
+
+    if(FAILED(scope.back().set_domain(bound_[0], bound_[1]))) wiped_idx = FAILURE(weight.size);
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << scope.back().get_domain() << std::endl;
+    }
+#endif
 
 
-    if(!scope.back().includes(bound_[0], bound_[1])) {
 
+    if(IS_OK(wiped_idx) && !scope.back().includes(bound_[0], bound_[1])) {
+
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "[" << bound_[0] << "," << bound_[1] << "] is not a subset of "
+		<< scope.back().get_domain() << std::endl;
+    }
+#endif
 
       i = index_;
       
-      while(i>=0) {
+      while(IS_OK(wiped_idx) && i>=0) {
 	// 
 	while(i>=0 && scope[i].is_ground()) --i;
 	
@@ -11883,7 +11988,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
 	      if(_DEBUG_PWEIGHTEDBOOLSUM) {
 		std::cout << scope[i] << " cannot be set to 0 because " 
-			  << bound_[1] << " - " << weight[i] << " > " 
+			  << bound_[0] << " - " << weight[i] << " > " 
 			  << scope.back().get_domain() << std::endl;
 	      }
 #endif
@@ -11899,7 +12004,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
 	      if(_DEBUG_PWEIGHTEDBOOLSUM) {
 		std::cout << scope[i] << " cannot be set to 1 because " 
-			<< bound_[1] << " + " << weight[i] << " > " 
+			<< bound_[0] << " + " << weight[i] << " > " 
 			  << scope.back().get_domain() << std::endl;
 	      }
 #endif
@@ -11924,20 +12029,36 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 	  else break;
 	  }
 	}
- 
 
-	scope.back().set_domain(bound_[0], bound_[1]);
-	--i;
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	if(_DEBUG_PWEIGHTEDBOOLSUM) {
+	  std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+	  std::cout << "\nprune total: " << scope.back().get_domain() << " => " ;
+	}
+#endif
+
+	if(FAILED(scope.back().set_domain(bound_[0], bound_[1]))) wiped_idx = FAILURE(weight.size);	
 	
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
-      if(_DEBUG_PWEIGHTEDBOOLSUM) {
-	std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
-      }
-#endif
-      
+	if(_DEBUG_PWEIGHTEDBOOLSUM) {
+	  std::cout << scope.back().get_domain() << std::endl;
+	}
+#endif 
+	
+	--i;
+	      
       }
       index_ = i;
     }
+
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    else if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "consistent!" << std::endl;
+    }
+#endif 
+
+
   }
     
 

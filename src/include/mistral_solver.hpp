@@ -380,6 +380,21 @@ namespace Mistral {
     void monitor(Variable X);
 #endif
 
+#ifdef _CHECK_NOGOOD
+    Vector< Explanation* >       nogood_origin;
+    Vector < Vector< Literal > >  nogood_clause;
+    Vector< int >  solution;
+    Vector< int >  node_num;
+    Vector< Atom >  atom;
+
+    void store_reason(Explanation *expl, Atom a);
+    void store_nogood(Vector< Literal >& lc);
+    void read_solution(const char* fname);
+
+    void check_nogoods();
+#endif
+
+
 
     /// The set of constraints, with special accessors for triggers
     Vector< Constraint >         constraints;
