@@ -2541,15 +2541,22 @@ namespace Mistral {
     Solver *solver;
     Default init_choice;
     
-    Guided() {}
-    Guided(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); }
+    //int cool;
+
+    Guided() {} //cool=3;}
+    Guided(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); } //cool=3;}
     void initialise(double **vw, double *bw) { init_choice.initialise(vw, bw); }
     virtual ~Guided() {};
     
     inline Decision make(Variable x) {
       int val = solver->last_solution_lb[x.id()];
+      //if(cool < 3+solver->statistics.num_solutions) {
+      int cool = 3+solver->statistics.num_solutions;
+      // 	std::cout << cool <<std::endl;
+      // }
       Decision d;
-      if(val == -INFTY || !x.contain(val)) 
+      if(val == -INFTY || !x.contain(val) || !randint(cool)
+	 ) 
 	d = init_choice.make(x);
       else 
 	d = Decision(x, Decision::ASSIGNMENT, val);

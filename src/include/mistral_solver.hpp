@@ -1016,6 +1016,8 @@ public:
 
     std::string get_value_ordering();
 
+    std::string get_restart_policy();
+
 
     const char* get_filename()//  {
     //   return fileArg->getValue().c_str();

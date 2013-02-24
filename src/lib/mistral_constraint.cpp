@@ -10912,9 +10912,13 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
   int i=n, idx;
   while(i--) {
     idx = scope[i].id();
-    lact[2*idx] += incr_0 * (double)(weight[i]) / avg_weight;
-    lact[2*idx+1] += incr_1 * (double)(weight[i]) / avg_weight;
-    vact[idx] += total_weight * (double)(weight[i]) / avg_weight;
+
+    double pond = (double)(weight[i]) / avg_weight;
+    if(pond<0) pond = -pond;
+
+    lact[2*idx] += incr_0 * pond;
+    lact[2*idx+1] += incr_1 * pond;
+    vact[idx] += total_weight * pond;
   }
 
 
@@ -11614,12 +11618,15 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
 
     //std::cout << vact[idx] << " " << lact[2*idx] << " " << lact[2*idx+1] << " => ";
 
+    double pond = (double)(weight[i]) / avg_weight;
+    if(pond<0) pond = -pond;
+
     if(weight[i] > 0) {
-      lact[2*idx+1] += incr_1 * (double)(weight[i]) / avg_weight;
-      vact[idx] += incr_1 * (double)(weight[i]) / avg_weight;
+      lact[2*idx+1] += incr_1 * pond;
+      vact[idx] += incr_1 * pond;
     } else {
-      lact[2*idx] += incr_0 * (double)(weight[i]) / avg_weight;
-      vact[idx] += incr_0 * (double)(weight[i]) / avg_weight;
+      lact[2*idx] += incr_0 * pond;
+      vact[idx] += incr_0 * pond;
     }
 
     //std::cout << vact[idx] << " " << lact[2*idx] << " " << lact[2*idx+1] << std::endl;

@@ -1042,6 +1042,8 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
 	      if(all_pones) {
 
+		//std::cout << "cardinality constraint" << std::endl;
+
 		add( BoolSum(scope, //weight,
 			     bounds[0], bounds[1]) );
 	    
@@ -1087,13 +1089,15 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 		//   }
 		// }
 
+		//std::cout << "linear constraint" << std::endl;
+
 		add( BoolSum(scope, weight, bounds[0], bounds[1]) );
 
 	      }
 	    }
 	  }  else {
 
-	    //std::cout << " OBJ" ;
+	    //std::cout << " OBJ" << std::endl;
 
 	    //minimize(BoolSum(scope, weight));
 
@@ -1693,10 +1697,12 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
       if(!limits_expired()) {
 	satisfiability = UNKNOWN;
       }
-      forget();
     }
 
     if(_restore_) restore(root);
+
+    forget();
+
   }
 
   statistics.outcome = satisfiability;
@@ -4240,12 +4246,27 @@ Mistral::Outcome Mistral::Solver::branch_right() {
 
 #else
   else if( limits_expired() ) {
+    
+#ifdef _DEBUG_SEARCH
+    if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+      std::cout << "limit out!" << std::endl;
+    }
+#endif    
+
     status = LIMITOUT;
   }
 #endif
   else {
 
-
+#ifdef _DEBUG_SEARCH
+    if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+      std::cout << "limit fine: " << statistics.num_failures << " < " << parameters.restart_limit << std::endl;
+    }
+#endif
 
     Mistral::Decision deduction;
     //backtrack_level = level-1;
@@ -5903,7 +5924,7 @@ void Mistral::SolverCmdLine::initialise() {
     rallowed.push_back("geom");
     rallowed.push_back("luby");
     r_allowed = new TCLAP::ValuesConstraint<std::string>( rallowed );
-    restartArg = new TCLAP::ValueArg<std::string>("r","restart","restart policy",false,"no",r_allowed);
+    restartArg = new TCLAP::ValueArg<std::string>("r","restart","restart policy",false,"geom",r_allowed);
     add( *restartArg );
     
     // RESTART FACTOR
@@ -5989,11 +6010,15 @@ void Mistral::SolverCmdLine::set_parameters(Mistral::Solver& s) {
     s.parameters.activity_decay = decayArg->getValue();
     s.parameters.backjump = learningArg->getValue();
     s.parameters.activity_increment = incrementArg->getValue();
-
+    s.parameters.forgetfulness = forgetArg->getValue();
   }
 
 std::string Mistral::SolverCmdLine::get_value_ordering() {
   return branchingArg->getValue();
+}
+
+std::string Mistral::SolverCmdLine::get_restart_policy() {
+  return restartArg->getValue();
 }
 
 const char* Mistral::SolverCmdLine::get_filename() {

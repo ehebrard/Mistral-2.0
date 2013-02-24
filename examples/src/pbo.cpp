@@ -36,6 +36,8 @@ int main(int argc, char **argv)
   cmd.set_parameters(solver);
   
   solver.parse_pbo(cmd.get_filename());
+
+
   
   solver.consolidate();
   
@@ -76,12 +78,25 @@ int main(int argc, char **argv)
 
   
 
+  RestartPolicy *policy = NULL;
+
+  if(cmd.get_restart_policy() == "no")  
+    policy = new NoRestart();
+  else if(cmd.get_restart_policy() == "luby")  
+    policy = new Luby(solver.parameters.restart_base);
+  else if(cmd.get_restart_policy() == "geom")  
+    policy = new Geometric(solver.parameters.restart_base,
+					  solver.parameters.restart_factor);
   
-  RestartPolicy *policy = new Geometric(solver.parameters.restart_base,
-					solver.parameters.restart_factor);
+
+  VarArray X;
+  for(int i=0; i<solver.variables.size; ++i) {
+    if(solver.variables[i].is_bool())
+      X.add(solver.variables[i]);
+  }
+
   
-  
-  Outcome result = solver.depth_first_search(solver.variables, strategy, policy);
+  Outcome result = solver.depth_first_search(X, strategy, policy);
   
   if(cmd.print_statistics())
     cout << solver.statistics ;

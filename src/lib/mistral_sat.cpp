@@ -919,6 +919,11 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 
   //std::cout << "FORGET " << forgetfulness << std::endl;
 
+  int * solution = NULL;
+  if(get_solver()->statistics.num_solutions)
+    solution = get_solver()->last_solution_lb.stack_;
+
+
   if( forgetfulness > 0.0 ) {
     int nlearnt = learnt.size;
     double sa[nlearnt];
@@ -938,12 +943,14 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 	      // real_size is the number of free literal in hte clause.
 	      // For correcteness, we need to not forget any clause that currently explains a literal.
 	      // It seems like a good idea to keep clauses with small real size anyway (they matter the most right now)
-	      if(scope[UNSIGNED(clause[j])].is_ground()) --real_size;
+	      //if(scope[UNSIGNED(clause[j])].is_ground()) --real_size;
+	      if(solution && solution[UNSIGNED(clause[j])] != SIGN(clause[j])) --real_size;
 	      else 
 		sa[i] += lit_activity[NOT(clause[j])];
 	    }
 	  if(real_size)
-	    sa[i] /= (real_size * real_size); //
+	    sa[i] /= //(real_size * clause.size);
+	      (real_size * real_size); //
 	  //(clause.size * clause.size);
 	  else
 	    sa[i] = INFTY;
@@ -971,6 +978,28 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
     }
     
 
+  // double avg_fgt_size = 0;
+  // double avg_fgt_size_weight = 0;
+
+  // double avg_kpt_size = 0;
+  // double avg_kpt_size_weight = 0;
+
+
+    // std::cout << nlearnt << " " << keep << " " << forgetfulness << std::endl;
+
+    // std::cout << sa[order[nlearnt-1]] << std::endl;
+
+    // for(i=0; i<scope.size; ++i) {
+    //   std::cout << scope[i].get_domain();
+    // }
+    // std::cout << std::endl;
+
+    // for(i=nlearnt; i--;) {
+    //   std::cout << sa[order[i-1]] << std::endl;
+    // }
+
+    // exit(1);
+
     
     for(i=nlearnt; i>keep && sa[order[i-1]] != INFTY;) {
       
@@ -984,12 +1013,14 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 
     // for(int kk=keep; kk; ) {
 
-    //  std::cout << sa[order[kk-1]] << " keep " ;
+    //   std::cout << sa[order[kk-1]] << " keep " ;
     //   print_clause(std::cout, learnt[kk-1]) ;
     //   std::cout << std::endl;
 
     //   --kk;
     // }
+
+    
 
 
     /// PIECE OF CODE THAT I CAN'T UNDERSTAND!!!!
