@@ -8599,6 +8599,14 @@ int Mistral::ConstraintBoolSumEqual::check( const int* s ) const
 void Mistral::ConstraintBoolSumEqual::initialise_activity(double *lact, double *vact, double norm) {
 
   int n = scope.size;
+
+
+
+  if(get_solver()->statistics.max_arity < n)
+    get_solver()->statistics.max_arity = n;
+
+
+
   int real_max = std::min(n, (int)max_);
   int real_min = std::max(0, (int)min_);
   int span = (real_max - real_min);
@@ -8608,7 +8616,14 @@ void Mistral::ConstraintBoolSumEqual::initialise_activity(double *lact, double *
 
 
   double activity_increment = norm / (scope.size * (1 << span));
-	      
+	 
+
+  if(skew<0 || skew>1 || activity_increment<0)
+    {
+      get_solver()->statistics.negative_weight = true;
+    }
+
+   
   int i=n;
   while(i--) {
     lact[2*scope[i].id()] += (1-skew) * activity_increment;
@@ -8946,6 +8961,14 @@ double sum_bi_coeff(const int nn, const int lb, const int ub) {
 void Mistral::ConstraintBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
 
   int n = scope.size;
+
+
+
+  if(get_solver()->statistics.max_arity < n)
+    get_solver()->statistics.max_arity = n;
+
+
+
   int center = n/2;
   int real_max = std::min(n, upper_bound);
   int real_min = std::max(0, lower_bound);
@@ -9038,6 +9061,12 @@ void Mistral::ConstraintBoolSumInterval::initialise_activity(double *lact, doubl
 
 
   total_weight = incr_1+incr_0;
+
+
+  if(incr_1<0 || incr_0<0)
+    {
+      get_solver()->statistics.negative_weight = true;
+    }
 
 
 	      
@@ -9796,6 +9825,90 @@ std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
     os << " <= " << upper_bound;
  
 
+  return os;
+}
+
+
+
+
+
+
+
+Mistral::ConstraintParity::ConstraintParity(Vector< Variable >& scp, const int p)
+  : GlobalConstraint(scp), target_parity(p) { 
+  priority = 1;
+}
+
+void Mistral::ConstraintParity::initialise() {
+  ConstraintImplementation::initialise();
+  for(unsigned int i=0; i<scope.size; ++i)
+    trigger_on(_VALUE_, scope[i]);
+  GlobalConstraint::initialise();
+}
+
+Mistral::ConstraintParity::~ConstraintParity() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete parity constraint" << std::endl;
+#endif
+}
+
+Mistral::Explanation::iterator Mistral::ConstraintParity::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+  explanation.clear();
+
+  // all assignments are required
+  int idx, i = scope.size;
+  while(i--) {
+    idx = scope[i].id();
+    if(idx != a)
+      explanation.add(NOT(literal(scope[i])));
+  }
+
+  end = explanation.end();
+  return explanation.begin();
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintParity::propagate() 
+{
+  // do nothing until all but one of the variables are assigned
+
+  PropagationOutcome wiped_idx = CONSISTENT;
+
+  if(active.size <= 1) {
+    int parity = 0;
+    for(int i=scope.size; --i>=0;) {
+      parity ^= scope[i].get_min();
+    }
+    if(active.size) {
+      if(FAILED(scope[active.back()].set_domain(parity != target_parity))) wiped_idx = FAILURE(active.back());
+    } else {
+      if(parity != target_parity) wiped_idx = FAILURE(0);
+    }
+  }
+
+  return wiped_idx;
+}
+
+int Mistral::ConstraintParity::check( const int* s ) const 
+{
+  int i=scope.size, t=0;
+  while(i--) {
+    t+=s[i];
+  }
+  return (t%2 != target_parity);
+}
+
+std::ostream& Mistral::ConstraintParity::display(std::ostream& os) const {
+  if(target_parity)
+    os << "odd(" << scope[0];
+  else 
+    os << "even(" << scope[0];
+
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << ", " << scope[i];
+  
+  os << ")" ;
+ 
   return os;
 }
 
@@ -10818,6 +10931,12 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWei
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
   
   int n = scope.size;
+
+
+  if(get_solver()->statistics.max_arity < n)
+    get_solver()->statistics.max_arity = n;
+
+
   
   double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
 
@@ -10908,6 +11027,12 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
   incr_0 += total_weight * (sol_1/(sol_0+sol_1));
   total_weight *= 2;
  
+
+  if(incr_1<0 || incr_0<0 || total_weight<0) 
+    {
+      get_solver()->statistics.negative_weight = true;
+    }
+
 	      
   int i=n, idx;
   while(i--) {
@@ -11493,6 +11618,12 @@ Mistral::PredicateWeightedBoolSum::~PredicateWeightedBoolSum()
 void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double *vact, double norm) {
   
   int n = weight.size;
+
+
+  if(get_solver()->statistics.max_arity < n)
+    get_solver()->statistics.max_arity = n;
+
+
   
   double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
 
@@ -11610,6 +11741,12 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
 
 
   //std::cout << "weights: " << incr_0 << " " << incr_1 << " " << avg_weight << std::endl;
+
+  if(incr_1<0 || incr_0<0) 
+    {
+      get_solver()->statistics.negative_weight = true;
+    }
+
 
 	      
   int i=n, idx;

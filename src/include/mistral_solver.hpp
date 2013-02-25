@@ -167,6 +167,11 @@ namespace Mistral {
     unsigned long int num_values; 
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_constraints; 
+    ///
+    unsigned long int max_arity;
+    ///
+    bool negative_weight;
+    
 
     /// timestamp
     double start_time;
@@ -180,6 +185,10 @@ namespace Mistral {
     unsigned int      small;
     double            base_avg_size;
     double            learnt_avg_size;
+
+
+
+    
 
 
 #ifdef _PROFILING

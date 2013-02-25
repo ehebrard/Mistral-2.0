@@ -250,6 +250,10 @@ void Mistral::SolverStatistics::initialise() {
   learnt_avg_size = 0;
   literals = 0;
   small = 0;
+
+  negative_weight = false;
+  max_arity = 0;
+
 }
 
 #ifdef _PROFILING
@@ -415,8 +419,14 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::right << std::setw(46) << num_backtracks << std::endl
      << std::left << std::setw(46) << " d  PROPAGATIONS"
      << std::right << std::setw(46) << num_propagations << std::endl
-     << std::left << std::setw(46) << " d  FILTERINGS"
-     << std::right << std::setw(46) << num_filterings << std::endl
+     << std::left << std::setw(46) << " d  VARIABLES"
+     << std::right << std::setw(46) << num_variables << std::endl
+     << std::left << std::setw(46) << " d  CONSTRAINTS"
+     << std::right << std::setw(46) << num_constraints << std::endl
+     << std::left << std::setw(46) << " d  ARITY"
+     << std::right << std::setw(46) << max_arity << std::endl
+     << std::left << std::setw(46) << " d  NEGWEIGHT"
+     << std::right << std::setw(46) << negative_weight << std::endl
      << " c +" << std::setw(90) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
   //<< " c +=============================================================================+" << std::endl;
   return os;
@@ -2949,6 +2959,8 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 bool Mistral::Solver::propagate() 
 {
 
+  // findprop
+
 #ifdef _DEBUG_AC
   if(_DEBUG_AC) {
     std::cout << "c start propagation" << std::endl;
@@ -3241,8 +3253,8 @@ bool Mistral::Solver::propagate()
       // if(culprit.explained()) {
       // 	wiped_idx = culprit.propagate_and_explain(reason_for); 
       // } else {
-	wiped_idx = culprit.propagate(); 
-	//}
+      wiped_idx = culprit.propagate(); 
+      //}
       taboo_constraint = culprit.defrost();
 
 #ifdef _DEBUG_AC

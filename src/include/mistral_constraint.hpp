@@ -4280,6 +4280,57 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
 
+
+  /**********************************************
+   * Parity Constraint
+   **********************************************/
+  /*! \class ConstraintParity
+    \brief  Constraint on a sum modulo 2 of variables (x1 + ... + xn = p)
+    with p in {0,1}
+  */
+  class ConstraintParity : public GlobalConstraint {
+
+  public:
+    /**@name Parameters*/
+    //@{ 
+    // the wanted parity 
+    int target_parity;
+
+    //
+    Vector< Literal > explanation;
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    ConstraintParity(Vector< Variable >& scp, const int p=0);
+    virtual ~ConstraintParity();
+    virtual Constraint clone() { return Constraint(new ConstraintParity(scope, target_parity)); }
+    //virtual bool rewritable() { return true; }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //virtual void mark_domain();
+    //@}
+
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "sum="; }
+    //@}
+  };
+
+
+
   /**********************************************
    * AtMostSeqCard Constraint
    **********************************************/
