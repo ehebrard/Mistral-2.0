@@ -711,6 +711,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue& x) {
   return x.display(os);
 }
 
+std::ostream& operator<<(std::ostream& os, Mistral::BoolMaxWeightValue& x) {
+  return x.display(os);
+}
+
 
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomain* x) {
@@ -806,5 +810,9 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinWeightBound* x) {
 // }
 
 std::ostream& operator<<(std::ostream& os, Mistral::BoolMinWeightValue* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::BoolMaxWeightValue* x) {
   return x->display(os);
 }

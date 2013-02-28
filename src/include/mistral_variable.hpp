@@ -2076,7 +2076,7 @@ namespace Mistral {
     inline void set_value(const int val) {_data_ = (_data_&3)|(val<<2); }
     
     Decision() {
-      init_data(ASSIGNMENT,INFTY);
+      init_data(ASSIGNMENT,INFTY/2);
     }
 
     Decision(Variable x, const int t, const int v) {
@@ -2085,7 +2085,13 @@ namespace Mistral {
     }
     
     void init_data(const int t, const int v) {
+
+      //std::cout << "init with " << v << std::endl;
+
       _data_ = (((v - (t == LOWERBOUND)) << 2) | t);
+
+      //std::cout << " ==> " << value() << std::endl;
+
     }
 
     Decision(ConstraintImplementation *c) {
@@ -2097,7 +2103,7 @@ namespace Mistral {
     virtual ~Decision() {
     }
 
-    inline bool is_void() { return value()==INFTY; }
+    inline bool is_void() { return value()==INFTY/2; }
 
     inline void invert() { _data_^=1; }
     

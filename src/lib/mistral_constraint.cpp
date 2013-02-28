@@ -8960,114 +8960,167 @@ double sum_bi_coeff(const int nn, const int lb, const int ub) {
 
 void Mistral::ConstraintBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
 
+
+
   int n = scope.size;
 
-
+  //std::cout << "n: " << n << std::endl;
 
   if(get_solver()->statistics.max_arity < n)
     get_solver()->statistics.max_arity = n;
+  
 
-
-
-  int center = n/2;
   int real_max = std::min(n, upper_bound);
   int real_min = std::max(0, lower_bound);
 
+  // std::cout << "bound: [" << 0 << ".." << n << "]" << std::endl;
 
-  long double sol_0 = 0;
-  long double sol_1 = 0;
-  
+  // std::cout << "reach: [" << real_min << ".." << real_max << "]" << std::endl;
+
   double incr_0 = 0;
   double incr_1 = 0;
 
-  double total_weight = 0;  
 
-  if(n<500) {
+  double center = (double)(real_min + real_max) / 2;
 
-    long double total_asgn = pow(2.0, n);
 
-    // std::cout << "arity: " << n << std::endl;
+  //std::cout << "center: " << center << std::endl;
+
+  double skew = center/n; 
+  if(skew<0) skew = -skew;
+
+  //std::cout << "skew: " << skew << std::endl;
+
+  double exponent = skew;
+  if(exponent < 1-exponent) exponent = 1-exponent;
+  exponent = 1/exponent;
+
+  //std::cout << "exponent: " << exponent << std::endl;
+
+  exponent += (double)(real_max - real_min + 1) / n;
+
+  //std::cout << "exponent: " << exponent << std::endl;
+
+
+  double activity_increment = norm / pow(n, exponent);
+
+  //std::cout << "activity_increment: " << activity_increment << std::endl;
+
+  incr_0 = skew * activity_increment;
+  incr_1 = (1-skew) * activity_increment;
+
+  //std::cout << "0: " << incr_0 << ", 1: " << incr_1 << std::endl; 
+
+
+ 
+
+  // int n = scope.size;
+
+
+
+  // if(get_solver()->statistics.max_arity < n)
+  //   get_solver()->statistics.max_arity = n;
+
+
+
+  // int center = n/2;
+  // int real_max = std::min(n, upper_bound);
+  // int real_min = std::max(0, lower_bound);
+
+
+  // long double sol_0 = 0;
+  // long double sol_1 = 0;
   
-    // std::cout << real_min << " .. " << real_max << std::endl;
+  // double incr_0 = 0;
+  // double incr_1 = 0;
 
-    // std::cout << "total_asgn: " << total_asgn << std::endl;
+  // double total_weight = 0;  
 
-    long double total_sol = 0;
-    for(int k=real_min; k<=real_max; ++k) {
-      total_sol += bi_coeff(n, k);
-    }
+  // if(n<500) {
+
+  //   long double total_asgn = pow(2.0, n);
+
+  //   // std::cout << "arity: " << n << std::endl;
   
-    //std::cout << "total_sol: " << total_sol << std::endl;
+  //   // std::cout << real_min << " .. " << real_max << std::endl;
 
-    // case x = 0;
+  //   // std::cout << "total_asgn: " << total_asgn << std::endl;
+
+  //   long double total_sol = 0;
+  //   for(int k=real_min; k<=real_max; ++k) {
+  //     total_sol += bi_coeff(n, k);
+  //   }
   
-    for(int k=real_min; k<=real_max; ++k) {
-      sol_0 += bi_coeff(n-1, k);
-    }
+  //   //std::cout << "total_sol: " << total_sol << std::endl;
 
-    // double sbc = sum_bi_coeff(n-1, real_min, real_max);
+  //   // case x = 0;
+  
+  //   for(int k=real_min; k<=real_max; ++k) {
+  //     sol_0 += bi_coeff(n-1, k);
+  //   }
 
-    // if(sbc != sol_0) {
-    //   std::cout << sol_0 << " <1> " << sbc << std::endl;
-    //   exit(1);
-    // }
+  //   // double sbc = sum_bi_coeff(n-1, real_min, real_max);
+
+  //   // if(sbc != sol_0) {
+  //   //   std::cout << sol_0 << " <1> " << sbc << std::endl;
+  //   //   exit(1);
+  //   // }
 
 
-    //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
+  //   //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
 
-    // // case x = 1;
-    // double sol_1 = 0;
-    // for(int k=real_min-1; k<real_max; ++k) {
-    //   sol_1 += bi_coeff(n-1, k);
-    // }
+  //   // // case x = 1;
+  //   // double sol_1 = 0;
+  //   // for(int k=real_min-1; k<real_max; ++k) {
+  //   //   sol_1 += bi_coeff(n-1, k);
+  //   // }
 
-    // case x = 1;
-    sol_1 = sol_0 - bi_coeff(n-1, real_max) + bi_coeff(n-1, real_min-1);
+  //   // case x = 1;
+  //   sol_1 = sol_0 - bi_coeff(n-1, real_max) + bi_coeff(n-1, real_min-1);
   
 
-    // double ssol_1 = 0;
-    // for(int k=real_min-1; k<real_max; ++k) {
-    //   ssol_1 += bi_coeff(n-1, k);
-    // }
+  //   // double ssol_1 = 0;
+  //   // for(int k=real_min-1; k<real_max; ++k) {
+  //   //   ssol_1 += bi_coeff(n-1, k);
+  //   // }
 
-    // std::cout << "#sol[x=1]: " << sol_1 << std::endl;
+  //   // std::cout << "#sol[x=1]: " << sol_1 << std::endl;
 
-    // if(ssol_1 != sol_1) {
-    //   std::cout << " should have been " << ssol_1 << "!!\n";
-    //   exit(1);
-    // }
+  //   // if(ssol_1 != sol_1) {
+  //   //   std::cout << " should have been " << ssol_1 << "!!\n";
+  //   //   exit(1);
+  //   // }
 
-    double ratio_0 = 2*(sol_0/total_asgn);
-    double ratio_1 = 2*(sol_1/total_asgn);
+  //   double ratio_0 = 2*(sol_0/total_asgn);
+  //   double ratio_1 = 2*(sol_1/total_asgn);
 
-    //std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
+  //   //std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
 
-    //std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
+  //   //std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
   
-    double incr_0 = norm*(1-ratio_0);
-    double incr_1 = norm*(1-ratio_1);
+  //   double incr_0 = norm*(1-ratio_0);
+  //   double incr_1 = norm*(1-ratio_1);
 
-    // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
+  //   // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
 
-    // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
-
-
-    total_weight = incr_1+incr_0;
-    // 
-    incr_1 += total_weight * (sol_0/(sol_0+sol_1));
-    incr_0 += total_weight * (sol_1/(sol_0+sol_1));
-    total_weight *=2;  
-  }
+  //   // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
 
 
-  total_weight = incr_1+incr_0;
+  //   total_weight = incr_1+incr_0;
+  //   // 
+  //   incr_1 += total_weight * (sol_0/(sol_0+sol_1));
+  //   incr_0 += total_weight * (sol_1/(sol_0+sol_1));
+  //   total_weight *=2;  
+  // }
+
+
+  double total_weight = incr_1+incr_0;
 
 
   if(incr_1<0 || incr_0<0)
     {
       get_solver()->statistics.negative_weight = true;
     }
-
 
 	      
   int i=n, idx;
@@ -10929,109 +10982,170 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWei
 
 
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
-  
-  int n = scope.size;
 
+
+
+  int n = weight.size;
+
+  // std::cout << "n: " << n << std::endl;
 
   if(get_solver()->statistics.max_arity < n)
     get_solver()->statistics.max_arity = n;
-
-
   
   double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
+
+  // std::cout << "aw: " << avg_weight << std::endl;
+
 
   int real_max = std::min((int)(bound_[1]), upper_bound);
   int real_min = std::max((int)(bound_[0]), lower_bound);
 
-  long double total_asgn = pow(2.0, n);
+  // std::cout << "bound: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
 
-  int k;
+  // std::cout << "reach: [" << real_min << ".." << real_max << "]" << std::endl;
 
-  // std::cout << "arity: " << n << std::endl;
+  double incr_0 = 0;
+  double incr_1 = 0;
 
-  // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
+  // long double sol_0 = 0;
+  // long double sol_1 = 0;
 
-  // std::cout << "bounds [" << lower_bound << " .. " << upper_bound << "]\n"; 
 
-  // std::cout << "avg_weight: " << avg_weight << std::endl;
+  double center = (double)(real_min + real_max) / 2;
 
-  // std::cout << "total_asgn: " << total_asgn << std::endl;
 
-  // double total_sol = 0;
+  // std::cout << "center: " << center << std::endl;
+
+  double skew = (center - (double)((int)(bound_[0])) + 1)/(double)(bound_[1] - bound_[0] + 1);
+  if(skew<0) skew = -skew;
+
+  // std::cout << "skew: " << skew << std::endl;
+
+  double exponent = skew;
+  if(exponent < 1-exponent) exponent = 1-exponent;
+  exponent = 1/exponent;
+
+  // std::cout << "exponent: " << exponent << std::endl;
+
+  exponent += (double)(real_max - real_min + 1) / (double)(bound_[1] - bound_[0] + 1);
+
+  // std::cout << "exponent: " << exponent << std::endl;
+
+
+  double activity_increment = norm / pow(n, exponent);
+
+  // std::cout << "activity_increment: " << activity_increment << std::endl;
+
+  incr_0 = skew * activity_increment;
+  incr_1 = (1-skew) * activity_increment;
+
+  // std::cout << "0: " << incr_0 << ", 1: " << incr_1 << std::endl; 
+
+
+
+  
+  // int n = scope.size;
+
+
+  // if(get_solver()->statistics.max_arity < n)
+  //   get_solver()->statistics.max_arity = n;
+
+
+  
+  // double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
+
+  // int real_max = std::min((int)(bound_[1]), upper_bound);
+  // int real_min = std::max((int)(bound_[0]), lower_bound);
+
+  // long double total_asgn = pow(2.0, n);
+
+  // int k;
+
+  // // std::cout << "arity: " << n << std::endl;
+
+  // // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
+
+  // // std::cout << "bounds [" << lower_bound << " .. " << upper_bound << "]\n"; 
+
+  // // std::cout << "avg_weight: " << avg_weight << std::endl;
+
+  // // std::cout << "total_asgn: " << total_asgn << std::endl;
+
+  // // double total_sol = 0;
+  // //  k = (int)((double)(real_min - bound_[0])/avg_weight);
+  // // for(double val=real_min; val<=real_max; val+=avg_weight) {
+  // //   total_sol += bi_coeff(n, k);
+  // //   ++k;
+  // // }
+  
+  // // std::cout << "total_sol: " << total_sol << std::endl;
+
+  // // case x = 0;
+
+  // long double sol_0 = 0;
   //  k = (int)((double)(real_min - bound_[0])/avg_weight);
+  //  //int l = k;
+  //  //int u = k;
   // for(double val=real_min; val<=real_max; val+=avg_weight) {
-  //   total_sol += bi_coeff(n, k);
+  //   sol_0 += bi_coeff(n-1, k);
+  //   //u = k;
   //   ++k;
   // }
-  
-  // std::cout << "total_sol: " << total_sol << std::endl;
-
-  // case x = 0;
-
-  long double sol_0 = 0;
-   k = (int)((double)(real_min - bound_[0])/avg_weight);
-   //int l = k;
-   //int u = k;
-  for(double val=real_min; val<=real_max; val+=avg_weight) {
-    sol_0 += bi_coeff(n-1, k);
-    //u = k;
-    ++k;
-  }
 
 
-  // double sbc = sum_bi_coeff(n-1, l, u);
+  // // double sbc = sum_bi_coeff(n-1, l, u);
 
-  // if(sbc != sol_0) {
-  //   std::cout << sol_0 << " <2> " << sbc << std::endl;
-  //   exit(1);
+  // // if(sbc != sol_0) {
+  // //   std::cout << sol_0 << " <2> " << sbc << std::endl;
+  // //   exit(1);
+  // // }
+
+
+  // //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
+
+  // // case x = 1;
+  // long double sol_1 = 0;
+  //  k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
+  // for(double val=real_min; val<=real_max; val+=avg_weight) {
+  //   sol_1 += bi_coeff(n-1, k);
+  //   ++k;
   // }
 
-
-  //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
-
-  // case x = 1;
-  long double sol_1 = 0;
-   k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
-  for(double val=real_min; val<=real_max; val+=avg_weight) {
-    sol_1 += bi_coeff(n-1, k);
-    ++k;
-  }
-
-  //double sol_1 = sol_0 - bi_coeff(n-1, real_max) + bi_coeff(n-1, real_min-1);
+  // //double sol_1 = sol_0 - bi_coeff(n-1, real_max) + bi_coeff(n-1, real_min-1);
  
 
-  //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
+  // //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
 
-  double ratio_0 = 2*(sol_0/total_asgn);
-  double ratio_1 = 2*(sol_1/total_asgn);
+  // double ratio_0 = 2*(sol_0/total_asgn);
+  // double ratio_1 = 2*(sol_1/total_asgn);
 
-  // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
+  // // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
 
-  // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
+  // // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
   
-  double incr_0 = norm*(1-ratio_0);
-  double incr_1 = norm*(1-ratio_1);
+  // double incr_0 = norm*(1-ratio_0);
+  // double incr_1 = norm*(1-ratio_1);
 
-   // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
+  //  // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
 
-   // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
+  //  // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
   
-  if(incr_0 < 0.0001 && incr_1 < 0.0001) {
-    incr_0 = 0.0001 * norm;
-    incr_1 = 0.0001 * norm;
-  }
+  // if(incr_0 < 0.0001 && incr_1 < 0.0001) {
+  //   incr_0 = 0.0001 * norm;
+  //   incr_1 = 0.0001 * norm;
+  // }
 
-  double total_weight = incr_1+incr_0;
-  // 
-  incr_1 += total_weight * (sol_0/(sol_0+sol_1));
-  incr_0 += total_weight * (sol_1/(sol_0+sol_1));
-  total_weight *= 2;
+  // double total_weight = incr_1+incr_0;
+  // // 
+  // incr_1 += total_weight * (sol_0/(sol_0+sol_1));
+  // incr_0 += total_weight * (sol_1/(sol_0+sol_1));
+  // total_weight *= 2;
  
 
-  if(incr_1<0 || incr_0<0 || total_weight<0) 
-    {
-      get_solver()->statistics.negative_weight = true;
-    }
+  // if(incr_1<0 || incr_0<0 || total_weight<0) 
+  //   {
+  //     get_solver()->statistics.negative_weight = true;
+  //   }
 
 	      
   int i=n, idx;
@@ -11041,9 +11155,15 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
     double pond = (double)(weight[i]) / avg_weight;
     if(pond<0) pond = -pond;
 
-    lact[2*idx] += incr_0 * pond;
-    lact[2*idx+1] += incr_1 * pond;
-    vact[idx] += total_weight * pond;
+    if(weight[i] > 0) {
+      lact[2*idx] += incr_0 * pond;
+      lact[2*idx+1] += incr_1 * pond;
+    } else {
+      lact[2*idx] += incr_0 * pond;
+      lact[2*idx+1] += incr_1 * pond;
+    }
+
+    vact[idx] += (incr_0 + incr_1) * pond;
   }
 
 
@@ -11619,125 +11739,166 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
   
   int n = weight.size;
 
+  //std::cout << "n: " << n << std::endl;
 
   if(get_solver()->statistics.max_arity < n)
     get_solver()->statistics.max_arity = n;
-
-
   
   double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
+
+  //std::cout << "aw: " << avg_weight << std::endl;
+
 
   int real_max = std::min((int)(bound_[1]), scope[n].get_max());
   int real_min = std::max((int)(bound_[0]), scope[n].get_min());
 
+  // std::cout << "bound: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+
+  // std::cout << "reach: [" << real_min << ".." << real_max << "]" << std::endl;
+
   double incr_0 = 0;
   double incr_1 = 0;
 
-    long double sol_0 = 0;
-    long double sol_1 = 0;
+  // long double sol_0 = 0;
+  // long double sol_1 = 0;
 
-  if(n < 500) {
 
-    long double total_asgn = pow(2.0, n);
+  double center = (double)(real_min + real_max) / 2;
+
+
+  // std::cout << "center: " << center << std::endl;
+
+  double skew = (center - (double)((int)(bound_[0])) + 1)/(double)(bound_[1] - bound_[0] + 1);
+  if(skew<0) skew = -skew;
+
+  //  std::cout << "skew: " << skew << std::endl;
+
+  double exponent = skew;
+  if(exponent < 1-exponent) exponent = 1-exponent;
+  exponent = 1/exponent;
+
+  //std::cout << "exponent: " << exponent << std::endl;
+
+  exponent += (double)(real_max - real_min + 1) / (double)(bound_[1] - bound_[0] + 1);
+
+  //std::cout << "exponent: " << exponent << std::endl;
+
+
+  double activity_increment = norm / pow(n, exponent);
+
+  //std::cout << "activity_increment: " << activity_increment << std::endl;
+
+  incr_0 = skew * activity_increment;
+  incr_1 = (1-skew) * activity_increment;
+
+  //std::cout << "0: " << incr_0 << ", 1: " << incr_1 << std::endl; 
+
+
+  // exit(1);
+
+
+  // if(n < 500) {
+
+  //   long double total_asgn = pow(2.0, n);
     
-    int k;
+  //   int k;
     
-    // std::cout << "arity: " << n << std::endl;
+  //   // std::cout << "arity: " << n << std::endl;
     
-    // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
+  //   // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
 
-    // std::cout << "bounds [" << scope[n].get_min() << " .. " << scope[n].get_max() << "]\n"; 
+  //   // std::cout << "bounds [" << scope[n].get_min() << " .. " << scope[n].get_max() << "]\n"; 
 
-    // std::cout << "avg_weight: " << avg_weight << std::endl;
+  //   // std::cout << "avg_weight: " << avg_weight << std::endl;
 
-    // std::cout << "total_asgn: " << total_asgn << std::endl;
+  //   // std::cout << "total_asgn: " << total_asgn << std::endl;
 
-    // double total_sol = 0;
-    //  k = (int)((double)(real_min - bound_[0])/avg_weight);
-    // for(double val=real_min; val<=real_max; val+=avg_weight) {
-    //   total_sol += bi_coeff(n, k);
-    //   ++k;
-    // }
+  //   // double total_sol = 0;
+  //   //  k = (int)((double)(real_min - bound_[0])/avg_weight);
+  //   // for(double val=real_min; val<=real_max; val+=avg_weight) {
+  //   //   total_sol += bi_coeff(n, k);
+  //   //   ++k;
+  //   // }
   
-    // std::cout << "total_sol: " << total_sol << std::endl;
+  //   // std::cout << "total_sol: " << total_sol << std::endl;
 
 
-    k = (int)((double)(real_min - bound_[0])/avg_weight);
-    // int l = k;
-    // int u = k;
-    for(double val=real_min; val<=real_max; val+=avg_weight) {
-      sol_0 += bi_coeff(n-1, k);
-      // u = k;
-      ++k;
-    }
+  //   k = (int)((double)(real_min - bound_[0])/avg_weight);
+  //   // int l = k;
+  //   // int u = k;
+  //   for(double val=real_min; val<=real_max; val+=avg_weight) {
+  //     sol_0 += bi_coeff(n-1, k);
+  //     // u = k;
+  //     ++k;
+  //   }
 
-    // std::cout << "[" << l << "," << u << "]\n";
-    // double sbc = sum_bi_coeff(n-1, l, u);
+  //   // std::cout << "[" << l << "," << u << "]\n";
+  //   // double sbc = sum_bi_coeff(n-1, l, u);
 
-    // if(sbc != sol_0) {
-    //   std::cout << sol_0 << " <3> " << sbc << std::endl;
-    //   exit(1);
-    // }
+  //   // if(sbc != sol_0) {
+  //   //   std::cout << sol_0 << " <3> " << sbc << std::endl;
+  //   //   exit(1);
+  //   // }
 
-    // // case x = 0;
-    // double sol_0 = 0;
-    //  k = (int)((double)(real_min - bound_[0])/avg_weight);
-    // for(double val=real_min; val<real_max; val+=avg_weight) {
+  //   // // case x = 0;
+  //   // double sol_0 = 0;
+  //   //  k = (int)((double)(real_min - bound_[0])/avg_weight);
+  //   // for(double val=real_min; val<real_max; val+=avg_weight) {
     
     
-    //   sol_0 += bi_coeff(n-1, k);
+  //   //   sol_0 += bi_coeff(n-1, k);
 
-    //   //std::cout << "  -> " << k << " " << sol_0 << std::endl;
+  //   //   //std::cout << "  -> " << k << " " << sol_0 << std::endl;
 
 
-    //   ++k;
-    // }
+  //   //   ++k;
+  //   // }
 
-    //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
+  //   //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
 
-    // case x = 1;
+  //   // case x = 1;
 
-    k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
-    for(double val=real_min; val<real_max; val+=avg_weight) {
+  //   k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
+  //   for(double val=real_min; val<real_max; val+=avg_weight) {
 
-      sol_1 += bi_coeff(n-1, k);
+  //     sol_1 += bi_coeff(n-1, k);
 
-      //std::cout << "  -> " << k << " " << sol_1 << std::endl;
+  //     //std::cout << "  -> " << k << " " << sol_1 << std::endl;
 
-      ++k;
-    }
+  //     ++k;
+  //   }
 
-    //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
+  //   //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
 
-    double ratio_0 = 2*(sol_0/total_asgn);
-    double ratio_1 = 2*(sol_1/total_asgn);
+  //   double ratio_0 = 2*(sol_0/total_asgn);
+  //   double ratio_1 = 2*(sol_1/total_asgn);
 
-    // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
+  //   // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
 
-    // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
+  //   // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
   
-    incr_0 = norm*(1-ratio_0);
-    incr_1 = norm*(1-ratio_1);
+  //   incr_0 = norm*(1-ratio_0);
+  //   incr_1 = norm*(1-ratio_1);
 
-    // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
+  //   // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
 
-    // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
-  }
+  //   // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
+  // }
 
 
-  if(incr_0 < 0.0001 && incr_1 < 0.0001) {
-    incr_0 = 0.0001 * norm;
-    incr_1 = 0.0001 * norm;
-  }
+  // if(incr_0 < 0.0001 && incr_1 < 0.0001) {
+  //   incr_0 = 0.0001 * norm;
+  //   incr_1 = 0.0001 * norm;
+  // }
 
-  double total_weight = incr_1+incr_0;
-  // 
+  // double total_weight = incr_1+incr_0;
+  // // 
 
-  if(sol_0 != sol_1) {
-    incr_1 += total_weight * (sol_0/(sol_0+sol_1));
-    incr_0 += total_weight * (sol_1/(sol_0+sol_1));
-    //total_weight *=2;  
-  }
+  // if(sol_0 != sol_1) {
+  //   incr_1 += total_weight * (sol_0/(sol_0+sol_1));
+  //   incr_0 += total_weight * (sol_1/(sol_0+sol_1));
+  //   //total_weight *=2;  
+  // }
 
 
   //std::cout << "weights: " << incr_0 << " " << incr_1 << " " << avg_weight << std::endl;
@@ -11752,18 +11913,20 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
   int i=n, idx;
   while(i--) {
     idx = scope[i].id();
-
+    
     //std::cout << vact[idx] << " " << lact[2*idx] << " " << lact[2*idx+1] << " => ";
 
     double pond = (double)(weight[i]) / avg_weight;
     if(pond<0) pond = -pond;
 
+    vact[idx] += (incr_0 + incr_1) * pond;
+
     if(weight[i] > 0) {
       lact[2*idx+1] += incr_1 * pond;
-      vact[idx] += incr_1 * pond;
-    } else {
       lact[2*idx] += incr_0 * pond;
-      vact[idx] += incr_0 * pond;
+    } else {
+      lact[2*idx+1] += incr_0 * pond;
+      lact[2*idx] += incr_1 * pond;
     }
 
     //std::cout << vact[idx] << " " << lact[2*idx] << " " << lact[2*idx+1] << std::endl;

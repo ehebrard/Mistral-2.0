@@ -541,10 +541,14 @@ void Mistral::ConstraintClauseBase::initialise_activity(double *lact, double *va
   // there are 2^n assignments in a clause, only one that falsifies it.
   double activity_increment;
 
+
   while(i--) {
     Clause& clause = *(clauses[i]);
     
-    activity_increment = norm / (1 << (clause.size-1));
+    //activity_increment = norm / (1 << (clause.size-1));
+    activity_increment = norm / (clause.size-1);
+    activity_increment = norm / (clause.size-1);
+    activity_increment = norm / (clause.size-1);
     j=clause.size;
     while(j--) {
       lact[NOT(clause[j])] += activity_increment;

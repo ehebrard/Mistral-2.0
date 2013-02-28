@@ -441,8 +441,12 @@ std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
   os << std::right << std::setw(13) << num_propagations << " |" ;
   os << std::right << std::setw(9) << std::setprecision(5) ;
   os << (get_run_time() - start_time) << " |" ;
-  os << std::right << std::setw(10) << objective_value ;
-  os << " |";
+  os << std::right ;
+  if(num_solutions)
+    os << std::setw(10) << objective_value ;
+  else
+    os << std::setw(10) << "nill";
+  os << " | " << num_solutions;
   return os;
 }
 std::ostream& Mistral::SolverStatistics::display(std::ostream& os) const {
@@ -5997,16 +6001,18 @@ void Mistral::SolverCmdLine::initialise() {
 
     // VALUE ORDERING
     std::vector<std::string> boallowed;
-    boallowed.push_back("min");
-    boallowed.push_back("max");
-    boallowed.push_back("weight");
-    boallowed.push_back("rand");
-    boallowed.push_back("guided+weight");
-    boallowed.push_back("guided+min");
-    boallowed.push_back("guided+max");
-    boallowed.push_back("guided+rand");
+    boallowed.push_back("minval");
+    boallowed.push_back("maxval");
+    boallowed.push_back("minweight");
+    boallowed.push_back("maxweight");
+    boallowed.push_back("random");
+    boallowed.push_back("minweight+guided");
+    boallowed.push_back("maxweight+guided");
+    boallowed.push_back("minval+guided");
+    boallowed.push_back("maxval+guided");
+    boallowed.push_back("random+guided");
     bo_allowed = new TCLAP::ValuesConstraint<std::string>( boallowed );
-    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided+min",bo_allowed);
+    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided+minval",bo_allowed);
     add( *branchingArg );    
 
   }

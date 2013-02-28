@@ -49,22 +49,26 @@ int main(int argc, char **argv)
 
 
   if(solver.parameters.backjump) {
-    if(cmd.get_value_ordering() == "min")
+    if(cmd.get_value_ordering() == "minval")
       strategy = new GenericHeuristic< VSIDS<2>, MinValue >(&solver);
-    else if(cmd.get_value_ordering() == "max")
+    else if(cmd.get_value_ordering() == "maxval")
       strategy = new GenericHeuristic< VSIDS<2>, MaxValue >(&solver);
-    else if(cmd.get_value_ordering() == "rand")
+    else if(cmd.get_value_ordering() == "random")
       strategy = new GenericHeuristic< VSIDS<2>, RandomMinMax >(&solver);
-    else if(cmd.get_value_ordering() == "weight")
+    else if(cmd.get_value_ordering() == "minweight")
       strategy = new GenericHeuristic< VSIDS<2>, BoolMinWeightValue >(&solver);
-    else if(cmd.get_value_ordering() == "guided+min")
+    else  if(cmd.get_value_ordering() == "maxweight")
+      strategy = new GenericHeuristic< VSIDS<2>, BoolMaxWeightValue >(&solver);
+    else if(cmd.get_value_ordering() == "minval+guided")
       strategy = new GenericHeuristic< VSIDS<2>, Guided< MinValue > >(&solver);
-    else if(cmd.get_value_ordering() == "guided+max")
+    else if(cmd.get_value_ordering() == "maxval+guided")
       strategy = new GenericHeuristic< VSIDS<2>, Guided< MaxValue > >(&solver);
-    else  if(cmd.get_value_ordering() == "guided+rand")
+    else  if(cmd.get_value_ordering() == "random+guided")
       strategy = new GenericHeuristic< VSIDS<2>, Guided< RandomMinMax > >(&solver);
-    else if(cmd.get_value_ordering() == "guided+weight")
+    else if(cmd.get_value_ordering() == "minweight+guided")
       strategy = new GenericHeuristic< VSIDS<2>, Guided< BoolMinWeightValue > >(&solver);
+    else if(cmd.get_value_ordering() == "maxweight+guided")
+      strategy = new GenericHeuristic< VSIDS<2>, Guided< BoolMaxWeightValue > >(&solver);
     else {
       std::cout << "This value ordering is not handled!\n";
       exit(1);

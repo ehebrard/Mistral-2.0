@@ -2541,26 +2541,42 @@ namespace Mistral {
     Solver *solver;
     Default init_choice;
     
+    int cool;
     //int cool;
 
-    Guided() {} //cool=3;}
-    Guided(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); } //cool=3;}
+    Guided() {cool=150;}
+    Guided(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); cool=150;}
     void initialise(double **vw, double *bw) { init_choice.initialise(vw, bw); }
     virtual ~Guided() {};
     
     inline Decision make(Variable x) {
-      int val = solver->last_solution_lb[x.id()];
-      //if(cool < 3+solver->statistics.num_solutions) {
-      int cool = 3+solver->statistics.num_solutions;
-      // 	std::cout << cool <<std::endl;
-      // }
       Decision d;
-      if(val == -INFTY || !x.contain(val) || !randint(cool)
-	 ) 
+      
+      int val, num_sol = solver->statistics.num_solutions;
+
+      if(cool < num_sol) {
+	num_sol = num_sol - cool + 1;
+	val = solver->last_solution_lb[x.id()];
+	if(val != -INFTY && x.contain(val) && randint(num_sol))
+	  d = Decision(x, Decision::ASSIGNMENT, val);
+      }
+      
+      if(d.is_void()) {
 	d = init_choice.make(x);
-      else 
-	d = Decision(x, Decision::ASSIGNMENT, val);
+      }
       return d;
+
+      // //if(cool < 3+solver->statistics.num_solutions) {
+      // //int cool = 3+solver->statistics.num_solutions;
+      // // 	std::cout << cool <<std::endl;
+      // // }
+
+      // if(val == -INFTY || !x.contain(val) || !randint(cool)
+      // 	 ) 
+      // 	d = init_choice.make(x);
+      // else 
+      // 	d = Decision(x, Decision::ASSIGNMENT, val);
+      // return d;
     }
     
     std::ostream& display(std::ostream& os) const {
@@ -2684,6 +2700,56 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, BoolMinWeightValue& x);
 
   std::ostream& operator<<(std::ostream& os, BoolMinWeightValue* x);
+
+
+
+  /*! \class BoolMaxWeightValue
+    \brief  Class BoolMaxWeightValue
+
+    Assigns the variable to its value with minimum weight for some weight matrix.
+    Assumes that the variable is Boolean
+  */
+  class BoolMaxWeightValue {
+
+  public: 
+
+    //double **weight;
+    double *weight;
+    
+    BoolMaxWeightValue() {}
+    BoolMaxWeightValue(Solver *s, double **vw, double *bw) {
+      initialise(vw, bw);
+    }
+    void initialise(double **vw, double *bw) {
+      weight = bw;
+    }
+    // BoolMaxWeightValue(Solver *s, void *a) {
+    //   weight = (double*)a;
+    // }
+    virtual ~BoolMaxWeightValue() {};
+    
+    inline Decision make(Variable x) {
+
+      // this thing is tricky: the value 'lit_activity' of a literal gets incremented when we post a new clause 
+      // involving this literal. Now, this means that the opposite literal is found to be more constrained, 
+      // hence when weighting clause one should use the opposite literal, and when branching one should use the literal
+      // with highest activity
+
+      Atom a = x.id();
+      Decision d(x, Decision::ASSIGNMENT, (weight[NEG(a)]<weight[POS(a)]));
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the value with maximum weight in its (Boolean) domain";
+       return os;
+     }
+        
+  };
+  
+  std::ostream& operator<<(std::ostream& os, BoolMaxWeightValue& x);
+
+  std::ostream& operator<<(std::ostream& os, BoolMaxWeightValue* x);
 
 
 
