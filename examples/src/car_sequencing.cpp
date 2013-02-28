@@ -1831,6 +1831,8 @@ int main(int argc, char **argv)
 
 		ValueArg<int> seedArg("s","seed","random seed",false,12345,"int");
 		cmd.add( seedArg );
+		ValueArg<int> timelimitArg("t","timelimit","resolution time limit",false,2500,"int");
+		cmd.add( timelimitArg );
 
 		ValueArg<int> verbosityArg("v","verbosity","verbosity level",false,1,"int");
 		cmd.add( verbosityArg );
@@ -1869,6 +1871,7 @@ int main(int argc, char **argv)
 
 
 		int seed = seedArg.getValue();
+		int timelimit = timelimitArg.getValue();
 		int verbosity = verbosityArg.getValue();
 
 		bool rewrite = rewriteSwitch.getValue();
@@ -1924,6 +1927,7 @@ int main(int argc, char **argv)
 #endif
 
 		RestartPolicy *restartp = restartFactory(restart);
+		solver->set_time_limit(timelimit);
 
 		Outcome result = solver->depth_first_search(*solver->branchOn() , heuristic, restartp);
 
