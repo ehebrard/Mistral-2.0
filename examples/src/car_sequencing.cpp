@@ -393,6 +393,8 @@ public:
 	//allcars is a simple concatenation of all bool_class[i]. We use it only for branching
 	VarArray allcars;
 
+	//Clauses
+	Vector< Vector< Literal > > clauses;
 	PseudoBoolModel(CarSequencingInstance *inst) : CarSequencingModel(inst) {}
 	virtual ~PseudoBoolModel() {}
 
@@ -435,6 +437,9 @@ void PseudoBoolModel::setup() {
 		//  CarSequencingModel::setup();
 		// option variables
 
+		//class_at_position.initialise(instance->nb_cars(), 0, instance->nb_classes()-1);
+		//add(class_at_position);
+
 		allcars.initialise(instance->nb_cars()* instance->nb_classes(), 0, 1);
 		add(allcars);
 
@@ -449,7 +454,6 @@ void PseudoBoolModel::setup() {
 		}
 
 
-
 		bool_class.resize(instance->nb_classes());
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
 		{
@@ -457,6 +461,12 @@ void PseudoBoolModel::setup() {
 			add(bool_class[cla]);
 			//	Free(bool_class[cla].back());
 		}
+
+		//for(int i=0; i<instance->nb_cars(); ++i)
+		//for(int cla=0; cla<instance->nb_classes(); ++cla)
+		//add(bool_class[cla][i] == (class_at_position[i]==cla));
+
+
 
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
 			for (int i=0; i< instance->nb_cars() ; i++)
@@ -495,9 +505,9 @@ void PseudoBoolModel::setup() {
 
 
 
-		//Chanelling bool_class with option
-
-
+		//Chanelling bool_class with option :
+		//The CP version :
+		/*
 		Variable tmp(1,1);
 		for(int i=0; i<instance->nb_cars(); ++i)
 		{
@@ -538,11 +548,56 @@ void PseudoBoolModel::setup() {
 				}
 			}
 		}
+		 */
 
+		//The SAT-version
+		for(int i=0; i<instance->nb_cars(); ++i)
+		{
 
+	//		cout << "i : " << i;
+			for(int cla=0; cla<instance->nb_classes(); ++cla)
+			{
+			//	cout << "class : " << cla;
+				for(int k=0; k<instance->nb_options(); ++k)
+				{
+					Vector< Literal > new_clause;
+					new_clause.initialise(2);
+					Literal lit1 =  2* bool_class[cla][i].id();
+					//	Literal lit1  = Literal(bool_class[cla][i],false);
+					new_clause.add(lit1);
+			//		cout << "option : " << k;
+					if (instance->has_option(cla,k))
+					{
+			//			cout << "yes" << endl;
+						//	Literal lit2 = Literal(option[k][i],true);
+						Literal lit2 = 2* option[k][i].id() +1 ;
+						//	add( bool_class[cla][i] <= option[k][i]);
+						new_clause.add(lit2);
+					}
+					else
+					{
 
+				//		cout << "no" << endl;
+						//		Literal lit2(option[k][i],false);
+						Literal		lit2 = 2* option[k][i].id() ;
+						//	add( bool_class[cla][i] <= (tmp-option[k][i]));
+						new_clause.add(lit2);
+					}
 
-		//		Solver::set_learning_on();
+				//	cout << "ADD CLAUSE \n " << endl;
+					clauses.add(new_clause);
+				}
+			}
+		}
+		for(int i=0; i<clauses.size; ++i) {
+			add(clauses[i]);
+		}
+
+		//	parameters.backjump = 1;
+		parameters.activity_decay =.96;
+		parameters.activity_increment = .012;
+		parameters.forgetfulness = .75;
+		set_learning_on();
 
 	}
 	catch (ArgException &e)  // catch any exceptions
@@ -1937,8 +1992,14 @@ int main(int argc, char **argv)
 		if(result) {
 			cout << "SATISFIABLE!" << endl;
 			if(should_print[string("sol")]) {
-				Solution sol(solver->class_at_position);
-				cout << " c  solution: " << sol << endl;
+				for(int opt=0; opt<solver->instance->nb_options(); ++opt)
+				{
+					Solution sol(solver->option[opt]);
+					cout << " c  solution: " << sol << endl;
+
+				}
+				//Solution sol(solver->class_at_position);
+				//cout << " c  solution: " << sol << endl;
 			}
 		} else {
 			cout << "UNSATISFIABLE!" << endl;
@@ -1957,5 +2018,4 @@ int main(int argc, char **argv)
 	}
 
 }
-
 
