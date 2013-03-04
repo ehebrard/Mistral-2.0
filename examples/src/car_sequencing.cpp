@@ -849,8 +849,6 @@ public:
   Method       second_best;
 
   Aggregation() { options_beg = options_end = NULL; randomization = 0; }
-  //since choice= ValSelector(s,var.get_value_weight(),var.get_bound_weight()); in the GenericHeuristic class
-  Aggregation(Solver *s, double **vw, double *bw,  const int r=0) { options_beg = options_end = NULL; randomization = r; } //options_beg = NULL;options_end = options_score = NULL; }
   Aggregation(Solver *s, const int r=0) { options_beg = options_end = NULL; randomization = r; } //options_beg = NULL;options_end = options_score = NULL; }
   virtual ~Aggregation() {
     delete [] options_beg;

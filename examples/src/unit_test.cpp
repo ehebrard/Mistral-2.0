@@ -1860,7 +1860,7 @@ int main(int argc, char *argv[])
   tests.push_back(new MemberTest());
   tests.push_back(new RewriteTest1());
   tests.push_back(new OpshopTest());
-   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
+  tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
   tests.push_back(new SatTest());
   tests.push_back(new Pigeons(N+2)); 
@@ -4804,12 +4804,12 @@ void SatTest::run() {
   solver.parameters.verbosity = 0;
   solver.parameters.backjump = 1;
 
-  solver.depth_first_search(solver.variables, 
+  solver.depth_first_search(solver.variables,
 			    new GenericHeuristic< VSIDS<1>, BoolMinWeightValue >(&solver),
 			    new Geometric()
 			    );
   
-  if(solver.statistics.num_backtracks != 18445) {
+  if(solver.statistics.num_backtracks != 600) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (solver.statistics.num_backtracks) << ")" << endl;
     //exit(1);
