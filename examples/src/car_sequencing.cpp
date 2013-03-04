@@ -1856,111 +1856,22 @@ int main(int argc, char **argv)
 	  ValueArg<string> aggregationArg("","aggregation","aggregation method",false,"sum",&a_allowed);
 	  cmd.add( aggregationArg );
 	  
-
-	  /*
-	  vector<string> voallowed;
-	  voallowed.push_back("minval");
-	  voallowed.push_back("maxval");
-	  voallowed.push_back("random");
-	  voallowed.push_back("minweight");
-		voallowed.push_back("maxweight");
-		voallowed.push_back("minval+guided");
-		voallowed.push_back("maxval+guided");
-		voallowed.push_back("random+guided");
-		voallowed.push_back("minweight+guided");
-		voallowed.push_back("maxweight+guided");
-		ValuesConstraint<string> vo_allowed( voallowed );
-		ValueArg<string> value_orderingArg("o","value_ordering","value ordering for the Pseudo Boolean model",false,"minval",&vo_allowed);
-		cmd.add( value_orderingArg );
-
-
-
-
-		vector<string> rallowed;
-		rallowed.push_back("no");
-		rallowed.push_back("geom");
-		rallowed.push_back("luby");
-		ValuesConstraint<string> r_allowed( rallowed );
-		ValueArg<string> restartArg("r","restart","restart method",false,"geom",&r_allowed);
-		cmd.add( restartArg );
-
-		ValueArg<double> randomizationArg("d","randomization","randomization level",false,0,"int");
-		cmd.add( randomizationArg );
-
-		ValueArg<int> seedArg("s","seed","random seed",false,12345,"int");
-		cmd.add( seedArg );
-		ValueArg<int> timelimitArg("t","timelimit","resolution time limit",false,2500,"int");
-		cmd.add( timelimitArg );
-
-		ValueArg<int> verbosityArg("v","verbosity","verbosity level",false,1,"int");
-		cmd.add( verbosityArg );
-
-		SwitchArg rewriteSwitch("w","rewrite","Use rewriting during preprocessing", false);
-		cmd.add( rewriteSwitch );
-
-		vector<string> pallowed;
-		pallowed.push_back("params");
-		pallowed.push_back("instance");
-		pallowed.push_back("model");
-		pallowed.push_back("sol");
-		pallowed.push_back("stat");
-		ValuesConstraint<string> p_allowed( pallowed );
-		MultiArg<string> printArg("p","print","Objects to print, in {params, instance, model, sol, stat}.",false,&p_allowed);
-		cmd.add( printArg );
-	  */
-
-
 		// Parse the args.
 		cmd.parse( argc, argv );
 
 	       
 		// Get the value parsed by each arg.
-		//string file = fileArg.getValue();
 		string model = modelArg.getValue();
 		string branching = branchingArg.getValue();
 		string exploration = explorationArg.getValue();
 		string criterion = criterionArg.getValue();
 		string aggregation = aggregationArg.getValue();
-		//for the PseudoB model
-		//string value_ordering = value_orderingArg.getValue();
-		//string restart = restartArg.getValue();
-
-		//int randomization = (int)((double)CS_RAND_MAX * randomizationArg.getValue());
-
-
-		//int seed = seedArg.getValue();
-		//int timelimit = timelimitArg.getValue();
-		//int verbosity = verbosityArg.getValue();
-
-		//bool rewrite = rewriteSwitch.getValue();
-
-		// vector<string> print = printArg.getValue();
-		// map< string, bool > should_print;
-		// should_print[string("params")] = false;
-		// should_print[string("instance")] = false;
-		// should_print[string("model")] = false;
-		// should_print[string("sol")] = false;
-		// should_print[string("stat")] = false;
-
-		// vector<string>::iterator to_print = print.begin();
-		// vector<string>::iterator stop = print.end();
-		// while(to_print != stop) {
-		// 	should_print[*to_print] = true;
-		// 	++to_print;
-		// }
-
-		// if(should_print[string("params")]) {
-
-		// }
 
 		usrand(cmd.get_seed());
-		//usrand(seed);
-
 
 		CarSequencingInstance instance(cmd.get_filename()); //file.c_str());
 
 		if(cmd.print_instance()) {
-		  //if(should_print[string("instance")]) {
 			cout << instance << endl;
 		}
 
@@ -1973,7 +1884,6 @@ int main(int argc, char **argv)
 
 		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
 
-		//solver->parameters.verbosity = verbosity;
 
 #ifdef _MONITOR
 		for(int opt=0; opt<instance.nb_options(); ++opt) {
@@ -1983,11 +1893,8 @@ int main(int argc, char **argv)
 #endif
 
 		RestartPolicy *restartp = restartFactory(cmd.get_restart_policy());
-		//solver->set_time_limit(timelimit);
 
 
-
-		//if(should_print[string("model")]) {
 		if(cmd.print_model()) {
 			cout << (*solver) << endl;
 		}
@@ -1999,8 +1906,6 @@ int main(int argc, char **argv)
 
 
 		if(result) {
-		  //cout << "SATISFIABLE!" << endl;
-		  //if(should_print[string("sol")]) {
 		  if(cmd.print_solution()) {
 		    for(int opt=0; opt<solver->instance->nb_options(); ++opt)
 		      {
@@ -2008,14 +1913,8 @@ int main(int argc, char **argv)
 			cout << " c  solution: " << sol << endl;
 			
 		      }
-		    //Solution sol(solver->class_at_position);
-		    //cout << " c  solution: " << sol << endl;
 		  }
-		} // else {
-		//   cout << "UNSATISFIABLE!" << endl;
-		// }
-		
-		//if(should_print[string("stat")]) {
+		} 
 		if(cmd.print_statistics()) { 
 			cout << solver->statistics << endl;
 		}
