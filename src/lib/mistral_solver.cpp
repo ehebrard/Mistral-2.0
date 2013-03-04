@@ -4100,32 +4100,29 @@ void Mistral::Solver::learn_nogood() {
     
 #ifdef _DEBUG_NOGOOD
 	if(_DEBUG_NOGOOD) {
-    std::cout << "current literals to expend:";
-    for(vidx=index+1; vidx<variables.size; ++vidx) {
-      if(visited.fast_contain(sequence[vidx].id())) {
-	std::cout << " " << sequence[vidx] ;
-      }
-    }
-    std::cout << std::endl;
+	  std::cout << "current literals to expend:";
+	  for(vidx=index+1; vidx<variables.size; ++vidx) {
+	    if(visited.fast_contain(sequence[vidx].id())) {
+	      std::cout << " " << sequence[vidx] ;
+	    }
+	  }
+	  std::cout << std::endl;
 	}
 #endif
-//std::cout << variables.size << " " << sequence.size<< std::endl;
-//std::cout <<  index << std::endl;
-    // jump to the next visited atom that need be further expended
-  //  while(!visited.fast_contain(sequence[++index].id())) {
-	  while((index< (variables.size-1)) && !visited.fast_contain(sequence[++index].id())) {
-
+	
+	// jump to the next visited atom that need be further expended
+	while(!visited.fast_contain(sequence[++index].id())) {
+	  
 #ifdef _DEBUG_NOGOOD
-      if(_DEBUG_NOGOOD) {
-	if(index >= variables.size-1) {
-	  std::cout << "reached the end of the stack!!" << std::endl;
-	}
-      }
+	  if(_DEBUG_NOGOOD) {
+	    if(index >= variables.size-1) {
+	      std::cout << "reached the end of the stack!!" << std::endl;
+	    }
+	  }
 #endif
-
-    };
-if (index< variables.size)
-{
+	  
+	};
+	
     x = sequence[index];
     a = x.id();
     p = ((2*a) | (x.get_min()));
@@ -4133,32 +4130,30 @@ if (index< variables.size)
 
     if( pathC > 1 ) {
       // there are still atoms to expend, we start with 'a'
-
+      
       // EXPL
       current_explanation = reason_for[a];
       visited.fast_add(a);
-
+      
 #ifdef _DEBUG_NOGOOD
-     	if(_DEBUG_NOGOOD) {
- //for(int i=0; i<depth; ++i) std::cout << "  "; 
-    std::cout << "replace ";
-    print_literal(std::cout, p); 
-    std::cout << " by its ";
-    std::cout.flush();
-	}
+      if(_DEBUG_NOGOOD) {
+	//for(int i=0; i<depth; ++i) std::cout << "  "; 
+	std::cout << pathC << " - replace ";
+	print_literal(std::cout, p); 
+	std::cout << " by its ";
+	std::cout.flush();
+      }
 #endif
-
+      
     } 
 #ifdef _DEBUG_NOGOOD
     else {
-	if(_DEBUG_NOGOOD) {
-      std::cout << std::endl;
-    }
+      if(_DEBUG_NOGOOD) {
+	std::cout << std::endl;
+      }
     }
 #endif
-}
-else
-	break;
+
   } while( --pathC );
   // p is the last decision, since all atoms above it in the
   // assumption stack have been skipped or expended.

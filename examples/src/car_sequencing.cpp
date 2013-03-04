@@ -440,8 +440,22 @@ void PseudoBoolModel::setup() {
 		//class_at_position.initialise(instance->nb_cars(), 0, instance->nb_classes()-1);
 		//add(class_at_position);
 
-		allcars.initialise(instance->nb_cars()* instance->nb_classes(), 0, 1);
-		add(allcars);
+		//allcars.initialise(instance->nb_cars()* instance->nb_classes(), 0, 1);
+		//add(allcars);
+
+
+
+		bool_class.resize(instance->nb_classes());
+		for(int cla=0; cla<instance->nb_classes(); ++cla)
+		{
+			bool_class[cla].initialise(instance->nb_cars(), 0, 1);
+			add(bool_class[cla]);
+
+			for(int i=0; i<instance->nb_cars(); ++i)
+			  allcars.add(bool_class[cla][i]);
+			//	Free(bool_class[cla].back());
+		}
+
 
 		option.resize(instance->nb_options());
 
@@ -450,17 +464,13 @@ void PseudoBoolModel::setup() {
 		{
 			option[opt].initialise(instance->nb_cars(), 0, 1);
 			add(option[opt]);
+
+			for(int i=0; i<instance->nb_cars(); ++i)
+			  allcars.add(option[opt][i]);
 			//	add( Free(option[opt].back()) );
 		}
 
 
-		bool_class.resize(instance->nb_classes());
-		for(int cla=0; cla<instance->nb_classes(); ++cla)
-		{
-			bool_class[cla].initialise(instance->nb_cars(), 0, 1);
-			add(bool_class[cla]);
-			//	Free(bool_class[cla].back());
-		}
 
 		//for(int i=0; i<instance->nb_cars(); ++i)
 		//for(int cla=0; cla<instance->nb_classes(); ++cla)
@@ -468,9 +478,9 @@ void PseudoBoolModel::setup() {
 
 
 
-		for(int cla=0; cla<instance->nb_classes(); ++cla)
-			for (int i=0; i< instance->nb_cars() ; i++)
-				add(bool_class[cla][i]==allcars[cla*  instance->nb_cars()  + i]);
+		// for(int cla=0; cla<instance->nb_classes(); ++cla)
+		// 	for (int i=0; i< instance->nb_cars() ; i++)
+		// 		add(bool_class[cla][i]==allcars[cla*  instance->nb_cars()  + i]);
 
 
 		VarArray subsequence;
@@ -1982,6 +1992,7 @@ int main(int argc, char **argv)
 
 		RestartPolicy *restartp = restartFactory(restart);
 		solver->set_time_limit(timelimit);
+
 
 		Outcome result = solver->depth_first_search(*solver->branchOn() , heuristic, restartp);
 

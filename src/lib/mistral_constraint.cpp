@@ -9184,7 +9184,7 @@ int Mistral::ConstraintBoolSumInterval::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintBoolSumInterval::display(std::ostream& os) const {
-  os << "(" << scope[0]/*.get_var()*/ ;
+  os << "bsi(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
     os << " + " << scope[i]/*.get_var()*/;
   if(lower_bound == -INFTY)
