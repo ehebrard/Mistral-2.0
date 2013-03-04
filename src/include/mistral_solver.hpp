@@ -1027,7 +1027,6 @@ public:
 
     std::string get_restart_policy();
 
-
     const char* get_filename()//  {
     //   return fileArg->getValue().c_str();
     // }
@@ -1036,6 +1035,9 @@ public:
     //   return seedArg->getValue();
     // }
       ;
+
+    int get_randomization(); // { 
+
     bool print_model() // {
     //   //init_print();
     //   //return printmodArg->getValue();
@@ -1070,6 +1072,9 @@ public:
     //   return true;
     // }
       ;
+
+
+    bool use_rewrite();
 
 
 };

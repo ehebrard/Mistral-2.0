@@ -603,11 +603,11 @@ void PseudoBoolModel::setup() {
 			add(clauses[i]);
 		}
 
-		//	parameters.backjump = 1;
-		parameters.activity_decay =.96;
-		parameters.activity_increment = .012;
-		parameters.forgetfulness = .75;
-		set_learning_on();
+		// //	parameters.backjump = 1;
+		// parameters.activity_decay =.96;
+		// parameters.activity_increment = .012;
+		// parameters.forgetfulness = .75;
+		// set_learning_on();
 
 	}
 	catch (ArgException &e)  // catch any exceptions
@@ -1668,7 +1668,6 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 			cout << "not ? backjump" << endl;
 #endif
 
-
 		if(value_ordering == "minval")
 			heuristic = new GenericHeuristic< VSIDS<2>, MinValue >((Solver*) solver);
 		else if(value_ordering == "maxval")
@@ -1807,68 +1806,63 @@ int main(int argc, char **argv)
 	try
 	{
 
+	  // Define the command line object.
+	  SolverCmdLine cmd("Mistral (car-sequencing)", ' ', "2.0");      
 
-		// Define the command line object.
-		CmdLine cmd("car_sequencing", ' ', "0.0");
+	  vector<string> mallowed;
+	  mallowed.push_back("sum");
+	  mallowed.push_back("amsc+sum");
+	  mallowed.push_back("gsc");
+	  mallowed.push_back("amsc");
+	  mallowed.push_back("mamsc+sum");
+	  mallowed.push_back("pseudoB");
+	  ValuesConstraint<string> m_allowed( mallowed );
+	  ValueArg<string> modelArg("","model","type of model",false,"sum",&m_allowed); //"amsc","string");
+	  cmd.add( modelArg );
+	  
+	  vector<string> ballowed;
+	  ballowed.push_back("slot");
+	  ballowed.push_back("class");
+	  ballowed.push_back("option");
+	  ValuesConstraint<string> b_allowed( ballowed );
+	  ValueArg<string> branchingArg("","branch","type of branching",false,"class",&b_allowed);
+	  cmd.add( branchingArg );
+	  
+	  vector<string> eallowed;
+	  eallowed.push_back("lex");
+	  eallowed.push_back("middle");
+	  ValuesConstraint<string> e_allowed( eallowed );
+	  ValueArg<string> explorationArg("","explore","type of exploration",false,"lex",&e_allowed);
+	  cmd.add( explorationArg );
+	  
+	  vector<string> callowed;
+	  //callowed.push_back("id");
+	  callowed.push_back("demand");
+	  callowed.push_back("pq");
+	  callowed.push_back("load");
+	  callowed.push_back("rate");
+	  callowed.push_back("slack");
+	  ValuesConstraint<string> c_allowed( callowed );
+	  ValueArg<string> criterionArg("","criterion","option criterion",false,"demand",&c_allowed);
+	  cmd.add( criterionArg );
+	  
+	  vector<string> aallowed;
+	  aallowed.push_back("sum");
+	  aallowed.push_back("euc");
+	  //aallowed.push_back("max");
+	  aallowed.push_back("lex");
+	  aallowed.push_back("card+lex");
+	  ValuesConstraint<string> a_allowed( aallowed );
+	  ValueArg<string> aggregationArg("","aggregation","aggregation method",false,"sum",&a_allowed);
+	  cmd.add( aggregationArg );
+	  
 
-		ValueArg<string> fileArg("f","file","instance file",true,"data/carseq/easy/60_01","string");
-		cmd.add( fileArg );
-
-		vector<string> mallowed;
-		mallowed.push_back("sum");
-		mallowed.push_back("amsc+sum");
-		mallowed.push_back("gsc");
-		mallowed.push_back("amsc");
-		mallowed.push_back("mamsc+sum");
-		mallowed.push_back("pseudoB");
-		ValuesConstraint<string> m_allowed( mallowed );
-		ValueArg<string> modelArg("m","model","type of model",false,"sum",&m_allowed); //"amsc","string");
-		cmd.add( modelArg );
-
-		vector<string> ballowed;
-		ballowed.push_back("slot");
-		ballowed.push_back("class");
-		ballowed.push_back("option");
-		ValuesConstraint<string> b_allowed( ballowed );
-		ValueArg<string> branchingArg("b","branch","type of branching",false,"class",&b_allowed);
-		cmd.add( branchingArg );
-
-		vector<string> eallowed;
-		eallowed.push_back("lex");
-		eallowed.push_back("middle");
-		ValuesConstraint<string> e_allowed( eallowed );
-		ValueArg<string> explorationArg("e","explore","type of exploration",false,"lex",&e_allowed);
-		cmd.add( explorationArg );
-
-		vector<string> callowed;
-		//callowed.push_back("id");
-		callowed.push_back("demand");
-		callowed.push_back("pq");
-		callowed.push_back("load");
-		callowed.push_back("rate");
-		callowed.push_back("slack");
-		ValuesConstraint<string> c_allowed( callowed );
-		ValueArg<string> criterionArg("c","criterion","option criterion",false,"demand",&c_allowed);
-		cmd.add( criterionArg );
-
-		vector<string> aallowed;
-		aallowed.push_back("sum");
-		aallowed.push_back("euc");
-		//aallowed.push_back("max");
-		aallowed.push_back("lex");
-		aallowed.push_back("card+lex");
-		ValuesConstraint<string> a_allowed( aallowed );
-		ValueArg<string> aggregationArg("a","aggregation","aggregation method",false,"sum",&a_allowed);
-		cmd.add( aggregationArg );
-
-
-
-
-		vector<string> voallowed;
-		voallowed.push_back("minval");
-		voallowed.push_back("maxval");
-		voallowed.push_back("random");
-		voallowed.push_back("minweight");
+	  /*
+	  vector<string> voallowed;
+	  voallowed.push_back("minval");
+	  voallowed.push_back("maxval");
+	  voallowed.push_back("random");
+	  voallowed.push_back("minweight");
 		voallowed.push_back("maxweight");
 		voallowed.push_back("minval+guided");
 		voallowed.push_back("maxval+guided");
@@ -1887,7 +1881,7 @@ int main(int argc, char **argv)
 		rallowed.push_back("geom");
 		rallowed.push_back("luby");
 		ValuesConstraint<string> r_allowed( rallowed );
-		ValueArg<string> restartArg("r","restart","restart method",false,"no",&r_allowed);
+		ValueArg<string> restartArg("r","restart","restart method",false,"geom",&r_allowed);
 		cmd.add( restartArg );
 
 		ValueArg<double> randomizationArg("d","randomization","randomization level",false,0,"int");
@@ -1913,75 +1907,73 @@ int main(int argc, char **argv)
 		ValuesConstraint<string> p_allowed( pallowed );
 		MultiArg<string> printArg("p","print","Objects to print, in {params, instance, model, sol, stat}.",false,&p_allowed);
 		cmd.add( printArg );
-
+	  */
 
 
 		// Parse the args.
 		cmd.parse( argc, argv );
 
-
+	       
 		// Get the value parsed by each arg.
-		string file = fileArg.getValue();
+		//string file = fileArg.getValue();
 		string model = modelArg.getValue();
 		string branching = branchingArg.getValue();
 		string exploration = explorationArg.getValue();
 		string criterion = criterionArg.getValue();
 		string aggregation = aggregationArg.getValue();
 		//for the PseudoB model
-		string value_ordering = value_orderingArg.getValue();
-		string restart = restartArg.getValue();
+		//string value_ordering = value_orderingArg.getValue();
+		//string restart = restartArg.getValue();
 
-		int randomization = (int)((double)CS_RAND_MAX * randomizationArg.getValue());
+		//int randomization = (int)((double)CS_RAND_MAX * randomizationArg.getValue());
 
 
-		int seed = seedArg.getValue();
-		int timelimit = timelimitArg.getValue();
-		int verbosity = verbosityArg.getValue();
+		//int seed = seedArg.getValue();
+		//int timelimit = timelimitArg.getValue();
+		//int verbosity = verbosityArg.getValue();
 
-		bool rewrite = rewriteSwitch.getValue();
+		//bool rewrite = rewriteSwitch.getValue();
 
-		vector<string> print = printArg.getValue();
-		map< string, bool > should_print;
-		should_print[string("params")] = false;
-		should_print[string("instance")] = false;
-		should_print[string("model")] = false;
-		should_print[string("sol")] = false;
-		should_print[string("stat")] = false;
+		// vector<string> print = printArg.getValue();
+		// map< string, bool > should_print;
+		// should_print[string("params")] = false;
+		// should_print[string("instance")] = false;
+		// should_print[string("model")] = false;
+		// should_print[string("sol")] = false;
+		// should_print[string("stat")] = false;
 
-		vector<string>::iterator to_print = print.begin();
-		vector<string>::iterator stop = print.end();
-		while(to_print != stop) {
-			should_print[*to_print] = true;
-			++to_print;
-		}
+		// vector<string>::iterator to_print = print.begin();
+		// vector<string>::iterator stop = print.end();
+		// while(to_print != stop) {
+		// 	should_print[*to_print] = true;
+		// 	++to_print;
+		// }
 
 		// if(should_print[string("params")]) {
 
 		// }
 
-		usrand(seed);
+		usrand(cmd.get_seed());
+		//usrand(seed);
 
 
-		CarSequencingInstance instance(file.c_str());
+		CarSequencingInstance instance(cmd.get_filename()); //file.c_str());
 
-
-		if(should_print[string("instance")]) {
+		if(cmd.print_instance()) {
+		  //if(should_print[string("instance")]) {
 			cout << instance << endl;
 		}
 
 
 
-		CarSequencingModel *solver = modelFactory(model, &instance, rewrite);
+		CarSequencingModel *solver = modelFactory(model, &instance, cmd.use_rewrite());
+
+		cmd.set_parameters(*solver);
 
 
+		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
 
-		if(should_print[string("model")]) {
-			cout << (*solver) << endl;
-		}
-
-		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, value_ordering, randomization);
-
-		solver->parameters.verbosity = verbosity;
+		//solver->parameters.verbosity = verbosity;
 
 #ifdef _MONITOR
 		for(int opt=0; opt<instance.nb_options(); ++opt) {
@@ -1990,8 +1982,15 @@ int main(int argc, char **argv)
 		}
 #endif
 
-		RestartPolicy *restartp = restartFactory(restart);
-		solver->set_time_limit(timelimit);
+		RestartPolicy *restartp = restartFactory(cmd.get_restart_policy());
+		//solver->set_time_limit(timelimit);
+
+
+
+		//if(should_print[string("model")]) {
+		if(cmd.print_model()) {
+			cout << (*solver) << endl;
+		}
 
 
 		Outcome result = solver->depth_first_search(*solver->branchOn() , heuristic, restartp);
@@ -2000,22 +1999,24 @@ int main(int argc, char **argv)
 
 
 		if(result) {
-			cout << "SATISFIABLE!" << endl;
-			if(should_print[string("sol")]) {
-				for(int opt=0; opt<solver->instance->nb_options(); ++opt)
-				{
-					Solution sol(solver->option[opt]);
-					cout << " c  solution: " << sol << endl;
-
-				}
-				//Solution sol(solver->class_at_position);
-				//cout << " c  solution: " << sol << endl;
-			}
-		} else {
-			cout << "UNSATISFIABLE!" << endl;
-		}
-
-		if(should_print[string("stat")]) {
+		  //cout << "SATISFIABLE!" << endl;
+		  //if(should_print[string("sol")]) {
+		  if(cmd.print_solution()) {
+		    for(int opt=0; opt<solver->instance->nb_options(); ++opt)
+		      {
+			Solution sol(solver->option[opt]);
+			cout << " c  solution: " << sol << endl;
+			
+		      }
+		    //Solution sol(solver->class_at_position);
+		    //cout << " c  solution: " << sol << endl;
+		  }
+		} // else {
+		//   cout << "UNSATISFIABLE!" << endl;
+		// }
+		
+		//if(should_print[string("stat")]) {
+		if(cmd.print_statistics()) { 
 			cout << solver->statistics << endl;
 		}
 

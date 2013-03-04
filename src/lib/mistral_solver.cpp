@@ -6047,6 +6047,10 @@ const char* Mistral::SolverCmdLine::get_filename() {
       return seedArg->getValue();
     }
 
+   int Mistral::SolverCmdLine::get_randomization() { 
+      return randomizationArg->getValue();
+    }
+
     bool Mistral::SolverCmdLine::print_model() {
       //init_print();
       return printmodArg->getValue();
@@ -6077,8 +6081,9 @@ const char* Mistral::SolverCmdLine::get_filename() {
       //return true;
     }
 
-
-
+bool Mistral::SolverCmdLine::use_rewrite() {
+  return rewriteArg->getValue();
+}
 
 #ifdef _CHECK_NOGOOD
 
