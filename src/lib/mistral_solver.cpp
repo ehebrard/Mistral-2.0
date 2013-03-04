@@ -4109,10 +4109,12 @@ void Mistral::Solver::learn_nogood() {
     std::cout << std::endl;
 	}
 #endif
-
+//std::cout << variables.size << " " << sequence.size<< std::endl;
+//std::cout <<  index << std::endl;
     // jump to the next visited atom that need be further expended
-    while(!visited.fast_contain(sequence[++index].id())) {
-      
+  //  while(!visited.fast_contain(sequence[++index].id())) {
+	  while((index< (variables.size-1)) && !visited.fast_contain(sequence[++index].id())) {
+
 #ifdef _DEBUG_NOGOOD
       if(_DEBUG_NOGOOD) {
 	if(index >= variables.size-1) {
@@ -4122,7 +4124,8 @@ void Mistral::Solver::learn_nogood() {
 #endif
 
     };
-
+if (index< variables.size)
+{
     x = sequence[index];
     a = x.id();
     p = ((2*a) | (x.get_min()));
@@ -4153,7 +4156,9 @@ void Mistral::Solver::learn_nogood() {
     }
     }
 #endif
-
+}
+else
+	break;
   } while( --pathC );
   // p is the last decision, since all atoms above it in the
   // assumption stack have been skipped or expended.
