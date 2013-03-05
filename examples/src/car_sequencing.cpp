@@ -1497,6 +1497,7 @@ public:
 			for(int i=0; i<nbCars; ++i) {
 				car = (lex ? i : nbCars/2 + (i%2 ? -1 : 1)*(i/2+1));
 				order[opt].add(CarSequencingHeuristic< Criterion >::model->option[opt][car]);
+
 			}
 
 #ifdef _DEBUG_HEURISTIC
@@ -1656,6 +1657,7 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 	cout << "model " <<model << endl;
 	cout << "value_ordering " <<value_ordering << endl;
 	cout << "branching " << branching<< endl;
+	cout << "exploration " << exploration<< endl;
 	cout << "criterion " <<criterion << endl;
 	cout << "aggregation " <<aggregation << endl;
 #endif
@@ -1668,36 +1670,52 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 			cout << "not ? backjump" << endl;
 #endif
 
-		if(value_ordering == "minval")
-			heuristic = new GenericHeuristic< VSIDS<2>, MinValue >((Solver*) solver);
-		else if(value_ordering == "maxval")
-			heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >((Solver*) solver);
-		else if(value_ordering == "random")
-			heuristic = new GenericHeuristic< VSIDS<2>, RandomMinMax >((Solver*) solver);
-		else if(value_ordering == "minweight")
-			heuristic = new GenericHeuristic< VSIDS<2>, BoolMinWeightValue >((Solver*) solver);
-		else  if(value_ordering == "maxweight")
-			heuristic = new GenericHeuristic< VSIDS<2>, BoolMaxWeightValue >((Solver*) solver);
-		else if(value_ordering == "minval+guided")
-			heuristic = new GenericHeuristic< VSIDS<2>, Guided< MinValue > >((Solver*) solver);
-		else if(value_ordering == "maxval+guided")
-			heuristic = new GenericHeuristic< VSIDS<2>, Guided< MaxValue > >((Solver*) solver);
-		else  if(value_ordering == "random+guided")
-			heuristic = new GenericHeuristic< VSIDS<2>, Guided< RandomMinMax > >((Solver*) solver);
-		else if(value_ordering == "minweight+guided")
-			heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMinWeightValue > >((Solver*) solver);
-		else if(value_ordering == "maxweight+guided")
-			heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMaxWeightValue > >((Solver*) solver);
-		else {
-			std::cout << "This value ordering is not handled!\n";
-			exit(1);
+		if(branching == "option") {
+			if(criterion == "demand") {
+				heuristic = new OptionBranchingHeuristic < Dynamic<Demand>, MaxValue >(solver, (exploration == "lex"), randomization);
+			} else if(criterion == "pq") {
+				heuristic = new OptionBranchingHeuristic < StaticCapacity, MaxValue >(solver, (exploration == "lex"), randomization);
+			} else if(criterion == "load") {
+				heuristic = new OptionBranchingHeuristic < Dynamic<Load>, MaxValue >(solver, (exploration == "lex"), randomization);
+			} else if(criterion == "rate") {
+				heuristic = new OptionBranchingHeuristic < Dynamic<Rate>, MaxValue >(solver, (exploration == "lex"), randomization);
+			} else if(criterion == "slack") {
+				heuristic = new OptionBranchingHeuristic < Dynamic<Slack>, MaxValue >(solver, (exploration == "lex"), randomization);
+			}
 		}
+		else
+		{
 
+			if(value_ordering == "minval")
+				heuristic = new GenericHeuristic< VSIDS<2>, MinValue >(solver);
+			else if(value_ordering == "maxval")
+				heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+			else if(value_ordering == "random")
+				heuristic = new GenericHeuristic< VSIDS<2>, RandomMinMax >(solver);
+			else if(value_ordering == "minweight")
+				heuristic = new GenericHeuristic< VSIDS<2>, BoolMinWeightValue >(solver);
+			else  if(value_ordering == "maxweight")
+				heuristic = new GenericHeuristic< VSIDS<2>, BoolMaxWeightValue >(solver);
+			else if(value_ordering == "minval+guided")
+				heuristic = new GenericHeuristic< VSIDS<2>, Guided< MinValue > >(solver);
+			else if(value_ordering == "maxval+guided")
+				heuristic = new GenericHeuristic< VSIDS<2>, Guided< MaxValue > >(solver);
+			else  if(value_ordering == "random+guided")
+				heuristic = new GenericHeuristic< VSIDS<2>, Guided< RandomMinMax > >(solver);
+			else if(value_ordering == "minweight+guided")
+				heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMinWeightValue > >(solver);
+			else if(value_ordering == "maxweight+guided")
+				heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMaxWeightValue > >(solver);
+			else {
+				std::cout << "This value ordering is not handled!\n";
+				exit(1);
+			}
 
+		}
 	}
 	else
 	{
-		cout << "not pseudoB" << endl;
+
 		if(branching == "class") {
 			if(criterion == "demand") {
 				if(aggregation == "lex") {

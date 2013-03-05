@@ -6012,7 +6012,7 @@ void Mistral::SolverCmdLine::initialise() {
     boallowed.push_back("maxval+guided");
     boallowed.push_back("random+guided");
     bo_allowed = new TCLAP::ValuesConstraint<std::string>( boallowed );
-    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"guided+minval",bo_allowed);
+    branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"minval+guided",bo_allowed);
     add( *branchingArg );    
 
   }
