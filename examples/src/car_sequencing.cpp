@@ -1465,6 +1465,211 @@ public:
 
 
 
+template< class Criterion, class ValSelector >
+class BoolClassBranchingHeuristic : public CarSequencingHeuristic< Criterion >, public BranchingHeuristic
+{
+
+public:
+
+
+
+
+	Vector< Vector< Variable > >   order;
+	Vector< Vector< Variable > >   reversed_bool_classes;
+//	Vector< Variable >           classes;
+//	ReversibleNum< int >            lastbool;
+	ReversibleNum< int >            last;
+
+	int nbOptions;
+	int nbCars;
+	int nbClasses;
+	int randomization;
+	bool _lex_;
+
+
+	ValSelector choice;
+
+
+	BoolClassBranchingHeuristic(CarSequencingModel *s, const bool lex=true, const int r=0) : CarSequencingHeuristic< Criterion >(s), BranchingHeuristic(s) {
+
+		nbCars = CarSequencingHeuristic< Criterion >::model->instance->nb_cars();
+		nbOptions = CarSequencingHeuristic< Criterion >::model->instance->nb_options();
+		nbClasses =  CarSequencingHeuristic< Criterion >::model->instance->nb_classes();
+		randomization = r;
+		_lex_ = lex;
+
+		int car;
+
+		order.initialise(nbCars, nbCars);
+		reversed_bool_classes.initialise(0, nbCars*nbClasses);
+
+		for(int i=0; i<nbCars; ++i) {
+			car = (lex ? i : nbCars/2 + (i%2 ? -1 : 1)*((i+1)/2));
+			order[i].initialise(0, nbOptions);
+
+			for(int opt=0; opt<nbOptions; ++opt) {
+				order[i].add(CarSequencingHeuristic< Criterion >::model->option[opt][car]);
+			}
+
+#ifdef _DEBUG_HEURISTIC
+			cout << order[i] << endl;
+#endif
+
+		}
+
+
+
+		for(int i=0; i<nbCars; ++i) {
+			car = (lex ? i : nbCars/2 + (i%2 ? -1 : 1)*((i+1)/2));
+	reversed_bool_classes[i].initialise(0, nbClasses);
+
+			for(int cls=0; cls<nbClasses; ++cls) {
+				reversed_bool_classes[i].add(CarSequencingHeuristic< Criterion >::model->bool_class[cls][car]);
+			}
+
+#ifdef _DEBUG_HEURISTIC
+			cout << reversed_bool_classes[i] << endl;
+#endif
+		}
+		last.initialise(s,0);
+		CarSequencingHeuristic< Criterion >::model->add((VariableListener*)this);
+	}
+	virtual ~BoolClassBranchingHeuristic() {}
+
+	virtual Decision branch() {
+		return choice.make(select());
+	}
+
+	Variable select()
+	{
+
+#ifdef _PRINT_CLASSES
+		CarSequencingModel *m = CarSequencingHeuristic< Criterion >::model;
+		int nbClasses = m->instance->nb_classes();
+
+
+		cout << endl;
+		for(int j=0; j<nbClasses; ++j) {
+			for(int i=0; i<nbCars; ++i) {
+				if(m->bool_class[j][i].is_ground()) cout << m->bool_class[j][i].get_min();
+				else cout << ".";
+			}
+			cout << endl;
+		}
+		cout << endl;
+#endif
+
+
+
+		int opt, best_opt=-1, second_best_opt=-1;
+
+#ifdef _DEBUG_HEURISTIC
+
+		cout << "The _PRINT_CLASSES flag should be better in this case..";
+		cout << "find first unassigned slot : ";
+		for (int cls=0;cls<nbClasses;++cls )
+			cout << reversed_bool_classes[last][cls].get_domain() << (reversed_bool_classes[last][cls].is_ground() ? "-" : "+") << "\n";
+#endif
+
+		int cls=0;
+		while(last<nbCars && reversed_bool_classes[last][cls].is_ground()) {
+
+#ifdef _DEBUG_HEURISTIC
+			cout << " " << reversed_bool_classes[last][cls] ;
+#endif
+			if (cls<(nbClasses-1)) ++cls;
+			else
+			{
+				++last;
+				cls=0;
+			}
+#ifdef _DEBUG_HEURISTIC
+			if(last < nbCars)
+				cout << " " << reversed_bool_classes[last][cls].get_domain() << ( reversed_bool_classes[last][cls].is_ground() ? "-" : "+");
+#endif
+		}
+
+#ifdef _DEBUG_HEURISTIC
+		//		cout << " (lastbool:" << lastbool << ")";
+		cout << " (" << last << ")";
+		// cout.flush();
+		cout << " go with " << endl << " rank options:\n";
+#endif
+
+		for(opt=0; opt<nbOptions; ++opt) {
+
+#ifdef _DEBUG_HEURISTIC
+			cout << " -option_" << opt << ": " ;
+#endif
+
+			if(!order[last][opt].is_ground()) {
+
+#ifdef _DEBUG_HEURISTIC
+				cout << CarSequencingHeuristic< Criterion >::options_weight[opt] ;
+#endif
+
+				if(best_opt < 0 || CarSequencingHeuristic< Criterion >::options_weight[opt] > CarSequencingHeuristic< Criterion >::options_weight[best_opt]) {
+					second_best_opt = best_opt;
+					best_opt = opt;
+
+#ifdef _DEBUG_HEURISTIC
+					cout << " best so far!\n";
+#endif
+
+				} else if(randomization && (second_best_opt < 0 || CarSequencingHeuristic< Criterion >::options_weight[opt] >
+				CarSequencingHeuristic< Criterion >::options_weight[second_best_opt])) {
+					second_best_opt = opt;
+
+#ifdef _DEBUG_HEURISTIC
+					cout << " second best so far!\n";
+#endif
+
+				}
+			}
+
+#ifdef _DEBUG_HEURISTIC
+			else cout << "ground!\n";
+#endif
+
+		}
+
+		if(randomization && second_best_opt>=0 && randint(CS_RAND_MAX) < randomization) {
+			best_opt = second_best_opt;
+		}
+
+#ifdef _DEBUG_HEURISTIC
+		cout << last << " " << best_opt << endl;
+		cout << "return " << order[last][best_opt] << " in " << order[last][best_opt].get_domain() << endl;
+#endif
+
+		return order[last][best_opt];
+	}
+
+	virtual std::ostream& display(std::ostream& os)  {
+		os << "Go by lexicographic order: " ;
+
+		int i = last,cls=0;
+
+		while(i<(int)(order.size) && reversed_bool_classes[i][cls].is_ground()) {
+
+			if (cls<nbClasses) ++cls;
+			else
+			{
+						++last;
+						cls=0;
+			}
+		}
+		os << order[i];
+		return os;
+	}
+
+
+};
+
+
+
+
+
 
 template< class Criterion, class ValSelector >
 class OptionBranchingHeuristic : public CarSequencingHeuristic< Criterion >, public BranchingHeuristic {
@@ -1686,31 +1891,46 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 		else
 		{
 
-			if(value_ordering == "minval")
-				heuristic = new GenericHeuristic< VSIDS<2>, MinValue >(solver);
-			else if(value_ordering == "maxval")
-				heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
-			else if(value_ordering == "random")
-				heuristic = new GenericHeuristic< VSIDS<2>, RandomMinMax >(solver);
-			else if(value_ordering == "minweight")
-				heuristic = new GenericHeuristic< VSIDS<2>, BoolMinWeightValue >(solver);
-			else  if(value_ordering == "maxweight")
-				heuristic = new GenericHeuristic< VSIDS<2>, BoolMaxWeightValue >(solver);
-			else if(value_ordering == "minval+guided")
-				heuristic = new GenericHeuristic< VSIDS<2>, Guided< MinValue > >(solver);
-			else if(value_ordering == "maxval+guided")
-				heuristic = new GenericHeuristic< VSIDS<2>, Guided< MaxValue > >(solver);
-			else  if(value_ordering == "random+guided")
-				heuristic = new GenericHeuristic< VSIDS<2>, Guided< RandomMinMax > >(solver);
-			else if(value_ordering == "minweight+guided")
-				heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMinWeightValue > >(solver);
-			else if(value_ordering == "maxweight+guided")
-				heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMaxWeightValue > >(solver);
-			else {
-				std::cout << "This value ordering is not handled!\n";
-				exit(1);
+			if(branching == "slot") {
+				if(criterion == "demand") {
+					heuristic = new BoolClassBranchingHeuristic < Dynamic<Demand>, MaxValue >(solver, (exploration == "lex"), randomization);
+				} else if(criterion == "pq") {
+					heuristic = new BoolClassBranchingHeuristic < StaticCapacity, MaxValue >(solver, (exploration == "lex"), randomization);
+				} else if(criterion == "load") {
+					heuristic = new BoolClassBranchingHeuristic < Dynamic<Load>, MaxValue >(solver, (exploration == "lex"), randomization);
+				} else if(criterion == "rate") {
+					heuristic = new BoolClassBranchingHeuristic < Dynamic<Rate>, MaxValue >(solver, (exploration == "lex"), randomization);
+				} else if(criterion == "slack") {
+					heuristic = new BoolClassBranchingHeuristic < Dynamic<Slack>, MaxValue >(solver, (exploration == "lex"), randomization);
+				}
 			}
-
+			else
+			{
+				if(value_ordering == "minval")
+					heuristic = new GenericHeuristic< VSIDS<2>, MinValue >(solver);
+				else if(value_ordering == "maxval")
+					heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+				else if(value_ordering == "random")
+					heuristic = new GenericHeuristic< VSIDS<2>, RandomMinMax >(solver);
+				else if(value_ordering == "minweight")
+					heuristic = new GenericHeuristic< VSIDS<2>, BoolMinWeightValue >(solver);
+				else  if(value_ordering == "maxweight")
+					heuristic = new GenericHeuristic< VSIDS<2>, BoolMaxWeightValue >(solver);
+				else if(value_ordering == "minval+guided")
+					heuristic = new GenericHeuristic< VSIDS<2>, Guided< MinValue > >(solver);
+				else if(value_ordering == "maxval+guided")
+					heuristic = new GenericHeuristic< VSIDS<2>, Guided< MaxValue > >(solver);
+				else  if(value_ordering == "random+guided")
+					heuristic = new GenericHeuristic< VSIDS<2>, Guided< RandomMinMax > >(solver);
+				else if(value_ordering == "minweight+guided")
+					heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMinWeightValue > >(solver);
+				else if(value_ordering == "maxweight+guided")
+					heuristic = new GenericHeuristic< VSIDS<2>, Guided< BoolMaxWeightValue > >(solver);
+				else {
+					std::cout << "This value ordering is not handled!\n";
+					exit(1);
+				}
+			}
 		}
 	}
 	else
