@@ -404,6 +404,7 @@ public:
 	// variables for classes
 	//VarArray class_at_position;
 
+	virtual void setLearning(){}
 };
 
 
@@ -457,7 +458,7 @@ class PseudoBoolModel : public CarSequencingModel {
 
 public:
 
-	//allcars is a simple concatenation of all bool_class[i]. We use it only for branching
+	//allcars is a simple concatenation of all boolean variables. We use it only for branching
 	VarArray allcars;
 
 	//Clauses
@@ -469,6 +470,8 @@ public:
 	virtual void __get_var();
 
 	virtual VarArray* branchOn(){return &allcars;}
+
+	virtual void setLearning(){set_learning_on();}
 };
 
 
@@ -674,12 +677,12 @@ void PseudoBoolModel::setup() {
 		// parameters.activity_decay =.96;
 		// parameters.activity_increment = .012;
 		// parameters.forgetfulness = .75;
-		// set_learning_on();
+
 
 	}
 	catch (ArgException &e)  // catch any exceptions
 	{
-		cerr << "error in Pseudo Boolean model sutup: " << e.error() << " for arg " << e.argId() << endl;
+		cerr << "error in Pseudo Boolean model setup: " << e.error() << " for arg " << e.argId() << endl;
 	}
 
 }
@@ -1936,12 +1939,6 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 
 	if (model=="pseudoB")
 	{
-#ifdef _DEBUG_PSEUDO_BOOL
-		cout << "fpseudoB" << endl;
-		if (! (Solver*)solver->parameters.backjump )
-			cout << "not ? backjump" << endl;
-#endif
-
 		if(branching == "option") {
 			if(criterion == "demand") {
 				heuristic = new OptionBranchingHeuristic < Dynamic<Demand>, MaxValue >(solver, (exploration == "lex"), randomization);
@@ -2184,6 +2181,7 @@ int main(int argc, char **argv)
 
 		cmd.set_parameters(*solver);
 
+		solver->setLearning();
 
 		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
 
