@@ -3,7 +3,8 @@
 #include <fstream>
 #include <vector>
 #include <map>
-
+#include <set>
+#include <algorithm>
 
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
@@ -22,7 +23,7 @@ using namespace TCLAP;
 //#define _PRINT_CLASSES true
 //#define _DEBUG_HEURISTIC true
 //#define _DEBUG_PSEUDO_BOOL true
-
+//#define _DEBUG_INSTANCE true
 
 class CarSequencingInstance {
 
@@ -95,6 +96,9 @@ public:
 	// printing
 	ostream& display(ostream& os) const;
 
+	//rewrite
+	//void rewrite();
+
 };
 
 
@@ -105,6 +109,7 @@ CarSequencingInstance::CarSequencingInstance(const char *filename) {
 	int opt, cla, aux;
 	int nbOptions;
 	int nbClasses;
+	int identic_classes=0;
 	fin >> length >> nbOptions >> nbClasses;
 
 	capacity_p.resize(nbOptions);
@@ -133,23 +138,85 @@ CarSequencingInstance::CarSequencingInstance(const char *filename) {
 		capacity_q[opt] = aux;
 	}
 
-	// read the options required by each configuration
-	for(cla=0;cla<nbClasses;++cla){
-		fin >> aux;
-		fin >> aux;
-		class_demand[cla] = aux;
 
-		//nbCarsByClass[cla];
-		for (opt=0;opt<nbOptions;++opt){
+	// read the options required by each configuration
+	for(cla=0;cla<(nbClasses - identic_classes);++cla)
+	{
+		fin >> aux;
+		fin >> aux;
+		int demand_tmp;
+		vector<int> tmpvector;
+		vector<int> tmpvector_index;
+		demand_tmp = aux;
+		/*
+				class_demand[cla] = aux;
+
+				//nbCarsByClass[cla];
+				for (opt=0;opt<nbOptions;++opt){
+					fin >> aux;
+					if(aux) {
+						configuration[cla].push_back(opt);
+						option_config[opt].push_back(cla);
+						config_matrix[cla].add(opt);
+					}
+				}
+
+		 */
+
+		for (opt=0;opt<nbOptions;++opt)
+		{
 			fin >> aux;
+			tmpvector_index.push_back(aux);
 			if(aux) {
-				configuration[cla].push_back(opt);
-				option_config[opt].push_back(cla);
-				config_matrix[cla].add(opt);
+				tmpvector.push_back(opt);
 			}
 		}
+		int intcount = std::count (configuration.begin(), configuration.end(), tmpvector );
+		if (intcount==0)
+		{
+			class_demand[cla] = demand_tmp;
+			//nbCarsByClass[cla];
+			for (opt=0;opt<nbOptions;++opt)
+			{
+				if(tmpvector_index[opt])
+				{
+					configuration[cla].push_back(opt);
+					option_config[opt].push_back(cla);
+					config_matrix[cla].add(opt);
+				}
+			}
+		}
+		else
+		{
+
+#ifdef _DEBUG_INSTANCE
+			cout << "tmp vector index :";
+
+			for(int opt=0;opt<nb_options();++opt)
+				cout << tmpvector_index[opt];
+			cout << endl ;
+			cout << "tmp vector :";
+
+			for(int opt=0;opt<tmpvector.size();++opt)
+				cout << tmpvector[opt];
+			cout << endl ;
+
+			std::cout << "Class : " << find(configuration.begin(), configuration.end(), tmpvector) - configuration.begin() << "appeared again! " << intcount  << "time(s)" << endl;
+#endif
+
+			identic_classes++;
+			class_demand[find(configuration.begin(), configuration.end(), tmpvector) - configuration.begin()]+=demand_tmp;
+			cla--;
+		}
+
 	}
 
+	config_matrix.erase(config_matrix.end()-identic_classes ,config_matrix.end());
+	configuration.erase(configuration.end()-identic_classes ,configuration.end());
+	class_demand.erase(class_demand.end()-identic_classes ,class_demand.end());
+
+
+	fin.close();
 	// compute the number of cars to be built for each option
 	for(opt=0;opt<nbOptions;++opt){
 		aux = 0;
@@ -2113,8 +2180,6 @@ int main(int argc, char **argv)
 			cout << instance << endl;
 		}
 
-
-
 		CarSequencingModel *solver = modelFactory(model, &instance, cmd.use_rewrite());
 
 		cmd.set_parameters(*solver);
@@ -2166,4 +2231,6 @@ int main(int argc, char **argv)
 	}
 
 }
+
+
 
