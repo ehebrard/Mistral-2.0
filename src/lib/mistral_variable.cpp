@@ -7277,7 +7277,6 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
     if(sub_type == MINIMIZATION) {
       upper_bound = objective.get_min();
     
-
       //std::cout << "LEVEL: " << solver->level << std::endl;
       // search the deepest level 
       int level, search_root = solver->search_root;
@@ -7309,25 +7308,35 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
       // if(!solver->level) lower_bound = upper_bound;
     } else { //if(sub_type == MAXIMIZATION) {
 
-      // lower_bound = objective.get_max();
-
-      // // search the deepest level 
-      // int level, search_root = solver->search_root;
-      // do {
-      // 	level = solver->level;
-      // 	if(level == search_root) {
-      // 	  upper_bound = lower_bound;
-      // 	  return OPT;
-      // 	}
-      // 	solver->restore(level-1);
-      // } while(lower_bound >= objective.get_max());
-	
-      // Decision deduction(objective, Decision::LOWERBOUND, lower_bound+1);
-      // deduction.make();
-      // return UNKNOWN;
-
       lower_bound = objective.get_max();
-      if(!solver->level) upper_bound = lower_bound;
+
+      // search the deepest level 
+      int level, search_root = solver->search_root;
+      do {
+       	level = solver->level;
+       	if(level == search_root) {
+       	  upper_bound = lower_bound;
+       	  return OPT;
+       	}
+       	solver->restore(level-1);
+      } while(lower_bound >= objective.get_max());
+	
+      Decision deduction(objective, Decision::LOWERBOUND, lower_bound+1);
+
+#ifdef _DEBUG_SEARCH
+    if(_DEBUG_SEARCH) {
+      std::cout << "c";
+      for(unsigned int k=0; k<=solver->decisions.size; ++k) std::cout << " ";
+      std::cout << "backtrack to lvl " << solver->level << " and deduce " 
+		<< deduction << " (lower bound)" << std::endl;
+    }
+#endif
+      
+      deduction.make();
+      return UNKNOWN;
+
+      // lower_bound = objective.get_max();
+      // if(!solver->level) upper_bound = lower_bound;
     }
       
     if(upper_bound == lower_bound) return OPT;

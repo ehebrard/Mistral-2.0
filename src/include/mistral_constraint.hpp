@@ -4177,6 +4177,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     int ub;
     ReversibleNum<int> min_;
     ReversibleNum<int> max_;
+
+    Vector< Literal > explanation;
     //@}
 
     /**@name Constructors*/
@@ -4195,6 +4197,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~PredicateBoolSum();
     //@}
+
+
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
     /**@name Solving*/
     //@{

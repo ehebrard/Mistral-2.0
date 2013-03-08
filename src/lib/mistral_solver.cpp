@@ -624,22 +624,29 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
 {
 // #ifdef _DEBUG_AC
 //  if(_DEBUG_AC) {
-//   std::cout << " initial trigger for " << c << "(" << (cons->id) << ")" << std::endl;
+//   std::cout << " initial trigger for " << cons << "(" << (cons->id) << ")" << std::endl;
+//  }
 // #endif
-
+  
   //int priority = cons->priority, cons_id = cons->id, triggered=false;
   Event evt;
   Variable x;
-
+  
   for(unsigned int i=0; i<cons->scope.size; ++i) {
     x = cons->_scope[i];
-
+    
     if(!x.is_void()) {
-
+      
       evt = (// cons->scope[i].domain_type != BOOL_VAR &&
 	     x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
       
-      if(cons->is_triggered_on(i, EVENT_TYPE(evt))) trigger(cons, i, evt);
+
+
+      
+      if(cons->is_triggered_on(i, EVENT_TYPE(evt))) {
+	//std::cout << "trigger " << cons << " because " << event2str(evt) << " on "<< x << std::endl;
+	trigger(cons, i, evt);
+      }
     }
   }
 }
@@ -693,11 +700,11 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, co
 
 // #ifdef _DEBUG_AC
 //  if(_DEBUG_AC) {
-//   std::cout << "  triggers " << cons << " after a " 
-// 	    << (ASSIGNED(evt) ? "value" : (RANGE_CHANGED(evt) ? "range" : "domain"))
-// 	    << " event on "
-// 	    << cons->scope[var] << " in " << cons->scope[var].get_domain() 
-// 	    << std::endl;
+//    std::cout << "  triggers " << cons << " after a " 
+// 	     << event2str(evt) 
+// 	     << " event on "
+// 	     << cons->scope[var] << " in " << cons->scope[var].get_domain() 
+// 	     << std::endl;
 //  }
 // #endif
 
@@ -705,9 +712,12 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, co
     int priority = cons->priority, cons_id = cons->id;
     if(_set_.fast_contain(cons_id)) {
 
-      //std::cout << "NOTIFY OTHER EVENT" << std::endl;
+      //std::cout << "NOTIFY OTHER EVENT " << event2strc(evt) << std::endl;
 
       cons->notify_other_event(var, evt);
+
+
+      //std::cout << " ==> " << event2strc(cons->event_type[var]) << std::endl;
       // if(cons->events.contain(var)) {
       // 	cons->event_type[var] |= evt;
       // } else {
@@ -725,7 +735,12 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, co
 
       if(priority > higher_priority) higher_priority = priority;
       triggers[priority].add(cons_id);
+
+      //std::cout << "NOTIFY OTHER EVENT " << event2strc(evt)  << std::endl;
+
       cons->notify_first_event(var, evt);
+
+      //std::cout << " ==> " << event2strc(cons->event_type[var]) << std::endl;
       // cons->events.set_to(var);
       // cons->event_type[var] = evt;
     }
@@ -2965,6 +2980,7 @@ bool Mistral::Solver::propagate()
 
   // findprop
 
+
 #ifdef _DEBUG_AC
   if(_DEBUG_AC) {
     std::cout << "c start propagation" << std::endl;
@@ -3299,6 +3315,9 @@ bool Mistral::Solver::propagate()
   std::cout << "c end propagation" << std::endl;
   }
 #endif
+
+
+
 
   
   if(IS_OK(wiped_idx)) {
@@ -3837,6 +3856,7 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
 //Mistral::Decision 
 void Mistral::Solver::learn_nogood() {
 
+
    unsigned int vidx;
 
   // // first, resolve the unresolved events, so that 'reason_for' and 'assignment_level' are up to date
@@ -4017,7 +4037,7 @@ void Mistral::Solver::learn_nogood() {
       Explanation::iterator stop;
       
       if(current_explanation == NULL) {
-	std::cout << "NULL POINTER!!!" << std::endl;
+	std::cout << "NULL POINTER!!! " << (statistics.num_filterings) << std::endl;
 	exit(1);
       }
 
@@ -6039,8 +6059,8 @@ std::string Mistral::SolverCmdLine::get_restart_policy() {
   return restartArg->getValue();
 }
 
-const char* Mistral::SolverCmdLine::get_filename() {
-  return fileArg->getValue().c_str();
+std::string Mistral::SolverCmdLine::get_filename() {
+  return fileArg->getValue(); //.c_str();
 }
 
     int Mistral::SolverCmdLine::get_seed() { 

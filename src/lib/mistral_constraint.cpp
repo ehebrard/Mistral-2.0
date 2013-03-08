@@ -9222,9 +9222,19 @@ Mistral::PredicateBoolSum::PredicateBoolSum(std::vector< Variable >& scp)
 
 void Mistral::PredicateBoolSum::initialise() {
   ConstraintImplementation::initialise();
+  int _min_ = 0;
+  int _max_ = scope.size;
   for(unsigned int i=0; i<scope.size-1; ++i) {
     trigger_on(_VALUE_, scope[i]);
+    if(scope[i].is_ground()) {
+      if(scope[i].get_value()) ++_min_;
+      else --_max_;
+    }
   }
+
+  min_.initialise(get_solver(), _min_);
+  max_.initialise(get_solver(), _max_);
+
   trigger_on(_RANGE_, scope[scope.size-1]);
   GlobalConstraint::initialise();
 }
@@ -9240,6 +9250,47 @@ Mistral::PredicateBoolSum::~PredicateBoolSum()
   std::cout << "c delete boolsum predicate" << std::endl;
 #endif
 }
+
+
+Mistral::Explanation::iterator Mistral::PredicateBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+
+  explanation.clear();
+  int i=scope.size-1;
+
+  if(a != NULL_ATOM) {
+    if(get_solver()->variables[a].get_value()) {
+      // the literal we try to explain is positive
+      while(i--) {
+	if( !(scope[i].get_max()) ) explanation.add(literal(scope[i], true));
+      }
+    } else {
+      // the literal we try to explain is positive
+      while(i--) {
+	if(  scope[i].get_min() ) explanation.add(literal(scope[i], false));
+      }
+    }
+  } else {
+    int upper_bound = scope.back().get_max();
+    int lower_bound = scope.back().get_min();
+    if(min_>upper_bound) {
+      // too many ones
+      while(i-- && explanation.size <= upper_bound) {
+	if(scope[i].get_min()) explanation.add(literal(scope[i], false));
+      }
+    } else {
+      // too many zeros
+      while(i-- && explanation.size <= scope.size-lower_bound) {
+	if(!(scope[i].get_max())) explanation.add(literal(scope[i], true));
+      }
+    }
+  }
+
+  //std::cout << explanation << std::endl;
+
+  end = explanation.end();
+  return explanation.begin();
+}
+
 
 Mistral::PropagationOutcome Mistral::PredicateBoolSum::propagate() 
 {
@@ -9279,7 +9330,7 @@ int Mistral::PredicateBoolSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateBoolSum::display(std::ostream& os) const {
-  os << "(" << scope[0]/*.get_var()*/ ;
+  os << "pbs(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size-1; ++i) 
     os << " + " << scope[i]/*.get_var()*/;
   os << ") = " << scope[scope.size-1];
@@ -10816,7 +10867,7 @@ std::ostream& Mistral::ConstraintWeightedBoolSumInterval::display(std::ostream& 
 
 
 
-//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 1)
+//#define _DEBUG_IWEIGHTEDBOOLSUM true //(id == 1)
 
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp, 
@@ -11395,16 +11446,18 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
 
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM
     if(_DEBUG_IWEIGHTEDBOOLSUM) {
-      std::cout << "\nprocessing events: " << event2str(event_type[i]) << " on " 
+      std::cout << "\nprocessing events: " << event2strc(event_type[i]) << " on " 
 		<< scope[i] << " in " << scope[i].get_domain() << std::endl;
     }
 #endif
 
-    if(LB_CHANGED(event_type[i])) {
+    // the commented way is faster, but the initial propagate might be triggered with invalid bound information
+    //if(LB_CHANGED(event_type[i])) {
+    if(GET_VAL(domains[i])) { 
       bound_[w]+=weight[i];
     } else {
       bound_[1-w]-=weight[i];
-    }    
+    }
 
 
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM

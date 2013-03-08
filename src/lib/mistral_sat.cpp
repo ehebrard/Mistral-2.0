@@ -1048,17 +1048,21 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 std::ostream& Mistral::ConstraintClauseBase::display(std::ostream& os) const {
   os << " (";
   if(clauses.size>0) {
-    print_clause(os, clauses[0]);
+    if(clauses.size<100) {
+      print_clause(os, clauses[0]);
+      
+      for(unsigned int i=1; i<clauses.size; ++i) {
+	os << " " ;
+	print_clause(os, clauses[i]);
+      }
+      
 
-    for(unsigned int i=1; i<clauses.size; ++i) {
-      os << " " ;
-      print_clause(os, clauses[i]);
+      // os << clauses[0];
+      // for(unsigned int i=1; i<clauses.size; ++i)
+      //   os << " " << clauses[i]  ;
+    } else {
+      std::cout << "many clauses";
     }
-
-
-    // os << clauses[0];
-    // for(unsigned int i=1; i<clauses.size; ++i)
-    //   os << " " << clauses[i]  ;
   }
   os << ")";
   //os << "nogoods";

@@ -1027,7 +1027,7 @@ public:
 
     std::string get_restart_policy();
 
-    const char* get_filename()//  {
+    std::string get_filename()//  {
     //   return fileArg->getValue().c_str();
     // }
       ;
