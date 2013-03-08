@@ -36,7 +36,7 @@ int main(int argc, char **argv)
   
   cmd.set_parameters(solver);
   
-  solver.parse_pbo(cmd.get_filename());
+  solver.parse_pbo(cmd.get_filename().c_str());
 
 
   

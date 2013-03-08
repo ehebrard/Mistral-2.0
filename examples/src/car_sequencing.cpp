@@ -2171,7 +2171,7 @@ int main(int argc, char **argv)
 
 		usrand(cmd.get_seed());
 
-		CarSequencingInstance instance(cmd.get_filename()); //file.c_str());
+		CarSequencingInstance instance(cmd.get_filename().c_str()); //file.c_str());
 
 		if(cmd.print_instance()) {
 			cout << instance << endl;
