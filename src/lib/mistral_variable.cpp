@@ -7302,6 +7302,7 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
 #endif
 
       deduction.make();
+
       return UNKNOWN;
 
       // upper_bound = objective.get_min();
@@ -7506,3 +7507,20 @@ Mistral::Literal Mistral::literal(Variable x, const int val) {
 Mistral::Literal Mistral::literal(Variable x) {
     return (x.id()*2+x.get_value());
   }
+
+
+// bool Mistral::Decision::make() {
+
+//   //std::cout << _data_ << std::endl;
+
+//   //std::cout << var << " in " << var.get_domain() << " : " << value() << std::endl;
+  
+//   //if(_data_ == -1) return propagateRelation();
+//   switch(type()) {
+//   case REMOVAL:    return !IS_FAIL(var.remove(value()));
+//   case ASSIGNMENT: return !IS_FAIL(var.set_domain(value()));
+//   case LOWERBOUND: return !IS_FAIL(var.set_min(value()+1));
+//   case UPPERBOUND: return !IS_FAIL(var.set_max(value()));
+//   }
+//   return true;
+// }
