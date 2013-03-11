@@ -33,7 +33,7 @@
 
 
 //#define _OLD_ true
-//#define _DEBUG_NOGOOD true //(statistics.num_filterings == 491)
+#define _DEBUG_NOGOOD true //(statistics.num_filterings == 491)
 //#define _DEBUG_SEARCH true
 
 //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738) || (statistics.num_filterings == 44368) || (statistics.num_filterings == 43659))

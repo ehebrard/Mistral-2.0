@@ -4361,6 +4361,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     int *lcumulated; //[arity+1];
     int *rcumulated; //[arity+1];
     VarArray reverse;
+    // used to store the explanation when "get_reason_for()" is called
+    Vector<Literal> explanation;
     //@}
 
     /**@name Constructors*/
@@ -4378,7 +4380,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~ConstraintMultiAtMostSeqCard();
     //@}
     
-    //virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
     /**@name Solving*/
     //@{

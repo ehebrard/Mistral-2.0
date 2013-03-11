@@ -13533,7 +13533,55 @@ int Mistral::ConstraintMultiAtMostSeqCard::check( const int* s ) const
   return !ok;
 }
 
+Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
+{
+	int i=scope.size;
+	int literal__;
+	explanation.clear();
 
+	if(a != NULL_ATOM)
+	{
+		while(i--)
+		{
+			if (scope[i].id() != get_solver()->variables[a].id())
+			{
+				//	std::cout << "i" << i << std::endl;
+				//	std::cout << "scope[i]" << scope[i] << std::endl;
+				if(!(scope[i].get_max()))
+				{
+					literal__= (literal(scope[i]));
+					explanation.add(NOT(literal__));
+				}
+				else
+					if(scope[i].get_min())
+					{
+						literal__= (literal(scope[i]));
+						explanation.add(NOT(literal__));
+					}
+			}
+		}
+	}
+	else
+		while(i--)
+		{
+			//	std::cout << "i" << i << std::endl;
+			//	std::cout << "scope[i]" << scope[i] << std::endl;
+			if(!(scope[i].get_max()))
+			{
+
+				literal__= (literal(scope[i]));
+				explanation.add(NOT(literal__));
+			}
+			else
+				if(scope[i].get_min())
+				{
+					literal__= (literal(scope[i]));
+					explanation.add(NOT(literal__));
+				}
+		}
+	end = explanation.end();
+	return explanation.begin();
+}
 
 
 // Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
