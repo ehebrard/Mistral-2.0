@@ -1381,6 +1381,8 @@ void Mistral::Solver::add(Constraint c) {
 
   if(c.id() < 0) {
 
+    //std::cout << "solver init " << c << std::endl;
+
     c.initialise(this);
 
     // get a name for the constraint and add it to the list

@@ -8358,359 +8358,366 @@ std::ostream& Mistral::ConstraintGAC3::display(std::ostream& os) const {
 }
 
 
-//#define _DEBUG_CARD true
+// //#define _DEBUG_CARD true
 
-Mistral::ConstraintBoolSumEqual::ConstraintBoolSumEqual(Vector< Variable >& scp, const int t)
-  : GlobalConstraint(scp) { 
-  priority = 1;
-  total = t; 
-  lower_bound = t;
-  upper_bound = t;
-}
+// Mistral::ConstraintBoolSumEqual::ConstraintBoolSumEqual(Vector< Variable >& scp, const int t)
+//   : GlobalConstraint(scp) { 
+//   priority = 1;
+//   total = t; 
+//   lower_bound = t;
+//   upper_bound = t;
+// }
 
-void Mistral::ConstraintBoolSumEqual::initialise() {
-  ConstraintImplementation::initialise();
-  int _min_ = 0;
-  int _max_ = scope.size;
-  for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_VALUE_, scope[i]);
-    if(scope[i].is_ground()) {
-      if(scope[i].get_value()) ++_min_;
-      else --_max_;
-    }
-  }
+// void Mistral::ConstraintBoolSumEqual::initialise() {
+//   ConstraintImplementation::initialise();
+//   int _min_ = 0;
+//   int _max_ = scope.size;
 
-  min_.initialise(get_solver(), _min_);
-  max_.initialise(get_solver(), _max_);
 
-  GlobalConstraint::initialise();
-}
+//   std::cout << "initialise: c" << id << " " << this << std::endl;
 
-void Mistral::ConstraintBoolSumEqual::mark_domain() {
-  for(int i=scope.size; i;)
-    get_solver()->forbid(scope[--i].id(), LIST_VAR);
-}
 
-Mistral::ConstraintBoolSumEqual::~ConstraintBoolSumEqual() 
-{
-#ifdef _DEBUG_MEMORY
-  std::cout << "c delete boolsumequal constraint" << std::endl;
-#endif
-}
+//   for(unsigned int i=0; i<scope.size; ++i) {
+//     trigger_on(_VALUE_, scope[i]);
+//     if(scope[i].is_ground()) {
+//       if(scope[i].get_value()) ++_min_;
+//       else --_max_;
+//     }
+//   }
 
-Mistral::PropagationOutcome Mistral::ConstraintBoolSumEqual::propagate() 
-{
-  PropagationOutcome wiped_idx = CONSISTENT;
+//   min_.initialise(get_solver(), _min_);
+//   max_.initialise(get_solver(), _max_);
 
-#ifdef _DEBUG_CARD
-  if(_DEBUG_CARD) {
-    std::cout << "c" << id << ":\n";
-    std::cout << "changes: " << changes << std::endl;
-    std::cout << " events: " << events << std::endl;
+//   GlobalConstraint::initialise();
+// }
+
+// void Mistral::ConstraintBoolSumEqual::mark_domain() {
+//   for(int i=scope.size; i;)
+//     get_solver()->forbid(scope[--i].id(), LIST_VAR);
+// }
+
+// Mistral::ConstraintBoolSumEqual::~ConstraintBoolSumEqual() 
+// {
+// #ifdef _DEBUG_MEMORY
+//   std::cout << "c delete boolsumequal constraint" << std::endl;
+// #endif
+// }
+
+// Mistral::PropagationOutcome Mistral::ConstraintBoolSumEqual::propagate() 
+// {
+//   PropagationOutcome wiped_idx = CONSISTENT;
+
+// #ifdef _DEBUG_CARD
+//   if(_DEBUG_CARD) {
+//     std::cout << "c" << id << ":\n";
+//     std::cout << "changes: " << changes << std::endl;
+//     std::cout << " events: " << events << std::endl;
     
-    int new_evt[scope.size];
-    for(int i=0; i<scope.size; ++i) {
-      new_evt[i]=0;
-    }
-    for(int i=0; i<events.size; ++i) {
-      new_evt[events[i]] = 1;
-    }
-    std::cout << " propagate [" ;
-    for(int i=0; i<scope.size; ++i) {
-      std::cout << std::setw(5) << scope[i].get_domain();
-    }
-    std::cout << "]\n   changes [" ;
-    for(int i=0; i<scope.size; ++i) {
-      std::cout << std::setw(5) << (new_evt[i] ? scope[i].get_domain() : " ");
-    }
-    std::cout << "]\n was in [" << min_ << ".." << max_ << "] now in [";
-  }
-#endif
+//     int new_evt[scope.size];
+//     for(int i=0; i<scope.size; ++i) {
+//       new_evt[i]=0;
+//     }
+//     for(int i=0; i<events.size; ++i) {
+//       new_evt[events[i]] = 1;
+//     }
+//     std::cout << " propagate [" ;
+//     for(int i=0; i<scope.size; ++i) {
+//       std::cout << std::setw(5) << scope[i].get_domain();
+//     }
+//     std::cout << "]\n   changes [" ;
+//     for(int i=0; i<scope.size; ++i) {
+//       std::cout << std::setw(5) << (new_evt[i] ? scope[i].get_domain() : " ");
+//     }
+//     std::cout << "]\n was in [" << min_ << ".." << max_ << "] now in [";
+//   }
+// #endif
 
 
 
-  while(!events.empty()) {
-    if(LB_CHANGED(event_type[events.pop()])) ++min_;
-    else --max_;
-  }
+//   while(!events.empty()) {
+//     //if(LB_CHANGED(event_type[events.pop()])) ++min_;
+//     if(scope[events.pop()].get_min()) ++min_;
+//     else --max_;
+//   }
 
-#ifdef _DEBUG_CARD
-  if(_DEBUG_CARD) {
-  std::cout << min_ << ".." << max_ << "]\n";
- }
-#endif
+// #ifdef _DEBUG_CARD
+//   if(_DEBUG_CARD) {
+//   std::cout << min_ << ".." << max_ << "]\n";
+//  }
+// #endif
 
-  // if(min_>upper_bound || max_<lower_bound) {
-  //   wiped_idx = FAILURE(events[0]);
-  // } else if(min_==upper_bound) {
-  //   // here there should not be any failure
-  //   for(unsigned int i=0; i<active.size; ++i) {
-  //     scope[active[i]].set_domain(0);
-  //   }
-  // } else if(max_==lower_bound) {
-  //   // here there should not be any failure
-  //   for(unsigned int i=0; i<active.size; ++i) {
-  //     scope[active[i]].set_domain(1);
-  //   }
-  // }
+//   // if(min_>upper_bound || max_<lower_bound) {
+//   //   wiped_idx = FAILURE(events[0]);
+//   // } else if(min_==upper_bound) {
+//   //   // here there should not be any failure
+//   //   for(unsigned int i=0; i<active.size; ++i) {
+//   //     scope[active[i]].set_domain(0);
+//   //   }
+//   // } else if(max_==lower_bound) {
+//   //   // here there should not be any failure
+//   //   for(unsigned int i=0; i<active.size; ++i) {
+//   //     scope[active[i]].set_domain(1);
+//   //   }
+//   // }
 
-  if(min_>upper_bound || max_<lower_bound) {
+//   if(min_>upper_bound || max_<lower_bound) {
     
-#ifdef _DEBUG_CARD
-    if(_DEBUG_CARD) {
-      std::cout << "FAILURE!\n";
-    }
-#endif
+// #ifdef _DEBUG_CARD
+//     if(_DEBUG_CARD) {
+//       std::cout << "FAILURE!\n";
+//     }
+// #endif
 
-    wiped_idx = FAILURE(events[0]);
-  } else if(min_==upper_bound) {
+//     wiped_idx = FAILURE(events[0]);
+//   } else if(min_==upper_bound) {
 
-#ifdef _DEBUG_CARD
-    if(_DEBUG_CARD) {
-      std::cout << "UPPER BOUND REACHED!\n";
-    }
-#endif
+// #ifdef _DEBUG_CARD
+//     if(_DEBUG_CARD) {
+//       std::cout << "UPPER BOUND REACHED!\n";
+//     }
+// #endif
 
-    // here there should not be any failure
-    for(unsigned int i=0; i<active.size; ++i) {
-      if(!(scope[active[i]].is_ground()) && FAILED(scope[active[i]].set_domain(0))) {
-	wiped_idx = FAILURE(i);
-	break;
-      }
-    }
-  } else if(max_==lower_bound) {
+//     // here there should not be any failure
+//     for(unsigned int i=0; i<active.size; ++i) {
+//       if(!(scope[active[i]].is_ground()) && FAILED(scope[active[i]].set_domain(0))) {
+// 	wiped_idx = FAILURE(i);
+// 	break;
+//       }
+//     }
+//   } else if(max_==lower_bound) {
 
-#ifdef _DEBUG_CARD
-    if(_DEBUG_CARD) {
-      std::cout << "LOWER BOUND REACHED!\n";
-    }
-#endif
+// #ifdef _DEBUG_CARD
+//     if(_DEBUG_CARD) {
+//       std::cout << "LOWER BOUND REACHED!\n";
+//     }
+// #endif
 
-    // here there should not be any failure
-    for(unsigned int i=0; i<active.size; ++i) {
-      if(!(scope[active[i]].is_ground()) && FAILED(scope[active[i]].set_domain(1))) {
-	wiped_idx = FAILURE(i);
-	break;
-      }
-    }
-  } else if(min_ >= lower_bound && max_ <= upper_bound) {
+//     // here there should not be any failure
+//     for(unsigned int i=0; i<active.size; ++i) {
+//       if(!(scope[active[i]].is_ground()) && FAILED(scope[active[i]].set_domain(1))) {
+// 	wiped_idx = FAILURE(i);
+// 	break;
+//       }
+//     }
+//   } else if(min_ >= lower_bound && max_ <= upper_bound) {
 
-#ifdef _DEBUG_CARD
-    if(_DEBUG_CARD) {
-      std::cout << "ENTAILED!\n";
-    }
-#endif
+// #ifdef _DEBUG_CARD
+//     if(_DEBUG_CARD) {
+//       std::cout << "ENTAILED!\n";
+//     }
+// #endif
 
-    relax();
-  }
+//     relax();
+//   }
 
-#ifdef _DEBUG_CARD
-  else {
-    if(_DEBUG_CARD) {
-      std::cout << "OK\n";
-    }
-  }
-#endif
-
-
-
-
-  // int _min_ = 0;
-  // int _max_ = 0;
-  // unsigned int i;
-  // gap = 0;
-
-  // for( i=0; i<scope.size; ++i ) {
-  //   _min_ += scope[i].get_min();
-  //   _max_ += scope[i].get_max();
-  // }
-  // if(_min_ > total )  gap = _min_-total;
-  // else if(_max_ < total ) gap = _max_-total;
-
-  // if(gap) {
-  // // if(_min_ > total || _max_ < total) {
-  //   wiped_idx = FAILURE(active[0]);
-  // } else if(_min_ == total ) {
-  //   for( i=0; i<scope.size; ++i ) 
-  //     if( !scope[i].is_ground() ) scope[i].set_domain(0);
-  // } else if(_max_ == total ) {
-  //   for( i=0; i<scope.size; ++i ) 
-  //     if( !scope[i].is_ground() ) scope[i].set_domain(1);
-  // }
-
-
-  return wiped_idx;
-}
-
-int Mistral::ConstraintBoolSumEqual::check( const int* s ) const 
-{
-  int i=scope.size, t=0;
-  while(i--) t+=s[i];
-  return total != t; 
-}
+// #ifdef _DEBUG_CARD
+//   else {
+//     if(_DEBUG_CARD) {
+//       std::cout << "OK\n";
+//     }
+//   }
+// #endif
 
 
 
 
-// Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::begin(Atom a) {
+//   // int _min_ = 0;
+//   // int _max_ = 0;
+//   // unsigned int i;
+//   // gap = 0;
+
+//   // for( i=0; i<scope.size; ++i ) {
+//   //   _min_ += scope[i].get_min();
+//   //   _max_ += scope[i].get_max();
+//   // }
+//   // if(_min_ > total )  gap = _min_-total;
+//   // else if(_max_ < total ) gap = _max_-total;
+
+//   // if(gap) {
+//   // // if(_min_ > total || _max_ < total) {
+//   //   wiped_idx = FAILURE(active[0]);
+//   // } else if(_min_ == total ) {
+//   //   for( i=0; i<scope.size; ++i ) 
+//   //     if( !scope[i].is_ground() ) scope[i].set_domain(0);
+//   // } else if(_max_ == total ) {
+//   //   for( i=0; i<scope.size; ++i ) 
+//   //     if( !scope[i].is_ground() ) scope[i].set_domain(1);
+//   // }
+
+
+//   return wiped_idx;
+// }
+
+// int Mistral::ConstraintBoolSumEqual::check( const int* s ) const 
+// {
+//   int i=scope.size, t=0;
+//   while(i--) t+=s[i];
+//   return total != t; 
+// }
+
+
+
+
+// // Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::begin(Atom a) {
+// //   explanation.clear();
+// //   int i=scope.size;
+
+// //   if(a != NULL_ATOM) {
+// //     if(get_solver()->variables[a].get_value()) {
+// //       // the literal we try to explain is positive
+// //       while(i--) if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+// //     } else {
+// //       // the literal we try to explain is positive
+// //       while(i--) if(  scope[i].get_min() ) explanation.add(literal(scope[i]));
+// //     }
+// //   } else {
+
+// //     // for(i=0; i<scope.size; ++i) {
+// //     //   std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+// //     // }
+
+// //     // std::cout << "gap: " << gap << std::endl;
+
+// //     if(gap > 0) {
+// //       // too many ones
+// //       while(i-- && explanation.size <= total) {
+// // 	if(scope[i].get_min()) explanation.add(literal(scope[i]));
+// //       }
+// //     } else {
+// //       // too many zeros
+// //       while(i-- && explanation.size <= scope.size-total) {
+// // 	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+// //       }
+// //     }
+
+
+// //     // std::cout << this << " has failed because of "
+// //     // 	      << explanation << std::endl;
+// //   }
+
+
+// //   return explanation.begin();
+// // }
+// // Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::end  (Atom a) {
+// //   return explanation.end();
+// // }
+
+// void Mistral::ConstraintBoolSumEqual::initialise_activity(double *lact, double *vact, double norm) {
+
+//   int n = scope.size;
+
+
+
+//   if(get_solver()->statistics.max_arity < n)
+//     get_solver()->statistics.max_arity = n;
+
+
+
+//   int real_max = std::min(n, (int)max_);
+//   int real_min = std::max(0, (int)min_);
+//   int span = (real_max - real_min);
+
+//   double center = (double)(real_min + real_max) / 2;
+//   double skew = center/(double)(n);
+
+
+//   double activity_increment = norm / (scope.size * (1 << span));
+	 
+
+//   if(skew<0 || skew>1 || activity_increment<0)
+//     {
+//       get_solver()->statistics.negative_weight = true;
+//     }
+
+   
+//   int i=n;
+//   while(i--) {
+//     lact[2*scope[i].id()] += (1-skew) * activity_increment;
+//     lact[2*scope[i].id()+1] += skew * activity_increment;
+//     vact[scope[i].id()] += activity_increment;
+//   }
+// }
+
+
+// Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+
+//   // std::cout << "explain \n";
+//   // for(int k=0; k<scope.size; ++k) {
+//   //   std::cout << scope[k].get_domain() << " ";
+//   // }
+//   // std::cout << "\n" << gap << "\n" << std::endl;
+
 //   explanation.clear();
 //   int i=scope.size;
 
 //   if(a != NULL_ATOM) {
 //     if(get_solver()->variables[a].get_value()) {
 //       // the literal we try to explain is positive
-//       while(i--) if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+//       while(i--) {
+// 	if( !(scope[i].get_max()) ) explanation.add(literal(scope[i], true));
+//       }
 //     } else {
 //       // the literal we try to explain is positive
-//       while(i--) if(  scope[i].get_min() ) explanation.add(literal(scope[i]));
+//       while(i--) {
+// 	if(  scope[i].get_min() ) explanation.add(literal(scope[i], false));
+//       }
 //     }
 //   } else {
-
-//     // for(i=0; i<scope.size; ++i) {
-//     //   std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
-//     // }
-
-//     // std::cout << "gap: " << gap << std::endl;
-
-//     if(gap > 0) {
+//     //if(gap > 0) {
+//     if(min_>upper_bound) {
 //       // too many ones
-//       while(i-- && explanation.size <= total) {
-// 	if(scope[i].get_min()) explanation.add(literal(scope[i]));
+//       while(i-- && explanation.size <= upper_bound) {
+// 	if(scope[i].get_min()) explanation.add(literal(scope[i], false));
 //       }
 //     } else {
 //       // too many zeros
-//       while(i-- && explanation.size <= scope.size-total) {
-// 	if(!(scope[i].get_max())) explanation.add(literal(scope[i]));
+//       while(i-- && explanation.size <= scope.size-lower_bound) {
+// 	if(!(scope[i].get_max())) explanation.add(literal(scope[i], true));
 //       }
 //     }
-
-
-//     // std::cout << this << " has failed because of "
-//     // 	      << explanation << std::endl;
 //   }
 
+//   //  std::cout << explaantion << std::endl;
 
+//   end = explanation.end();
 //   return explanation.begin();
 // }
-// Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::end  (Atom a) {
-//   return explanation.end();
+
+
+// std::ostream& Mistral::ConstraintBoolSumEqual::display(std::ostream& os) const {
+//   os << "(" << scope[0]/*.get_var()*/ ;
+//   for(unsigned int i=1; i<scope.size; ++i) 
+//     os << " + " << scope[i]/*.get_var()*/;
+//   os << ") == " << total ;
+//   return os;
 // }
 
-void Mistral::ConstraintBoolSumEqual::initialise_activity(double *lact, double *vact, double norm) {
-
-  int n = scope.size;
-
-
-
-  if(get_solver()->statistics.max_arity < n)
-    get_solver()->statistics.max_arity = n;
-
-
-
-  int real_max = std::min(n, (int)max_);
-  int real_min = std::max(0, (int)min_);
-  int span = (real_max - real_min);
-
-  double center = (double)(real_min + real_max) / 2;
-  double skew = center/(double)(n);
-
-
-  double activity_increment = norm / (scope.size * (1 << span));
-	 
-
-  if(skew<0 || skew>1 || activity_increment<0)
-    {
-      get_solver()->statistics.negative_weight = true;
-    }
-
-   
-  int i=n;
-  while(i--) {
-    lact[2*scope[i].id()] += (1-skew) * activity_increment;
-    lact[2*scope[i].id()+1] += skew * activity_increment;
-    vact[scope[i].id()] += activity_increment;
-  }
-}
-
-
-Mistral::Explanation::iterator Mistral::ConstraintBoolSumEqual::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
-
-  // std::cout << "explain \n";
-  // for(int k=0; k<scope.size; ++k) {
-  //   std::cout << scope[k].get_domain() << " ";
-  // }
-  // std::cout << "\n" << gap << "\n" << std::endl;
-
-  explanation.clear();
-  int i=scope.size;
-
-  if(a != NULL_ATOM) {
-    if(get_solver()->variables[a].get_value()) {
-      // the literal we try to explain is positive
-      while(i--) {
-	if( !(scope[i].get_max()) ) explanation.add(literal(scope[i], true));
-      }
-    } else {
-      // the literal we try to explain is positive
-      while(i--) {
-	if(  scope[i].get_min() ) explanation.add(literal(scope[i], false));
-      }
-    }
-  } else {
-    //if(gap > 0) {
-    if(min_>upper_bound) {
-      // too many ones
-      while(i-- && explanation.size <= upper_bound) {
-	if(scope[i].get_min()) explanation.add(literal(scope[i], false));
-      }
-    } else {
-      // too many zeros
-      while(i-- && explanation.size <= scope.size-lower_bound) {
-	if(!(scope[i].get_max())) explanation.add(literal(scope[i], true));
-      }
-    }
-  }
-
-  //  std::cout << explaantion << std::endl;
-
-  end = explanation.end();
-  return explanation.begin();
-}
-
-
-std::ostream& Mistral::ConstraintBoolSumEqual::display(std::ostream& os) const {
-  os << "(" << scope[0]/*.get_var()*/ ;
-  for(unsigned int i=1; i<scope.size; ++i) 
-    os << " + " << scope[i]/*.get_var()*/;
-  os << ") == " << total ;
-  return os;
-}
 
 //#define _DEBUG_CARD true
-
 
 Mistral::ConstraintBoolSumInterval::ConstraintBoolSumInterval(Vector< Variable >& scp, const int l, const int u)
   : GlobalConstraint(scp) { 
   priority = 1;
   lower_bound = l; 
   upper_bound = u; 
+  init_prop = true;
 }
 
 void Mistral::ConstraintBoolSumInterval::initialise() {
   ConstraintImplementation::initialise();
 
-  int _min_ = 0;
-  int _max_ = scope.size;
-  for(unsigned int i=0; i<scope.size; ++i) {
+  // int _min_ = 0;
+  // int _max_ = scope.size;
+   for(unsigned int i=0; i<scope.size; ++i) {
     trigger_on(_VALUE_, scope[i]);
-    if(scope[i].is_ground()) {
-      if(scope[i].get_value()) ++_min_;
-      else --_max_;
-    }
-  }
+  //   if(scope[i].is_ground()) {
+  //     if(scope[i].get_value()) ++_min_;
+  //     else --_max_;
+  //   }
+   }
 
-  min_.initialise(get_solver(), _min_);
-  max_.initialise(get_solver(), _max_);
+  // min_.initialise(get_solver(), _min_);
+  // max_.initialise(get_solver(), _max_);
 
   GlobalConstraint::initialise();
 }
@@ -8731,9 +8738,25 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 {
   PropagationOutcome wiped_idx = CONSISTENT;
 
+  if(init_prop) {
+    int _min_ = 0;
+    int _max_ = scope.size;
+    for(unsigned int i=0; i<scope.size; ++i) {
+      //trigger_on(_VALUE_, scope[i]);
+      if(scope[i].is_ground()) {
+	if(scope[i].get_value()) ++_min_;
+	else --_max_;
+      }
+    }
+    
+    init_prop = false;
+    min_.initialise(get_solver(), _min_);
+    max_.initialise(get_solver(), _max_);
+  } else {
+
 #ifdef _DEBUG_CARD
   if(_DEBUG_CARD) {
-    std::cout << "c" << id << ":\n";
+    std::cout << "c" << id << " " << this << ":\n";
     std::cout << "changes: " << changes << std::endl;
     std::cout << " events: " << events << std::endl;
     
@@ -8759,10 +8782,11 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 
 
   while(!changes.empty()) {
-    if(LB_CHANGED(event_type[changes.pop()])) ++min_;
+    //if(LB_CHANGED(event_type[changes.pop()])) ++min_;
+    if(scope[changes.pop()].get_min()) ++min_;
     else --max_;
   }
-
+  }
 #ifdef _DEBUG_CARD
   if(_DEBUG_CARD) {
   std::cout << min_ << ".." << max_ << "]\n";
@@ -10528,6 +10552,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
   
 #ifdef _DEBUG_WEIGHTEDBOOLSUM
   if(_DEBUG_WEIGHTEDBOOLSUM) {
+    std::cout << "c" << id << std::endl;
     std::cout << std::endl << "propagate " << lower_bound << " <= " ;
     for(i=0; i<arity; ++i) {
       std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();

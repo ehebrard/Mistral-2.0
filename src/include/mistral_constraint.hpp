@@ -3835,62 +3835,62 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
 
-  /**********************************************
-   * BoolSum Equal Constraint
-   **********************************************/
-  //  b1 + ... + bn = k
-  /// Constraint on the value of the sum of a set of variables.
-  class ConstraintBoolSumEqual : public GlobalConstraint {
+  // /**********************************************
+  //  * BoolSum Equal Constraint
+  //  **********************************************/
+  // //  b1 + ... + bn = k
+  // /// Constraint on the value of the sum of a set of variables.
+  // class ConstraintBoolSumEqual : public GlobalConstraint {
  
-  public:
-    /**@name Parameters*/
-    //@{
-    // last "gap" from the tightest bound to the total, used to know what cause pruning/failure
-    //int gap;
-    int total;
-    int lower_bound;
-    int upper_bound;
-    ReversibleNum<int> min_;
-    ReversibleNum<int> max_;
-    // used to store the explanation when "get_reason_for()" is called
-    Vector<Literal> explanation;
-    //@}
+  // public:
+  //   /**@name Parameters*/
+  //   //@{
+  //   // last "gap" from the tightest bound to the total, used to know what cause pruning/failure
+  //   //int gap;
+  //   int total;
+  //   int lower_bound;
+  //   int upper_bound;
+  //   ReversibleNum<int> min_;
+  //   ReversibleNum<int> max_;
+  //   // used to store the explanation when "get_reason_for()" is called
+  //   Vector<Literal> explanation;
+  //   //@}
 
-    /**@name Constructors*/
-    //@{
-    ConstraintBoolSumEqual() : GlobalConstraint() { priority = 1; total = 0; }
-    ConstraintBoolSumEqual(Vector< Variable >& scp, const int t);
-    ConstraintBoolSumEqual(std::vector< Variable >& scp, const int t);
-    virtual Constraint clone() { return Constraint(new ConstraintBoolSumEqual(scope, total)); }
-    virtual void initialise();
-    virtual void mark_domain();
-    virtual int idempotent() { return 1;}
-    virtual int postponed() { return 1;}
-    virtual int pushed() { return 1;}
-    //virtual bool absorb_negation(const int var) { return true; }
-    virtual ~ConstraintBoolSumEqual();
-    //@}
+  //   /**@name Constructors*/
+  //   //@{
+  //   ConstraintBoolSumEqual() : GlobalConstraint() { priority = 1; total = 0; }
+  //   ConstraintBoolSumEqual(Vector< Variable >& scp, const int t);
+  //   ConstraintBoolSumEqual(std::vector< Variable >& scp, const int t);
+  //   virtual Constraint clone() { return Constraint(new ConstraintBoolSumEqual(scope, total)); }
+  //   virtual void initialise();
+  //   virtual void mark_domain();
+  //   virtual int idempotent() { return 1;}
+  //   virtual int postponed() { return 1;}
+  //   virtual int pushed() { return 1;}
+  //   //virtual bool absorb_negation(const int var) { return true; }
+  //   virtual ~ConstraintBoolSumEqual();
+  //   //@}
 
 
-    // virtual Explanation::iterator begin(Atom a);// { return NULL; }
-    // virtual Explanation::iterator end  (Atom a);// { return NULL; } 
-    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
-    virtual void initialise_activity(double *lact, double *vact, double norm);
+  //   // virtual Explanation::iterator begin(Atom a);// { return NULL; }
+  //   // virtual Explanation::iterator end  (Atom a);// { return NULL; } 
+  //   virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+  //   virtual void initialise_activity(double *lact, double *vact, double norm);
 
-    /**@name Solving*/
-    //@{
-    virtual int check( const int* sol ) const ;
-    virtual PropagationOutcome propagate();
-    //virtual PropagationOutcome propagate_and_explain(Vector<Explanation*>);
-    //virtual RewritingOutcome rewrite();
-    //@}
+  //   /**@name Solving*/
+  //   //@{
+  //   virtual int check( const int* sol ) const ;
+  //   virtual PropagationOutcome propagate();
+  //   //virtual PropagationOutcome propagate_and_explain(Vector<Explanation*>);
+  //   //virtual RewritingOutcome rewrite();
+  //   //@}
   
-    /**@name Miscellaneous*/
-    //@{  
-    virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bsum=k"; }
-    //@}
-  };
+  //   /**@name Miscellaneous*/
+  //   //@{  
+  //   virtual std::ostream& display(std::ostream&) const ;
+  //   virtual std::string name() const { return "bsum=k"; }
+  //   //@}
+  // };
 
 
   /**********************************************
@@ -3909,6 +3909,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ReversibleNum<int> max_;
     // used to store the explanation when "get_reason_for()" is called
     Vector<Literal> explanation;
+    bool init_prop;
     //@}
 
     /**@name Constructors*/
@@ -4179,6 +4180,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ReversibleNum<int> max_;
 
     Vector< Literal > explanation;
+    bool init_prop;
     //@}
 
     /**@name Constructors*/

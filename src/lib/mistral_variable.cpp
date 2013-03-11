@@ -4269,8 +4269,32 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
     // if(lower_bound == upper_bound) {
     //   s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
     // } else {
+    if(lower_bound == children.size) {
+      for(int i=0; i<children.size; ++i) {
+	if(IS_FAIL(children[i].set_domain(1))) {
+
+	  std::cout << "FAIL!" << std::endl;
+	  exit(1);
+
+	  s->fail();
+	  break;
+	}
+      }
+    } else if(upper_bound == 0) {
+      for(int i=0; i<children.size; ++i) {
+	if(IS_FAIL(children[i].set_domain(0))) {
+
+
+	  std::cout << "FAIL!" << std::endl;
+	  exit(1);
+
+	  s->fail();
+	  break;
+	}
+      }
+    } else {
       s->add(new ConstraintBoolSumInterval(children,lower_bound,upper_bound)); 
-      //}
+    }
   } else {
    
 #ifdef _INCREMENTAL_WBOOLSUM
