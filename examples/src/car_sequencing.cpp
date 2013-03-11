@@ -699,7 +699,7 @@ public:
 
 	virtual VarArray* branchOn(){return &allcars;}
 
-	virtual void setLearning(){set_learning_on();}
+  virtual void setLearning(){set_learning_on();}
 };
 
 
@@ -2379,7 +2379,7 @@ int main(int argc, char **argv)
 
 		cmd.set_parameters(*solver);
 
-		solver->setLearning();
+		//solver->setLearning();
 
 		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
 

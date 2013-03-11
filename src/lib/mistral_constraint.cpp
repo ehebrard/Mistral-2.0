@@ -13535,50 +13535,25 @@ int Mistral::ConstraintMultiAtMostSeqCard::check( const int* s ) const
 
 Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
 {
-	int i=scope.size;
+  int i=scope.size, idx;
 	int literal__;
+	int *rank = get_solver()->assignment_order.stack_;
+	int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
+
 	explanation.clear();
 
-	if(a != NULL_ATOM)
-	{
-		while(i--)
+	while(i--)
+	  {
+	    if(scope[i].is_ground()) {
+	      idx = scope[i].id();
+	      if (idx != a && rank[idx] < a_rank)
 		{
-			if (scope[i].id() != get_solver()->variables[a].id())
-			{
-				//	std::cout << "i" << i << std::endl;
-				//	std::cout << "scope[i]" << scope[i] << std::endl;
-				if(!(scope[i].get_max()))
-				{
-					literal__= (literal(scope[i]));
-					explanation.add(NOT(literal__));
-				}
-				else
-					if(scope[i].get_min())
-					{
-						literal__= (literal(scope[i]));
-						explanation.add(NOT(literal__));
-					}
-			}
+		  literal__= (literal(scope[i]));
+		  explanation.add(NOT(literal__));
 		}
-	}
-	else
-		while(i--)
-		{
-			//	std::cout << "i" << i << std::endl;
-			//	std::cout << "scope[i]" << scope[i] << std::endl;
-			if(!(scope[i].get_max()))
-			{
+	    }
+	  }
 
-				literal__= (literal(scope[i]));
-				explanation.add(NOT(literal__));
-			}
-			else
-				if(scope[i].get_min())
-				{
-					literal__= (literal(scope[i]));
-					explanation.add(NOT(literal__));
-				}
-		}
 	end = explanation.end();
 	return explanation.begin();
 }
