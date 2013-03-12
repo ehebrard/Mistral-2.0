@@ -2756,7 +2756,7 @@ void SchedulingSolver::dichotomic_search()
     //std::cout << "LEVEL: " << level << " " << this << std::endl;
 
     restore();
-    statistics.initialise();
+    statistics.initialise(this);
     pol->initialise(parameters.restart_limit);
 
 

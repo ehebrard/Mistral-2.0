@@ -52,48 +52,18 @@ void write_solution(FlatZinc::FlatZincModel *fm, string filename)
 int main(int argc, char *argv[])
 {
 #ifdef _FLATZINC_OUTPUT
-	cout << "%";
+  cout << "%";
 #endif
-  cout << " c Mistral-fzn" << endl;
-
-  map<string, string> options;
-
-  // default value
-  options["--var_heuristic"] = "dom/wdeg";
-  options["--val_heuristic"] = "guided";
-  options["--restart"] = "luby";
-  options["--seed"] = "123456";
-  options["--limit"] = "0";
-  options["--verbose"] = "0";
-  options["--rewrite"] = "0";
-  options["--display_model"] = "0";
-
-
-  options["a"] = "0";
-  options["p"] = "1";
-  options["f"] = "0";
   
-
-
-
-  list<string> args(argv+1, argv+argc);
-
-  if(args.empty())
-    {
-	#ifdef _FLATZINC_OUTPUT
-	  cout << "%";
-	#endif
-      cout << " usage: mistral-fz [options] input.fzn\n% options are:\n";
-
-      map<string, string>::iterator it;
-      for(it=options.begin(); it!=options.end(); ++it) {
-	cout << "%  " << it->first << endl;
-      }
-      cout << endl;
-      return 1;
-    }
-
+  SolverCmdLine cmd("Mistral (fzn)", ' ', "2.0");      
+  cmd.parse(argc, argv);
+  
+  usrand(cmd.get_seed());
+  
   Solver s;
+  
+  cmd.set_parameters(s);
+
   double cpu_time = get_run_time() ;
 
 #ifdef _VERBOSE_PARSER
@@ -103,7 +73,7 @@ int main(int argc, char *argv[])
   FlatZinc::Printer p;
   FlatZinc::FlatZincModel *fm = 0L;
 
-  fm = parse(args.back(), s, p);
+  fm = parse(cmd.get_filename(), s, p);
 
   FlatZinc::SolutionPrinter *sp = new FlatZinc::SolutionPrinter(&p, fm, &s);
   s.add(sp);
@@ -113,71 +83,26 @@ int main(int argc, char *argv[])
 #ifdef _VERBOSE_PARSER
   std::cout << std::endl;
 #endif
-#ifdef _FLATZINC_OUTPUT
-	cout << "%";
-#endif
-  std::cout << " d PARSETIME " << parse_time << std::endl;
+  cout << " " << s.parameters.prefix_statistics << " PARSETIME " << parse_time << std::endl;
 
- 
 
-  string option_name = "error";
-  //string option_value = "error";
-
-  list<string>::iterator it;
-  list<string>::iterator the_end = args.end();
-  --the_end;
-  int phase = 0;
-  for(it=args.begin(); it!=the_end; ++it)
-    {
-      if((*it)[0] == '-') {
-	if(phase) {
-	  options[option_name] = "1";
-	  //std::cout << "1" << std::endl;
-	}
-	option_name = (*it);
-	//std::cout << option_name << " <- ";
-	phase = 1;
-      } else {
-	//option_value = (*it);
-	options[option_name] = (*it);
-	//std::cout << (*it) << std::endl;
-	phase = 0;
-      }
-    }
-  if(phase) {
-    options[option_name] = "1";
-    //std::cout << "1" << std::endl;
-  }
-
-  map<string,string>::iterator ito;
-
-  double total_time = atof(options["--limit"].c_str());
-  double cutoff = (total_time>0 ? total_time - parse_time : 0);
-#ifdef _FLATZINC_OUTPUT
-  cout << "%";
-#endif
-  if(cutoff>0) std::cout << " d CUTOFF " << cutoff << std::endl;
+  if(s.parameters.time_limit>0) std::cout << " " << s.parameters.prefix_statistics 
+					  << " CUTOFF " << s.parameters.time_limit << std::endl;
 
 
   // set flatzinc model options
-  fm->set_strategy(options["--var_heuristic"], options["--val_heuristic"], options["--restart"]);
-  fm->set_rewriting(atoi(options["--rewrite"].c_str()));
-  fm->set_enumeration(atoi(options["-a"].c_str()));
-  fm->set_display_model(atoi(options["--display_model"].c_str()));
-  fm->set_annotations(!(atoi(options["-f"].c_str())));
-
-  // set solver options
-  s.initialise_random_seed(atoi(options["--seed"].c_str()));
-  s.parameters.verbosity = atoi(options["--verbose"].c_str());
-  s.set_time_limit(cutoff);
-
-
+  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_restart_policy());
+  fm->set_display_model(cmd.print_model());
+  fm->set_display_solution(cmd.print_solution());
+  //fm->set_annotations(annotationArg.getValue());
 
   fm->run(cout , p);
   
-  //if (fm->finished())
-  fm->print_final(cout , p);
+  if(cmd.print_solution())
+    fm->print_final(cout , p);
 
+  if(cmd.print_statistics())
+    s.statistics.print_full(std::cout);
 
 #ifdef _VERIFICATION
   write_solution(fm, args.back());

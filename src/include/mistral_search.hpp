@@ -2451,6 +2451,62 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, MinWeightValue* x);
 
 
+  /*! \class MaxWeightValue
+    \brief  Class MaxWeightValue
+
+    Assigns the variable to its value with minimum weight for some weight matrix.
+  */
+  class MaxWeightValue {
+
+  public: 
+
+    double **weight;
+    
+    MaxWeightValue() {}
+    MaxWeightValue(Solver *s, double **vw, double *bw) {
+      initialise(vw, bw);
+    }
+    void initialise(double **vw, double *bw) {
+      weight = vw;
+    }
+    //MaxWeightValue(Solver *s, void *a) { weight = (double**)a; }
+    virtual ~MaxWeightValue() {};
+    
+    inline Decision make(Variable x) {
+      int // id_x = x.id(),
+	best_val = x.get_min();
+      double *wgt = weight[x.id()];
+      //double min_weight = weight[id_x][best_val]// [best_val][id_x]
+      double max_weight = wgt[best_val]// [best_val][id_x]
+	, aux_weight;
+      int vali, vnxt=x.next(best_val);
+      do {
+	vali = vnxt;
+	vnxt = x.next(vali);
+	aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
+	if(aux_weight > max_weight) {
+	  max_weight = aux_weight;
+	  best_val = vali;
+	}
+      } while(vali<vnxt);
+      
+      Decision d(x, Decision::ASSIGNMENT, best_val);
+      return d;
+    }
+
+     std::ostream& display(std::ostream& os) const {
+       os << "assign it to the value with minimum weight in its domain";
+       return os;
+     }
+
+  };
+
+  std::ostream& operator<<(std::ostream& os, MaxWeightValue& x);
+
+  std::ostream& operator<<(std::ostream& os, MaxWeightValue* x);
+
+
+
   /*! \class MinWeightBound
     \brief  Class MinWeightBound
 

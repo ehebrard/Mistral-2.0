@@ -8706,18 +8706,18 @@ Mistral::ConstraintBoolSumInterval::ConstraintBoolSumInterval(Vector< Variable >
 void Mistral::ConstraintBoolSumInterval::initialise() {
   ConstraintImplementation::initialise();
 
-  // int _min_ = 0;
-  // int _max_ = scope.size;
+  int _min_ = 0;
+  int _max_ = scope.size;
    for(unsigned int i=0; i<scope.size; ++i) {
     trigger_on(_VALUE_, scope[i]);
-  //   if(scope[i].is_ground()) {
-  //     if(scope[i].get_value()) ++_min_;
-  //     else --_max_;
-  //   }
+    if(scope[i].is_ground()) {
+      if(scope[i].get_value()) ++_min_;
+      else --_max_;
+    }
    }
 
-  // min_.initialise(get_solver(), _min_);
-  // max_.initialise(get_solver(), _max_);
+  min_.initialise(get_solver(), _min_);
+  max_.initialise(get_solver(), _max_);
 
   GlobalConstraint::initialise();
 }
@@ -8739,6 +8739,19 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
   PropagationOutcome wiped_idx = CONSISTENT;
 
   if(init_prop) {
+
+#ifdef _DEBUG_CARD
+    if(_DEBUG_CARD) {
+      std::cout << "c" << id << " " << this << ": INITIAL PROPAGATE\n";
+      
+      std::cout << " propagate [" ;
+      for(int i=0; i<scope.size; ++i) {
+	std::cout << std::setw(5) << scope[i].get_domain();
+      }
+      std::cout << "]\n";
+    }
+#endif
+    
     int _min_ = 0;
     int _max_ = scope.size;
     for(unsigned int i=0; i<scope.size; ++i) {
@@ -8749,50 +8762,53 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
       }
     }
     
+
     init_prop = false;
-    min_.initialise(get_solver(), _min_);
-    max_.initialise(get_solver(), _max_);
+    //min_.initialise(get_solver(), _min_);
+    //max_.initialise(get_solver(), _max_);
+    min_ = _min_;
+    max_ = _max_;
+
   } else {
 
 #ifdef _DEBUG_CARD
-  if(_DEBUG_CARD) {
-    std::cout << "c" << id << " " << this << ":\n";
-    std::cout << "changes: " << changes << std::endl;
-    std::cout << " events: " << events << std::endl;
-    
-    int new_evt[scope.size];
-    for(int i=0; i<scope.size; ++i) {
-      new_evt[i]=0;
+    if(_DEBUG_CARD) {
+      std::cout << "c" << id << " " << this << ":\n";
+      std::cout << "changes: " << changes << std::endl;
+      std::cout << " events: " << events << std::endl;
+      
+      int new_evt[scope.size];
+      for(int i=0; i<scope.size; ++i) {
+	new_evt[i]=0;
+      }
+      for(int i=0; i<events.size; ++i) {
+	new_evt[events[i]] = 1;
+      }
+      std::cout << " propagate [" ;
+      for(int i=0; i<scope.size; ++i) {
+	std::cout << std::setw(5) << scope[i].get_domain();
+      }
+      std::cout << "]\n   changes [" ;
+      for(int i=0; i<scope.size; ++i) {
+	std::cout << std::setw(5) << (new_evt[i] ? scope[i].get_domain() : " ");
+      }
+      std::cout << "]\n was in [" << min_ << ".." << max_ << "] now in [";
     }
-    for(int i=0; i<events.size; ++i) {
-      new_evt[events[i]] = 1;
-    }
-    std::cout << " propagate [" ;
-    for(int i=0; i<scope.size; ++i) {
-      std::cout << std::setw(5) << scope[i].get_domain();
-    }
-    std::cout << "]\n   changes [" ;
-    for(int i=0; i<scope.size; ++i) {
-      std::cout << std::setw(5) << (new_evt[i] ? scope[i].get_domain() : " ");
-    }
-    std::cout << "]\n was in [" << min_ << ".." << max_ << "] now in [";
-  }
 #endif
-
-
-
-  while(!changes.empty()) {
-    //if(LB_CHANGED(event_type[changes.pop()])) ++min_;
-    if(scope[changes.pop()].get_min()) ++min_;
-    else --max_;
+    
+    while(!changes.empty()) {
+      //if(LB_CHANGED(event_type[changes.pop()])) ++min_;
+      if(scope[changes.pop()].get_min()) ++min_;
+      else --max_;
+    }
   }
-  }
+
 #ifdef _DEBUG_CARD
   if(_DEBUG_CARD) {
-  std::cout << min_ << ".." << max_ << "]\n";
- }
+    std::cout << min_ << ".." << max_ << "]\n";
+  }
 #endif
-
+  
   // if(min_>upper_bound || max_<lower_bound) {
   //   wiped_idx = FAILURE(events[0]);
   // } else if(min_==upper_bound) {

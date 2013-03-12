@@ -53,7 +53,7 @@
 //#define _VERBOSE_PARSER 100
 //#define _VERIFICATION
 //#define _DEBUG_VERIFICATION
-#define _FLATZINC_OUTPUT
+//#define _FLATZINC_OUTPUT
 using namespace Mistral;
 
 typedef Vector<Variable> IntVarArray;
@@ -275,6 +275,7 @@ protected:
 	bool _option_rewriting;
   bool _option_enumerate;
   bool _option_display_mistral_model;
+  bool _option_display_solution;
   bool _option_annotations;
 	////
 
@@ -361,6 +362,9 @@ public:
 
 	/// setup the rewriting step
   void set_display_model(const bool on);
+
+	/// setup the rewriting step
+  void set_display_solution(const bool on);
 
 	/// setup annotations
   void set_annotations(const bool on);

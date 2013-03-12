@@ -128,19 +128,29 @@ namespace Mistral {
     int               value_selection;
     int               dynamic_value;
 
+
+    /// MISC
+    std::string prefix_comment;
+    std::string prefix_statistics;
+    std::string prefix_objective;
+    std::string prefix_solution;
+    std::string prefix_outcome;
+
   };
 
   class SolverStatistics {
   
   public:
 
-    SolverStatistics();
+    SolverStatistics(Solver *s=NULL);
     SolverStatistics(const SolverStatistics&);
     virtual ~SolverStatistics();
-    void initialise();
+    void initialise(Solver *s);
     void copy(const SolverStatistics&);
     void update(const SolverStatistics&);
 
+
+    Solver *solver;
 
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_nodes; 
@@ -185,8 +195,6 @@ namespace Mistral {
     unsigned int      small;
     double            base_avg_size;
     double            learnt_avg_size;
-
-
 
     
 
@@ -814,14 +822,23 @@ namespace Mistral {
     TCLAP::ValueArg<double>      *incrementArg;
     TCLAP::SwitchArg             *learningArg;
     TCLAP::ValueArg<std::string> *branchingArg;
+    TCLAP::ValueArg<std::string> *orderingArg;
     TCLAP::SwitchArg             *printsolArg;
     TCLAP::SwitchArg             *printparArg;
     TCLAP::SwitchArg             *printmodArg;
     TCLAP::SwitchArg             *printinsArg;
     TCLAP::SwitchArg             *printstaArg;
-
+    TCLAP::ValueArg<std::string> *commentArg;
+    TCLAP::ValueArg<std::string> *pcommentArg;
+    TCLAP::ValueArg<std::string> *pstatArg;
+    TCLAP::ValueArg<std::string> *pobjectiveArg;
+    TCLAP::ValueArg<std::string> *psolutionArg;
+    TCLAP::ValueArg<std::string> *poutcomeArg;
+    TCLAP::SwitchArg             *allsolArg;
+    
 
     TCLAP::ValuesConstraint<std::string> * r_allowed;
+    TCLAP::ValuesConstraint<std::string> *vo_allowed;
     TCLAP::ValuesConstraint<std::string> *bo_allowed;
     // int print_sol;
     // int print_sta;
@@ -1024,6 +1041,8 @@ public:
 
 
     std::string get_value_ordering();
+
+    std::string get_variable_ordering();
 
     std::string get_restart_policy();
 

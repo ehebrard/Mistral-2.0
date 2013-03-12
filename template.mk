@@ -41,8 +41,8 @@ PLIBOBJ = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
 
 default: flatzinc
 
-flatzinc: fz/mistral-fz
-	cp fz/mistral-fz ./fzn-mistral
+flatzinc: fz/mistral-fzn
+	cp fz/mistral-fzn ./bin/fzn-mistral
 
 fz/mistral-fz: 
 	cd fz; make
