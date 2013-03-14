@@ -25,7 +25,7 @@
 #include <mistral_variable.hpp>
 #include <mistral_constraint.hpp>
 
-
+//#define _DEBUG_AMSC_NOGOOD true
 
 
 
@@ -13551,27 +13551,362 @@ int Mistral::ConstraintMultiAtMostSeqCard::check( const int* s ) const
 
 Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
 {
-  int i=scope.size, idx;
+	int arity=scope.size, tmp_idx, idx, l_pruning, r_pruning;
 	int literal__;
 	int *rank = get_solver()->assignment_order.stack_;
 	int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
 
 	explanation.clear();
 
-	while(i--)
-	  {
-	    if(scope[i].is_ground()) {
-	      idx = scope[i].id();
-	      if (idx != a && rank[idx] < a_rank)
-		{
-		  literal__= (literal(scope[i]));
-		  explanation.add(NOT(literal__));
-		}
-	    }
-	  }
+	if (a != NULL_ATOM)
+	{
 
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout << "Explaning a pruning " << std::endl ;
+#endif
+
+		arity=scope.size;
+
+		for(int i=0; i<arity; ++i) {
+			wl[i] = scope[i].get_min();
+			wr[arity-i-1] = wl[i];
+		}
+
+		while(arity--)
+		{
+			idx = scope[arity].id();
+			if (idx == a)
+				break;
+		}
+		idx=arity;
+		arity=scope.size;
+		l_pruning=idx-_q[0];
+
+		if(scope[idx].get_value()==0)
+			l_pruning++;
+		greedy_assign_for_explanation(wl, lcumulated, scope, arity);
+
+		for (int i=0; i< l_pruning; ++i)
+		{
+#ifdef _DEBUG_AMSC_NOGOOD
+			std::cout << "learn at index " << i << std::endl;
+#endif
+			if(scope[i].is_ground())
+			{
+				tmp_idx = scope[i].id();
+				if (rank[tmp_idx] < a_rank)
+				{
+					if (max_equal_to_p[i] == scope[i].get_value())
+					{
+
+						literal__= (literal(scope[i]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		}
+		/*
+		l_pruning--;
+		while(arity--)
+		{
+		if (arity ==l_pruning)
+				break;
+			if(scope[arity].is_ground()) {
+				idx = scope[arity].id();
+				if (idx != a && rank[idx] < a_rank)
+				{
+					literal__= (literal(scope[arity]));
+					explanation.add(NOT(literal__));
+				}
+			}
+		}
+		 */
+
+		arity=scope.size;
+		r_pruning=arity-1 - idx - _q[0];
+		if(scope[idx].get_value()==0)
+			r_pruning++;
+
+#ifdef _DEBUG_AMSC_NOGOOD
+
+		std::cout << "idx = " << idx << std::endl;
+		std::cout << "l_pruning* " << l_pruning << std::endl;
+		std::cout << "r_pruning init" << r_pruning << std::endl;
+#endif
+
+		if (r_pruning<0)
+			r_pruning=0;
+		if (l_pruning>=0)
+			for (int i=l_pruning; i< (arity- r_pruning); ++i)
+			{
+				if(scope[i].is_ground()) {
+					tmp_idx = scope[i].id();
+					if (tmp_idx != a && rank[tmp_idx] < a_rank)
+					{
+						literal__= (literal(scope[i]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout << "r_pruning* = 0?" << r_pruning << std::endl;
+		std::cout << "q=" << _q[0] << std::endl;
+
+#endif
+
+		if (r_pruning==0)
+		{
+			end = explanation.end();
+			return explanation.begin();
+		}
+
+		greedy_assign_for_explanation(wr, rcumulated, reverse, r_pruning+1);
+
+
+		for (int i=0; i< r_pruning; ++i)
+		{
+			if(scope[arity-i-1].is_ground())
+			{
+				tmp_idx = scope[arity-i-1].id();
+				if (rank[tmp_idx] < a_rank)
+				{
+					if (max_equal_to_p[i] == scope[arity-i-1].get_value())
+					{
+						literal__= (literal(scope[arity-i-1]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		}
+
+
+
+		/*
+		while(arity--)
+			{
+				if(scope[arity].is_ground()) {
+					idx = scope[arity].id();
+					if (idx != a && rank[idx] < a_rank)
+					{
+						literal__= (literal(scope[arity]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		 */
+	}
+	else
+	{
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout << "Explaning FAILURE " << std::endl ;
+#endif
+		arity=scope.size;
+
+		for(int i=0; i<arity; ++i) {
+			wl[i] = scope[i].get_min();
+			wr[arity-i-1] = wl[i];
+		}
+
+		greedy_assign_for_explanation(wl, lcumulated, scope, arity);
+
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout << "The max is = p ? \n" ;
+		for (int i=0; i< arity; i++)
+			std::cout<<  max_equal_to_p[i] ;
+		std::cout<< std::endl;
+#endif
+
+		while(arity--)
+		{
+			if(scope[arity].is_ground()) {
+				idx = scope[arity].id();
+				if (idx != a && rank[idx] < a_rank)
+				{
+					if (max_equal_to_p[arity] == scope[arity].get_value())
+					{
+						literal__= (literal(scope[arity]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		}
+	}
 	end = explanation.end();
 	return explanation.begin();
+}
+
+
+void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(int *w, int *cumulated, Vector<Variable>& X, int __size) {
+
+  int arity = X.size;
+  int i, j, k;
+
+  int max_cardinality[_k];
+  int count = 0;
+
+  int o_c[_k];
+  int n_c[_k];
+  max_equal_to_p.clear();
+#ifdef _DEBUG_AMSC
+  int _max_card[_k*arity];
+  int _count[_k*arity];
+
+  int max_p = _p[0];
+  for(k=1; k<_k; ++k) if(max_p < _p[k]) max_p = _p[k];
+  int **_occ = new int*[_k];
+  int **_card = new int*[_k];
+
+
+  for(k=0; k<_k; ++k) {
+    _occ[k] = new int[(arity*(arity+_p[k]+1))];
+    std::fill(_occ[k], _occ[k]+(arity*(arity+_p[k]+1)), 0);
+    _card[k] = new int[(arity*_q[k])];
+  }
+#endif
+
+ // bool maybe_inconsistent = true;
+
+  for(i=0; i<arity; ++i) {
+    count += w[i];
+    cumulated[i] = 0;
+    for(k=0; k<_k; ++k) {
+      occurrences[k][i-arity] = 0;
+    }
+  }
+
+  for(k=0; k<_k; ++k) {
+    max_cardinality[k] = 0;
+    for(i=0; i<=_p[k] && i<arity; ++i) {
+      occurrences[k][i] = 0;
+    }
+
+    for(i=0; i<_q[k] && i<arity; ++i) {
+      cardinality[k][i] = cardinality[k][i-1]+w[i];
+      ++(occurrences[k][cardinality[k][i]]);
+      if(cardinality[k][i] > max_cardinality[k]) max_cardinality[k] = cardinality[k][i];
+    }
+  }
+
+  for(i=0; i<arity; ++i) {
+
+    bool card_ok = true;
+    for(k=0; card_ok && k<_k; ++k) {
+      card_ok = (max_cardinality[k] < _p[k]);
+    }
+    max_equal_to_p.add(!card_ok);
+    if(card_ok && !X[i].is_ground()) {
+      for(k=0; k<_k; ++k) ++max_cardinality[k];
+      cumulated[i+1] = cumulated[i]+1;
+      w[i] = 1;
+     // if(cumulated[i+1]+count > _d) {
+//	maybe_inconsistent = false;
+//	break;
+   //   }
+    } else {
+      cumulated[i+1] = cumulated[i];
+    }
+
+#ifdef _DEBUG_AMSC
+    if(_DEBUG_AMSC) {
+    _count[i] = count;
+    for(k=0; k<_k; ++k) {
+      _max_card[i*_k+k] = max_cardinality[k];
+      for(j=0; j<_q[k]; ++j) _card[k][(j*arity+i)] = cardinality[k][(i+j)%_q[k]]+cumulated[i+1];
+      for(j=0; j<=arity+_p[k]; ++j) {
+
+	// if(occurrences[k][j-arity] > 10) {
+	//   cout << "_occ[" << k << "][" << j << "][" << i << "] = "
+	//        << "occurrences[" << k << "][" << j-arity << "] = "
+	//        << occurrences[k][j-arity] << endl;
+	// }
+
+	_occ[k][(j*arity+i)] = occurrences[k][j-arity];
+      }
+    }
+    }
+#endif
+
+    for(k=0; k<_k; ++k) {
+      o_c[k] = cardinality[k][i%_q[k]];
+      n_c[k] = cardinality[k][(i+_q[k]-1)%_q[k]]+w[i+_q[k]]-w[i];
+      cardinality[k][i%_q[k]] = n_c[k];
+
+      if(o_c[k] != n_c[k]) {
+
+	if(n_c[k] > _p[k]) {
+//	  std::cerr << id << " k=" << k << " / 1" << std::endl
+//		    << id << " n_c[k]=" << n_c[k] << " / [" << (-arity) << "," << _p[k] << "]" << std::endl << std::endl;
+	}
+
+	++occurrences[k][n_c[k]];
+	if((n_c[k]+cumulated[i+1])>max_cardinality[k]) ++max_cardinality[k];
+	if(!(--occurrences[k][o_c[k]]) && (o_c[k]+cumulated[i+1])==max_cardinality[k]) --max_cardinality[k];
+      }
+    }
+
+  }
+
+
+#ifdef _DEBUG_AMSC
+  if(_DEBUG_AMSC) {
+    if(maybe_inconsistent) {
+      std::cerr << std::endl << "propag " << _d-count  ;
+      for(k=0; k<_k; ++k)
+	std::cerr << " " << _p[k] << "/" << _q[k] ;
+      std::cerr << std::endl;
+      for(i=0; i<arity; ++i) {
+	if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+      else std::cerr << ".";
+      }
+      std::cerr << std::endl;
+      for(i=0; i<arity; ++i) {
+	std::cerr << w[i];
+      }
+      std::cerr << std::endl;
+      for(k=0; k<_k; ++k) {
+	std::cerr << std::endl;
+	for(i=0; i<arity; ++i) {
+	  std::cerr << _max_card[_k*i+k];
+	}
+	std::cerr << std::endl;
+	std::cerr << std::endl;
+	for(j=0; j<_q[k]; ++j) {
+	  for(i=0; i<arity; ++i) {
+	    std::cerr << _card[k][(j*arity+i)];
+	  }
+	  std::cerr << std::endl;
+	}
+	std::cerr << std::endl;
+	for(j=arity+_p[k]; j; --j) {
+	  int tmax = 0;
+	  for(i=0; i<arity; ++i) {
+	    if(cumulated[i+1]+j+1 == arity)
+	      std::cerr << "-";
+	    else
+	      std::cerr << _occ[k][(j*arity+i)];
+	    tmax = (cumulated[i+1]+j+1 > arity);
+	  }
+	  std::cerr << std::endl;
+	  if(!tmax) break;
+	}
+	std::cerr << std::endl;
+      }
+    }
+  }
+
+  for(k=0; k<_k; ++k) {
+    delete [] _card[k];
+    delete [] _occ[k];
+  }
+  delete [] _card;
+  delete [] _occ;
+
+  //exit(1);
+  //}
+#endif
+
+//  return maybe_inconsistent;
 }
 
 
