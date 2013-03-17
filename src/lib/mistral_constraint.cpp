@@ -13567,10 +13567,10 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 		arity=scope.size;
 
-		for(int i=0; i<arity; ++i) {
-			wl[i] = scope[i].get_min();
-			wr[arity-i-1] = wl[i];
-		}
+//		for(int i=0; i<arity; ++i) {
+//			wl[i] = scope[i].get_min();
+//			wr[arity-i-1] = wl[i];
+//		}
 
 		while(arity--)
 		{
@@ -13706,10 +13706,10 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 #endif
 		arity=scope.size;
 
-		for(int i=0; i<arity; ++i) {
-			wl[i] = scope[i].get_min();
+	//	for(int i=0; i<arity; ++i) {
+	//		wl[i] = scope[i].get_min();
 		//	wr[arity-i-1] = wl[i];
-		}
+	//	}
 
 //		greedy_assign_for_explanation(wl, lcumulated, scope, arity);
 		set_max_equal_to_p_at_rank(a_rank, arity, scope);
