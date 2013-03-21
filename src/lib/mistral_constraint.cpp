@@ -15909,3 +15909,33 @@ std::ostream& Mistral::PredicateMax::display(std::ostream& os) const {
 // std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::ConstraintTriggerArray* x) {
 //   return x->display(os);
 // }
+
+Mistral::ConstraintNaiveMultiAtMostSeqCard::ConstraintNaiveMultiAtMostSeqCard(Vector< Variable >& scp, const int k, const int d, const int* p, const int* q)
+: ConstraintMultiAtMostSeqCard(scp,k, d, p, q)
+{
+}
+
+Mistral::Explanation::iterator Mistral::ConstraintNaiveMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
+{
+	//	std::cout<< "d\n" ;
+	int arity=scope.size, idx;
+	int literal__;
+	int *rank = get_solver()->assignment_order.stack_;
+	int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
+
+	explanation.clear();
+
+	while(arity--)
+	{
+		if(scope[arity].is_ground()) {
+			idx = scope[arity].id();
+			if (idx != a && rank[idx] < a_rank)
+			{
+				literal__= (literal(scope[arity]));
+				explanation.add(NOT(literal__));
+			}
+		}
+	}
+	end = explanation.end();
+	return explanation.begin();
+}

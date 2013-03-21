@@ -4418,6 +4418,23 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
   };
 
+  /**********************************************
+   * AtMostSeqCard Constraint
+   * The same constraint as ConstraintMultiAtMostSeqCard with the exeption of generating default nogoods without reductions
+   **********************************************/
+  //
+  ///
+  class ConstraintNaiveMultiAtMostSeqCard : public ConstraintMultiAtMostSeqCard {
+
+  public:
+	  /**@name Constructors*/
+	  //@{
+	  //ConstraintNaiveMultiAtMostSeqCard();
+	  ConstraintNaiveMultiAtMostSeqCard(Vector< Variable >& scp, const int k, const int d, const int* p, const int* q);
+	  //ConstraintNaiveMultiAtMostSeqCard(std::vector< Variable >& scp, const int k, const int d, const int* p, const int* q);
+	  virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+  };
+
 
 
   /**********************************************

@@ -7835,3 +7835,21 @@ Mistral::Literal Mistral::literal(Variable x) {
 //   }
 //   return true;
 // }
+Mistral::Variable Mistral::AtMostSeqCardNaiveReason(Vector< Variable >& args, const int d, const int p, const int q) {
+	Variable exp(new AtMostSeqCardExpressionNaiveReason(args,d,p,q));
+	return exp;
+}
+
+Mistral::AtMostSeqCardExpressionNaiveReason::AtMostSeqCardExpressionNaiveReason(
+		Vector<Variable>& args, const int d, const int p, const int q)
+: AtMostSeqCardExpression(args, d, p, q)
+{
+}
+
+void Mistral::AtMostSeqCardExpressionNaiveReason::extract_constraint(Solver* s)
+{
+	s->add(Constraint(new ConstraintNaiveMultiAtMostSeqCard(children, _k, _d, _p, _q)));
+}
+const char* Mistral::AtMostSeqCardExpressionNaiveReason::get_name() const {
+	return "naive amsc";
+}
