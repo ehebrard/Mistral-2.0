@@ -4380,6 +4380,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     VarArray reverse;
     // used to store the explanation when "get_reason_for()" is called
     Vector<Literal> explanation;
+    //we need this for the explanation to check if the maximum cardinality of all subsequences at position i is equal to p.
+    Vector< bool> max_equal_to_p ;
+	Vector<int> sequence_image;
     //@}
 
     /**@name Constructors*/
@@ -4399,7 +4402,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
     
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
-
+    void greedy_assign_for_explanation(int *w, int *cumulated, Vector<Variable>& X, int __size);
+    void set_max_equal_to_p_at_rank(int __rank, int __size,  Vector<Variable>& X);
     /**@name Solving*/
     //@{
     bool greedy_assign(int *w, int *cumulated, Vector<Variable>& X) ;
