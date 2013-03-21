@@ -52,6 +52,35 @@ namespace Mistral {
   // typedef Array<Literal> Clause;
 
 
+  class SatSolverStatistics : public SolverStatistics {
+
+  public: 
+
+    unsigned int      literals;
+    unsigned int      small;
+    double            base_avg_size;
+    double            learnt_avg_size;
+
+
+    SatSolverStatistics(Solver *s=NULL) {
+      initialise(s);
+    }
+
+    //SatSolverStatistics(const SatSolverStatistics&);
+    virtual ~SatSolverStatistics() {}
+    void initialise(Solver *s) {
+      SolverStatistics::initialise(s);
+      base_avg_size = 0;
+      learnt_avg_size = 0;
+      literals = 0;
+      small = 0;
+    }
+    //void copy(const SolverStatistics&);
+    //void update(const SolverStatistics&);
+
+  };
+
+
   std::ostream& operator<< (std::ostream& os, const Clause& x);
   std::ostream& operator<< (std::ostream& os, const Clause* x);
 
@@ -154,7 +183,7 @@ namespace Mistral {
     int next_deduction;
 
     /// search statistics
-    SolverStatistics stats;
+    SatSolverStatistics stats;
     /// search parameters
     SolverParameters params;
     /// Restart

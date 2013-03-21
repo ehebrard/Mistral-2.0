@@ -241,6 +241,8 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
   num_variables = 0; 
   num_values = 0; 
   num_constraints = 0; 
+  num_clauses = 0;
+  num_learned = 0;
   num_nodes = 0; 
   num_restarts = 0; 
   num_backtracks = 0;
@@ -254,12 +256,13 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
 
   outcome = UNKNOWN;
 
-  base_avg_size = 0;
-  learnt_avg_size = 0;
-  literals = 0;
-  small = 0;
+  avg_learned_size = 0;
+  //base_avg_size = 0;
+  //learnt_avg_size = 0;
+  //literals = 0;
+  //small = 0;
 
-  negative_weight = false;
+  //negative_weight = false;
   max_arity = 0;
 
 }
@@ -923,7 +926,7 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 
 
   Variable Goal;
-  int obj_dir;
+  int obj_dir = 0;
 
   // skip comments
   infile >> c;
@@ -6496,9 +6499,6 @@ void Mistral::SolverCmdLine::set_parameters(Mistral::Solver& s) {
     s.parameters.prefix_solution = psolutionArg->getValue();
     s.parameters.prefix_outcome = poutcomeArg->getValue();
     //s.parameters.find_all = allsolArg->getValue();
-
-    std::cout << s.parameters.prefix_solution << std::endl;
-
   }
 
 std::string Mistral::SolverCmdLine::get_value_ordering() {

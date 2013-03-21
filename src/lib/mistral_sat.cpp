@@ -948,7 +948,7 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 	      // For correcteness, we need to not forget any clause that currently explains a literal.
 	      // It seems like a good idea to keep clauses with small real size anyway (they matter the most right now)
 	      //if(scope[UNSIGNED(clause[j])].is_ground()) --real_size;
-	      if(solution && solution[UNSIGNED(clause[j])] != SIGN(clause[j])) --real_size;
+	      if(solution && solution[UNSIGNED(clause[j])] != (int)(SIGN(clause[j]))) --real_size;
 	      else 
 		sa[i] += lit_activity[NOT(clause[j])];
 	    }

@@ -4136,6 +4136,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     ReversibleNum<int> index_;
     //ReversibleNum<int> max_index;
 
+    bool init_prop;
+
     // used to store the explanation when "get_reason_for()" is called
     Vector<Literal> explanation;
     //@}

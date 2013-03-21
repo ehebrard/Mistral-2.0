@@ -4399,7 +4399,7 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
     // if(lower_bound == upper_bound) {
     //   s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
     // } else {
-    if(lower_bound == children.size) {
+    if(lower_bound == (int)(children.size)) {
 
 #ifdef _DEBUG_AC
       std::cout << "pre-propagte sum(" << children[0] ;
@@ -4408,7 +4408,7 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
       std::cout << ") = " << children.size;
 #endif
 
-      for(int i=0; i<children.size; ++i) {
+      for(unsigned int i=0; i<children.size; ++i) {
 	if(FAILED(children[i].set_domain(1))) {
 #ifdef _DEBUG_AC
 	  std::cout << " FAIL!" << std::endl;
@@ -4423,7 +4423,7 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
 #endif
       }
     } else if(upper_bound == 0) {
-      for(int i=0; i<children.size; ++i) {
+      for(unsigned int i=0; i<children.size; ++i) {
 	if(FAILED(children[i].set_domain(0))) {
 #ifdef _DEBUG_AC
 	  std::cout << " FAIL!" << std::endl;
@@ -4570,7 +4570,7 @@ Mistral::ParityExpression::~ParityExpression() {
 
 void Mistral::ParityExpression::extract_constraint(Solver *s) {
   VarArray scope;
-  for(int i=0; i<children.size; ++i)
+  for(unsigned int i=0; i<children.size; ++i)
     if(children[i].is_ground())
       target_parity ^= children[i].get_value();
     else

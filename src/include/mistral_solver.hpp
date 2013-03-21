@@ -179,9 +179,16 @@ namespace Mistral {
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_constraints; 
     ///
+    unsigned long int num_clauses; 
+    ///
     unsigned long int max_arity;
     ///
-    bool negative_weight;
+    unsigned long int num_learned;
+    ///
+    unsigned long int max_learned;
+    ///
+    double avg_learned_size;
+
     
 
     /// timestamp
@@ -191,11 +198,11 @@ namespace Mistral {
 
     //unsigned int memory;
 
-    /////// STATISTICS FOR SAT SOLVING ///////
-    unsigned int      literals;
-    unsigned int      small;
-    double            base_avg_size;
-    double            learnt_avg_size;
+    // /////// STATISTICS FOR SAT SOLVING ///////
+    // unsigned int      literals;
+    // unsigned int      small;
+    // double            base_avg_size;
+    // double            learnt_avg_size;
 
     // MISC
     bool pseudo_boolean;

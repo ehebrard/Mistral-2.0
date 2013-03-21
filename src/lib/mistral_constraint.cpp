@@ -27,7 +27,7 @@
 
 //#define _DEBUG_AMSC_NOGOOD true
 
-
+#define _GET_SUM_NAME true
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -3142,7 +3142,7 @@ Mistral::Explanation::iterator Mistral::PredicateNot::get_reason_for(const Atom 
     explanation[1] = NOT(literal(scope[1]));
     end = &(explanation[0])+2;
   } else {
-    explanation[0] = NOT(literal(scope[scope[0].id() == a]));
+    explanation[0] = NOT(literal(scope[(Atom)(scope[0].id()) == a]));
     end = &(explanation[0])+1;;
   }
   return &(explanation[0]);
@@ -8765,7 +8765,7 @@ void Mistral::ConstraintBoolSumInterval::initialise() {
   int _min_ = 0;
   int _max_ = scope.size;
    for(unsigned int i=0; i<scope.size; ++i) {
-    trigger_on(_VALUE_, scope[i]);
+    trigger_on(_RANGE_, scope[i]);
     if(scope[i].is_ground()) {
       if(scope[i].get_value()) ++_min_;
       else --_max_;
@@ -8809,13 +8809,15 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 #endif
     
     int _min_ = 0;
-    int _max_ = scope.size;
+    int _max_ = 0;
     for(unsigned int i=0; i<scope.size; ++i) {
       //trigger_on(_VALUE_, scope[i]);
-      if(scope[i].is_ground()) {
-	if(scope[i].get_value()) ++_min_;
-	else --_max_;
-      }
+      // if(scope[i].is_ground()) {
+      // 	if(scope[i].get_value()) ++_min_;
+      // 	else --_max_;
+      // }
+      _min_ += scope[i].get_min();
+      _max_ += scope[i].get_max();
     }
     
 
@@ -9226,10 +9228,10 @@ void Mistral::ConstraintBoolSumInterval::initialise_activity(double *lact, doubl
   double total_weight = incr_1+incr_0;
 
 
-  if(incr_1<0 || incr_0<0)
-    {
-      get_solver()->statistics.negative_weight = true;
-    }
+  // if(incr_1<0 || incr_0<0)
+  //   {
+  //     get_solver()->statistics.negative_weight = true;
+  //   }
 
 	      
   int i=n, idx;
@@ -9293,7 +9295,11 @@ int Mistral::ConstraintBoolSumInterval::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintBoolSumInterval::display(std::ostream& os) const {
-  os << "bsi(" << scope[0]/*.get_var()*/ ;
+#ifdef _GET_SUM_NAME
+  os << " cbsi: ";
+#endif
+
+  os << "(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size; ++i) 
     os << " + " << scope[i]/*.get_var()*/;
   if(lower_bound == -INFTY)
@@ -9334,7 +9340,7 @@ void Mistral::PredicateBoolSum::initialise() {
   int _min_ = 0;
   int _max_ = scope.size;
   for(unsigned int i=0; i<scope.size-1; ++i) {
-    trigger_on(_VALUE_, scope[i]);
+    trigger_on(_RANGE_, scope[i]);
     if(scope[i].is_ground()) {
       if(scope[i].get_value()) ++_min_;
       else --_max_;
@@ -9439,7 +9445,11 @@ int Mistral::PredicateBoolSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateBoolSum::display(std::ostream& os) const {
-  os << "pbs(" << scope[0]/*.get_var()*/ ;
+#ifdef _GET_SUM_NAME
+  os << " pbs: ";
+#endif
+
+  os << "(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size-1; ++i) 
     os << " + " << scope[i]/*.get_var()*/;
   os << ") = " << scope[scope.size-1];
@@ -10027,7 +10037,10 @@ int Mistral::PredicateWeightedSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
-  os << "ws: " ;
+#ifdef _GET_SUM_NAME
+  os << " pws: " ;
+#endif
+
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
   os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
@@ -10057,7 +10070,7 @@ Mistral::ConstraintParity::ConstraintParity(Vector< Variable >& scp, const int p
 void Mistral::ConstraintParity::initialise() {
   ConstraintImplementation::initialise();
   for(unsigned int i=0; i<scope.size; ++i) 
-    trigger_on(_VALUE_, scope[i]);
+    trigger_on(_RANGE_, scope[i]);
   GlobalConstraint::initialise();
 }
 
@@ -10403,7 +10416,7 @@ in fact, only parity pruning must be stored. Otherwise, we can deduce it from th
   int i=scope.size, idx;
   int *rank = get_solver()->assignment_order.stack_;
   int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
-  bool direction;
+  bool direction = true;
   int bounds[2] = {0,0};
   int val, va=INFTY;
 
@@ -11005,6 +11018,10 @@ int Mistral::ConstraintWeightedBoolSumInterval::check( const int* s ) const
 }
 
 std::ostream& Mistral::ConstraintWeightedBoolSumInterval::display(std::ostream& os) const {
+#ifdef _GET_SUM_NAME
+  os << " cwbsi: ";
+#endif
+
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
   os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
@@ -11022,7 +11039,7 @@ std::ostream& Mistral::ConstraintWeightedBoolSumInterval::display(std::ostream& 
 
 
 
-#define _DEBUG_IWEIGHTEDBOOLSUM true //(id == 1)
+//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 4)
 
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp, 
@@ -11102,7 +11119,7 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
     weight[i] = w[i];
 
 
-    trigger_on(_VALUE_, scope[i]);
+    trigger_on(_RANGE_, scope[i]);
 
     if(weight[i]<0) {
       _min_ += weight[i];
@@ -11250,7 +11267,7 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   int i, idx;
   int *rank = get_solver()->assignment_order.stack_;
   int a_rank = INFTY-1;
-  Explanation **reason = get_solver()->reason_for.stack_;
+  //Explanation **reason = get_solver()->reason_for.stack_;
 
   // direction is 1 iff the constraint pushed toward ub and 0 otherwise
   bool direction = 1; 
@@ -11331,13 +11348,14 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
 }
 
 
-
+//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 7)
 
 Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterval::propagate() 
 {
   
   PropagationOutcome wiped_idx = CONSISTENT;
-  int w, i;
+  int w;
+  int i;
 
   if(init_prop) {
 
@@ -11346,7 +11364,7 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
       std::cout << "c" << id << " " << this << ": INITIAL PROPAGATE\n";
       std::cout << active << std::endl;
       std::cout << " propagate [" ;
-      for(int i=0; i<scope.size; ++i) {
+      for(unsigned int i=0; i<scope.size; ++i) {
 	std::cout << std::setw(5) << scope[i].get_domain();
       }
       std::cout << "]\n";
@@ -11356,7 +11374,10 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     int _min_ = 0;
     int _max_ = 0;
     for(unsigned int i=0; i<weight.size; ++i) {
-      if(weight[i]<0) {
+      if(scope[i].is_ground()) {
+	_min_ += weight[i];
+	_max_ += weight[i];
+      } else if(weight[i]<0) {
 	_min_ += weight[i];
       } else {
 	_max_ += weight[i];
@@ -11371,7 +11392,7 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM
     if(_DEBUG_IWEIGHTEDBOOLSUM) {
-      std::cout << std::endl << "propagate " << lower_bound << " <= " ;
+      std::cout << std::endl << "c" << id << " propagate " << lower_bound << " <= " ;
       for(i=0; i<weight.size; ++i) {
 	std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
       }
@@ -11622,6 +11643,11 @@ int Mistral::ConstraintIncrementalWeightedBoolSumInterval::check( const int* s )
 }
 
 std::ostream& Mistral::ConstraintIncrementalWeightedBoolSumInterval::display(std::ostream& os) const {
+
+#ifdef _GET_SUM_NAME
+  os << " ciwbsi: ";
+#endif
+
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
 
@@ -11642,12 +11668,13 @@ std::ostream& Mistral::ConstraintIncrementalWeightedBoolSumInterval::display(std
 
 
 
-//#define _DEBUG_PWEIGHTEDBOOLSUM true
+//#define _DEBUG_PWEIGHTEDBOOLSUM (id == 7)
 
 
 Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& scp)
   : GlobalConstraint(scp) { 
   priority = 1;
+    init_prop = true;
   for(unsigned int i=1; i<scope.size; ++i) {
     weight.add(1);
   }
@@ -11657,6 +11684,7 @@ Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& 
 							    Vector< int >& wgt)
   : GlobalConstraint(scp) { 
   priority = 1;
+    init_prop = true;
   for(unsigned int i=0; i<wgt.size; ++i) {
     weight.add(wgt[i]);
   }
@@ -11666,6 +11694,7 @@ Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(std::vector< Variabl
 							    std::vector< int >& wgt)
   : GlobalConstraint(scp) { 
   priority = 1;
+    init_prop = true;
   for(unsigned int i=0; i<wgt.size(); ++i) {
     weight.add(wgt[i]);
   }
@@ -11744,9 +11773,6 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
 
   //std::cout << "n: " << n << std::endl;
 
-  if(get_solver()->statistics.max_arity < n)
-    get_solver()->statistics.max_arity = n;
-  
   double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
 
   //std::cout << "aw: " << avg_weight << std::endl;
@@ -11906,10 +11932,10 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
 
   //std::cout << "weights: " << incr_0 << " " << incr_1 << " " << avg_weight << std::endl;
 
-  if(incr_1<0 || incr_0<0) 
-    {
-      get_solver()->statistics.negative_weight = true;
-    }
+  // if(incr_1<0 || incr_0<0) 
+  //   {
+  //     get_solver()->statistics.negative_weight = true;
+  //   }
 
 
 	      
@@ -12008,10 +12034,10 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
 Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
   explanation.clear();
-  int i, idx;
+  unsigned int i, idx;
   int *rank = get_solver()->assignment_order.stack_;
   int a_rank = INFTY-1;
-  Explanation **reason = get_solver()->reason_for.stack_;
+  //Explanation **reason = get_solver()->reason_for.stack_;
 
 
 #ifdef _DEBUG_REASONRIWBS
@@ -12123,57 +12149,90 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 {
   
   PropagationOutcome wiped_idx = CONSISTENT;
-  int w, i;
+  int w;
+  int i;
 
-
-#ifdef _DEBUG_PWEIGHTEDBOOLSUM
-  if(_DEBUG_PWEIGHTEDBOOLSUM) {
-    std::cout << std::endl << "propagate " ;
-    for(i=0; i<weight.size; ++i) {
-      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
-    }
-    std::cout << " = " << scope.back().get_domain() << std::endl << changes << std::endl;
-  }
-#endif
-
+  if(init_prop) {
 
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
     if(_DEBUG_PWEIGHTEDBOOLSUM) {
-      std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
-    }
-#endif
-
-
-
-  while(!changes.empty()) {
-    i = changes.pop();
-
-    if(i<weight.size) {
-
-      w = weight[i]<0;
-    
-
-#ifdef _DEBUG_PWEIGHTEDBOOLSUM
-      if(_DEBUG_PWEIGHTEDBOOLSUM) {
-	std::cout << "\nprocessing events: " << event2str(event_type[i]) << " on " 
-		  << scope[i] << " in " << scope[i].get_domain() << std::endl;
+      std::cout << "c" << id << " " << this << ": INITIAL PROPAGATE\n";
+      std::cout << active << std::endl;
+      std::cout << " propagate [" ;
+      for(unsigned int i=0; i<scope.size; ++i) {
+	std::cout << std::setw(5) << scope[i].get_domain();
       }
-#endif
-      
-      if(LB_CHANGED(event_type[i])) {
-	bound_[w]+=weight[i];
-      } else {
-	bound_[1-w]-=weight[i];
-      }    
+      std::cout << "]\n";
     }
+#endif
+    
+    int _min_ = 0;
+    int _max_ = 0;
+    for(unsigned int i=0; i<weight.size; ++i) {
+      if(scope[i].is_ground()) {
+	_min_ += weight[i];
+	_max_ += weight[i];
+      } else if(weight[i]<0) {
+	_min_ += weight[i];
+      } else {
+	_max_ += weight[i];
+      }
+    }
+    
+    init_prop = false;
+    bound_[0] = _min_;
+    bound_[1] = _max_;
 
+  } else {
 
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << std::endl << "propagate " ;
+      for(i=0; i<weight.size; ++i) {
+	std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+      }
+      std::cout << " = " << scope.back().get_domain() << std::endl << changes << std::endl;
+    }
+#endif
+    
+    
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
     if(_DEBUG_PWEIGHTEDBOOLSUM) {
       std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
     }
 #endif
-
+    
+    
+    
+    while(!changes.empty()) {
+      i = changes.pop();
+      
+      if(i<weight.size) {
+	
+	w = weight[i]<0;
+	
+	
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+	if(_DEBUG_PWEIGHTEDBOOLSUM) {
+	  std::cout << "\nprocessing events: " << event2str(event_type[i]) << " on " 
+		    << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	}
+#endif
+	
+	if(LB_CHANGED(event_type[i])) {
+	  bound_[w]+=weight[i];
+	} else {
+	  bound_[1-w]-=weight[i];
+	}    
+      }
+    }
+    
+#ifdef _DEBUG_PWEIGHTEDBOOLSUM
+    if(_DEBUG_PWEIGHTEDBOOLSUM) {
+      std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+    }
+#endif
+    
   }
 
 
@@ -12417,8 +12476,11 @@ int Mistral::PredicateWeightedBoolSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateWeightedBoolSum::display(std::ostream& os) const {
-  os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
+#ifdef _GET_SUM_NAME
+  os << " pwbs: " ;
+#endif
 
+  os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<weight.size; ++i) 
     os << " + " << weight[i] << "*" << scope[i]/*.get_var()*/;
   
@@ -13110,7 +13172,7 @@ Mistral::ConstraintMultiAtMostSeqCard::~ConstraintMultiAtMostSeqCard()
 bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w, int *cumulated, Vector<Variable>& X) {
   
   int arity = X.size;
-  int i, j, k;
+  int i, k;
 
   int max_cardinality[_k];
   int count = 0;
@@ -13119,6 +13181,7 @@ bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w, int *cumulated
   int n_c[_k];
 
 #ifdef _DEBUG_AMSC
+  int j;
   int _max_card[_k*arity];
   int _count[_k*arity];
 
@@ -13483,8 +13546,8 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 		while(arity--)
 		{
-			idx = scope[arity].id();
-			if (idx == a)
+		  idx = scope[arity].id();
+		  if ((Atom)idx == a)
 				break;
 		}
 		idx=arity;
@@ -13553,7 +13616,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 			{
 				if(scope[i].is_ground()) {
 					tmp_idx = scope[i].id();
-					if (tmp_idx != a && rank[tmp_idx] < a_rank)
+					if ((Atom)tmp_idx != a && rank[tmp_idx] < a_rank)
 					{
 						literal__= (literal(scope[i]));
 						explanation.add(NOT(literal__));
@@ -13645,7 +13708,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		{
 			if(scope[arity].is_ground()) {
 				idx = scope[arity].id();
-				if (idx != a && rank[idx] < a_rank)
+				if ((Atom)idx != a && rank[idx] < a_rank)
 				{
 					if (max_equal_to_p[arity] == scope[arity].get_value())
 					{
@@ -13826,7 +13889,7 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(int *w, int *cumulated, Vector<Variable>& X, int __size) {
 
   int arity = X.size;
-  int i, j, k;
+  int i, k;
 
   int max_cardinality[_k];
   int count = 0;
@@ -13835,6 +13898,7 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(int *w
   int n_c[_k];
   max_equal_to_p.clear();
 #ifdef _DEBUG_AMSC
+  int j;
   int _max_card[_k*arity];
   int _count[_k*arity];
 
@@ -14035,7 +14099,7 @@ std::ostream& Mistral::ConstraintMultiAtMostSeqCard::display(std::ostream& os) c
   for(unsigned int i=1; i<scope.size; ++i) 
     os << " + " << scope[i]/*.get_var()*/;
   os << ") == " << _d  << " & AtMost(" << _p[0] << "/" << _q[0] ;
-  for(unsigned int i=1; i<_k; ++i) 
+  for(int i=1; i<_k; ++i) 
     os << ", " << _p[i] << "/" << _q[i] ;
   os << ")";
   return os;
