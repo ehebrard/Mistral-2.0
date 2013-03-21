@@ -2720,7 +2720,20 @@ namespace Mistral {
 
   Variable AtMostSeqCard(Vector< Variable >& args, const int d, const int p, const int q);
   Variable MultiAtMostSeqCard(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c);
+  Variable AtMostSeqCardNaiveReason(Vector< Variable >& args, const int d, const int p, const int q);
 
+
+  class AtMostSeqCardExpressionNaiveReason : public AtMostSeqCardExpression {
+
+  public:
+
+	  AtMostSeqCardExpressionNaiveReason(Vector< Variable >& args, const int d, const int p, const int q);
+
+	  virtual void extract_constraint(Solver*);
+	  //virtual void extract_predicate(Solver*);
+	  virtual const char* get_name() const;
+
+  };
 
 
   class TableExpression : public Expression {

@@ -472,6 +472,10 @@ public:
 	virtual VarArray* branchOn(){return &allcars;}
 
 	virtual void setLearning(){set_learning_on();}
+protected:
+	void initialise_setup();
+	void setup_clauses();
+
 };
 
 
@@ -502,189 +506,89 @@ void PseudoBoolModel::__get_var() {
 }
 
 
-void PseudoBoolModel::setup() {
-	try{
-		//  CarSequencingModel::setup();
-		// option variables
+void PseudoBoolModel::setup()
+{
+	initialise_setup();
+	setup_clauses();
+}
 
-		//class_at_position.initialise(instance->nb_cars(), 0, instance->nb_classes()-1);
-		//add(class_at_position);
+void PseudoBoolModel::initialise_setup()
+{
+	bool_class.resize(instance->nb_classes());
+	for(int cla=0; cla<instance->nb_classes(); ++cla)
+	{
+		bool_class[cla].initialise(instance->nb_cars(), 0, 1);
+		add(bool_class[cla]);
+		for(int i=0; i<instance->nb_cars(); ++i)
+			allcars.add(bool_class[cla][i]);
+	}
 
-		//allcars.initialise(instance->nb_cars()* instance->nb_classes(), 0, 1);
-		//add(allcars);
+	option.resize(instance->nb_options());
 
+	for(int opt=0; opt<instance->nb_options(); ++opt)
+	{
+		option[opt].initialise(instance->nb_cars(), 0, 1);
+		add(option[opt]);
 
+		for(int i=0; i<instance->nb_cars(); ++i)
+			allcars.add(option[opt][i]);
+	}
 
-		bool_class.resize(instance->nb_classes());
+	VarArray subsequence;
+	for (int i=0; i < instance->nb_cars(); ++i)
+	{
+		subsequence.clear();
+		for(int cla=0; cla<instance->nb_classes(); ++cla) subsequence.add(bool_class[cla][i]);
+		add( BoolSum( subsequence, 1, 1) );
+	}
+
+	for(int opt=0; opt<instance->nb_options(); ++opt) {
+		// demand on options as boolean sums too
+		add( BoolSum(option[opt], instance->nb_cars_with_option(opt)) );
+
+		// capacity constraint as boolean sums
+		int p = instance->max_capacity(opt);
+		int q = instance->sequence_length(opt);
+		int n = instance->nb_cars()-q+1;
+		VarArray _subsequence;
+		for(int i=0; i<n; ++i) {
+			_subsequence.clear();
+			for(int j=0; j<q; ++j) _subsequence.add(option[opt][i+j]);
+			add( BoolSum( _subsequence, -INFTY, p ) );
+		}
+	}
+
+	for(int cla=0; cla<instance->nb_classes(); ++cla) {
+		// demand
+		add( BoolSum(bool_class[cla], instance->nb_cars_of_class(cla)) );
+	}
+}
+
+void PseudoBoolModel::setup_clauses()
+{
+	clauses.clear();
+	//Chanelling bool_class with option through SAT :
+	Vector< Literal > new_clause;
+	Literal lit;
+	for(int i=0; i<instance->nb_cars(); ++i)
+	{
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
 		{
-			bool_class[cla].initialise(instance->nb_cars(), 0, 1);
-			add(bool_class[cla]);
-
-			for(int i=0; i<instance->nb_cars(); ++i)
-			  allcars.add(bool_class[cla][i]);
-			//	Free(bool_class[cla].back());
-		}
-
-
-		option.resize(instance->nb_options());
-
-
-		for(int opt=0; opt<instance->nb_options(); ++opt)
-		{
-			option[opt].initialise(instance->nb_cars(), 0, 1);
-			add(option[opt]);
-
-			for(int i=0; i<instance->nb_cars(); ++i)
-			  allcars.add(option[opt][i]);
-			//	add( Free(option[opt].back()) );
-		}
-
-
-
-		//for(int i=0; i<instance->nb_cars(); ++i)
-		//for(int cla=0; cla<instance->nb_classes(); ++cla)
-		//add(bool_class[cla][i] == (class_at_position[i]==cla));
-
-
-
-		// for(int cla=0; cla<instance->nb_classes(); ++cla)
-		// 	for (int i=0; i< instance->nb_cars() ; i++)
-		// 		add(bool_class[cla][i]==allcars[cla*  instance->nb_cars()  + i]);
-
-
-		VarArray subsequence;
-		for (int i=0; i < instance->nb_cars(); ++i)
-		{
-			subsequence.clear();
-			for(int cla=0; cla<instance->nb_classes(); ++cla) subsequence.add(bool_class[cla][i]);
-			add( BoolSum( subsequence, 1, 1) );
-		}
-
-
-		for(int opt=0; opt<instance->nb_options(); ++opt) {
-			// demand on options as boolean sums too
-			add( BoolSum(option[opt], instance->nb_cars_with_option(opt)) );
-
-			// capacity constraint as boolean sums
-			int p = instance->max_capacity(opt);
-			int q = instance->sequence_length(opt);
-			int n = instance->nb_cars()-q+1;
-			VarArray _subsequence;
-			for(int i=0; i<n; ++i) {
-				_subsequence.clear();
-				for(int j=0; j<q; ++j) _subsequence.add(option[opt][i+j]);
-				add( BoolSum( _subsequence, -INFTY, p ) );
-			}
-		}
-
-		for(int cla=0; cla<instance->nb_classes(); ++cla) {
-			// demand
-			add( BoolSum(bool_class[cla], instance->nb_cars_of_class(cla)) );
-		}
-
-
-
-		//Chanelling bool_class with option :
-		//The CP version :
-		/*
-		Variable tmp(1,1);
-		for(int i=0; i<instance->nb_cars(); ++i)
-		{
-			for(int cla=0; cla<instance->nb_classes(); ++cla)
+			for(int k=0; k<instance->nb_options(); ++k)
 			{
-				for(int k=0; k<instance->nb_options(); ++k)
-				{
-
-					if (instance->has_option(cla,k))
-						//	add(OrExpression(NotExpression(bool_class[cla][i]), option[k][i]) );
-						//	add(OrExpression(bool_class[cla][i], option[k][i])._self );
-					{
-						//							Variable not_C_bool_class_clas_i(new NotExpression(bool_class[cla][i]));
-						//						Variable OR_NotC_O (new OrExpression(not_C_bool_class_clas_i,option[k][i]));
-						//						add(OR_NotC_O);
-
-						add( bool_class[cla][i] <= option[k][i]);
-						//					add(OrExpression(NotExpression(bool_class[cla][i])._self, option[k][i])._self);
-					}
-					else
-					{
-						//							Variable not_C_bool_class_clas_i(new NotExpression(bool_class[cla][i]));
-						//							Variable not_option_k_i(new NotExpression(option[k][i]));
-
-						//						Variable OR_C_O (new OrExpression(not_C_bool_class_clas_i,not_option_k_i));
-						//					add(OR_C_O);
-
-
-
-						//add(tmp==(1-option[k][i]));
-
-						add( bool_class[cla][i] <= (tmp-option[k][i]));
-
-						//	add(OrExpression(NotExpression(bool_class[cla][i])._self, NotExpression(option[k][i])._self)._self);
-
-					}
-
-				}
+				new_clause.clear();
+				lit =  2* bool_class[cla][i].id();
+				new_clause.add(lit);
+				lit = 2* option[k][i].id() ;
+				if (instance->has_option(cla,k)) lit++;
+				new_clause.add(lit);
+				clauses.add(new_clause);
 			}
 		}
-		 */
-
-		//The SAT-version
-		for(int i=0; i<instance->nb_cars(); ++i)
-		{
-
-	//		cout << "i : " << i;
-			for(int cla=0; cla<instance->nb_classes(); ++cla)
-			{
-			//	cout << "class : " << cla;
-				for(int k=0; k<instance->nb_options(); ++k)
-				{
-					Vector< Literal > new_clause;
-					new_clause.initialise(2);
-					Literal lit1 =  2* bool_class[cla][i].id();
-					//	Literal lit1  = Literal(bool_class[cla][i],false);
-					new_clause.add(lit1);
-			//		cout << "option : " << k;
-					if (instance->has_option(cla,k))
-					{
-			//			cout << "yes" << endl;
-						//	Literal lit2 = Literal(option[k][i],true);
-						Literal lit2 = 2* option[k][i].id() +1 ;
-						//	add( bool_class[cla][i] <= option[k][i]);
-						new_clause.add(lit2);
-					}
-					else
-					{
-
-				//		cout << "no" << endl;
-						//		Literal lit2(option[k][i],false);
-						Literal		lit2 = 2* option[k][i].id() ;
-						//	add( bool_class[cla][i] <= (tmp-option[k][i]));
-						new_clause.add(lit2);
-					}
-
-				//	cout << "ADD CLAUSE \n " << endl;
-					clauses.add(new_clause);
-				}
-			}
-		}
-		for(int i=0; i<clauses.size; ++i) {
-			add(clauses[i]);
-		}
-
-		// //	parameters.backjump = 1;
-		// parameters.activity_decay =.96;
-		// parameters.activity_increment = .012;
-		// parameters.forgetfulness = .75;
-
-
 	}
-	catch (ArgException &e)  // catch any exceptions
-	{
-		cerr << "error in Pseudo Boolean model setup: " << e.error() << " for arg " << e.argId() << endl;
+	for(int i=0; i<clauses.size; ++i) {
+		add(clauses[i]);
 	}
-
 }
 
 
@@ -699,192 +603,48 @@ public:
 
 	virtual VarArray* branchOn(){return &allcars;}
 
-  virtual void setLearning(){set_learning_on();}
+	virtual void setLearning(){set_learning_on();}
 };
 
 
-void PseudoBoolLazyAMSCModel::setup() {
-	try{
-
-		bool_class.resize(instance->nb_classes());
-		for(int cla=0; cla<instance->nb_classes(); ++cla)
-		{
-			bool_class[cla].initialise(instance->nb_cars(), 0, 1);
-			add(bool_class[cla]);
-
-			for(int i=0; i<instance->nb_cars(); ++i)
-			  allcars.add(bool_class[cla][i]);
-			//	Free(bool_class[cla].back());
-		}
-
-
-		option.resize(instance->nb_options());
-
-
-		for(int opt=0; opt<instance->nb_options(); ++opt)
-		{
-			option[opt].initialise(instance->nb_cars(), 0, 1);
-			add(option[opt]);
-
-			for(int i=0; i<instance->nb_cars(); ++i)
-			  allcars.add(option[opt][i]);
-			//	add( Free(option[opt].back()) );
-		}
-
-
-
-		//for(int i=0; i<instance->nb_cars(); ++i)
-		//for(int cla=0; cla<instance->nb_classes(); ++cla)
-		//add(bool_class[cla][i] == (class_at_position[i]==cla));
-
-
-
-		// for(int cla=0; cla<instance->nb_classes(); ++cla)
-		// 	for (int i=0; i< instance->nb_cars() ; i++)
-		// 		add(bool_class[cla][i]==allcars[cla*  instance->nb_cars()  + i]);
-
-
-		VarArray subsequence;
-		for (int i=0; i < instance->nb_cars(); ++i)
-		{
-			subsequence.clear();
-			for(int cla=0; cla<instance->nb_classes(); ++cla) subsequence.add(bool_class[cla][i]);
-			add( BoolSum( subsequence, 1, 1) );
-		}
-
-
-		for(int opt=0; opt<instance->nb_options(); ++opt) {
-			// demand on options as boolean sums too
-			add( BoolSum(option[opt], instance->nb_cars_with_option(opt)) );
-
-			// capacity constraint as boolean sums
-			int p = instance->max_capacity(opt);
-			int q = instance->sequence_length(opt);
-			int n = instance->nb_cars()-q+1;
-			VarArray _subsequence;
-			for(int i=0; i<n; ++i) {
-				_subsequence.clear();
-				for(int j=0; j<q; ++j) _subsequence.add(option[opt][i+j]);
-				add( BoolSum( _subsequence, -INFTY, p ) );
-			}
-		}
-
-		for(int cla=0; cla<instance->nb_classes(); ++cla) {
-			// demand
-			add( BoolSum(bool_class[cla], instance->nb_cars_of_class(cla)) );
-		}
-
-		for(int opt=0; opt<instance->nb_options(); ++opt) {
-			// demand on options as boolean sums too
-			add( AtMostSeqCard( option[opt],
-					instance->nb_cars_with_option(opt),
-					instance->max_capacity(opt),
-					instance->sequence_length(opt) ) );
-		}
-
-		//Chanelling bool_class with option :
-		//The CP version :
-		/*
-		Variable tmp(1,1);
-		for(int i=0; i<instance->nb_cars(); ++i)
-		{
-			for(int cla=0; cla<instance->nb_classes(); ++cla)
-			{
-				for(int k=0; k<instance->nb_options(); ++k)
-				{
-
-					if (instance->has_option(cla,k))
-						//	add(OrExpression(NotExpression(bool_class[cla][i]), option[k][i]) );
-						//	add(OrExpression(bool_class[cla][i], option[k][i])._self );
-					{
-						//							Variable not_C_bool_class_clas_i(new NotExpression(bool_class[cla][i]));
-						//						Variable OR_NotC_O (new OrExpression(not_C_bool_class_clas_i,option[k][i]));
-						//						add(OR_NotC_O);
-
-						add( bool_class[cla][i] <= option[k][i]);
-						//					add(OrExpression(NotExpression(bool_class[cla][i])._self, option[k][i])._self);
-					}
-					else
-					{
-						//							Variable not_C_bool_class_clas_i(new NotExpression(bool_class[cla][i]));
-						//							Variable not_option_k_i(new NotExpression(option[k][i]));
-
-						//						Variable OR_C_O (new OrExpression(not_C_bool_class_clas_i,not_option_k_i));
-						//					add(OR_C_O);
-
-
-
-						//add(tmp==(1-option[k][i]));
-
-						add( bool_class[cla][i] <= (tmp-option[k][i]));
-
-						//	add(OrExpression(NotExpression(bool_class[cla][i])._self, NotExpression(option[k][i])._self)._self);
-
-					}
-
-				}
-			}
-		}
-		 */
-
-		//The SAT-version
-		for(int i=0; i<instance->nb_cars(); ++i)
-		{
-
-	//		cout << "i : " << i;
-			for(int cla=0; cla<instance->nb_classes(); ++cla)
-			{
-			//	cout << "class : " << cla;
-				for(int k=0; k<instance->nb_options(); ++k)
-				{
-					Vector< Literal > new_clause;
-					new_clause.initialise(2);
-					Literal lit1 =  2* bool_class[cla][i].id();
-					//	Literal lit1  = Literal(bool_class[cla][i],false);
-					new_clause.add(lit1);
-			//		cout << "option : " << k;
-					if (instance->has_option(cla,k))
-					{
-			//			cout << "yes" << endl;
-						//	Literal lit2 = Literal(option[k][i],true);
-						Literal lit2 = 2* option[k][i].id() +1 ;
-						//	add( bool_class[cla][i] <= option[k][i]);
-						new_clause.add(lit2);
-					}
-					else
-					{
-
-				//		cout << "no" << endl;
-						//		Literal lit2(option[k][i],false);
-						Literal		lit2 = 2* option[k][i].id() ;
-						//	add( bool_class[cla][i] <= (tmp-option[k][i]));
-						new_clause.add(lit2);
-					}
-
-				//	cout << "ADD CLAUSE \n " << endl;
-					clauses.add(new_clause);
-				}
-			}
-		}
-		for(int i=0; i<clauses.size; ++i) {
-			add(clauses[i]);
-		}
-
-		// //	parameters.backjump = 1;
-		// parameters.activity_decay =.96;
-		// parameters.activity_increment = .012;
-		// parameters.forgetfulness = .75;
-
-
-	}
-	catch (ArgException &e)  // catch any exceptions
+void PseudoBoolLazyAMSCModel::setup()
+{
+	initialise_setup();
+	for(int opt=0; opt<instance->nb_options(); ++opt)
 	{
-		cerr << "error in Pseudo Boolean model setup: " << e.error() << " for arg " << e.argId() << endl;
+		// demand on options as boolean sums too
+		add( AtMostSeqCard( option[opt],
+				instance->nb_cars_with_option(opt),
+				instance->max_capacity(opt),
+				instance->sequence_length(opt) ) );
 	}
-
+	setup_clauses();
 }
 
 
+
+class PseudoBoolLazyAMSCNAIVEModel : public PseudoBoolLazyAMSCModel {
+
+public:
+
+	PseudoBoolLazyAMSCNAIVEModel(CarSequencingInstance *inst) : PseudoBoolLazyAMSCModel(inst) {}
+	virtual void setup();
+};
+
+
+void PseudoBoolLazyAMSCNAIVEModel::setup()
+{
+	initialise_setup();
+	for(int opt=0; opt<instance->nb_options(); ++opt)
+	{
+		// demand on options as boolean sums too
+		add( AtMostSeqCardNaiveReason( option[opt],
+				instance->nb_cars_with_option(opt),
+				instance->max_capacity(opt),
+				instance->sequence_length(opt) ) );
+	}
+	setup_clauses();
+}
 
 
 class SumModel : public CarSequencingModel {
@@ -2102,6 +1862,8 @@ CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, 
 		solver = new PseudoBoolModel(instance);
 	} else if(model == "lazyamsc") {
 		solver = new PseudoBoolLazyAMSCModel(instance);
+	} else if(model == "naivelazyamsc") {
+		solver = new PseudoBoolLazyAMSCNAIVEModel(instance);
 	}
 	else {
 		throw ArgException(string(" "),
@@ -2134,7 +1896,7 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 	cout << "aggregation " <<aggregation << endl;
 #endif
 
-	if (model=="pseudoB" || model=="lazyamsc" )
+	if (model=="pseudoB" || model=="lazyamsc" || model=="naivelazyamsc" )
 	{
 		if(branching == "option") {
 			if(criterion == "demand") {
@@ -2316,6 +2078,7 @@ int main(int argc, char **argv)
 	  mallowed.push_back("mamsc+sum");
 	  mallowed.push_back("pseudoB");
 	  mallowed.push_back("lazyamsc");
+	  mallowed.push_back("naivelazyamsc");
 	  ValuesConstraint<string> m_allowed( mallowed );
 	  ValueArg<string> modelArg("","model","type of model",false,"sum",&m_allowed); //"amsc","string");
 	  cmd.add( modelArg );
@@ -2398,7 +2161,6 @@ int main(int argc, char **argv)
 			cout << (*solver) << endl;
 		}
 
-
 		Outcome result = solver->depth_first_search(*solver->branchOn() , heuristic, restartp);
 
 		//			Outcome result = solver->depth_first_search(solver->class_at_position, heuristic, restartp);
@@ -2427,6 +2189,4 @@ int main(int argc, char **argv)
 	}
 
 }
-
-
 
