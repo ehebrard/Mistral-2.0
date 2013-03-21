@@ -186,6 +186,7 @@ FlatZincModel::FlatZincModel(Solver &s)
   _option_enumerate(false),
   _option_display_mistral_model(false),
   _option_annotations(false),
+  _option_parity(0),
   intVarCount(-1), boolVarCount(-1), setVarCount(-1), _optVar(-1),
   _solveAnnotations(NULL)
 {
@@ -644,13 +645,20 @@ FlatZincModel::set_parameters(SolverParameters& p) {
 
 void
 FlatZincModel::set_strategy(string var_o, string val_o, string r_pol) {
-	_option_heuristic = solver.heuristic_factory(var_o, val_o);
-	_option_policy = solver.restart_factory(r_pol);
+  _variable_ordering = var_o;
+  _value_ordering = val_o;
+	// _option_heuristic = solver.heuristic_factory(var_o, val_o);
+	 _option_policy = solver.restart_factory(r_pol);
 }
 
 void
 FlatZincModel::set_rewriting(const bool on) {
 	_option_rewriting = on;
+}
+
+void
+FlatZincModel::set_parity_processing(const int lvl) {
+	_option_parity = lvl;
 }
 
 void
@@ -768,7 +776,7 @@ FlatZincModel::set_annotations(const bool on) {
     using std::setfill;
     
 #ifdef _DEBUG_FLATZINC
-    std::cout << " c run!" << std::endl;
+    std::cout << " " << solver.parameters.prefix_comment << " run!" << std::endl;
 #endif
 
     if(_option_rewriting) {
@@ -783,18 +791,66 @@ FlatZincModel::set_annotations(const bool on) {
 #endif
     }
 
+    /*
+solver.add(solver.variables[1] == 0);
+solver.add(solver.variables[7] == 0);
+solver.add(solver.variables[15] == 1);
+solver.add(solver.variables[20] == 0);
+solver.add(solver.variables[24] == 1);
+solver.add(solver.variables[25] == 1);
+solver.add(solver.variables[28] == 1);
+solver.add(solver.variables[29] == 1);
+solver.add(solver.variables[31] == 1);
+solver.add(solver.variables[32] == 1);
+solver.add(solver.variables[33] == 1);
+solver.add(solver.variables[34] == 1);
+solver.add(solver.variables[35] == 0);
+solver.add(solver.variables[36] == 0);
+solver.add(solver.variables[37] == 0);
+solver.add(solver.variables[38] == 1);
+solver.add(solver.variables[39] == 0);
+solver.add(solver.variables[40] == 0);
+solver.add(solver.variables[41] == 0);
+solver.add(solver.variables[42] == 1);
+solver.add(solver.variables[43] == 1);
+solver.add(solver.variables[44] == 1);
+solver.add(solver.variables[45] == 1);
+solver.add(solver.variables[46] == 1);
+solver.add(solver.variables[47] == 0);
+solver.add(solver.variables[48] == 0);
+solver.add(solver.variables[49] == 0);
+solver.add(solver.variables[50] == 1);
+solver.add(solver.variables[51] == 1);
+solver.add(solver.variables[52] == 0);
+solver.add(solver.variables[53] == 0);
+solver.add(solver.variables[54] == 1);
+solver.add(solver.variables[55] == 1);
+solver.add(solver.variables[56] == 0);
+solver.add(solver.variables[57] == 0);
+solver.add(solver.variables[58] == 0);
+solver.add(solver.variables[59] == 1);
+solver.add(solver.variables[60] == 0);
+solver.add(solver.variables[61] == 0);
+solver.add(solver.variables[62] == 0);
+solver.add(solver.variables[63] == 0);
+solver.add(solver.variables[64] == 1);
+solver.add(solver.variables[65] == 0);
+solver.add(solver.variables[66] == 0);
+    */
+
+
     solver.consolidate();
     solver.sequence.clear();
 
 
     if(_option_display_mistral_model)
-      std::cout << "c mistral representation:\n " << solver << std::endl;
-
+      std::cout << " " << solver.parameters.prefix_comment << " mistral representation:\n " << solver << std::endl;
+    
         
     Outcome result = UNKNOWN;
 
 
-    Goal *goal;
+    Goal *goal = NULL;
 
     switch (_method) {
     case MINIMIZATION: {
@@ -822,11 +878,25 @@ FlatZincModel::set_annotations(const bool on) {
     }
 
 
+    solver.objective = goal;
+
+
+    // if(solver.is_pseudo_boolean())
+    //   solver.set_learning_on();
 
     if(_option_annotations) {
       fz_search_goals.add(goal);
       get_annotations();
     }
+
+
+    if(_option_parity)
+      solver.parity_processing(_option_parity);
+
+
+    _option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering);
+    
+
       
     if(fz_search_sequences.size < 2) {
 
@@ -851,12 +921,24 @@ FlatZincModel::set_annotations(const bool on) {
       // solver.monitor_list << "], objective: " << obj ;
       // solver.monitor_list << "\n" ;
 
+     
+
+      //exit(1);
+
+      //std::cout <<  solver << std::endl;
+
 
       // there is no annotation, we use the default strategy
-      if(fz_search_sequences.empty())
+      if(fz_search_sequences.empty()) {
+        //std::cout << solver.variables << std::endl;
         result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
-      else
-        result = solver.depth_first_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
+      } else {
+        //std::cout << fz_search_sequences[0] << std::endl;
+        //result = solver.depth_first_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
+        solver.initialise_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
+        //solver.heuristic->display(std::cout);
+        result = solver.depth_first_search();
+      }
     } else {
       // follows flatzinc model's annotations
 

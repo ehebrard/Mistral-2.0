@@ -901,9 +901,9 @@ public:
     }
 #endif
 
-		if( IS_FAIL(scope1[j].get_var().set_min(k)) ) wiped1 = FAILURE(j);
-		if( AC && IS_FAIL(scope2[j].get_var().set_min(k)) ) wiped2 = FAILURE(j);
-		if( BC && IS_FAIL(scope3[j].get_var().set_min(k)) ) wiped3 = FAILURE(j);
+		if( FAILED(scope1[j].get_var().set_min(k)) ) wiped1 = FAILURE(j);
+		if( AC && FAILED(scope2[j].get_var().set_min(k)) ) wiped2 = FAILURE(j);
+		if( BC && FAILED(scope3[j].get_var().set_min(k)) ) wiped3 = FAILURE(j);
 
 		scope1[j] = scope1[j].get_var();
 		scope2[j] = scope2[j].get_var();
@@ -921,9 +921,9 @@ public:
     }
 #endif
 
-		if( IS_FAIL(scope1[j].get_var().set_max(k)) ) wiped1 = FAILURE(j);
-		if( AC && IS_FAIL(scope2[j].get_var().set_max(k)) ) wiped2 = FAILURE(j);
-		if( BC && IS_FAIL(scope3[j].get_var().set_max(k)) ) wiped3 = FAILURE(j);
+		if( FAILED(scope1[j].get_var().set_max(k)) ) wiped1 = FAILURE(j);
+		if( AC && FAILED(scope2[j].get_var().set_max(k)) ) wiped2 = FAILURE(j);
+		if( BC && FAILED(scope3[j].get_var().set_max(k)) ) wiped3 = FAILURE(j);
 
 		scope1[j] = scope1[j].get_var();
 		scope2[j] = scope2[j].get_var();
@@ -944,9 +944,9 @@ public:
     }
 #endif
 	    
-		if( IS_FAIL(scope1[j].get_var().set_domain(k)) ) wiped1 = FAILURE(j);
-		if( AC && IS_FAIL(scope2[j].get_var().set_domain(k)) ) wiped2 = FAILURE(j);
-		if( BC && IS_FAIL(scope3[j].get_var().set_domain(k)) ) wiped3 = FAILURE(j);
+		if( FAILED(scope1[j].get_var().set_domain(k)) ) wiped1 = FAILURE(j);
+		if( AC && FAILED(scope2[j].get_var().set_domain(k)) ) wiped2 = FAILURE(j);
+		if( BC && FAILED(scope3[j].get_var().set_domain(k)) ) wiped3 = FAILURE(j);
 
 		scope1[j] = scope1[j].get_var();
 		scope2[j] = scope2[j].get_var();
@@ -964,9 +964,9 @@ public:
     }
 #endif
 	    
-		if( IS_FAIL(scope1[j].get_var().remove(k)) ) wiped1 = FAILURE(j);
-		if( AC && IS_FAIL(scope2[j].get_var().remove(k)) ) wiped2 = FAILURE(j);
-		if( BC && IS_FAIL(scope3[j].get_var().remove(k)) ) wiped3 = FAILURE(j);
+		if( FAILED(scope1[j].get_var().remove(k)) ) wiped1 = FAILURE(j);
+		if( AC && FAILED(scope2[j].get_var().remove(k)) ) wiped2 = FAILURE(j);
+		if( BC && FAILED(scope3[j].get_var().remove(k)) ) wiped3 = FAILURE(j);
 
 		scope1[j] = scope1[j].get_var();
 		scope2[j] = scope2[j].get_var();
@@ -1878,8 +1878,7 @@ int main(int argc, char *argv[])
   // tests.push_back(new RandomRevNumAffectations<int>());
   // //tests.push_back(new ConstraintArrayTest());
   // tests.push_back(new RandomIntervalTest());
-
-
+ 
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
   //tests[0]->Quantity = EXTREME;
@@ -4758,16 +4757,41 @@ void MemberTest::run2() {
 
   s.rewrite();
   
-  //cout << "Rewrite\n" << s << endl;
+  // cout << "Rewrite\n" << s << endl;
 
   s.consolidate();
   
   //cout << "Consolidate\n" << s << endl;  
 
+  //cout << s.variables << endl;
+
+#ifdef _MONITOR
+  
+  s.monitor_list << X ;
+  
+  s.monitor_list << " in " ;
+  
+  s.monitor_list << Y ;
+
+  s.monitor_list << " <-/-> " ;
+  
+  s.monitor_list << b ;
+  
+  s.monitor_list << "\n";
+
+  /*
+  s.monitor( X );
+  s.monitor( " in ");
+  s.monitor( Y );
+  s.monitor( "\n");
+  */
+#endif
+
 
   s.initialise_search(s.variables,
 		      new GenericHeuristic< Lexicographic, MinValue >(&s), 
 		      new NoRestart());
+
 
   int num_solutions = 0;
   while(s.get_next_solution() == SAT) {

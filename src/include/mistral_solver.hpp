@@ -136,6 +136,7 @@ namespace Mistral {
     std::string prefix_solution;
     std::string prefix_outcome;
 
+
   };
 
   class SolverStatistics {
@@ -196,7 +197,8 @@ namespace Mistral {
     double            base_avg_size;
     double            learnt_avg_size;
 
-    
+    // MISC
+    bool pseudo_boolean;
 
 
 #ifdef _PROFILING
@@ -242,7 +244,10 @@ namespace Mistral {
     Solver *solver;
 
     Vector<int> sequence;
-    
+    Vector<Variable> sequence_var;
+    Vector<Constraint> sequence_con;
+    Vector<int> sequence_type;
+
     std::vector<const char*> strs;
 
     void add(Variable);
@@ -565,6 +570,11 @@ namespace Mistral {
     BooleanMemoryManager booleans;
     //@}
 
+
+    // Vector< Variable > non_boolean_variables;
+    // Vector< Constraint > non_explained_constraints;
+    // //statistics.pseudo_boolean &= (x.is_boolean() || (objective && objective->objective == x));
+
     /*!@name Destructor*/
     //@{
     virtual ~Solver();
@@ -655,7 +665,9 @@ namespace Mistral {
     
     void fail();
 
+    void parity_processing(const int k=1);
     bool rewrite(); 
+    bool is_pseudo_boolean() const; 
     void consolidate(); 
     void make_non_convex(const int idx);
     //void specialise(); 
@@ -1094,6 +1106,8 @@ public:
 
 
     bool use_rewrite();
+
+    bool enumerate_solutions();
 
 
 };

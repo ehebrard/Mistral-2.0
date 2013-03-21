@@ -1557,8 +1557,9 @@ namespace Mistral {
 
     // };
 
-    bool is_bool() { return (domain_type > DYN_VAR); }
-    bool is_void() { return (domain_type != CONST_VAR && variable == NULL); }
+    bool is_bool() const { return (domain_type > DYN_VAR); }
+    bool is_boolean() const ; //{ return (domain_type > DYN_VAR); }
+    bool is_void() const { return (domain_type != CONST_VAR && variable == NULL); }
     void initialise_domain(const int lo, const int up, const int type);
     void initialise_domain(const Vector< int >& values, const int type);
     void initialise_domain(const int lo, const int up, const Vector< int >& values, const int type);
@@ -2116,10 +2117,10 @@ namespace Mistral {
 
       //if(_data_ == -1) return propagateRelation();
       switch(type()) {
-      case REMOVAL:    return !IS_FAIL(var.remove(value()));
-      case ASSIGNMENT: return !IS_FAIL(var.set_domain(value()));
-      case LOWERBOUND: return !IS_FAIL(var.set_min(value()+1));
-      case UPPERBOUND: return !IS_FAIL(var.set_max(value()));
+      case REMOVAL:    return !FAILED(var.remove(value()));
+      case ASSIGNMENT: return !FAILED(var.set_domain(value()));
+      case LOWERBOUND: return !FAILED(var.set_min(value()+1));
+      case UPPERBOUND: return !FAILED(var.set_max(value()));
 
       }
       return true;
@@ -2782,6 +2783,27 @@ namespace Mistral {
   Variable LexLeq(VarArray& r1, VarArray& r2);
 
 
+  class ParityExpression : public Expression {
+
+  public:
+
+    int target_parity;
+
+    ParityExpression() : Expression() {target_parity=0;}
+    ParityExpression(Vector< Variable >& args, const int p);
+    virtual ~ParityExpression();
+    void initialise_bounds();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Parity(Vector< Variable >& args, const int l=0);
+
+
   class BoolSumExpression : public Expression {
 
   public:
@@ -2822,6 +2844,9 @@ namespace Mistral {
   class LinearExpression : public Expression {
 
   public:
+
+    int weighted;
+    int bool_domains;
 
     int lower_bound;
     int upper_bound;

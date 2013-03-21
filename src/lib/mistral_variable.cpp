@@ -550,6 +550,10 @@ std::string Mistral::Variable::get_domain() const {
     buf << "[0,1]";
   } 
   else if(domain_type ==   EXPRESSION) {
+
+    // buf << "e" ;
+    // if(expression->is_set()) buf << "s" ;
+
     if(expression->is_set()) ((SetExpression*)(expression))->display(buf, true);
     else buf << expression->get_self().get_domain();
   } else {
@@ -568,6 +572,30 @@ std::string Mistral::Variable::get_history() const {
   else if(domain_type >      DYN_VAR && *bool_domain < 3) buf << "[0,1]";
   return buf.str();
 }
+
+bool Mistral::Variable::is_boolean() const {
+  bool of_the_living_dead = false;
+  if(domain_type > DYN_VAR) of_the_living_dead = true;
+  else if(domain_type ==  BITSET_VAR) {
+    of_the_living_dead =  (bitset_domain->get_min()==0 && bitset_domain->get_max()==1);
+  } else if(domain_type ==    LIST_VAR)  {
+    int f = list_domain->get_first(); 
+    if(f == 0)
+      of_the_living_dead = list_domain->get_last()==1;
+    else if(f == 1)
+      of_the_living_dead = list_domain->get_last()==0;
+  } else if(domain_type ==   RANGE_VAR)  {
+    of_the_living_dead =  (range_domain->get_min()==0 && range_domain->get_max()==1);
+  } else if(domain_type ==   CONST_VAR)  {
+    of_the_living_dead =  constant_value<=1 && constant_value>=0;
+  } else if(domain_type ==   EXPRESSION)  {
+    of_the_living_dead =  expression->get_self().is_boolean();
+  } 
+
+  return of_the_living_dead;
+}
+
+
 
 int Mistral::Variable::get_first() const {
 
@@ -2729,8 +2757,31 @@ void Mistral::AndExpression::extract_constraint(Solver *s) {
   //std::cout << "not implemented" << std::endl;
   //exit(1);
   if(spin) {
-    if(IS_FAIL(children[0].remove(0))) s->fail();
-    if(IS_FAIL(children[1].remove(0))) s->fail();
+
+#ifdef _DEBUG_AC
+    std::cout << "pre-propagte (" << children[0] << " AND "
+	      << children[1] << ") ";
+#endif
+
+    if(FAILED(children[0].remove(0))) {
+#ifdef _DEBUG_AC
+      std::cout << "fail!\n";
+#endif
+      s->fail();
+    }
+    else if(FAILED(children[1].remove(0))) {
+#ifdef _DEBUG_AC
+      std::cout << "fail!\n";
+#endif
+    s->fail();
+    }
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
+
+
+
   } else {
     s->add(Constraint(new ConstraintNotAnd(children)));
   }
@@ -2782,14 +2833,33 @@ void Mistral::OrExpression::extract_constraint(Solver *s) {
   if(spin) {
     s->add(Constraint(new ConstraintOr(children)));
   } else {
-    if(IS_FAIL(children[0].set_domain(0))) s->fail();
-    if(IS_FAIL(children[1].set_domain(0))) s->fail();
+    
+#ifdef _DEBUG_AC
+    std::cout << "pre-propagte NOT(" << children[0] << " OR "
+	      << children[1] << ") ";
+#endif
+    
+    if(FAILED(children[0].set_domain(0))) {
+#ifdef _DEBUG_AC
+      std::cout << "fail!\n";
+#endif
+      s->fail();
+    } else if(FAILED(children[1].set_domain(0))) {
+#ifdef _DEBUG_AC
+      std::cout << "fail!\n";
+#endif
+      s->fail();
+    }
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
+    //s->add(ConstraintOr::ConstraintOr_new(children));
+    //std::cout << "not implemented" << std::endl;
+    //exit(1);
   }
-  //s->add(ConstraintOr::ConstraintOr_new(children));
-  //std::cout << "not implemented" << std::endl;
-  //exit(1);
 }
-
+  
 void Mistral::OrExpression::extract_variable(Solver *s) {
   Variable aux(0, 1, BOOL_VAR);
   _self = aux;
@@ -2874,11 +2944,43 @@ void Mistral::EqualExpression::extract_constraint(Solver *s) {
   if(spin) {
     if(children.size==2)
       s->add(Constraint(new ConstraintEqual(children), (BINARY|IDEMPOTENT)));
-    else if(children[0].set_domain(value) == FAIL_EVENT) s->fail();
+    else {
+
+#ifdef _DEBUG_AC
+      std::cout << "pre-propagte (" << children[0] << " = "
+		<< value << ") ";
+#endif
+
+      if(children[0].set_domain(value) == FAIL_EVENT) {
+	s->fail();
+#ifdef _DEBUG_AC
+	std::cout << "fail!\n";
+      } else {
+	std::cout << "ok\n";
+#endif
+      }
+    }
+
   } else {
     if(children.size==2) {
       s->add(Constraint(new ConstraintNotEqual(children)));
-    } else if(children[0].remove(value) == FAIL_EVENT) s->fail();
+    } else {
+
+#ifdef _DEBUG_AC
+      std::cout << "pre-propagte (" << children[0] << " != "
+		<< value << ") ";
+#endif
+      
+      if(children[0].remove(value) == FAIL_EVENT) {
+
+	s->fail();
+#ifdef _DEBUG_AC
+	std::cout << "fail!\n";
+      } else {
+	std::cout << "ok\n";
+#endif
+      }
+    }
   }
 }
 
@@ -3645,13 +3747,13 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
     if(violated) {
       s->fail();
     } else {
-      if(IS_FAIL(children[2].set_domain(true))) {
+      if(FAILED(children[2].set_domain(true))) {
 	//std::cout << "this fail" << std::endl;
 	s->fail();
       }
     }
   } else if(violated) {
-    if(IS_FAIL(children[2].set_domain(false))) {
+    if(FAILED(children[2].set_domain(false))) {
       //std::cout << "that fail" << std::endl;
       s->fail();
     }
@@ -3696,7 +3798,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
       else
 	s->add( children[2] <= (BoolSum(disjunction_pos) < disjunction_pos.size) );
     } else {
-      if(IS_FAIL(children[2].set_domain(spin))) s->fail();
+      if(FAILED(children[2].set_domain(spin))) s->fail();
     }
   }   
 }
@@ -3773,13 +3875,41 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
   else {
     if(spin) {
       
+#ifdef _DEBUG_AC
+      std::cout << "pre-propagte (" << children[0] << " <= "
+		<< offset << ") ";
+#endif
       //std::cout << "HERE" << std::endl;
 
-      if(children[0].set_max(offset) == FAIL_EVENT) 
-	{ s->fail(); }
-    } else {     
-      if(children[0].set_min(offset) == FAIL_EVENT)
-	{ s->fail(); }
+      if(FAILED(children[0].set_max(offset))) 
+	{ 
+#ifdef _DEBUG_AC
+	  std::cout << "fail!\n";
+#endif
+	  s->fail(); 
+	}
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
+
+    } else {    
+#ifdef _DEBUG_AC
+      std::cout << "pre-propagte (" << children[0] << " >= "
+		<< offset << ") ";
+#endif
+ 
+      if(FAILED(children[0].set_min(offset)))
+	{ 
+#ifdef _DEBUG_AC
+	  std::cout << "fail!\n";
+#endif
+	  s->fail(); 
+	}
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
     }
   }
 }
@@ -4163,10 +4293,10 @@ void Mistral::LexExpression::extract_constraint(Solver *s) {
     s->add( new ConstraintLex(scp) );
   }
 
-  if(children[2*arity].set_domain(0) == FAIL_EVENT)
+  if(FAILED(children[2*arity].set_domain(0)))
     { s->fail(); }
   if(strict) 
-    if(children[3*arity].set_domain(1) == FAIL_EVENT)
+    if(FAILED(children[3*arity].set_domain(1)))
       { s->fail(); }
 }
 
@@ -4270,27 +4400,42 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
     //   s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
     // } else {
     if(lower_bound == children.size) {
+
+#ifdef _DEBUG_AC
+      std::cout << "pre-propagte sum(" << children[0] ;
+      for(unsigned int i=0; i<children.size; ++i)
+	std::cout << ", " << children[i];
+      std::cout << ") = " << children.size;
+#endif
+
       for(int i=0; i<children.size; ++i) {
-	if(IS_FAIL(children[i].set_domain(1))) {
-
-	  std::cout << "FAIL!" << std::endl;
-	  exit(1);
-
+	if(FAILED(children[i].set_domain(1))) {
+#ifdef _DEBUG_AC
+	  std::cout << " FAIL!" << std::endl;
+	  //exit(1);
+#endif
 	  s->fail();
 	  break;
 	}
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
       }
     } else if(upper_bound == 0) {
       for(int i=0; i<children.size; ++i) {
-	if(IS_FAIL(children[i].set_domain(0))) {
-
-
-	  std::cout << "FAIL!" << std::endl;
-	  exit(1);
-
+	if(FAILED(children[i].set_domain(0))) {
+#ifdef _DEBUG_AC
+	  std::cout << " FAIL!" << std::endl;
+	  //exit(1);
+#endif
 	  s->fail();
 	  break;
 	}
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
       }
     } else {
       s->add(new ConstraintBoolSumInterval(children,lower_bound,upper_bound)); 
@@ -4411,14 +4556,79 @@ Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const Vector< int >
 
 
 
+Mistral::ParityExpression::ParityExpression(Vector< Variable >& args, const int p) 
+  : Expression(args) {
+  target_parity = p;
+}
+
+Mistral::ParityExpression::~ParityExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete boolsum expression" << std::endl;
+#endif
+}
+
+
+void Mistral::ParityExpression::extract_constraint(Solver *s) {
+  VarArray scope;
+  for(int i=0; i<children.size; ++i)
+    if(children[i].is_ground())
+      target_parity ^= children[i].get_value();
+    else
+      scope.add(children[i]);
+
+  if(scope.size)
+    s->add(new ConstraintParity(scope,target_parity)); 
+  else
+    if(target_parity) s->fail();
+}
+
+void Mistral::ParityExpression::extract_variable(Solver *s) {
+  Variable aux(0, 1, DYN_VAR);
+  _self = aux;
+  
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+void Mistral::ParityExpression::extract_predicate(Solver *s) { 
+  s->add(new ConstraintParity(children,target_parity)); 
+}
+
+const char* Mistral::ParityExpression::get_name() const {
+  return "parity";
+}
+
+Mistral::Variable Mistral::Parity(Vector< Variable >& args, const int p) {
+  Variable exp(new ParityExpression(args,p));
+  return exp;
+}
+
+
+
+
 Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 
 					    Vector< int >& wgts, 
 					    const int l, const int u) 
   : Expression(args) {
+  weighted = 0;
+  bool_domains = 0;
+
   lower_bound = l;
   upper_bound = u;
   for(unsigned int i=0; i<wgts.size; ++i) {
     weight.add(wgts[i]);
+    if(wgts[i]==1) {
+      if(weighted<0 || weighted>1) weighted = 2;
+      else weighted = 1;
+    } else if(wgts[i]==-1) {
+      if(weighted>0 || weighted<-1) weighted = 2;
+      else weighted = -1;
+    } else weighted = 2;
+    if(!children[i].is_boolean()) {
+      if(bool_domains==0) bool_domains = i;
+      else if(bool_domains>0) bool_domains = -1;
+    } 
   }
 }
 
@@ -4426,10 +4636,24 @@ Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args,
 					    std::vector< int >& wgts, 
 					    const int l, const int u) 
   : Expression(args) {
+  weighted = 0;
+  bool_domains = true;
+
   lower_bound = l;
   upper_bound = u;
   for(unsigned int i=0; i<wgts.size(); ++i) {
     weight.add(wgts[i]);
+    if(wgts[i]==1) {
+      if(weighted<0 || weighted>1) weighted = 2;
+      else weighted = 1;
+    } else if(wgts[i]==-1) {
+      if(weighted>0 || weighted<-1) weighted = 2;
+      else weighted = -1;
+    } else weighted = 2;
+    if(!children[i].is_boolean()) {
+      if(bool_domains==0) bool_domains = i;
+      else if(bool_domains>0) bool_domains = -1;
+    } 
   }
 }
 
@@ -4478,8 +4702,34 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
     }  
   }
   
-  if(!post_add)
-    s->add(Constraint(new PredicateWeightedSum(children, weight, lower_bound, upper_bound)));
+  if(!post_add) {
+    if(!bool_domains) {
+      if(weighted) {
+	s->add(Constraint(new ConstraintIncrementalWeightedBoolSumInterval(children, weight, lower_bound, upper_bound)));
+      } else {
+	s->add(Constraint(new ConstraintBoolSumInterval(children, lower_bound, upper_bound)));
+      }
+    } else if(lower_bound == 0 && upper_bound == 0 && bool_domains>0 && 
+	      (weight[bool_domains] == 1 || weight[bool_domains] == -1)) {
+      int n = children.size-1;
+      Variable last = children[n];
+      int wswap = weight[n];
+      
+      children[n] = children[bool_domains];
+      weight[n] = weight[bool_domains];
+      children[bool_domains] = last;
+      weight[bool_domains] = wswap;
+      
+      if(weight[bool_domains] == 1) {
+	for(int i=0; i<n; ++i)
+	  weight[i] = -weight[i];
+      }
+      weight.pop();
+      s->add(Constraint(new PredicateWeightedBoolSum(children, weight)));
+    } else {
+      s->add(Constraint(new PredicateWeightedSum(children, weight, lower_bound, upper_bound)));
+    }
+  }
 }
 
 
@@ -4774,10 +5024,34 @@ const char* Mistral::ElementExpression::get_name() const {
 
 void Mistral::ElementExpression::extract_predicate(Solver *s) {
   int arity = children.size-2;
-  if(children[arity].set_min(offset) == FAIL_EVENT)
-    { s->fail(); }
-  if(children[arity].set_max(arity-1+offset) == FAIL_EVENT)
-    { s->fail(); }
+#ifdef _DEBUG_AC
+  std::cout << "pre-propagte element(" 
+	    << children[arity] << " of ["
+	    << children[0] ;
+  for(unsigned int i=0; i<arity; ++i)
+    std::cout << ", " << children[i];
+  std::cout << "]) = " << children[arity+1] ;
+#endif
+  if(FAILED(children[arity].set_min(offset)))
+    { 
+#ifdef _DEBUG_AC
+      std::cout << " FAIL!" << std::endl;
+      //exit(1);
+#endif
+      s->fail(); 
+    }
+  else if(FAILED(children[arity].set_max(arity-1+offset)))
+    { 
+#ifdef _DEBUG_AC
+      std::cout << " FAIL!" << std::endl;
+      //exit(1);
+#endif
+      s->fail(); 
+    }
+#ifdef _DEBUG_AC
+    else
+      std::cout << "ok\n";
+#endif
   s->add(Constraint(new PredicateElement(children, offset)));
 }
 
@@ -6739,7 +7013,7 @@ void Mistral::SubsetExpression::extract_predicate(Solver *s) {
  
 
   if(violated) {
-    if(IS_FAIL(children[2].remove(spin))) s->fail();
+    if(FAILED(children[2].remove(spin))) s->fail();
   } else {
     int all;
     if(spin) {
@@ -6759,7 +7033,7 @@ void Mistral::SubsetExpression::extract_predicate(Solver *s) {
       } else if(implies_false.size) {
 	s->add((BoolSum(implies_false) == 0) <= children[2]);
       } else {
-	if(IS_FAIL(children[2].set_domain(spin))) s->fail();
+	if(FAILED(children[2].set_domain(spin))) s->fail();
       }
     } else {
 
@@ -6779,7 +7053,7 @@ void Mistral::SubsetExpression::extract_predicate(Solver *s) {
       } else if(implies_false.size) {
 	s->add(children[2] <= (BoolSum(implies_false) > 0));
       } else {
-	if(IS_FAIL(children[2].set_domain(spin))) s->fail();
+	if(FAILED(children[2].set_domain(spin))) s->fail();
       }
     }
   }
@@ -6888,7 +7162,7 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
 	  s->add(Constraint(new ConstraintLess(scp)));
 	  //s->add((children[0] == vali) <= y->children[idx]);
 	} else if(y->get_element_lb_index(vali)<0)
-	  if(IS_FAIL(children[0].remove(vali))) {
+	  if(FAILED(children[0].remove(vali))) {
 	    s->fail();
 	    break;
 	  }
@@ -6896,11 +7170,16 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
       } while(vali < vnxt);
     } else if(size == (ub-lb+1)) {
       // interval 
-      if(children[0].set_min(lb) == FAIL_EVENT) { s->fail(); }
-      if(children[0].set_max(ub) == FAIL_EVENT) { s->fail(); }
+      if(FAILED(children[0].set_min(lb))) { 
+	s->fail(); }
+      if(children[0].set_max(ub) == FAIL_EVENT) { 
+	s->fail(); 
+      }
     } else {
       // set
-      if(children[0].set_domain(values) == FAIL_EVENT) { s->fail(); }
+      if(FAILED(children[0].set_domain(values))) { 
+	s->fail(); 
+      }
     }
   } else {
     // not member
@@ -6927,7 +7206,7 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
 	  s->add(Constraint(new ConstraintLess(scp)));
 	  //s->add((children[0] == vali) <= y->children[idx]);
 	} else if(y->get_element_lb_index(vali)>=0)
-	  if(IS_FAIL(children[0].remove(vali))) {
+	  if(FAILED(children[0].remove(vali))) {
 	    s->fail();
 	    break;
 	  }
@@ -6935,10 +7214,14 @@ void Mistral::MemberExpression::extract_constraint(Solver *s) {
       } while(vali < vnxt);
     } else if(size == (ub-lb+1)) {
       // interval 
-      if(children[0].remove_interval(lb,ub) == FAIL_EVENT) { s->fail(); }
+      if(FAILED(children[0].remove_interval(lb,ub))) { 
+	s->fail(); 
+      }
     } else {
       // set
-      if(children[0].remove_set(values) == FAIL_EVENT) { s->fail(); }
+      if(FAILED(children[0].remove_set(values))) {  
+	s->fail(); 
+      }
     }
   }   
 
@@ -6954,6 +7237,7 @@ void Mistral::MemberExpression::extract_variable(Solver *s) {
 }
 
 void Mistral::MemberExpression::extract_predicate(Solver *s) { 
+
   //unsigned int i = 0, j = 0;
   if(children.size == 3) {
     // set variable
@@ -7030,7 +7314,9 @@ void Mistral::MemberExpression::extract_predicate(Solver *s) {
       }
       s->add(b <= BoolSum(implies_b));
     } else {
-      if(FAILED(b.set_domain(false))) s->fail();
+      if(FAILED(b.set_domain(false))) {
+	s->fail();
+      }
     } 
 
     if(implies_notb.size) {
@@ -7040,9 +7326,10 @@ void Mistral::MemberExpression::extract_predicate(Solver *s) {
       implies_notb.add(b);
       s->add(BoolSum(implies_notb, 1, INFTY));
     } else {
-      if(FAILED(b.set_domain(true))) s->fail();
-    } 
-
+      if(FAILED(b.set_domain(true))) {
+	s->fail();
+      } 
+    }
 
 
     // VarArray scp;
@@ -7190,15 +7477,15 @@ Mistral::Goal::~Goal() {
 bool Mistral::Goal::enforce() {
   // if(type == OPTIMIZATION) {
   //   if(sub_type == MINIMIZATION) {
-  //     return IS_FAIL(objective.set_max(upper_bound-1));
+  //     return FAILED(objective.set_max(upper_bound-1));
   //   } else { //if(sub_type == MAXIMIZATION) {
-  //     return IS_FAIL(objective.set_min(lower_bound+1));
+  //     return FAILED(objective.set_min(lower_bound+1));
   //   }
   // } else if(sub_type != NONE) {
   //   if(sub_type == MINIMIZATION) {
-  //     return IS_FAIL(objective.set_max(upper_bound));
+  //     return FAILED(objective.set_max(upper_bound));
   //   } else { //if(sub_type == MAXIMIZATION) {
-  //     return IS_FAIL(objective.set_min(lower_bound));
+  //     return FAILED(objective.set_min(lower_bound));
   //   }
   // }
 
@@ -7208,12 +7495,12 @@ bool Mistral::Goal::enforce() {
 
     //std::cout << objective << " in " << objective.get_domain() << " <= " << (upper_bound-1) << std::endl;
 
-    return IS_FAIL(objective.set_max(upper_bound-1));
+    return FAILED(objective.set_max(upper_bound-1));
   } else if(sub_type == MAXIMIZATION) {
 
     //std::cout << objective << " in " << objective.get_domain() << " >= " << (lower_bound+1) << std::endl;
 
-    return IS_FAIL(objective.set_min(lower_bound+1));
+    return FAILED(objective.set_min(lower_bound+1));
   }
 
   return false;
@@ -7541,10 +7828,10 @@ Mistral::Literal Mistral::literal(Variable x) {
   
 //   //if(_data_ == -1) return propagateRelation();
 //   switch(type()) {
-//   case REMOVAL:    return !IS_FAIL(var.remove(value()));
-//   case ASSIGNMENT: return !IS_FAIL(var.set_domain(value()));
-//   case LOWERBOUND: return !IS_FAIL(var.set_min(value()+1));
-//   case UPPERBOUND: return !IS_FAIL(var.set_max(value()));
+//   case REMOVAL:    return !FAILED(var.remove(value()));
+//   case ASSIGNMENT: return !FAILED(var.set_domain(value()));
+//   case LOWERBOUND: return !FAILED(var.set_min(value()+1));
+//   case UPPERBOUND: return !FAILED(var.set_max(value()));
 //   }
 //   return true;
 // }

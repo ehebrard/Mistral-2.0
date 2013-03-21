@@ -397,7 +397,7 @@ Mistral::PropagationOutcome Mistral::BinaryConstraint::bound_propagate(const int
 	std::cout << "  => none found!" << std::endl;
 #endif
 	
-	if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	if(FAILED(scope[revise_idx].remove(vali))) {
 	  wiped = FAILURE(revise_idx);
 	} 
       }
@@ -427,7 +427,7 @@ Mistral::PropagationOutcome Mistral::BinaryConstraint::bound_propagate(const int
 	  std::cout << "  => none found!" << std::endl;
 #endif
 	  
-	  if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	  if(FAILED(scope[revise_idx].remove(vali))) {
 	    wiped = FAILURE(revise_idx);
 	  } 
 	}
@@ -486,7 +486,7 @@ Mistral::PropagationOutcome Mistral::BinaryConstraint::propagate(const int chang
 	std::cout << "  => none found!" << std::endl;
 #endif
 
-      if(IS_FAIL(scope[revise_idx].remove(vali))) {
+      if(FAILED(scope[revise_idx].remove(vali))) {
 	wiped = FAILURE(revise_idx);
       } 
     } 
@@ -642,7 +642,7 @@ Mistral::PropagationOutcome Mistral::TernaryConstraint::propagate(const int chan
 	std::cout << "  => none found!" << std::endl;
 #endif
 
-	if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	if(FAILED(scope[revise_idx].remove(vali))) {
 	  wiped = FAILURE(revise_idx);
 	} 
       } 
@@ -713,7 +713,7 @@ Mistral::PropagationOutcome Mistral::TernaryConstraint::bound_propagate(const in
 	std::cout << "  => none found!" << std::endl;
 #endif
 
-	if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	if(FAILED(scope[revise_idx].remove(vali))) {
 	  wiped = FAILURE(revise_idx);
 	} 
       } 
@@ -750,7 +750,7 @@ Mistral::PropagationOutcome Mistral::TernaryConstraint::bound_propagate(const in
 	  std::cout << "  => none found!" << std::endl;
 #endif
 	  
-	  if(IS_FAIL(scope[revise_idx].remove(vali))) {
+	  if(FAILED(scope[revise_idx].remove(vali))) {
 	    wiped = FAILURE(revise_idx);
 	  } 
 	} 
@@ -891,7 +891,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate(const int chang
 #endif
 
 	if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
-	  if(IS_FAIL(scope[i].remove(vali))) {
+	  if(FAILED(scope[i].remove(vali))) {
 	    wiped = FAILURE(i);
 	  } 
 	}
@@ -986,7 +986,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
 // #endif
 
 // 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
-// 	    if(IS_FAIL(scope[i].remove(vali))) {
+// 	    if(FAILED(scope[i].remove(vali))) {
 // 	      wiped = FAILURE(i);
 // 	    } else if(changes.list_ == events.list_) {
 // 	      if(!changes.contain(i)) changes.add(i);
@@ -1011,7 +1011,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
 #endif
 
 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
-	    if(IS_FAIL(scope[i].remove(vali))) {
+	    if(FAILED(scope[i].remove(vali))) {
 	      wiped = FAILURE(i);
 	    } else if(changes.list_ == events.list_) {
 	      if(!changes.contain(i)) changes.add(i);
@@ -1043,7 +1043,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate(const int
 	//std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
 	
 	if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
-	  if(IS_FAIL(scope[i].remove(vali))) {
+	  if(FAILED(scope[i].remove(vali))) {
 	    wiped = FAILURE(i);
 	  } else if(changes.list_ == events.list_) {
 	    if(!changes.contain(i)) changes.add(i);
@@ -1061,7 +1061,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate(const int
 	  //std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
 	  
 	  if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
-	    if(IS_FAIL(scope[i].remove(vali))) {
+	    if(FAILED(scope[i].remove(vali))) {
 		wiped = FAILURE(i);
 	    }  else if(changes.list_ == events.list_) {
 	      if(!changes.contain(i)) changes.add(i);
@@ -1116,7 +1116,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate() {
 	    std::cout << "  => none found!" << std::endl;
 #endif
 
-	    if(IS_FAIL(scope[i].remove(vali))) {
+	    if(FAILED(scope[i].remove(vali))) {
 	      wiped = FAILURE(i);
 	    } else if(changes.list_ == events.list_) {
 	      if(!changes.contain(i)) changes.add(i);
@@ -1149,7 +1149,7 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate() {
 	  std::cout.flush();
 #endif
 
-	      if(IS_FAIL(scope[i].remove(vali))) {
+	      if(FAILED(scope[i].remove(vali))) {
 		wiped = FAILURE(i);
 	      }  else if(changes.list_ == events.list_) {
 		if(!changes.contain(i)) changes.add(i);
@@ -1707,17 +1707,17 @@ Mistral::PropagationOutcome Mistral::PredicateUpperBound::propagate() {
 
   if( scope[1].is_ground() ) {
     if( scope[1].get_min() ) { // x[0] <= k 
-      if( IS_FAIL(scope[0].set_max(bound)) )
+      if( FAILED(scope[0].set_max(bound)) )
 	wiped = FAILURE(0);
     } else { // x[0] > k
-      if( IS_FAIL(scope[0].set_min(bound+1)) )
+      if( FAILED(scope[0].set_min(bound+1)) )
 	wiped = FAILURE(0);
     } 
   } else {
     if( scope[0].get_min() > bound ) {
-      if( IS_FAIL(scope[1].set_domain(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].set_domain(0)) ) return FAILURE(1);
     } else if( scope[0].get_max() <= bound ) {
-      if( IS_FAIL(scope[1].remove(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].remove(0)) ) return FAILURE(1);
     }
   }
   
@@ -1730,15 +1730,15 @@ Mistral::PropagationOutcome Mistral::PredicateUpperBound::propagate(const int ch
 
   if( changed_idx ) {
     if( LB_CHANGED(evt) ) { // x[0] <= k 
-      if( IS_FAIL(scope[0].set_max(bound)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_max(bound)) ) wiped = FAILURE(0);
     } else { // x[0] > k
-      if( IS_FAIL(scope[0].set_min(bound+1)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_min(bound+1)) ) wiped = FAILURE(0);
     } 
   } else {
     if( LB_CHANGED(evt) && scope[0].get_min() > bound ) {
-      if( IS_FAIL(scope[1].set_domain(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].set_domain(0)) ) return FAILURE(1);
     } else if( UB_CHANGED(evt) && scope[0].get_max() <= bound ) {
-      if( IS_FAIL(scope[1].remove(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].remove(0)) ) return FAILURE(1);
     }
   }
   
@@ -1767,17 +1767,17 @@ Mistral::PropagationOutcome Mistral::PredicateLowerBound::propagate() {
 
   if( scope[1].is_ground() ) {
     if( scope[1].get_min() ) { // x[0] >= k 
-      if( IS_FAIL(scope[0].set_min(bound)) )
+      if( FAILED(scope[0].set_min(bound)) )
 	wiped = FAILURE(0);
     } else { // x[0] < k
-      if( IS_FAIL(scope[0].set_max(bound-1)) )
+      if( FAILED(scope[0].set_max(bound-1)) )
 	wiped = FAILURE(0);
     } 
   } else {
     if( scope[0].get_max() < bound ) {
-      if( IS_FAIL(scope[1].set_domain(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].set_domain(0)) ) return FAILURE(1);
     } else if( scope[0].get_min() >= bound ) {
-      if( IS_FAIL(scope[1].remove(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].remove(0)) ) return FAILURE(1);
     }
   }
   
@@ -1789,17 +1789,17 @@ Mistral::PropagationOutcome Mistral::PredicateLowerBound::propagate(const int ch
 
   if( changed_idx ) {
     if( LB_CHANGED(evt) ) { // x[0] >= k 
-      if( IS_FAIL(scope[0].set_min(bound)) )
+      if( FAILED(scope[0].set_min(bound)) )
 	wiped = FAILURE(0);
     } else { // x[0] < k
-      if( IS_FAIL(scope[0].set_max(bound-1)) )
+      if( FAILED(scope[0].set_max(bound-1)) )
 	wiped = FAILURE(0);
     } 
   } else {
     if( UB_CHANGED(evt) && scope[0].get_max() < bound ) {
-      if( IS_FAIL(scope[1].set_domain(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].set_domain(0)) ) return FAILURE(1);
     } else if( LB_CHANGED(evt) && scope[0].get_min() >= bound ) {
-      if( IS_FAIL(scope[1].remove(0)) ) return FAILURE(1);
+      if( FAILED(scope[1].remove(0)) ) return FAILURE(1);
     }
   }
   
@@ -1830,24 +1830,24 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate() {
 
   if( scope[2].is_ground() ) {
     if( scope[2].get_min() ) { // x[0] + k <= x[1]
-      if( IS_FAIL(scope[0].set_max(scope[1].get_max()-offset)) )
+      if( FAILED(scope[0].set_max(scope[1].get_max()-offset)) )
 	wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_min(scope[0].get_min()+offset)) )
+      else if( FAILED(scope[1].set_min(scope[0].get_min()+offset)) )
 	wiped = FAILURE(1);
     } else if( scope[2].get_max() == 0 ) { 
       // x[0] + k > x[1]
       // x[0] + k - 1 >= x[1]
       // x[1] + (1-k) <= x[0]
-      if( IS_FAIL(scope[0].set_min(scope[1].get_min()-offset+1)) )
+      if( FAILED(scope[0].set_min(scope[1].get_min()-offset+1)) )
 	wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_max(scope[0].get_max()+offset-1)) )
+      else if( FAILED(scope[1].set_max(scope[0].get_max()+offset-1)) )
 	wiped = FAILURE(1);
     } 
   } else {
     if( scope[0].get_min() + offset > scope[1].get_max() ) {
-      if( IS_FAIL(scope[2].set_domain(0)) ) return FAILURE(2);
+      if( FAILED(scope[2].set_domain(0)) ) return FAILURE(2);
     } else if( scope[0].get_max() + offset <= scope[1].get_min() ) {
-      if( IS_FAIL(scope[2].remove(0)) ) return FAILURE(2);
+      if( FAILED(scope[2].remove(0)) ) return FAILURE(2);
     }
   }
   
@@ -1863,12 +1863,12 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate(const int changed_
   if( changed_idx == 2 ) {
     if( LB_CHANGED(evt) ) {
       // x[0] + offset <= x[1]
-      if( IS_FAIL(scope[0].set_max(scope[1].get_max()-offset)) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_min(scope[0].get_min()+offset)) ) wiped = FAILURE(1);
+      if( FAILED(scope[0].set_max(scope[1].get_max()-offset)) ) wiped = FAILURE(0);
+      else if( FAILED(scope[1].set_min(scope[0].get_min()+offset)) ) wiped = FAILURE(1);
     } else {
       // x[0] + offset > x[1]
-      if( IS_FAIL(scope[0].set_min(scope[1].get_min()-offset+1)) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_max(scope[0].get_max()+offset-1)) ) wiped = FAILURE(1);
+      if( FAILED(scope[0].set_min(scope[1].get_min()-offset+1)) ) wiped = FAILURE(0);
+      else if( FAILED(scope[1].set_max(scope[0].get_max()+offset-1)) ) wiped = FAILURE(1);
     }
   } else {
     if( scope[2].is_ground() ) {
@@ -1876,9 +1876,9 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate(const int changed_
       if( scope[2].get_min() ) {
 	// x[0] + offset <= x[1]
 	if(changed_idx) {
-	  if(UB_CHANGED(evt) && IS_FAIL(scope[0].set_max(scope[1].get_max() - offset))) wiped = FAILURE(0);
+	  if(UB_CHANGED(evt) && FAILED(scope[0].set_max(scope[1].get_max() - offset))) wiped = FAILURE(0);
 	} else {
-	  if(LB_CHANGED(evt) && IS_FAIL(scope[1].set_min(scope[0].get_min() + offset))) wiped = FAILURE(1);
+	  if(LB_CHANGED(evt) && FAILED(scope[1].set_min(scope[0].get_min() + offset))) wiped = FAILURE(1);
 	}
       } else {
 
@@ -1889,9 +1889,9 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate(const int changed_
 	// x[0] + offset > x[1]
 	// x[1] + (1-k) <= x[0]	
 	if(changed_idx) {
-	  if(LB_CHANGED(evt) && IS_FAIL(scope[0].set_min(scope[1].get_min() - offset + 1))) wiped = FAILURE(0);
+	  if(LB_CHANGED(evt) && FAILED(scope[0].set_min(scope[1].get_min() - offset + 1))) wiped = FAILURE(0);
 	} else {
-	  if(UB_CHANGED(evt) && IS_FAIL(scope[1].set_max(scope[0].get_max() + offset - 1))) wiped = FAILURE(1);
+	  if(UB_CHANGED(evt) && FAILED(scope[1].set_max(scope[0].get_max() + offset - 1))) wiped = FAILURE(1);
 	}
       }
     } else {
@@ -1900,23 +1900,23 @@ Mistral::PropagationOutcome Mistral::PredicateLess::propagate(const int changed_
 	if(LB_CHANGED(evt)) {
 	  // x[1] is too big to be less than or equal to  (x[0] + k - 1) ?
 	  if(scope[1].get_min() > (scope[0].get_max() + offset -1) &&
-	     IS_FAIL(scope[2].set_domain(1))) wiped = FAILURE(2); 
+	     FAILED(scope[2].set_domain(1))) wiped = FAILURE(2); 
 	}
 	if(UB_CHANGED(evt)) {
 	  // x[1] is too small to be greater than or equal to  (x[0] + k) ?
 	  if(scope[1].get_max() < (scope[0].get_min() + offset) &&
-	     IS_FAIL(scope[2].set_domain(0))) wiped = FAILURE(2); 
+	     FAILED(scope[2].set_domain(0))) wiped = FAILURE(2); 
 	}
       } else {
 	if(LB_CHANGED(evt)) {
 	  // x[0] is too big to be less than or equal to (x[1] - k) ?
 	  if(scope[0].get_min() > (scope[1].get_max() - offset) &&
-	     IS_FAIL(scope[2].set_domain(0))) wiped = FAILURE(2); 
+	     FAILED(scope[2].set_domain(0))) wiped = FAILURE(2); 
 	}  
       	if(UB_CHANGED(evt)) {
 	  // x[0] is too small to be greater than or equal to (x[1] + 1 - k) ?
 	  if(scope[0].get_max() < (scope[1].get_min() + 1 - offset) &&
-	     IS_FAIL(scope[2].set_domain(1))) wiped = FAILURE(2); 
+	     FAILED(scope[2].set_domain(1))) wiped = FAILURE(2); 
 	}
       }
     }
@@ -2465,36 +2465,36 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
   // 	      << ") <-> " << scope[2] << " in " << scope[2].get_domain() << std::endl;
   // }
 
-  Mistral::PropagationOutcome wiped = propagate();
+  RewritingOutcome r_event = NO_EVENT; 
+  //Mistral::PropagationOutcome wiped = propagate();
 
-#ifdef _COMPLETE
-  if( active.size == 2 ) {
+  //#ifdef _COMPLETE
+  if( scope[2].is_ground() ) {
     relax();
-
-    if( scope[2].is_ground() ) {
-      if( (spin + scope[2].get_min()) == 1 ) {
-	solver->add(new ConstraintNotEqual(scope));
-      } else {
-
-	// std::cout << "   => change to an equal constraint" << std::endl;
-
-	--scope.size;
-	solver->add(new ConstraintEqual(scope));
-      }
+    r_event = get_solver()->constraints.size;
+    //r_event = REPLACED;
+    
+    if( (spin + scope[2].get_min()) == 1 ) {
+      get_solver()->add(Constraint(new ConstraintNotEqual(scope[0], scope[1])));
     } else {
-      Vector< Variable > new_scope;
-
-      int val = NOVAL, ground_idx = scope[1].is_ground();
-      new_scope.add(scope[1-ground_idx]);
-      new_scope.add(scope[2]);
-      
-      val = scope[ground_idx].get_min();
-      solver->add(new PredicateConstantEqual(new_scope, val, spin));
+      get_solver()->add(Constraint(new ConstraintEqual(scope[0], scope[1])));
     }
-  }
-#endif
 
-  return wiped;
+  } else if(scope[0].is_ground() || scope[1].is_ground()) {
+    relax();
+    r_event = get_solver()->constraints.size;
+    Vector< Variable > new_scope;
+    
+    int val = NOVAL, ground_idx = scope[1].is_ground();
+    new_scope.add(scope[1-ground_idx]);
+    new_scope.add(scope[2]);
+    
+    val = scope[ground_idx].get_min();
+    get_solver()->add(Constraint(new PredicateConstantEqual(new_scope, val, spin)));
+  }
+  //#endif
+
+  return r_event;
 }
 
 Mistral::PropagationOutcome Mistral::PredicateEqual::propagate() {      
@@ -2502,22 +2502,22 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate() {
 
   if( scope[2].is_ground() ) {
     if( (spin + scope[2].get_min()) == 1 ) {
-      if(scope[0].is_ground() && IS_FAIL(scope[1].remove(scope[0].get_min())))
+      if(scope[0].is_ground() && FAILED(scope[1].remove(scope[0].get_min())))
 	wiped = FAILURE(1);
       else {
-	if(scope[1].is_ground() && IS_FAIL(scope[0].remove(scope[1].get_min())))
+	if(scope[1].is_ground() && FAILED(scope[0].remove(scope[1].get_min())))
 	  wiped = FAILURE(0);
       }
     } else {
-      if( IS_FAIL(scope[0].set_domain(scope[1])) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_domain(scope[0])) ) wiped = FAILURE(1);
+      if( FAILED(scope[0].set_domain(scope[1])) ) wiped = FAILURE(0);
+      else if( FAILED(scope[1].set_domain(scope[0])) ) wiped = FAILURE(1);
     }
   } else {
     if( !(scope[0].intersect(scope[1])) ) {
-      if( IS_FAIL(scope[2].remove(spin)) ) wiped = FAILURE(2);	    
+      if( FAILED(scope[2].remove(spin)) ) wiped = FAILURE(2);	    
     } else { 
       if( scope[0].is_ground() && scope[1].is_ground() ) {
-	if( IS_FAIL(scope[2].set_domain(spin) )) wiped = FAILURE(2);
+	if( FAILED(scope[2].set_domain(spin) )) wiped = FAILURE(2);
       }
     }
   }
@@ -2532,12 +2532,12 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed
   if( changed_idx == 2 ) {
     if( LB_CHANGED(evt) == spin ) {
       // x[0] == x[1]
-      if( IS_FAIL(scope[0].set_domain(scope[1])) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_domain(scope[0])) ) wiped = FAILURE(1);
+      if( FAILED(scope[0].set_domain(scope[1])) ) wiped = FAILURE(0);
+      else if( FAILED(scope[1].set_domain(scope[0])) ) wiped = FAILURE(1);
     } else {
       // x[0] != x[1]
-      if(scope[0].is_ground() && IS_FAIL(scope[1].remove(scope[0].get_min()))) wiped = FAILURE(1);
-      else if(scope[1].is_ground() && IS_FAIL(scope[0].remove(scope[1].get_min()))) wiped = FAILURE(0);
+      if(scope[0].is_ground() && FAILED(scope[1].remove(scope[0].get_min()))) wiped = FAILURE(1);
+      else if(scope[1].is_ground() && FAILED(scope[0].remove(scope[1].get_min()))) wiped = FAILURE(0);
     }
   } else {
     if( scope[2].is_ground() ) {
@@ -2545,19 +2545,19 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed
       // std::cout << "HERE: " << spin << " " <<  scope[2].get_min() << " " << scope[changed_idx].get_domain() << std::endl;
 
       if( (spin != scope[2].get_min()) ) {
-	if(scope[changed_idx].is_ground() && IS_FAIL(scope[1-changed_idx].remove(scope[changed_idx].get_min()))) 
+	if(scope[changed_idx].is_ground() && FAILED(scope[1-changed_idx].remove(scope[changed_idx].get_min()))) 
 	  wiped = FAILURE(1-changed_idx);
       } else {
-	if( IS_FAIL(scope[1-changed_idx].set_domain(scope[changed_idx])) ) 
+	if( FAILED(scope[1-changed_idx].set_domain(scope[changed_idx])) ) 
 	  wiped = FAILURE(1-changed_idx);
       }
     } else {
       // check if (in)equality can be deduced
       if( !(scope[0].intersect(scope[1])) ) {
-	if( IS_FAIL(scope[2].remove(spin)) ) wiped = FAILURE(2);	    
+	if( FAILED(scope[2].remove(spin)) ) wiped = FAILURE(2);	    
       } else { 
 	if( scope[0].is_ground() && scope[1].is_ground() ) {
-	  if( IS_FAIL(scope[2].set_domain(spin) )) wiped = FAILURE(2);
+	  if( FAILED(scope[2].set_domain(spin) )) wiped = FAILURE(2);
 	}
       }
     }
@@ -2567,7 +2567,7 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed
 }
 
 std::ostream& Mistral::PredicateEqual::display(std::ostream& os) const {
-  os << scope[2]/*.get_var()*/ << " <=> (";
+  os << scope[2]/*.get_var()*/ << " <=2> (";
   if(spin) os << scope[0]/*.get_var()*/ << " == " << scope[1]/*.get_var()*/;
   else os << scope[0]/*.get_var()*/ << " =/= " << scope[1]/*.get_var()*/;
   os << ")";
@@ -2591,15 +2591,15 @@ Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate() {
 
   if( scope[1].is_ground() ) {
     if( (spin + scope[1].get_min()) == 1 ) {
-      if( IS_FAIL(scope[0].remove(value)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].remove(value)) ) wiped = FAILURE(0);
     } else {
-      if( IS_FAIL(scope[0].set_domain(value)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(value)) ) wiped = FAILURE(0);
     }
   } else {
     if( !(scope[0].contain(value)) ) {
-      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+      if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].is_ground() ) {
-      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+      if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
   
@@ -2611,23 +2611,68 @@ Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate(const int
 
   if( changed_idx ) {
     if( (spin + LB_CHANGED(evt)) == 1 ) {
-      if( IS_FAIL(scope[0].remove(value)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].remove(value)) ) wiped = FAILURE(0);
     } else {
-      if( IS_FAIL(scope[0].set_domain(value)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(value)) ) wiped = FAILURE(0);
     }
   } else {
     if( !(scope[0].contain(value)) ) {
-      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+      if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].is_ground() ) {
-      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+      if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
 
   return wiped;
 }
 
+
+Mistral::PropagationOutcome Mistral::PredicateConstantEqual::rewrite() {
+  RewritingOutcome r_evt = NO_EVENT; 
+
+  if(scope[0].is_ground() && scope[1].is_ground()) {
+
+#ifdef _DEBUG_REWRITE
+    std::cout << "    relax ";
+    display(std::cout);
+    std::cout << std::endl;
+#endif
+
+    r_evt = SUPPRESSED;
+    relax();
+  } else if(scope[0].get_min()==0 && scope[0].get_max()==1) {
+      
+      r_evt = SUPPRESSED;
+      
+#ifdef _DEBUG_REWRITE
+      std::cout << "    relax ";
+      display(std::cout);
+      std::cout << std::endl;
+#endif
+      
+      relax();
+      
+      
+      Constraint con;
+      
+      if(spin == value)
+	con = Constraint( new ConstraintEqual(scope[0], scope[1]) );
+      else
+	con = Constraint( new PredicateNot(scope[0], scope[1]) );
+      
+#ifdef _DEBUG_REWRITE
+      std::cout << "    post " << con << std::endl;
+#endif
+
+      get_solver()->add( con );
+  }  
+
+  return r_evt;
+}
+
+
 std::ostream& Mistral::PredicateConstantEqual::display(std::ostream& os) const {
-  os << scope[1]/*.get_var()*/ << " <=> (";
+  os << scope[1]/*.get_var()*/ << " <=1> (";
   if(spin) os << scope[0]/*.get_var()*/ << " == " << value;
   else os << scope[0]/*.get_var()*/ << " =/= " << value;
   os << ")";
@@ -2651,20 +2696,20 @@ Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate() {
 
   if( scope[1].is_ground() ) {
     if( (spin + scope[1].get_min()) == 1 ) {
-      if( IS_FAIL(scope[0].remove_interval(lower_bound, upper_bound)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].remove_interval(lower_bound, upper_bound)) ) wiped = FAILURE(0);
     } else {
-      //if( IS_FAIL(scope[0].set_domain(lower_bound, upper_bound)) ) wiped = FAILURE(0);
-      if( IS_FAIL(scope[0].set_min(lower_bound)) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[0].set_max(upper_bound)) ) wiped = FAILURE(0);
+      //if( FAILED(scope[0].set_domain(lower_bound, upper_bound)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_min(lower_bound)) ) wiped = FAILURE(0);
+      else if( FAILED(scope[0].set_max(upper_bound)) ) wiped = FAILURE(0);
     }
   } else {
 
     //std::cout << scope[0].get_domain() << " <> [" << lower_bound << ".." << upper_bound << "]" << std::endl; 
 
     if( !(scope[0].intersect(lower_bound, upper_bound)) ) {
-      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+      if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].included(lower_bound, upper_bound) ) {
-      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+      if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
   
@@ -2679,16 +2724,16 @@ Mistral::PropagationOutcome Mistral::PredicateIntervalMember::propagate(const in
 
   if(changed_idx == 1) {
     if( (spin + LB_CHANGED(evt)) == 1 ) {
-      if( IS_FAIL(scope[0].remove_interval(lower_bound, upper_bound)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].remove_interval(lower_bound, upper_bound)) ) wiped = FAILURE(0);
     } else {
-      if( IS_FAIL(scope[0].set_min(lower_bound)) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[0].set_max(upper_bound)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_min(lower_bound)) ) wiped = FAILURE(0);
+      else if( FAILED(scope[0].set_max(upper_bound)) ) wiped = FAILURE(0);
     }
   } else {
     if( !(scope[0].intersect(lower_bound, upper_bound)) ) {
-      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+      if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].included(lower_bound, upper_bound) ) {
-      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+      if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
 
@@ -2724,15 +2769,15 @@ Mistral::PropagationOutcome Mistral::PredicateSetMember::propagate() {
 
   if( scope[1].is_ground() ) {
     if( (spin + scope[1].get_min()) == 1 ) {
-      if( IS_FAIL(scope[0].set_domain(non_values)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(non_values)) ) wiped = FAILURE(0);
     } else {
-      if( IS_FAIL(scope[0].set_domain(values)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(values)) ) wiped = FAILURE(0);
     }
   } else {
     if( !(scope[0].intersect(values)) ) {
-      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+      if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].included(values) ) {
-      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+      if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
   
@@ -2744,15 +2789,15 @@ Mistral::PropagationOutcome Mistral::PredicateSetMember::propagate(const int cha
 
   if( changed_idx == 1 ) {
     if( (spin + LB_CHANGED(evt)) == 1 ) {
-      if( IS_FAIL(scope[0].set_domain(non_values)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(non_values)) ) wiped = FAILURE(0);
     } else {
-      if( IS_FAIL(scope[0].set_domain(values)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(values)) ) wiped = FAILURE(0);
     }
   } else {
     if( !(scope[0].intersect(values)) ) {
-      if( IS_FAIL(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
+      if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].included(values) ) {
-      if( IS_FAIL(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
+      if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
   
@@ -2790,10 +2835,10 @@ Mistral::PropagationOutcome Mistral::PredicateOffset::propagate() {
 #endif
 
 
-  if( IS_FAIL(scope[0].set_min( scope[1].get_min() - offset )) ) wiped = FAILURE(0); 
-  else if( IS_FAIL(scope[0].set_max( scope[1].get_max() - offset )) ) wiped = FAILURE(0); 
-  else if( IS_FAIL(scope[1].set_min( scope[0].get_min() + offset )) ) wiped = FAILURE(1); 
-  else if( IS_FAIL(scope[1].set_max( scope[0].get_max() + offset )) ) wiped = FAILURE(1);
+  if( FAILED(scope[0].set_min( scope[1].get_min() - offset )) ) wiped = FAILURE(0); 
+  else if( FAILED(scope[0].set_max( scope[1].get_max() - offset )) ) wiped = FAILURE(0); 
+  else if( FAILED(scope[1].set_min( scope[0].get_min() + offset )) ) wiped = FAILURE(1); 
+  else if( FAILED(scope[1].set_max( scope[0].get_max() + offset )) ) wiped = FAILURE(1);
 
 
 #ifdef _DEBUG_OFFSET
@@ -2898,22 +2943,22 @@ void Mistral::PredicateFactor::mark_domain() {
 Mistral::PropagationOutcome Mistral::PredicateFactor::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if( IS_FAIL(scope[0].set_min( (factor>0 ? 
+  if( FAILED(scope[0].set_min( (factor>0 ? 
 				 scope[1].get_min() : 
 				 scope[1].get_max()) / factor )) ) {
     wiped = FAILURE(0); 
 
-  } else if( IS_FAIL(scope[0].set_max( (factor>0 ? 
+  } else if( FAILED(scope[0].set_max( (factor>0 ? 
 				      scope[1].get_max() :
 					scope[1].get_min()) / factor )) ) {
     wiped = FAILURE(0); 
 
-  } else if( IS_FAIL(scope[1].set_min( (factor>0 ? 
+  } else if( FAILED(scope[1].set_min( (factor>0 ? 
 					scope[0].get_min() : 
 					scope[0].get_max()) * factor )) ) {
     wiped = FAILURE(1); 
 
-  } else if( IS_FAIL(scope[1].set_max( (factor>0 ? 
+  } else if( FAILED(scope[1].set_max( (factor>0 ? 
 					scope[0].get_max() :
 					scope[0].get_min()) * factor )) ) {
     wiped = FAILURE(1);
@@ -2928,26 +2973,26 @@ Mistral::PropagationOutcome Mistral::PredicateFactor::propagate(const int change
 
   if(changed_idx == 1) {
     if(factor>0) {
-      if( LB_CHANGED(evt) && IS_FAIL(scope[0].set_min( scope[1].get_min() / factor )) )
+      if( LB_CHANGED(evt) && FAILED(scope[0].set_min( scope[1].get_min() / factor )) )
 	wiped = FAILURE(0); 
-      if( UB_CHANGED(evt) && IS_FAIL(scope[0].set_max( scope[1].get_max() / factor )) ) 
+      if( UB_CHANGED(evt) && FAILED(scope[0].set_max( scope[1].get_max() / factor )) ) 
 	wiped = FAILURE(0); 
     } else {
-      if( UB_CHANGED(evt) && IS_FAIL(scope[0].set_min( scope[1].get_max() / factor )) )
+      if( UB_CHANGED(evt) && FAILED(scope[0].set_min( scope[1].get_max() / factor )) )
 	wiped = FAILURE(0); 
-      if( LB_CHANGED(evt) && IS_FAIL(scope[0].set_max( scope[1].get_min() / factor )) )
+      if( LB_CHANGED(evt) && FAILED(scope[0].set_max( scope[1].get_min() / factor )) )
 	wiped = FAILURE(0); 
     }
   } else {
     if(factor>0) {
-      if( LB_CHANGED(evt) && IS_FAIL(scope[1].set_min( scope[0].get_min() * factor )) )
+      if( LB_CHANGED(evt) && FAILED(scope[1].set_min( scope[0].get_min() * factor )) )
 	wiped = FAILURE(1); 
-      if( UB_CHANGED(evt) && IS_FAIL(scope[1].set_max( scope[0].get_max() * factor )) ) 
+      if( UB_CHANGED(evt) && FAILED(scope[1].set_max( scope[0].get_max() * factor )) ) 
 	wiped = FAILURE(1); 
     } else {
-      if( UB_CHANGED(evt) && IS_FAIL(scope[1].set_min( scope[0].get_max() * factor )) )
+      if( UB_CHANGED(evt) && FAILED(scope[1].set_min( scope[0].get_max() * factor )) )
 	wiped = FAILURE(1); 
-      if( LB_CHANGED(evt) && IS_FAIL(scope[1].set_max( scope[0].get_min() * factor )) )
+      if( LB_CHANGED(evt) && FAILED(scope[1].set_max( scope[0].get_min() * factor )) )
 	wiped = FAILURE(1); 
     }
   }
@@ -2998,7 +3043,7 @@ Mistral::PropagationOutcome Mistral::PredicateAbs::propagate_change_on_X(const E
     if(scope[0].get_max() < 0) lb = -scope[0].get_max();
     if(scope[0].get_min() > 0) lb =  scope[0].get_min();
 
-    if(IS_FAIL(scope[1].set_domain(
+    if(FAILED(scope[1].set_domain(
 				   lb,
 				   std::max(
 					    scope[0].get_max(),
@@ -3008,7 +3053,7 @@ Mistral::PropagationOutcome Mistral::PredicateAbs::propagate_change_on_X(const E
     scope[0].put_negation_in(buffer);
     scope[0].union_to(buffer);
     
-    if(IS_FAIL(scope[1].set_domain(buffer))) wiped = FAILURE(1);
+    if(FAILED(scope[1].set_domain(buffer))) wiped = FAILURE(1);
   }
 
 #ifdef _DEBUG_ABS
@@ -3033,20 +3078,20 @@ Mistral::PropagationOutcome Mistral::PredicateAbs::propagate_change_on_absX(cons
 
 
   if(scope[1].is_range()) {
-    if(IS_FAIL(scope[0].set_domain(-scope[1].get_max(), scope[1].get_max()))) wiped = FAILURE(0);
+    if(FAILED(scope[0].set_domain(-scope[1].get_max(), scope[1].get_max()))) wiped = FAILURE(0);
     else {
       
       // std::cout << "scope[1].get_min() > 0 : " << (scope[1].get_min() > 0) << std::endl;
       // std::cout << "[" << (1-scope[1].get_min()) << "," << (scope[1].get_min()-1) << "]\n";
 
-      if(scope[1].get_min() > 0 && IS_FAIL(scope[0].remove_interval(1-scope[1].get_min(), scope[1].get_min()-1))) wiped = FAILURE(0);
+      if(scope[1].get_min() > 0 && FAILED(scope[0].remove_interval(1-scope[1].get_min(), scope[1].get_min()-1))) wiped = FAILURE(0);
 
     }
   } else {
     scope[1].put_negation_in(buffer);
     scope[1].union_to(buffer);
     
-    if(IS_FAIL(scope[0].set_domain(buffer))) wiped = FAILURE(0);
+    if(FAILED(scope[0].set_domain(buffer))) wiped = FAILURE(0);
   }
 
 
@@ -3091,6 +3136,17 @@ void Mistral::PredicateNot::initialise() {
 
 }
 
+Mistral::Explanation::iterator Mistral::PredicateNot::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
+  if(a == NULL_ATOM) {
+    explanation[0] = NOT(literal(scope[0]));
+    explanation[1] = NOT(literal(scope[1]));
+    end = &(explanation[0])+2;
+  } else {
+    explanation[0] = NOT(literal(scope[scope[0].id() == a]));
+    end = &(explanation[0])+1;;
+  }
+  return &(explanation[0]);
+}
 
 Mistral::PropagationOutcome Mistral::PredicateNot::rewrite() {
   RewritingOutcome r_evt = NO_EVENT; 
@@ -3172,15 +3228,15 @@ Mistral::PropagationOutcome Mistral::PredicateNot::propagate() {
 
   if( scope[1].is_ground() ) {
     if( scope[1].get_min() ) { // x[0] == 0
-      if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].set_domain(0)) ) wiped = FAILURE(0);
     } else if( scope[1].get_max() == 0 ) { //x[0] != 0
-      if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+      if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
     } 
   } else {
     if( !scope[0].contain(0) ) {
-      if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
+      if(FAILED(scope[1].set_domain(0))) wiped = FAILURE(1);
     } else if( scope[0].is_ground() ) {
-      if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
+      if(FAILED(scope[1].remove(0))) wiped = FAILURE(1);
     }
   }
   
@@ -3194,19 +3250,19 @@ Mistral::PropagationOutcome Mistral::PredicateNot::propagate(const int changed_i
 
   // if( changed_idx ) {
   //   if( LB_CHANGED(evt) ) { // x[0] == 0
-  //     if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+  //     if( FAILED(scope[0].set_domain(0)) ) wiped = FAILURE(0);
   //   } else { //x[0] != 0
-  //     if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+  //     if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
   //   } 
   // } else {
   //   if( LB_CHANGED(evt) ) {
-  //     if(IS_FAIL(scope[1].set_domain(0))) wiped = FAILURE(1);
+  //     if(FAILED(scope[1].set_domain(0))) wiped = FAILURE(1);
   //   } else {
-  //     if(IS_FAIL(scope[1].remove(0))) wiped = FAILURE(1);
+  //     if(FAILED(scope[1].remove(0))) wiped = FAILURE(1);
   //   }
   // }
 
-  if( IS_FAIL( scope[1-changed_idx].set_domain(UB_CHANGED(evt)) ) ) wiped = FAILURE(1-changed_idx);
+  if( FAILED( scope[1-changed_idx].set_domain(UB_CHANGED(evt)) ) ) wiped = FAILURE(1-changed_idx);
 
 
   //  std::cout << scope[0].get_domain() << " " << scope[1].get_domain() << std::endl << std::endl ; 
@@ -3236,14 +3292,14 @@ Mistral::PropagationOutcome Mistral::PredicateNeg::propagate() {
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
   for(int changed_idx = 0; changed_idx < 2; ++changed_idx) {
-    if(IS_FAIL(scope[1-changed_idx].set_max(-scope[changed_idx].get_min()))) wiped = FAILURE(1-changed_idx);
-    if(IS_FAIL(scope[1-changed_idx].set_min(-scope[changed_idx].get_max()))) wiped = FAILURE(1-changed_idx);
+    if(FAILED(scope[1-changed_idx].set_max(-scope[changed_idx].get_min()))) wiped = FAILURE(1-changed_idx);
+    if(FAILED(scope[1-changed_idx].set_min(-scope[changed_idx].get_max()))) wiped = FAILURE(1-changed_idx);
     
     if( scope[changed_idx].get_size() < scope[1-changed_idx].get_size() ) {
       int vali, vnxt = scope[1-changed_idx].get_min();
       do {
 	vali = vnxt;
-	if(!scope[changed_idx].contain(-vali) && IS_FAIL(scope[1-changed_idx].remove(vali))) wiped = FAILURE(1-changed_idx);
+	if(!scope[changed_idx].contain(-vali) && FAILED(scope[1-changed_idx].remove(vali))) wiped = FAILURE(1-changed_idx);
 	vnxt = scope[1-changed_idx].next(vali);
       } while(vali < vnxt);
     }
@@ -3256,19 +3312,19 @@ Mistral::PropagationOutcome Mistral::PredicateNeg::propagate(const int changed_i
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
   if( ASSIGNED(evt) ) {
-    if(IS_FAIL(scope[1-changed_idx].set_domain(-scope[changed_idx].get_min()))) wiped = FAILURE(1-changed_idx);
+    if(FAILED(scope[1-changed_idx].set_domain(-scope[changed_idx].get_min()))) wiped = FAILURE(1-changed_idx);
   } else {
     if( LB_CHANGED(evt) ) {
-      if(IS_FAIL(scope[1-changed_idx].set_max(-scope[changed_idx].get_min()))) wiped = FAILURE(1-changed_idx);
+      if(FAILED(scope[1-changed_idx].set_max(-scope[changed_idx].get_min()))) wiped = FAILURE(1-changed_idx);
     }
     if( UB_CHANGED(evt) ) {
-      if(IS_FAIL(scope[1-changed_idx].set_min(-scope[changed_idx].get_max()))) wiped = FAILURE(1-changed_idx);
+      if(FAILED(scope[1-changed_idx].set_min(-scope[changed_idx].get_max()))) wiped = FAILURE(1-changed_idx);
     }
     if( scope[changed_idx].get_size() < scope[1-changed_idx].get_size() ) {
       int vali, vnxt = scope[1-changed_idx].get_min();
       do {
 	vali = vnxt;
-	if(!scope[changed_idx].contain(-vali) && IS_FAIL(scope[1-changed_idx].remove(vali))) wiped = FAILURE(1-changed_idx);
+	if(!scope[changed_idx].contain(-vali) && FAILED(scope[1-changed_idx].remove(vali))) wiped = FAILURE(1-changed_idx);
 	vnxt = scope[1-changed_idx].next(vali);
       } while(vali < vnxt);
     }
@@ -3300,22 +3356,22 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate() {
 
   if( scope[2].is_ground() ) {
     if( scope[2].get_min() ) {
-      if( IS_FAIL(scope[0].remove(0)) ) 
+      if( FAILED(scope[0].remove(0)) ) 
 	wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].remove(0)) ) 
+      else if( FAILED(scope[1].remove(0)) ) 
 	wiped = FAILURE(1);
     } else if( scope[2].get_max() == 0 ) {
       if( scope[1].get_min() ){
-	if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+	if( FAILED(scope[0].set_domain(0)) ) wiped = FAILURE(0);
       } else if( scope[0].get_min() ) {
-	if( IS_FAIL(scope[1].set_domain(0)) ) wiped = FAILURE(1);
+	if( FAILED(scope[1].set_domain(0)) ) wiped = FAILURE(1);
       }
     } 
   } else {
     if( scope[0].get_min() && scope[1].get_min() ) {
-      if( IS_FAIL(scope[2].remove(0)) ) return FAILURE(2);
+      if( FAILED(scope[2].remove(0)) ) return FAILURE(2);
     } else if( !scope[0].get_max() || !scope[1].get_max() ) {
-      if( IS_FAIL(scope[2].set_domain(0)) ) return FAILURE(2);
+      if( FAILED(scope[2].set_domain(0)) ) return FAILURE(2);
     }
   }
 
@@ -3337,26 +3393,26 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate(const int changed_i
 
   if(changed_idx == 2) {
     if(LB_CHANGED(evt)) {
-      if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].remove(0)) ) wiped = FAILURE(1);   
+      if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
+      else if( FAILED(scope[1].remove(0)) ) wiped = FAILURE(1);   
     } else {
       if( scope[1].get_min() ){
-	if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+	if( FAILED(scope[0].set_domain(0)) ) wiped = FAILURE(0);
       } else if( scope[0].get_min() ) {
-	if( IS_FAIL(scope[1].set_domain(0)) ) wiped = FAILURE(1);
+	if( FAILED(scope[1].set_domain(0)) ) wiped = FAILURE(1);
       }
     }
   } else { // either z is not yet set, or it is a not(x and y) constraint
     if( scope[2].is_ground() ) {
       if(LB_CHANGED(evt)) {
 	// it is an "not(AND)" and one of the variable was set to 1
-	if(IS_FAIL(scope[1-changed_idx].set_domain(0))) wiped = FAILURE(1-changed_idx);
+	if(FAILED(scope[1-changed_idx].set_domain(0))) wiped = FAILURE(1-changed_idx);
       } 
     } else {
       if(UB_CHANGED(evt)) {
-	if(IS_FAIL(scope[2].set_domain(0))) wiped = FAILURE(2);
+	if(FAILED(scope[2].set_domain(0))) wiped = FAILURE(2);
       } else if(scope[1-changed_idx].is_ground()) {
-	if(IS_FAIL(scope[2].remove(0))) wiped = FAILURE(2);
+	if(FAILED(scope[2].remove(0))) wiped = FAILURE(2);
       }
     }
   }
@@ -3398,26 +3454,26 @@ Mistral::PropagationOutcome Mistral::PredicateOr::propagate(const int changed_id
 
   if(changed_idx == 2) {
     if(UB_CHANGED(evt)) {
-      if( IS_FAIL(scope[0].set_domain(0)) ) wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_domain(0)) ) wiped = FAILURE(1);
+      if( FAILED(scope[0].set_domain(0)) ) wiped = FAILURE(0);
+      else if( FAILED(scope[1].set_domain(0)) ) wiped = FAILURE(1);
     } else {
       if( scope[1].get_max() == 0 ){
-	if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+	if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
       } else if( scope[0].get_max() == 0 ) {
-	if( IS_FAIL(scope[1].remove(0)) ) wiped = FAILURE(1);
+	if( FAILED(scope[1].remove(0)) ) wiped = FAILURE(1);
       }
     } 
   } else { // either z is not yet set, or it is a not(x and y) constraint
     if( scope[2].is_ground() ) {
       if(UB_CHANGED(evt)) {
 	// it is an "OR" constraint
-	if(IS_FAIL(scope[1-changed_idx].remove(0))) wiped = FAILURE(1-changed_idx);
+	if(FAILED(scope[1-changed_idx].remove(0))) wiped = FAILURE(1-changed_idx);
       }
     } else { 
       if(LB_CHANGED(evt)) {
-	if( IS_FAIL(scope[2].remove(0)) ) wiped = FAILURE(2);
+	if( FAILED(scope[2].remove(0)) ) wiped = FAILURE(2);
       } else if(scope[1-changed_idx].is_ground()) {
-	if( IS_FAIL(scope[2].set_domain(0)) ) wiped = FAILURE(2);
+	if( FAILED(scope[2].set_domain(0)) ) wiped = FAILURE(2);
       }
     }
   }
@@ -3430,22 +3486,22 @@ Mistral::PropagationOutcome Mistral::PredicateOr::propagate() {
 
   if( scope[2].is_ground() ) {
     if( scope[2].get_max() == 0 ) {
-      if( IS_FAIL(scope[0].set_domain(0)) ) 
+      if( FAILED(scope[0].set_domain(0)) ) 
 	wiped = FAILURE(0);
-      else if( IS_FAIL(scope[1].set_domain(0)) ) 
+      else if( FAILED(scope[1].set_domain(0)) ) 
 	wiped = FAILURE(1);
     } else if( scope[2].get_min() ) {
       if( scope[1].get_max() == 0 ){
-	if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+	if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
       } else if( scope[0].get_max() == 0 ) {
-	if( IS_FAIL(scope[1].remove(0)) ) wiped = FAILURE(1);
+	if( FAILED(scope[1].remove(0)) ) wiped = FAILURE(1);
       }
     } 
   } else {
     if( scope[0].get_min() || scope[1].get_min() ) {
-      if( IS_FAIL(scope[2].remove(0)) ) wiped = FAILURE(2);
+      if( FAILED(scope[2].remove(0)) ) wiped = FAILURE(2);
     } else if( !scope[0].get_max() && !scope[1].get_max() ) {
-      if( IS_FAIL(scope[2].set_domain(0)) ) wiped = FAILURE(2);
+      if( FAILED(scope[2].set_domain(0)) ) wiped = FAILURE(2);
     }
   }
 
@@ -3468,9 +3524,9 @@ void Mistral::ConstraintAnd::initialise() {
 Mistral::PropagationOutcome Mistral::ConstraintAnd::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if( IS_FAIL(scope[0].remove(0)) ) 
+  if( FAILED(scope[0].remove(0)) ) 
     wiped = FAILURE(0);
-  else if( IS_FAIL(scope[1].remove(0)) ) 
+  else if( FAILED(scope[1].remove(0)) ) 
     wiped = FAILURE(1);
   
   return wiped;
@@ -3480,9 +3536,9 @@ Mistral::PropagationOutcome Mistral::ConstraintAnd::propagate(const int changed_
 							      const Event evt) {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if( IS_FAIL(scope[0].remove(0)) ) 
+  if( FAILED(scope[0].remove(0)) ) 
     wiped = FAILURE(0);
-  else if( IS_FAIL(scope[1].remove(0)) ) 
+  else if( FAILED(scope[1].remove(0)) ) 
     wiped = FAILURE(1);
   
   return wiped;
@@ -3505,9 +3561,9 @@ Mistral::PropagationOutcome Mistral::ConstraintNotAnd::propagate() {
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
   if( scope[1].get_min() ){
-    if( IS_FAIL(scope[0].remove(1)) ) wiped = FAILURE(0);
+    if( FAILED(scope[0].remove(1)) ) wiped = FAILURE(0);
   } else if( scope[0].get_min() ) {
-    if( IS_FAIL(scope[1].remove(1)) ) wiped = FAILURE(1);
+    if( FAILED(scope[1].remove(1)) ) wiped = FAILURE(1);
   }
   
   return wiped;
@@ -3517,7 +3573,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNotAnd::propagate(const int chang
 							      const Event evt) {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if(LB_CHANGED(evt) && IS_FAIL(scope[1-changed_idx].remove(1))) wiped = FAILURE(1-changed_idx);
+  if(LB_CHANGED(evt) && FAILED(scope[1-changed_idx].remove(1))) wiped = FAILURE(1-changed_idx);
   
   return wiped;
 }
@@ -3537,9 +3593,9 @@ Mistral::PropagationOutcome Mistral::ConstraintOr::propagate() {
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
   if( scope[1].get_max() == 0 ){
-    if( IS_FAIL(scope[0].remove(0)) ) wiped = FAILURE(0);
+    if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
   } else if( scope[0].get_max() == 0 ) {
-    if( IS_FAIL(scope[1].remove(0)) ) wiped = FAILURE(1);
+    if( FAILED(scope[1].remove(0)) ) wiped = FAILURE(1);
   }
   
   return wiped;
@@ -3549,7 +3605,7 @@ Mistral::PropagationOutcome Mistral::ConstraintOr::propagate(const int changed_i
 							     const Event evt) {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  if(UB_CHANGED(evt) && IS_FAIL(scope[1-changed_idx].remove(0))) wiped = FAILURE(1-changed_idx);
+  if(UB_CHANGED(evt) && FAILED(scope[1-changed_idx].remove(0))) wiped = FAILURE(1-changed_idx);
   
   return wiped;
 }
@@ -3845,7 +3901,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
     if(lb_not_revised&1) {
       // revise scope[0]'lb
       cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
-      if(IS_FAIL(cevt)) {
+      if(FAILED(cevt)) {
 	wiped = FAILURE(0);
 	break;
       } else if(cevt != NO_EVENT) {
@@ -3859,7 +3915,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
     if(ub_not_revised&1) {
       // revise scope[0]'ub
       cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
-      if(IS_FAIL(cevt)) {
+      if(FAILED(cevt)) {
 	wiped = FAILURE(0);
 	break;
       } else if(cevt != NO_EVENT) {
@@ -3874,7 +3930,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
     if(lb_not_revised&2) {
       // revise scope[1]'lb
       cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
-      if(IS_FAIL(cevt)) {
+      if(FAILED(cevt)) {
 	wiped = FAILURE(1);
 	break;
       } else if(cevt != NO_EVENT) {
@@ -3888,7 +3944,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
     if(ub_not_revised&2) {
       // revise scope[1]'ub
       cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
-      if(IS_FAIL(cevt)) {
+      if(FAILED(cevt)) {
 	wiped = FAILURE(1);
 	break;
       } else if(cevt != NO_EVENT) {
@@ -3903,7 +3959,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
     if(lb_not_revised&4) {
       // revise scope[2]'lb
       cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
-      if(IS_FAIL(cevt)) {
+      if(FAILED(cevt)) {
 	wiped = FAILURE(2);
 	break;
       } else if(cevt != NO_EVENT) {
@@ -3917,7 +3973,7 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {
     if(ub_not_revised&4) {
       // revise scope[2]'ub
       cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
-      if(IS_FAIL(cevt)) {
+      if(FAILED(cevt)) {
 	wiped = FAILURE(2);
 	break;
       } else if(cevt != NO_EVENT) {
@@ -3970,26 +4026,26 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
       // max(y) = max(z) - min(x) 
       // update y's ub
       cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
-      if(IS_FAIL(cevt)) wiped = FAILURE(1);
+      if(FAILED(cevt)) wiped = FAILURE(1);
 	
 	if(IS_OK(wiped)) {
 	  // min(z) = min(x) + min(y);
 	  // update z's lb
 	  cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
-	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	  if(FAILED(cevt)) wiped = FAILURE(2);
 	}
       }
       if(UB_CHANGED(evt)) {
 	// min(y) = min(z) - max(x) 
 	// update y's lb
 	cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
-	if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	if(FAILED(cevt)) wiped = FAILURE(1);
 	
 	if(IS_OK(wiped)) {
 	  // max(z) = max(x) + max(y)
 	  // update z's ub
 	  cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
-	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	  if(FAILED(cevt)) wiped = FAILURE(2);
 	}
       }
     } else if(cidx == 1) {
@@ -3997,26 +4053,26 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
 	// max(x) = max(z) - min(y) 
 	// update x's ub
 	cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
-	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+	if(FAILED(cevt)) wiped = FAILURE(0);
 	
 	if(IS_OK(wiped)) {
 	  // min(z) = min(x) + min(y);
 	  // update z's lb
 	  cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
-	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	  if(FAILED(cevt)) wiped = FAILURE(2);
 	}
       }
       if(UB_CHANGED(evt)) {
 	// min(x) = min(z) - max(y) 
 	// update x's lb
 	cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
-	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+	if(FAILED(cevt)) wiped = FAILURE(0);
 
 	if(IS_OK(wiped)) {	
 	  // max(z) = max(x) + max(y)
 	  // update z's ub
 	  cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
-	  if(IS_FAIL(cevt)) wiped = FAILURE(2);
+	  if(FAILED(cevt)) wiped = FAILURE(2);
 	}
       }
     } else {
@@ -4024,26 +4080,26 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_i
 	// max(x) = max(z) - min(y) 
 	// update x's ub
 	cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
-	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+	if(FAILED(cevt)) wiped = FAILURE(0);
 
 	if(IS_OK(wiped)) {	
 	  // max(y) = max(z) - min(x);
 	  // update y's ub
 	  cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
-	  if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	  if(FAILED(cevt)) wiped = FAILURE(1);
 	}
       }
       if(LB_CHANGED(evt)) {
 	// min(x) = min(z) - max(y) 
 	// update x's lb
 	cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
-	if(IS_FAIL(cevt)) wiped = FAILURE(0);
+	if(FAILED(cevt)) wiped = FAILURE(0);
 
 	if(IS_OK(wiped)) {	
 	  // min(y) = min(z) - max(x) 
 	  // update y's lb
 	  cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
-	  if(IS_FAIL(cevt)) wiped = FAILURE(1);
+	  if(FAILED(cevt)) wiped = FAILURE(1);
 	}
       }
       //}
@@ -4234,8 +4290,8 @@ Mistral::PropagationOutcome Mistral::PredicateModConstant::filter() {
 
   Interval Y = X.operator_modulo(modulo);
   
-  if(IS_FAIL(scope[1].set_max(Y.max))) wiped = FAILURE(1);
-  else if(IS_FAIL(scope[1].set_min(Y.min))) wiped = FAILURE(1);
+  if(FAILED(scope[1].set_max(Y.max))) wiped = FAILURE(1);
+  else if(FAILED(scope[1].set_min(Y.min))) wiped = FAILURE(1);
   
   if(IS_OK(wiped)) {
     // now we compute forbidden intervals for X
@@ -4274,7 +4330,7 @@ Mistral::PropagationOutcome Mistral::PredicateModConstant::filter() {
 
 	//std::cout << "remove interval [" << lb << "," << ub << "]" << std::endl;
 	
-	if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	lb += incr;
 	ub += incr;
       }
@@ -4312,7 +4368,7 @@ Mistral::PropagationOutcome Mistral::PredicateModConstant::filter() {
 
 	  //std::cout << "remove interval [" << lb << "," << ub << "]" << std::endl;
 
-	  if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	  if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	  lb -= incr;
 	  ub -= incr;
 	}
@@ -4336,12 +4392,12 @@ Mistral::PropagationOutcome Mistral::PredicateModConstant::filter() {
   
 
   
-  // if(IS_FAIL(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
+  // if(FAILED(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
-  // if(IS_FAIL(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
+  // if(FAILED(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
   return wiped;
@@ -4356,12 +4412,12 @@ Mistral::PropagationOutcome Mistral::PredicateModConstant::propagate(const int c
   // Mistral::PropagationOutcome wiped = CONSISTENT;
 
 
-  // if(IS_FAIL(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
+  // if(FAILED(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
-  // if(IS_FAIL(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
+  // if(FAILED(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
 
@@ -4417,8 +4473,8 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 #endif
 
   
-  if(IS_FAIL(scope[1].set_max(Y.max))) wiped = FAILURE(1);
-  else if(IS_FAIL(scope[1].set_min(Y.min))) wiped = FAILURE(1);
+  if(FAILED(scope[1].set_max(Y.max))) wiped = FAILURE(1);
+  else if(FAILED(scope[1].set_min(Y.min))) wiped = FAILURE(1);
   
   if(IS_OK(wiped)) {
     // now we compute forbidden intervals for X
@@ -4448,7 +4504,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 		    << " is positive, hence "<< scope[0] << " must be positive " << std::endl;
 	}
 #endif	  
-	if(IS_FAIL(scope[0].set_min(1))) wiped = FAILURE(0);
+	if(FAILED(scope[0].set_min(1))) wiped = FAILURE(0);
 	
 
 	// we know x is positive
@@ -4463,7 +4519,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 	}
 #endif	
-	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    lb += incr;
 	    ub += incr;
 	  }
@@ -4471,7 +4527,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 	  max_x = scope[0].get_max();
 	}
       } else if(max_y < 0) { // the image of the modulo is negative, so the domain must be negative
-	if(IS_FAIL(scope[0].set_max(-1))) wiped = FAILURE(0);
+	if(FAILED(scope[0].set_max(-1))) wiped = FAILURE(0);
 	
 
 #ifdef _DEBUG_CMOD
@@ -4494,7 +4550,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 	}
 #endif	
-	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    lb -= incr;
 	    ub -= incr;
 	  }
@@ -4528,7 +4584,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 	}
 #endif	
-	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    lb += incr;
 	    ub += incr;
 	  }
@@ -4561,7 +4617,7 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
 	    std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 	}
 #endif	
-	    if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    lb -= incr;
 	    ub -= incr;
 	  }
@@ -4586,12 +4642,12 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::filter() {
   
 
   
-  // if(IS_FAIL(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
+  // if(FAILED(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
-  // if(IS_FAIL(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
+  // if(FAILED(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
   return wiped;
@@ -4606,12 +4662,12 @@ Mistral::PropagationOutcome Mistral::PredicateCModConstant::propagate(const int 
   // Mistral::PropagationOutcome wiped = CONSISTENT;
 
 
-  // if(IS_FAIL(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
-  // if(IS_FAIL(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
+  // if(FAILED(scope[1].set_max(max_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[1].set_min(min_modulo(scope[0].get_min(), scope[0].get_max(), modulo)))) wiped = FAILURE(1);
+  // if(FAILED(scope[0].set_min(min_antimodulo(scope[0].get_min(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
-  // if(IS_FAIL(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
+  // if(FAILED(scope[0].set_max(max_antimodulo(scope[0].get_max(), 
   // 					     scope[1].get_min(), 
   // 					     scope[1].get_max(), modulo)))) wiped = FAILURE(0);
 
@@ -4690,7 +4746,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::rewrite() {
 }
 
 Mistral::PropagationOutcome Mistral::PredicateMod::propagate() { 
-  if(IS_FAIL(scope[1].remove(0))) return FAILURE(1);
+  if(FAILED(scope[1].remove(0))) return FAILURE(1);
   return filter();
 }
 
@@ -4763,7 +4819,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
     }
 #endif
 
-      if(IS_FAIL(scope[1].remove(modulo))) wiped = FAILURE(1);
+      if(FAILED(scope[1].remove(modulo))) wiped = FAILURE(1);
     } else {
 
 #ifdef _DEBUG_MOD
@@ -5031,10 +5087,10 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
 
 
   
-  // if(IS_OK(wiped) && minmin_x <  INFTY && IS_FAIL(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
-  if(IS_OK(wiped) && minmin_y <  INFTY && IS_FAIL(scope[2].set_min(minmin_y))) wiped = FAILURE(2);
-  // if(IS_OK(wiped) && maxmax_x > -INFTY && IS_FAIL(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
-  if(IS_OK(wiped) && maxmax_y > -INFTY && IS_FAIL(scope[2].set_max(maxmax_y))) wiped = FAILURE(2);
+  // if(IS_OK(wiped) && minmin_x <  INFTY && FAILED(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
+  if(IS_OK(wiped) && minmin_y <  INFTY && FAILED(scope[2].set_min(minmin_y))) wiped = FAILURE(2);
+  // if(IS_OK(wiped) && maxmax_x > -INFTY && FAILED(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
+  if(IS_OK(wiped) && maxmax_y > -INFTY && FAILED(scope[2].set_max(maxmax_y))) wiped = FAILURE(2);
     
 #ifdef _DEBUG_MOD
   if(_DEBUG_MOD) {
@@ -5043,7 +5099,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
 #endif
 
   for(unsigned int i=0; IS_OK(wiped) && i<forbidden_intervals.size; ++i) {
-    if(IS_FAIL(scope[0].remove_interval(forbidden_intervals[i].min, forbidden_intervals[i].max))) wiped = FAILURE(0);
+    if(FAILED(scope[0].remove_interval(forbidden_intervals[i].min, forbidden_intervals[i].max))) wiped = FAILURE(0);
   }
 
 
@@ -5051,8 +5107,8 @@ Mistral::PropagationOutcome Mistral::PredicateMod::filter() {
 
 
   //}
-    // if(IS_FAIL(scope[0].set_domain(minmin_x, maxmax_x))) wiped = FAILURE(0);
-    // else if(IS_FAIL(scope[2].set_domain(minmin_y, maxmax_y))) wiped = FAILURE(2);
+    // if(FAILED(scope[0].set_domain(minmin_x, maxmax_x))) wiped = FAILURE(0);
+    // else if(FAILED(scope[2].set_domain(minmin_y, maxmax_y))) wiped = FAILURE(2);
   
 
 #ifdef _DEBUG_MOD
@@ -5145,14 +5201,14 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 
 //     if(modmin>max_z || modmax<min_z || antimodmin>max_x || antimodmax<min_x) {
 //       // forbidden value
-//       if(IS_FAIL(scope[1].remove(modulo))) wiped = FAILURE(1);
+//       if(FAILED(scope[1].remove(modulo))) wiped = FAILURE(1);
 //     }
 //   }
 
-//   if(IS_OK(wiped) && IS_FAIL(scope[2].set_max(max_z))) wiped = FAILURE(1);
-//   if(IS_OK(wiped) && IS_FAIL(scope[2].set_min(min_z))) wiped = FAILURE(1);
-//   if(IS_OK(wiped) && IS_FAIL(scope[0].set_min(min_x))) wiped = FAILURE(0);
-//   if(IS_OK(wiped) && IS_FAIL(scope[0].set_max(max_x))) wiped = FAILURE(0);
+//   if(IS_OK(wiped) && FAILED(scope[2].set_max(max_z))) wiped = FAILURE(1);
+//   if(IS_OK(wiped) && FAILED(scope[2].set_min(min_z))) wiped = FAILURE(1);
+//   if(IS_OK(wiped) && FAILED(scope[0].set_min(min_x))) wiped = FAILURE(0);
+//   if(IS_OK(wiped) && FAILED(scope[0].set_max(max_x))) wiped = FAILURE(0);
 
 
 
@@ -5161,7 +5217,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // //   if( scope[1].is_ground() ) { // modulo is known
 //   // //     modulo = scope[1].get_min();
 //   // //     if( modulo == 1 ) {// special case
-//   // // 	if(IS_FAIL(scope[0].set_domain(0))) wiped = FAILURE(0);
+//   // // 	if(FAILED(scope[0].set_domain(0))) wiped = FAILURE(0);
 //   // //     } else if( scope[2].is_ground() ) { // target is known
 //   // // 	target = scope[2].get_value();
 //   // // 	if(target >= modulo) wiped = FAILURE(0);
@@ -5169,12 +5225,12 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // // 	if(IS_OK(wiped)) {
 //   // // 	  // positive/negative target
 //   // // 	  if( target < 0 ) {
-//   // // 	    if(IS_FAIL(scope[0].set_max(0))) wiped = FAILURE(0);
+//   // // 	    if(FAILED(scope[0].set_max(0))) wiped = FAILURE(0);
 //   // // 	  } else if( target > 0 ) {
-//   // // 	    if(IS_FAIL(scope[0].set_min(0))) wiped = FAILURE(0);
+//   // // 	    if(FAILED(scope[0].set_min(0))) wiped = FAILURE(0);
 //   // // 	    //consistent = scope[0]->setMin(0);
 //   // // 	  } else { 
-//   // // 	    if(IS_FAIL(scope[0].set_domain(0))) wiped = FAILURE(0);
+//   // // 	    if(FAILED(scope[0].set_domain(0))) wiped = FAILURE(0);
 //   // // 	    //consistent = scope[0]->setDomain(0);
 //   // // 	  }
 
@@ -5185,7 +5241,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // // 	      lb = (target+1+k*modulo);
 //   // // 	      ub = (target+(k+1)*modulo-1);
 //   // // 	      if( ub < scope[0].get_min() ) break;
-//   // // 	      if(IS_FAIL(scope[0].remove_range( lb, ub ))) wiped = FAILURE(0);
+//   // // 	      if(FAILED(scope[0].remove_range( lb, ub ))) wiped = FAILURE(0);
 //   // // 	      --k;
 //   // // 	    }
 //   // // 	  }
@@ -5198,7 +5254,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // // 	while(vali<vnxt) {
 //   // // 	  vali = vnxt;
 //   // // 	  k = (vali % modulo);
-//   // // 	  if(!scope[2].contain( k ) && IS_FAIL(scope[0].remove( vali ))) wiped = FAILURE(0);
+//   // // 	  if(!scope[2].contain( k ) && FAILED(scope[0].remove( vali ))) wiped = FAILURE(0);
 //   // // 	  vnxt = scope[0].next(vali);
 //   // // 	} 
 	
@@ -5213,7 +5269,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // //   if( scope[1].is_ground() ) { // modulo is known
 //   // //     if( scope[0].is_ground() ) {
 //   // // 	//consistent = scope[2]->setDomain( (scope[0].get_min() % scope[1].get_min()) );
-//   // // 	if(IS_FAIL(scope[2].set_domain( (scope[0].get_value() % scope[1].get_value()) ))) wiped = FAILURE(2);
+//   // // 	if(FAILED(scope[2].set_domain( (scope[0].get_value() % scope[1].get_value()) ))) wiped = FAILURE(2);
 //   // //     } else {
 	
 //   // // 	//[TODO: this is wrong (?!!)]
@@ -5227,8 +5283,8 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // // 	  lb = 1-modulo;
 //   // // 	else lb = 0;
 	
-//   // // 	if(IS_FAIL(scope[2].set_max(ub))) wiped = FAILURE(2);
-//   // // 	else if(IS_FAIL(scope[2].set_min(lb))) wiped = FAILURE(2);
+//   // // 	if(FAILED(scope[2].set_max(ub))) wiped = FAILURE(2);
+//   // // 	else if(FAILED(scope[2].set_min(lb))) wiped = FAILURE(2);
 //   // // 	//consistent = scope[2]->setMax( ub ) && scope[2]->setMin( lb );
 	
 //   // // 	vnxt = scope[2].get_min();
@@ -5244,7 +5300,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // // 	      k+=modulo;
 //   // // 	    }
 //   // // 	    if(k && k > scope[0].get_max()) {
-//   // // 	      if(IS_FAIL(scope[2].remove( vali ))) wiped = FAILURE(2);
+//   // // 	      if(FAILED(scope[2].remove( vali ))) wiped = FAILURE(2);
 //   // // 	    } 
 //   // // 	  }
 //   // // 	  else {
@@ -5255,7 +5311,7 @@ Mistral::PropagationOutcome Mistral::PredicateMod::propagate(const int changed_i
 //   // // 	      k-=modulo;
 //   // // 	    }
 //   // // 	    if(k < scope[0].get_min()) {
-//   // // 	      if(IS_FAIL(scope[2].remove( vali ))) wiped = FAILURE(2);
+//   // // 	      if(FAILED(scope[2].remove( vali ))) wiped = FAILURE(2);
 //   // // 	    } 
 	    
 //   // // 	    vnxt = scope[2].next(k);
@@ -5330,7 +5386,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::rewrite() {
 }
 
 Mistral::PropagationOutcome Mistral::PredicateCMod::propagate() { 
-  if(IS_FAIL(scope[1].remove(0))) return FAILURE(1);
+  if(FAILED(scope[1].remove(0))) return FAILURE(1);
   return filter();
 }
 
@@ -5407,7 +5463,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
       }
 #endif
       
-      if(IS_FAIL(scope[1].remove(modulo))) wiped = FAILURE(1);
+      if(FAILED(scope[1].remove(modulo))) wiped = FAILURE(1);
     } else {
       
 #ifdef _DEBUG_CMOD
@@ -5448,7 +5504,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 	}
 #endif	  
 	
-	//if(IS_FAIL(scope[0].set_min(1))) wiped = FAILURE(0);
+	//if(FAILED(scope[0].set_min(1))) wiped = FAILURE(0);
 	
 	llb.push(-INFTY, 0);
 	
@@ -5465,7 +5521,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 // 	    }
 // #endif	
-	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    //if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    llb.push((lb <= 0 ? 1 : lb), ub);
 	    
 	    lb += incr;
@@ -5475,7 +5531,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 
       } else if(max_y < 0) { // the image of the modulo is negative, so the domain must be negative
 	
-	//if(IS_FAIL(scope[0].set_max(0))) wiped = FAILURE(0);
+	//if(FAILED(scope[0].set_max(0))) wiped = FAILURE(0);
 	  
 #ifdef _DEBUG_CMOD
 	  if(_DEBUG_CMOD) {
@@ -5498,7 +5554,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 // // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 // // 	    }
 // // #endif	
-// 	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+// 	    //if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 // 	    llb.push(lb, ub));
 // 	    lb -= incr;
 // 	    ub -= incr;
@@ -5521,7 +5577,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 // 	    }
 // #endif	
-	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    //if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    llb.push(lb, (ub >= 0 ? -1 : ub));
 	    lb += incr;
 	    ub += incr;
@@ -5559,7 +5615,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 // 	    }
 // #endif	
-	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    //if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    pos_ub.push((lb <= 0 ? 1 : lb),ub);
 	    lb += incr;
 	    ub += incr;
@@ -5594,7 +5650,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 // // 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 // // 	    }
 // // #endif	
-// 	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+// 	    //if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 // 	    neg_ub.push(lb,ub));
 // 	    lb -= incr;
 // 	    ub -= incr;
@@ -5619,7 +5675,7 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 	      std::cout << "    -> remove interval [" << lb << "," << ub << "]" << std::endl;
 	    }
 #endif	
-	    //if(IS_FAIL(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
+	    //if(FAILED(scope[0].remove_interval(lb, ub))) wiped = FAILURE(0);
 	    neg_ub.push(lb,(ub >= 0 ? -1 : ub));
 	    lb += incr;
 	    ub += incr;
@@ -5683,10 +5739,10 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 
   }
   
-  //if(IS_OK(wiped) && minmin_x <  INFTY && IS_FAIL(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
-  if(IS_OK(wiped) && minmin_y <  INFTY && IS_FAIL(scope[2].set_min(minmin_y))) wiped = FAILURE(2);
-  //if(IS_OK(wiped) && maxmax_x > -INFTY && IS_FAIL(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
-  if(IS_OK(wiped) && maxmax_y > -INFTY && IS_FAIL(scope[2].set_max(maxmax_y))) wiped = FAILURE(2);
+  //if(IS_OK(wiped) && minmin_x <  INFTY && FAILED(scope[0].set_min(minmin_x))) wiped = FAILURE(0);
+  if(IS_OK(wiped) && minmin_y <  INFTY && FAILED(scope[2].set_min(minmin_y))) wiped = FAILURE(2);
+  //if(IS_OK(wiped) && maxmax_x > -INFTY && FAILED(scope[0].set_max(maxmax_x))) wiped = FAILURE(0);
+  if(IS_OK(wiped) && maxmax_y > -INFTY && FAILED(scope[2].set_max(maxmax_y))) wiped = FAILURE(2);
     
  
 #ifdef _DEBUG_CMOD
@@ -5696,12 +5752,12 @@ Mistral::PropagationOutcome Mistral::PredicateCMod::filter() {
 #endif
 
   for(unsigned int i=0; IS_OK(wiped) && i<forbidden_intervals.size; ++i) {
-    if(IS_FAIL(scope[0].remove_interval(forbidden_intervals[i].min, forbidden_intervals[i].max))) wiped = FAILURE(0);
+    if(FAILED(scope[0].remove_interval(forbidden_intervals[i].min, forbidden_intervals[i].max))) wiped = FAILURE(0);
   }
 
   //}
-    // if(IS_FAIL(scope[0].set_domain(minmin_x, maxmax_x))) wiped = FAILURE(0);
-    // else if(IS_FAIL(scope[2].set_domain(minmin_y, maxmax_y))) wiped = FAILURE(2);
+    // if(FAILED(scope[0].set_domain(minmin_x, maxmax_x))) wiped = FAILURE(0);
+    // else if(FAILED(scope[2].set_domain(minmin_y, maxmax_y))) wiped = FAILURE(2);
   
 
 #ifdef _DEBUG_CMOD
@@ -5773,7 +5829,7 @@ void Mistral::PredicateDiv::mark_domain() {
 // }
 
 Mistral::PropagationOutcome Mistral::PredicateDiv::propagate() { 
-  if(IS_FAIL(scope[1].remove(0))) return FAILURE(1);
+  if(FAILED(scope[1].remove(0))) return FAILURE(1);
   return filter();
 }
 
@@ -5796,7 +5852,7 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::filter() {
   BiInterval X(scope[0]);
   BiInterval Y(scope[1]);
   BiInterval Z = X.divided_by(Y, scope[2]);
-  if(IS_FAIL(scope[2].set_domain(Z))) wiped = FAILURE(2);
+  if(FAILED(scope[2].set_domain(Z))) wiped = FAILURE(2);
 
   
   if(IS_OK(wiped)) {
@@ -5809,7 +5865,7 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::filter() {
 
     Z = BiInterval(scope[2]);
     X = Z.anti_div_X(Y);
-    if(IS_FAIL(scope[0].set_domain(X))) wiped = FAILURE(0);
+    if(FAILED(scope[0].set_domain(X))) wiped = FAILURE(0);
 
     if(IS_OK(wiped)) {
 
@@ -5826,7 +5882,7 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::filter() {
 
       Y = Z.anti_div_Y(X);
       //Y = X.anti_mul(Z);
-      if(IS_FAIL(scope[1].set_domain(Y))) wiped = FAILURE(1);
+      if(FAILED(scope[1].set_domain(Y))) wiped = FAILURE(1);
 
     }
   }
@@ -5897,7 +5953,7 @@ Mistral::PropagationOutcome Mistral::PredicateDivConstant::filter() {
   BiInterval Y = X/quotient;
   
 
-  if(IS_FAIL(scope[1].set_domain(Y))) wiped = FAILURE(1);
+  if(FAILED(scope[1].set_domain(Y))) wiped = FAILURE(1);
 
   
   if(IS_OK(wiped)) {
@@ -5906,7 +5962,7 @@ Mistral::PropagationOutcome Mistral::PredicateDivConstant::filter() {
 
     X = Y.anti_div_X(quotient);
 
-    if(IS_FAIL(scope[0].set_domain(X))) wiped = FAILURE(0);
+    if(FAILED(scope[0].set_domain(X))) wiped = FAILURE(0);
 
   }
 
@@ -6335,7 +6391,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
   else {
     if(lb_neg>min_neg[Z]) {
       evt = scope[Z].set_min( lb_neg );
-      if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+      if( FAILED(evt) ) wiped = FAILURE(Z);
       else {
 	if(changes.contain(Z)) {
 	  event_type[Z] |= evt;
@@ -6348,7 +6404,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
     }
     if(IS_OK(wiped) && ub_pos<max_pos[Z]) {
       evt = scope[Z].set_max( ub_pos );
-      if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+      if( FAILED(evt) ) wiped = FAILURE(Z);
       else {
 	if(changes.contain(Z)) {
 	  event_type[Z] |= evt;
@@ -6362,7 +6418,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
     if(IS_OK(wiped) && (lb_pos>=min_neg[Z] || ub_neg<=max_pos[Z])) { 
       if(lb_pos-1>ub_neg && (pzero || (!zero[Z] && (min_pos[Z]<lb_pos || max_neg[Z]>ub_neg)))) {
 	evt = scope[Z].remove_interval(ub_neg+1, lb_pos-1);
-	if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+	if( FAILED(evt) ) wiped = FAILURE(Z);
 	else {
 	  if(changes.contain(Z)) {
 	    event_type[Z] |= evt;
@@ -6377,7 +6433,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
       } else {
 	if(lb_pos>1 && min_pos[Z]<lb_pos) {
 	  evt = scope[Z].remove_interval(1, lb_pos-1);
-	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+	  if( FAILED(evt) ) wiped = FAILURE(Z);
 	  else {
 	    if(changes.contain(Z)) {
 	      event_type[Z] |= evt;
@@ -6390,7 +6446,7 @@ Mistral::PropagationOutcome Mistral::PredicateMul::prune(const int lb_neg,
 	}
 	if(ub_neg<-1 && max_neg[Z]>ub_neg) {
 	  evt = scope[Z].remove_interval(ub_neg+1, -1);
-	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+	  if( FAILED(evt) ) wiped = FAILURE(Z);
 	  else {
 	    if(changes.contain(Z)) {
 	      event_type[Z] |= evt;
@@ -7112,7 +7168,7 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 //       // 		 << " -> update lb" << std::endl;
 
 //       evt = scope[Z].set_min( lb_neg );
-//       if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+//       if( FAILED(evt) ) wiped = FAILURE(Z);
 //       else {
 // 	if(changes.contain(Z)) {
 // 	  event_type[Z] |= evt;
@@ -7129,7 +7185,7 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 //       // 		 << " -> update ub" << std::endl;
 
 //       evt = scope[Z].set_max( ub_pos );
-//       if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+//       if( FAILED(evt) ) wiped = FAILURE(Z);
 //       else {
 // 	if(changes.contain(Z)) {
 // 	  event_type[Z] |= evt;
@@ -7153,7 +7209,7 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 // 	// 	   << " -> update inbounds" << std::endl;
 	
 // 	evt = scope[Z].remove_interval(ub_neg+1, lb_pos-1);
-// 	if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+// 	if( FAILED(evt) ) wiped = FAILURE(Z);
 // 	else {
 // 	  if(changes.contain(Z)) {
 // 	    event_type[Z] |= evt;
@@ -7173,7 +7229,7 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 // 	  // 	    << " -> update negative ub" << std::endl;
 
 // 	  evt = scope[Z].remove_interval(1, lb_pos-1);
-// 	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+// 	  if( FAILED(evt) ) wiped = FAILURE(Z);
 // 	  else {
 // 	    //min_pos[Z] = lb_pos;
 // 	    //max_neg[Z] = ub_neg;
@@ -7193,7 +7249,7 @@ std::ostream& Mistral::PredicateMul::display(std::ostream& os) const {
 // 	  //   << " -> update positive lb" << std::endl;
 
 // 	  evt = scope[Z].remove_interval(ub_neg+1, -1);
-// 	  if( IS_FAIL(evt) ) wiped = FAILURE(Z);
+// 	  if( FAILED(evt) ) wiped = FAILURE(Z);
 // 	  else {
 // 	    //min_pos[Z] = lb_pos;
 // 	    //max_neg[Z] = ub_neg;
@@ -8693,7 +8749,7 @@ std::ostream& Mistral::ConstraintGAC3::display(std::ostream& os) const {
 // }
 
 
-//#define _DEBUG_CARD true
+//#define _DEBUG_CARD true //((id == 296))
 
 Mistral::ConstraintBoolSumInterval::ConstraintBoolSumInterval(Vector< Variable >& scp, const int l, const int u)
   : GlobalConstraint(scp) { 
@@ -8743,7 +8799,7 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 #ifdef _DEBUG_CARD
     if(_DEBUG_CARD) {
       std::cout << "c" << id << " " << this << ": INITIAL PROPAGATE\n";
-      
+      std::cout << active << std::endl;
       std::cout << " propagate [" ;
       for(int i=0; i<scope.size; ++i) {
 	std::cout << std::setw(5) << scope[i].get_domain();
@@ -8776,6 +8832,8 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
       std::cout << "c" << id << " " << this << ":\n";
       std::cout << "changes: " << changes << std::endl;
       std::cout << " events: " << events << std::endl;
+      std::cout << " active: " << active << std::endl;
+      
       
       int new_evt[scope.size];
       for(int i=0; i<scope.size; ++i) {
@@ -8792,7 +8850,7 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
       for(int i=0; i<scope.size; ++i) {
 	std::cout << std::setw(5) << (new_evt[i] ? scope[i].get_domain() : " ");
       }
-      std::cout << "]\n was in [" << min_ << ".." << max_ << "] now in [";
+      std::cout << "]\n was in [" << min_ << ".." << max_ << "] now in ";
     }
 #endif
     
@@ -8805,7 +8863,7 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 
 #ifdef _DEBUG_CARD
   if(_DEBUG_CARD) {
-    std::cout << min_ << ".." << max_ << "]\n";
+    std::cout << "[" << min_ << ".." << max_ << "]\n";
   }
 #endif
   
@@ -8832,36 +8890,6 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
 #endif
 
     wiped_idx = FAILURE(changes[0]);
-  } else if(min_==upper_bound) {
-
-#ifdef _DEBUG_CARD
-    if(_DEBUG_CARD) {
-      std::cout << "UPPER BOUND REACHED!\n";
-    }
-#endif
-
-    // here there should not be any failure
-    for(unsigned int i=0; i<active.size; ++i) {
-      if(!(scope[active[i]].is_ground()) && FAILED(scope[active[i]].set_domain(0))) {
-	wiped_idx = FAILURE(i);
-	break;
-      }
-    }
-  } else if(max_==lower_bound) {
-
-#ifdef _DEBUG_CARD
-    if(_DEBUG_CARD) {
-      std::cout << "LOWER BOUND REACHED!\n";
-    }
-#endif
-
-    // here there should not be any failure
-    for(unsigned int i=0; i<active.size; ++i) {
-      if(!(scope[active[i]].is_ground()) && FAILED(scope[active[i]].set_domain(1))) {
-	wiped_idx = FAILURE(i);
-	break;
-      }
-    }
   } else if(min_ >= lower_bound && max_ <= upper_bound) {
 
 #ifdef _DEBUG_CARD
@@ -8869,10 +8897,52 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
       std::cout << "ENTAILED!\n";
     }
 #endif
-
-    relax();
+    
+      relax();
+  } else if(min_==upper_bound) {
+	
+#ifdef _DEBUG_CARD
+    if(_DEBUG_CARD) {
+      std::cout << "UPPER BOUND REACHED!\n";
+    }
+#endif
+    
+    // here there should not be any failure
+    int j;
+    for(unsigned int i=0; i<active.size; ++i) {
+      j = active[i];
+      
+      //std::cout << "scope[" << j << "].equal(1): " < scope[j].equal(1) << std::endl;
+      
+      
+      if( // !(scope[j].is_ground()) &&
+	 // (scope[j].equal(1) ||
+	 FAILED(scope[j].set_domain(0)) ) {
+	wiped_idx = FAILURE(i);
+	break;
+      } 
+    }
+  } else if(max_==lower_bound) {
+    
+#ifdef _DEBUG_CARD
+    if(_DEBUG_CARD) {
+      std::cout << "LOWER BOUND REACHED!\n";
+    }
+#endif
+    
+    // here there should not be any failure
+    int j;
+    for(unsigned int i=0; i<active.size; ++i) {
+      j = active[i];
+      if( // !(scope[j].is_ground()) &&
+	 // (scope[j].equal(0) ||
+	 FAILED(scope[j].set_domain(1)) ) {
+	wiped_idx = FAILURE(i);
+	break;
+      }
+    }
   }
-
+  
 #ifdef _DEBUG_CARD
   else {
     if(_DEBUG_CARD) {
@@ -8880,10 +8950,10 @@ Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate()
     }
   }
 #endif
-
+  
   return wiped_idx;
-
-
+    
+    
   // int _min_ = 0;
   // int _max_ = 0;
   // unsigned int i;
@@ -8984,7 +9054,6 @@ double sum_bi_coeff(const int nn, const int lb, const int ub) {
   int l = lb;
   int u = ub;
   int s = u-l+1;
-  int d = 1;
 
   double res = 0;
   for(int i=1; i<=l; ++i)
@@ -9004,10 +9073,10 @@ void Mistral::ConstraintBoolSumInterval::initialise_activity(double *lact, doubl
 
   int n = scope.size;
 
-  //std::cout << "n: " << n << std::endl;
+  // //std::cout << "n: " << n << std::endl;
 
-  if(get_solver()->statistics.max_arity < n)
-    get_solver()->statistics.max_arity = n;
+  // if(get_solver()->statistics.max_arity < n)
+  //   get_solver()->statistics.max_arity = n;
   
 
   int real_max = std::min(n, upper_bound);
@@ -9199,7 +9268,7 @@ Mistral::Explanation::iterator Mistral::ConstraintBoolSumInterval::get_reason_fo
   } else {
     if(min_>upper_bound) {
       // too many ones
-      while(i-- && explanation.size <= upper_bound) {
+      while(i-- && (int)(explanation.size) <= upper_bound) {
 	if(scope[i].get_min()) explanation.add(literal(scope[i], false));
       }
     } else {
@@ -9314,7 +9383,7 @@ Mistral::Explanation::iterator Mistral::PredicateBoolSum::get_reason_for(const A
     int lower_bound = scope.back().get_min();
     if(min_>upper_bound) {
       // too many ones
-      while(i-- && explanation.size <= upper_bound) {
+      while(i-- && (int)(explanation.size) <= upper_bound) {
 	if(scope[i].get_min()) explanation.add(literal(scope[i], false));
       }
     } else {
@@ -9697,7 +9766,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 #endif
 	  
 	  tmin = lo_bound[i];
-	  if( IS_FAIL(scope[i].set_min(++lo_bound[i])) ) wiped = FAILURE(i);
+	  if( FAILED(scope[i].set_min(++lo_bound[i])) ) wiped = FAILURE(i);
 	  else {
 	    lo_bound[i] = scope[i].get_min();
 	    if(i<wneg) smin += ((lo_bound[i] - tmin)*weight[i]);
@@ -9721,7 +9790,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 #endif
 	  
 	  tmin = up_bound[i];
-	  if( IS_FAIL(scope[i].set_max(--up_bound[i])) ) wiped = FAILURE(i);
+	  if( FAILED(scope[i].set_max(--up_bound[i])) ) wiped = FAILURE(i);
 	  else {
 	    up_bound[i] = scope[i].get_max();
 	    if(i<wneg) smax -= ((tmin - up_bound[i])*weight[i]);
@@ -9763,7 +9832,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	  }
 #endif
 	    
-	    if(IS_FAIL(scope[i].set_max( lo_bound[i] + tmin ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_max( lo_bound[i] + tmin ))) wiped = FAILURE(i);
 	    else {
 	      
 	      events.add(i);
@@ -9783,7 +9852,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	  }
 #endif
 	  	    
-	    if(IS_FAIL(scope[i].set_max( lo_bound[i] + tmin/weight[i] ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_max( lo_bound[i] + tmin/weight[i] ))) wiped = FAILURE(i);
 	    
 	    else {
 	      events.add(i);
@@ -9802,7 +9871,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	  }
 #endif
 	    
-	    if(IS_FAIL(scope[i].set_min( up_bound[i] + tmin/weight[i] ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_min( up_bound[i] + tmin/weight[i] ))) wiped = FAILURE(i);
 	    
 	    else {
 	      events.add(i);
@@ -9821,7 +9890,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	  }
 #endif
 
-	    if(IS_FAIL(scope[i].set_min( up_bound[i] - tmax ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_min( up_bound[i] - tmax ))) wiped = FAILURE(i);
 	    
 	    else {
 	      
@@ -9846,7 +9915,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	  }
 #endif
 	    
-	    if(IS_FAIL(scope[i].set_min( up_bound[i] - tmax/weight[i] ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_min( up_bound[i] - tmax/weight[i] ))) wiped = FAILURE(i);
 	    
 	    else {
 	      
@@ -9872,7 +9941,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate()
 	  }
 #endif
 
-	    if(IS_FAIL(scope[i].set_max( lo_bound[i] - tmax/weight[i] ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_max( lo_bound[i] - tmax/weight[i] ))) wiped = FAILURE(i);
 	    
 	    else {
 	      
@@ -9958,6 +10027,7 @@ int Mistral::PredicateWeightedSum::check( const int* s ) const
 }
 
 std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
+  os << "ws: " ;
   if(lower_bound > -INFTY) 
     os << lower_bound << " <= " ;
   os << weight[0] << "*" << scope[0]/*.get_var()*/ ;
@@ -9981,11 +10051,12 @@ std::ostream& Mistral::PredicateWeightedSum::display(std::ostream& os) const {
 Mistral::ConstraintParity::ConstraintParity(Vector< Variable >& scp, const int p)
   : GlobalConstraint(scp), target_parity(p) { 
   priority = 1;
+  //init_prop = true;
 }
 
 void Mistral::ConstraintParity::initialise() {
   ConstraintImplementation::initialise();
-  for(unsigned int i=0; i<scope.size; ++i)
+  for(unsigned int i=0; i<scope.size; ++i) 
     trigger_on(_VALUE_, scope[i]);
   GlobalConstraint::initialise();
 }
@@ -9997,11 +10068,14 @@ Mistral::ConstraintParity::~ConstraintParity()
 #endif
 }
 
+//#define _DEBUG_PARITY true
+
 Mistral::Explanation::iterator Mistral::ConstraintParity::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
   explanation.clear();
 
   // all assignments are required
-  int idx, i = scope.size;
+  int i = scope.size;
+  unsigned int idx;
   while(i--) {
     idx = scope[i].id();
     if(idx != a)
@@ -10018,14 +10092,54 @@ Mistral::PropagationOutcome Mistral::ConstraintParity::propagate()
 
   PropagationOutcome wiped_idx = CONSISTENT;
 
+#ifdef _DEBUG_PARITY
+  if(_DEBUG_PARITY) {
+    std::cout << active << std::endl;
+    for(unsigned int i=0; i<active.size; ++i) {
+      std::cout << " " << scope[active[i]].get_domain() ;
+    }
+    std::cout << std::endl;
+  }
+#endif
+
   if(active.size <= 1) {
+
+#ifdef _DEBUG_PARITY
+  if(_DEBUG_PARITY) {
+    std::cout << active << " propagate! " << std::endl;
+  }
+#endif
+
     int parity = 0;
     for(int i=scope.size; --i>=0;) {
       parity ^= scope[i].get_min();
+
+#ifdef _DEBUG_PARITY
+  if(_DEBUG_PARITY) {
+      std::cout << " : " << scope[i].get_domain() << " -> " << parity << std::endl;
+  }
+#endif
+
     }
     if(active.size) {
+
+#ifdef _DEBUG_PARITY
+  if(_DEBUG_PARITY) {
+      std::cout << " -> " << scope[active.back()] << " in "
+		<< scope[active.back()].get_domain() 
+		<< " <- " << (parity != target_parity) << std::endl;
+  }
+#endif
+
       if(FAILED(scope[active.back()].set_domain(parity != target_parity))) wiped_idx = FAILURE(active.back());
     } else {
+
+#ifdef _DEBUG_PARITY
+  if(_DEBUG_PARITY) {
+      std::cout << " all assigned: " << (parity == target_parity ? "ok" : "fail!") << std::endl; 
+  }
+#endif
+
       if(parity != target_parity) wiped_idx = FAILURE(0);
     }
   }
@@ -10305,7 +10419,7 @@ in fact, only parity pruning must be stored. Otherwise, we can deduce it from th
 
     //std::cout << a_rank << " <> " << rank[idx] << std::endl;
 
-    if(idx == a) {
+    if((Atom)idx == a) {
       va = i;
       // a=0 and coeff is positive or
       // a=1 and coeff is negative => 1 <=> pushed toward the lower value (positive_contributors are the reason)
@@ -10699,7 +10813,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	}
 #endif
 
-	if( IS_FAIL(scope[i].set_domain(parity)) ) {
+	if( FAILED(scope[i].set_domain(parity)) ) {
 	  wiped = FAILURE(i);
 	} else {
 	  if(i<wpos) {
@@ -10744,7 +10858,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	  if( !(tmin || IS_GROUND(domains[i])) ) {
 	    // no freedom at all with the upper bound
 	    
-	    if(IS_FAIL(scope[i].set_domain( 0 ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_domain( 0 ))) wiped = FAILURE(i);
 	    else {
 	      
 	      events.add(i);
@@ -10758,7 +10872,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	  	  
 	  if( tmin < (IS_FREE(domains[i])) * weight[i] ) {
 	  	   
-	    if(IS_FAIL(scope[i].set_domain( 0 ))) wiped = FAILURE(i); 
+	    if(FAILED(scope[i].set_domain( 0 ))) wiped = FAILURE(i); 
 	    
 	    else {
 	      events.add(i);
@@ -10771,7 +10885,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	  
 	  if( tmin < -(IS_FREE(domains[i])) * weight[i] ) {
 
-	    if(IS_FAIL(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
 	    
 	    else {
 	      events.add(i);
@@ -10784,7 +10898,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	  
 	  if( !(tmax || (IS_GROUND(domains[i]))) ) {
 	    
-	    if(IS_FAIL(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
 	    
 	    else {
 	      
@@ -10803,7 +10917,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	  
 	  if( tmax < (IS_FREE(domains[i])) * weight[i] ) {
 	    
-	    if(IS_FAIL(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_domain( 1 ))) wiped = FAILURE(i);
 	    
 	    else {
 	      
@@ -10823,7 +10937,7 @@ Mistral::PropagationOutcome Mistral::ConstraintWeightedBoolSumInterval::propagat
 	  
 	  if( tmax < -(IS_FREE(domains[i])) * weight[i] ) {  
 	    
-	    if(IS_FAIL(scope[i].set_domain( 0 ))) wiped = FAILURE(i);
+	    if(FAILED(scope[i].set_domain( 0 ))) wiped = FAILURE(i);
 	    
 	    else {
 	      
@@ -10908,13 +11022,14 @@ std::ostream& Mistral::ConstraintWeightedBoolSumInterval::display(std::ostream& 
 
 
 
-//#define _DEBUG_IWEIGHTEDBOOLSUM true //(id == 1)
+#define _DEBUG_IWEIGHTEDBOOLSUM true //(id == 1)
 
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeightedBoolSumInterval(Vector< Variable >& scp, 
 												    const int L, const int U)
   : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
   priority = 1;
+ init_prop = true;
   for(unsigned int i=0; i<scope.size; ++i) {
     weight.add(1);
   }
@@ -10925,6 +11040,7 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::ConstraintIncrementalWeig
 												    const int L, const int U)
   : GlobalConstraint(scp), lower_bound(L), upper_bound(U) { 
   priority = 1;
+ init_prop = true;
   for(unsigned int i=0; i<wgt.size; ++i) {
     weight.add(wgt[i]);
   }
@@ -10979,10 +11095,6 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
      w.add(weight[ordering[i]]);
   }
 
-
-  //  std::cout << X << std::endl << w << "\n";
-
-
   int _min_ = 0;
   int _max_ = 0;
   for(unsigned int i=0; i<weight.size; ++i) {
@@ -10997,47 +11109,14 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise() {
     } else {
       _max_ += weight[i];
     }
-
-// #ifdef _DEBUG_IWEIGHTEDBOOLSUM
-//     if(_DEBUG_IWEIGHTEDBOOLSUM) {
-//      std::cout << "COMPUTE INITIAL BOUNDS: [" << _min_ << ".." << _max_ << "]\n";
-//     }
-// #endif
-
-
-    // if(scope[i].is_ground()) {
-    //   if(scope[i].get_value()) {
-    // 	if(weight[i]<0) {
-    // 	  // lose the possibility of a negative weight -> increase min
-    // 	  _min_-=weight[i];
-    // 	} else {
-    // 	  // lose the possibility of a positive weight -> decrease max
-    // 	  _max_-=weight[i];
-    // 	}
-    //   } else {
-    // 	if(weight[i]<0) {
-    // 	  // lose the possibility of not chosing a negative weight -> decrease max
-    // 	  _max_+=weight[i];
-    // 	} else {
-    // 	  // lose the possibility of not chosing a positive weight -> increase min
-    // 	  _min_+=weight[i];
-    // 	}	
-    //   }
-    // }
   }
-
-  //std::cout << scope << std::endl << weight << "\n";
 
   //min_index.initialise(get_solver(), 0);
   index_.initialise(get_solver(), weight.size-1);
   bound_[0].initialise(get_solver(), _min_);
   bound_[1].initialise(get_solver(), _max_);
 
-
-
-
   GlobalConstraint::initialise();
-
 
   domains = new BoolDomain[weight.size];
   for(unsigned int i=0; i<weight.size; ++i) {
@@ -11052,20 +11131,12 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::mark_domain() {
     get_solver()->forbid(scope[--i].id(), LIST_VAR|BITSET_VAR|RANGE_VAR);
 }
 
-// void Mistral::ConstraintIncrementalWeightedBoolSumInterval::change_weight(const int i, const int w) {
-//   if(weight[i]%2 =w%2))
-
-//   weight[i] = w;
-// }
 
 Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWeightedBoolSumInterval() 
 {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete weightedsum constraint" << std::endl;
 #endif
-  // delete [] lo_bound;
-  // delete [] up_bound;
-  // delete [] span;
   delete [] domains;
 }
 
@@ -11075,14 +11146,12 @@ Mistral::ConstraintIncrementalWeightedBoolSumInterval::~ConstraintIncrementalWei
 
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(double *lact, double *vact, double norm) {
 
-
-
   int n = weight.size;
 
   // std::cout << "n: " << n << std::endl;
 
-  if(get_solver()->statistics.max_arity < n)
-    get_solver()->statistics.max_arity = n;
+  // if(get_solver()->statistics.max_arity < n)
+  //   get_solver()->statistics.max_arity = n;
   
   double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
 
@@ -11132,113 +11201,6 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
   incr_1 = (1-skew) * activity_increment;
 
   // std::cout << "0: " << incr_0 << ", 1: " << incr_1 << std::endl; 
-
-
-
-  
-  // int n = scope.size;
-
-
-  // if(get_solver()->statistics.max_arity < n)
-  //   get_solver()->statistics.max_arity = n;
-
-
-  
-  // double avg_weight = (double)(bound_[1] - bound_[0] + 1)/(double)n;
-
-  // int real_max = std::min((int)(bound_[1]), upper_bound);
-  // int real_min = std::max((int)(bound_[0]), lower_bound);
-
-  // long double total_asgn = pow(2.0, n);
-
-  // int k;
-
-  // // std::cout << "arity: " << n << std::endl;
-
-  // // std::cout << "reachable [" << bound_[0] << " .. " << bound_[1] << "]\n"; 
-
-  // // std::cout << "bounds [" << lower_bound << " .. " << upper_bound << "]\n"; 
-
-  // // std::cout << "avg_weight: " << avg_weight << std::endl;
-
-  // // std::cout << "total_asgn: " << total_asgn << std::endl;
-
-  // // double total_sol = 0;
-  // //  k = (int)((double)(real_min - bound_[0])/avg_weight);
-  // // for(double val=real_min; val<=real_max; val+=avg_weight) {
-  // //   total_sol += bi_coeff(n, k);
-  // //   ++k;
-  // // }
-  
-  // // std::cout << "total_sol: " << total_sol << std::endl;
-
-  // // case x = 0;
-
-  // long double sol_0 = 0;
-  //  k = (int)((double)(real_min - bound_[0])/avg_weight);
-  //  //int l = k;
-  //  //int u = k;
-  // for(double val=real_min; val<=real_max; val+=avg_weight) {
-  //   sol_0 += bi_coeff(n-1, k);
-  //   //u = k;
-  //   ++k;
-  // }
-
-
-  // // double sbc = sum_bi_coeff(n-1, l, u);
-
-  // // if(sbc != sol_0) {
-  // //   std::cout << sol_0 << " <2> " << sbc << std::endl;
-  // //   exit(1);
-  // // }
-
-
-  // //std::cout << "#sol[x=0]: " << sol_0 << std::endl;
-
-  // // case x = 1;
-  // long double sol_1 = 0;
-  //  k = (int)((double)(real_min - bound_[0])/avg_weight)-1;
-  // for(double val=real_min; val<=real_max; val+=avg_weight) {
-  //   sol_1 += bi_coeff(n-1, k);
-  //   ++k;
-  // }
-
-  // //double sol_1 = sol_0 - bi_coeff(n-1, real_max) + bi_coeff(n-1, real_min-1);
- 
-
-  // //std::cout << "#sol[x=1]: " << sol_1 << std::endl;
-
-  // double ratio_0 = 2*(sol_0/total_asgn);
-  // double ratio_1 = 2*(sol_1/total_asgn);
-
-  // // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << (1-ratio_0) << std::endl;
-
-  // // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << (1-ratio_1) << std::endl;
-  
-  // double incr_0 = norm*(1-ratio_0);
-  // double incr_1 = norm*(1-ratio_1);
-
-  //  // std::cout << "ratio #sol[x=0]: " << ratio_0 << " weight: " << incr_0 << std::endl;
-
-  //  // std::cout << "ratio #sol[x=1]: " << ratio_1 << " weight: " << incr_1 << std::endl;
-  
-  // if(incr_0 < 0.0001 && incr_1 < 0.0001) {
-  //   incr_0 = 0.0001 * norm;
-  //   incr_1 = 0.0001 * norm;
-  // }
-
-  // double total_weight = incr_1+incr_0;
-  // // 
-  // incr_1 += total_weight * (sol_0/(sol_0+sol_1));
-  // incr_0 += total_weight * (sol_1/(sol_0+sol_1));
-  // total_weight *= 2;
- 
-
-  // if(incr_1<0 || incr_0<0 || total_weight<0) 
-  //   {
-  //     get_solver()->statistics.negative_weight = true;
-  //   }
-
 	      
   int i=n, idx;
   while(i--) {
@@ -11258,70 +11220,6 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
     vact[idx] += (incr_0 + incr_1) * pond;
   }
 
-
-  // std::cout << "HERE" << std::endl;
-
-  // exit(1);
-
-
-  /*
-  // std::cerr << "initialise activity for " << this << std::endl;
-  
-  // std::cerr << lact << " " << vact << std::endl;
-
-  int n = weight.size;
-  int real_max = std::min((int)(bound_[1]), upper_bound);
-  int real_min = std::max((int)(bound_[0]), lower_bound);
-
-  //std::cerr << real_min << " .. " << real_max << std::endl;
-
-  double span = (real_max - real_min);
-
-  double center = (double)(real_min + real_max) / 2;
-  double skew = center/(double)(bound_[1] - bound_[0] + 1);
-  if(skew<0) skew = -skew;
-
-  int log_n = 0, j=n;
-  while(j) {
-    j>>=1;
-    ++log_n;
-  }
-
-  int exp = (int)(log_n * (span)/(double)(bound_[1] - bound_[0] + 1));
-
-
-  std::cout << "exp: " << exp << std::endl;
-
-  std::cout << "skew: " << skew << std::endl;
-
-  double activity_increment = norm / (1 << exp);
-  double ac_i; 
-
-  std::cout << activity_increment << std::endl;
-
-
-  int i=n;
-  while(i--) {
-    //std::cerr << i << std::endl;
-    ac_i = activity_increment * (double)(std::abs(weight[i])) / (double)(std::abs(weight.back()));
-
-    // std::cerr << 11111 << "  " << (scope[i]) << " " << (2*scope[i].id()+(weight[i]<0)) << std::endl ;
-
-    // std::cerr << lact << " " << lact[(2*scope[i].id()+(weight[i]<0))] << std::endl;
-
-    lact[2*scope[i].id()+(weight[i]<0)] += (1-skew) * ac_i;
-
-    //std::cerr << 22222 << std::endl;
-
-    lact[2*scope[i].id()+(weight[i]>=0)] += skew * ac_i;
-
-    //std::cerr << 33333 << std::endl;
-
-    vact[scope[i].id()] += ac_i;
-
-    std::cout << scope[i] << " * " << weight[i] << ": " << ac_i << " (" << skew*ac_i << "/" << (1-skew)*ac_i << ")" << std::endl;
-  }
-  */
 }
 
 
@@ -11354,12 +11252,6 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   int a_rank = INFTY-1;
   Explanation **reason = get_solver()->reason_for.stack_;
 
-
-
-
-
-
-
   // direction is 1 iff the constraint pushed toward ub and 0 otherwise
   bool direction = 1; 
 
@@ -11370,7 +11262,7 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
     //if(active[i] == a) {
     for(i=weight.size; i--;) {
       idx = scope[i].id();
-      if(idx == a) {
+      if((Atom)idx == a) {
 	direction = (GET_VAL(domains[i]) == weight[i]>0);
 	break;
       }
@@ -11378,9 +11270,6 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   } else {
     direction = (bound_[1] < lower_bound);
   }
-
-
-
 
 #ifdef _DEBUG_REASONIWBS
   if(_DEBUG_REASONIWBS) {
@@ -11413,20 +11302,11 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   }
 #endif
 
-
-
-
-// #ifdef _DEBUG_REASONIWBS
-
-
-// #endif
-
-
   // finds all the assignment that decreased the maximum reachable value
   i = weight.size;
   while(i--) {
     idx = scope[i].id();
-    if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
+    if((Atom)idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
       if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
 
 	// if(reason[idx] == this) {
@@ -11459,54 +11339,83 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
   PropagationOutcome wiped_idx = CONSISTENT;
   int w, i;
 
-
+  if(init_prop) {
 
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM
-  if(_DEBUG_IWEIGHTEDBOOLSUM) {
-    std::cout << std::endl << "propagate " << lower_bound << " <= " ;
-    for(i=0; i<weight.size; ++i) {
-      std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+    if(_DEBUG_IWEIGHTEDBOOLSUM) {
+      std::cout << "c" << id << " " << this << ": INITIAL PROPAGATE\n";
+      std::cout << active << std::endl;
+      std::cout << " propagate [" ;
+      for(int i=0; i<scope.size; ++i) {
+	std::cout << std::setw(5) << scope[i].get_domain();
+      }
+      std::cout << "]\n";
     }
-    std::cout << " <= " << upper_bound << std::endl << changes << std::endl;
-  }
 #endif
+    
+    int _min_ = 0;
+    int _max_ = 0;
+    for(unsigned int i=0; i<weight.size; ++i) {
+      if(weight[i]<0) {
+	_min_ += weight[i];
+      } else {
+	_max_ += weight[i];
+      }
+    }
+    
+    init_prop = false;
+    bound_[0] = _min_;
+    bound_[1] = _max_;
 
-
+  } else {
+    
+#ifdef _DEBUG_IWEIGHTEDBOOLSUM
+    if(_DEBUG_IWEIGHTEDBOOLSUM) {
+      std::cout << std::endl << "propagate " << lower_bound << " <= " ;
+      for(i=0; i<weight.size; ++i) {
+	std::cout << " " << weight[i] << scope[i] << ":" << scope[i].get_domain();
+      }
+      std::cout << " <= " << upper_bound << std::endl << changes << std::endl;
+    }
+#endif
+    
+    
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM
     if(_DEBUG_IWEIGHTEDBOOLSUM) {
       std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
     }
 #endif
-
-
-
-  while(!changes.empty()) {
-    i = changes.pop();
-    w = weight[i]<0;
     
 
+    
+    while(!changes.empty()) {
+      i = changes.pop();
+      w = weight[i]<0;
+      
+      
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM
-    if(_DEBUG_IWEIGHTEDBOOLSUM) {
-      std::cout << "\nprocessing events: " << event2strc(event_type[i]) << " on " 
-		<< scope[i] << " in " << scope[i].get_domain() << std::endl;
-    }
+      if(_DEBUG_IWEIGHTEDBOOLSUM) {
+	std::cout << "\nprocessing events: " << event2strc(event_type[i]) << " on " 
+		  << scope[i] << " in " << scope[i].get_domain() << std::endl;
+      }
 #endif
-
-    // the commented way is faster, but the initial propagate might be triggered with invalid bound information
-    //if(LB_CHANGED(event_type[i])) {
-    if(GET_VAL(domains[i])) { 
-      bound_[w]+=weight[i];
-    } else {
-      bound_[1-w]-=weight[i];
-    }
-
-
+      
+      // the commented way is faster, but the initial propagate might be triggered with invalid bound information
+      //if(LB_CHANGED(event_type[i])) {
+      if(GET_VAL(domains[i])) { 
+	bound_[w]+=weight[i];
+      } else {
+	bound_[1-w]-=weight[i];
+      }
+      
+      
 #ifdef _DEBUG_IWEIGHTEDBOOLSUM
-    if(_DEBUG_IWEIGHTEDBOOLSUM) {
-      std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
-    }
+      if(_DEBUG_IWEIGHTEDBOOLSUM) {
+	std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1] << "]" << std::endl;
+      }
 #endif
-
+      
+    }
   }
 
 
@@ -12616,7 +12525,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	if( !scope[n+1].intersect(scope[evt]) ) {
 	  
 // 	  event_type[n] = scope[n].remove(evt+offset);
-// 	  if( IS_FAIL(event_type[n]) ) {
+// 	  if( FAILED(event_type[n]) ) {
 // 	    wiped = FAILURE(n);
 	    
 // #ifdef _DEBUG_ELEMENT 
@@ -12652,7 +12561,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 #endif
 	  
 	  event_type[i] = scope[i].set_domain(scope[n+1]);
-	  if( IS_FAIL(event_type[i]) ) { 
+	  if( FAILED(event_type[i]) ) { 
 #ifdef _DEBUG_ELEMENT 
 	    if(_DEBUG_ELEMENT) {
 	      std::cout << "  => FAIL" << std::endl;
@@ -12669,7 +12578,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 #endif
 	    }
 // 	    event_type[n+1] = scope[n+1].set_domain(scope[i]);
-// 	    if( IS_FAIL(event_type[n+1]) ) {
+// 	    if( FAILED(event_type[n+1]) ) {
 // #ifdef _DEBUG_ELEMENT 
 // 	      if(_DEBUG_ELEMENT) {
 // 		std::cout << "  => FAIL" << std::endl;
@@ -12706,7 +12615,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	  
 	  i = scope[n].get_min()-offset;
 // 	  event_type[i] = scope[i].set_domain(scope[n+1]);
-// 	  if( IS_FAIL(event_type[i]) ) { 
+// 	  if( FAILED(event_type[i]) ) { 
 // #ifdef _DEBUG_ELEMENT 
 // 	    if(_DEBUG_ELEMENT) {
 // 	      std::cout << "  => FAIL" << std::endl;
@@ -12760,7 +12669,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
 	    //std::cout << n << " " << N << " " << N.get_domain() << " " << i << std::endl;
 
 // 	    event_type[n] = scope[n].remove(i);
-// 	    if( IS_FAIL(event_type[n]) ) {
+// 	    if( FAILED(event_type[n]) ) {
 // #ifdef _DEBUG_ELEMENT 
 // 	      if(_DEBUG_ELEMENT) {
 // 		std::cout << "  => FAIL" << std::endl;
@@ -12840,7 +12749,7 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
       // std::cout << aux_dom << std::endl;
       
 //       event_type[n+1] = scope[n+1].set_domain(aux_dom);
-//       if( IS_FAIL(event_type[n+1]) ) { 
+//       if( FAILED(event_type[n+1]) ) { 
 // #ifdef _DEBUG_ELEMENT 
 // 	if(_DEBUG_ELEMENT) {
 // 	  std::cout << "  => FAIL" << std::endl;

@@ -387,7 +387,8 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
   os << " " << solver->parameters.prefix_comment << " +" << std::setw(90) << std::setfill('=')
     //"=============================================================================
      << "+" << std::endl << std::setfill(' ')
-     << std::left << std::setw(46) << " s  ";
+     << std::left << " " << solver->parameters.prefix_outcome 
+     << std::setw(46-solver->parameters.prefix_outcome.size()) << "  ";
 
   switch(outcome) {
   case SAT: 
@@ -992,7 +993,7 @@ void Mistral::Solver::parse_pbo(const char* filename) {
 	  assert( c == 'x' );
 	  
 	  infile >> aux;
-	  while(aux > variables.size) {
+	  while(aux > (int)(variables.size)) {
 	    Variable x(0,1);
 	    add(x);
 	  }
@@ -1172,7 +1173,7 @@ void Mistral::Solver::parse_pbo(const char* filename) {
     add(base);
   }
  
-  for(int i=0; i<clauses.size; ++i) {
+  for(unsigned int i=0; i<clauses.size; ++i) {
 
     add(clauses[i]);
 
@@ -1376,6 +1377,8 @@ int Mistral::Solver::declare(Variable x) {
   //std::cout << x.get_domain() << std::endl;
 
 
+
+
 #ifdef _DEBUG_BUILD
   std::cout << x << " in " << x.get_domain() << std::endl;
 #endif
@@ -1421,7 +1424,6 @@ void Mistral::Solver::add(Constraint c) {
   
 
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
-
   
   c.trigger();
   //active_constraints.trigger(c);
@@ -1450,6 +1452,12 @@ void Mistral::Solver::add(Constraint c) {
   }//  else {
   //   std::cout << "ADD " << c.id() << "?" << " nope " << std::endl;
   // }
+
+  //std::cout <<  11 << std::endl;
+
+
+  // if(!c.explained())
+  //   non_explained_constraints.add(c);
 }
 
 Mistral::Outcome Mistral::Solver::solve() {
@@ -1820,7 +1828,7 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   std::cout << "INIT SEARCH!" << std::endl;
 #endif
 
-  consolidate();
+  //consolidate();
 
   if(level < 0) save();
 
@@ -1873,7 +1881,7 @@ void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> 
 					Goal *goal) 
 {
 
-  consolidate();
+  //consolidate();
 
   if(level < 0) save();
 
@@ -2404,13 +2412,218 @@ void Mistral::Solver::make_non_convex(const int idx)
 }
 
 
+void Mistral::Solver::parity_processing(const int Knst) 
+{
+  std::vector< BitSet* > scopes;
+  std::vector< int > sizes;
+  std::vector< int > parities;
+  // Get all parity scopes
+  
+
+  Variable *scope;
+  int arity, min_idx, max_idx;
+  for(unsigned int i=0; i<constraints.size; ++i) {
+    if(constraints[i].symbol() == "parity") {
+      scope = constraints[i].get_scope();
+      arity = constraints[i].arity();
+      min_idx = max_idx = scope[0].id();
+      for(int j=arity; --j;) {
+	if(scope[j].id() < min_idx) min_idx = scope[j].id();
+	else if(scope[j].id() > max_idx) max_idx = scope[j].id();
+      }
+      BitSet *e = new BitSet(min_idx, max_idx, BitSet::empt);
+      for(int j=arity; j--;) {
+	e->add(scope[j].id());
+      }
+      //std::cout << e << std::endl;
+      scopes.push_back(e);
+      sizes.push_back(arity);
+      parities.push_back(((ConstraintParity*)(constraints[i].propagator))->target_parity);
+    }
+  }
+
+  BitSet f1(0, variables.size, BitSet::empt);
+  BitSet f2(0, variables.size, BitSet::empt);
+  int a1, a2;
+
+  int original_size = scopes.size();
+
+
+  // for(std::vector< BitSet* >::iterator it=scopes.begin(); it<scopes.end(); ++it) {
+  //   std::cout << (*it) << std::endl;
+  // }
+
+  // // int i=0;
+  // // for(std::vector< BitSet >::iterator it=scopes.begin(); it<(scopes.end()-1); ++it, ++i) {
+  // //   //std::cout << (*it) << std::endl;
+  // //   int j=i+1;
+  // //   for(std::vector< BitSet >::iterator jt=(it+1); jt!=scopes.end(); ++jt, ++j) {
+
+  
+  
+
+
+  for(unsigned int i=0; i<scopes.size()-1; ++i) {
+    for(unsigned int j=i+1; j<scopes.size(); ++j) {
+
+      //std::cout << i << " x " << j << ": " << scopes[i] << " x " << scopes[j] << std::endl;
+
+      scopes[i]->union_to(f1);
+      scopes[j]->setminus_to(f1);
+      scopes[j]->union_to(f2);
+      scopes[i]->setminus_to(f2);
+      
+      //f1 = ei \ ej;
+      //f2 = ej \ ei;
+
+
+      a1 = f1.size();
+      a2 = f2.size();
+
+      int cooling = (scopes.size()/(Knst * original_size))-1;
+
+      if(!a1) {
+
+	//std::cout << a2 << std::endl;
+
+	if(!a2) {
+	  if(parities[i] != parities[j]) fail();
+	} else {
+
+	  BitSet *ne = new BitSet(f2);
+
+	  std::cout << scopes[j] << " \\ " << scopes[i] << " => "
+		  << ne << std::endl;
+
+
+	  //std::cout << scopes.size() << " + "<< ne << " - " << scopes[j] << std::endl;
+
+	  // ei is included in ej, hence we can remove ej and replace scopes[i] by f2
+	  scopes.push_back(ne);
+	  sizes.push_back(a2);
+	  parities.push_back(parities[i] != parities[j]);
+	  //std::cout << "reduction!\n";
+	}
+	//exit(1);
+
+      } else if(!a2) {
+
+	//std::cout << a1 << std::endl;
+
+	if(!a1) {
+	  if(parities[i] != parities[j]) fail();
+	} else {
+
+	  BitSet *ne = new BitSet(f1);
+
+
+	  std::cout << scopes[i] << " \\ " << scopes[j] << " => "
+		  << ne << std::endl;
+
+	  //std::cout << scopes.size() << "  + "<< ne << " - " << scopes[i] << std::endl;
+
+	  // ej is included in ei, hence we can remove ei and replace it by f1
+	  scopes.push_back(ne);
+	  sizes.push_back(a1);
+	  parities.push_back(parities[i] != parities[j]);
+	  //std::cout << "reduction!\n";
+	  //exit(1);
+	}
+
+      } else if((a1+a2 < sizes[i]-cooling) && (a1+a2 < sizes[j]-cooling)) {
+	//std::cout << scopes.size() << "  + "<< f1 << " u " << f2 << std::endl;
+
+	BitSet *ne = new BitSet(0, variables.size, BitSet::empt);
+	ne->union_with(f1);
+	ne->union_with(f2);
+
+
+	std::cout << scopes[i] << " <> " << scopes[j] << " => "
+		  << ne << std::endl;
+
+	
+	bool already_in = false;
+	for(unsigned int k=0; !already_in && k<scopes.size(); ++k) {
+	  already_in |= (*(scopes[i]) == *ne);
+	  //std::cout << "check " << scopes[i] << " == " << ne << " " << (already_in ? "yes" : "no") << std::endl;
+	}
+	
+	if(!already_in) {
+	  scopes.push_back(ne);
+	  sizes.push_back(a1+a2);
+	  parities.push_back(parities[i] != parities[j]);
+	}
+      }//  else {
+      // 	std::cout << " nothing\n"; 
+      // }
+
+
+
+
+      f1.clear();
+      f2.clear();
+
+    }
+  }
+
+
+  // for(std::vector< BitSet* >::iterator it=scopes.begin(); it<scopes.end(); ++it) {
+  //   std::cout << std::setw(3) << sizes[(int)(it-scopes.begin())] << (*it) << std::endl;
+  // }
+
+  VarArray pscope;
+  for(unsigned int i=original_size; i<scopes.size(); ++i) {
+    int nxt=scopes[i]->min(), j;
+    do {
+      j = nxt;
+      pscope.add(variables[j]);
+      nxt = scopes[i]->next(j);
+    } while( nxt>j );
+
+    add(Parity(pscope, parities[i]));
+    pscope.clear();
+  }
+  
+
+}
+
+bool Mistral::Solver::is_pseudo_boolean() const {
+
+  bool is_pb = true;
+
+  for(unsigned int i=0; is_pb && i<variables.size; ++i) {
+    is_pb &= 
+      ((domain_types[i] & REMOVED_VAR) ||
+       variables[i].is_boolean() ||
+       ((objective!=NULL) && (objective->objective.operator_equal(variables[i]))));
+   
+    if(!is_pb) {
+	std::cout << " " << parameters.prefix_comment << " not pseudo boolean because of " << variables[i] << " in " << variables[i].get_domain() << std::endl;
+      }
+  }
+
+  for(unsigned int i=0; is_pb && i<posted_constraints.size; ++i) {
+    is_pb &= constraints[posted_constraints[i]].explained();
+
+
+    if(!is_pb) {	
+      std::cout << " " << parameters.prefix_comment << " not pseudo boolean because " << constraints[posted_constraints[i]] << " is not explained" << std::endl;
+      }
+  }
+
+  if(is_pb) {
+    std::cout << " " << parameters.prefix_comment << " the problem is pseudo boolean!" << std::endl;
+  }
+
+  return is_pb;
+}
 
 bool Mistral::Solver::rewrite() 
 {
   
   int i=0;
   unsigned int con_i=0;
-  IntStack to_rewrite(0, constraints.size-1, false);
+  IntStack to_rewrite(0, 2*constraints.size, false);
   Constraint con;
   RewritingOutcome rewritten;
   //bool fix_point;
@@ -2441,108 +2654,112 @@ bool Mistral::Solver::rewrite()
     //std::cout << "Collect rewritable constraints: " << std::endl;
 #endif
 
-    // add the unseen constraints that might be rewritten
-    for(; con_i<constraints.size; ++con_i) {
-
-// #ifdef _DEBUG_REWRITE
-//       std::cout << "   " << constraints[con_i] ;
-// #endif
-
-      if(constraints[con_i].rewritable()) {
-	to_rewrite.safe_add(con_i);
+    while(con_i < constraints.size) {
+      // add the unseen constraints that might be rewritten
+      for(; con_i<constraints.size; ++con_i) {
 	
-// #ifdef _DEBUG_REWRITE
-// 	std::cout << " in" << std::endl;
-// #endif
-	 
-      } 
-
-// #ifdef _DEBUG_REWRITE
-//       else {
-// 	std::cout << " out" << std::endl;
-//       }
-// #endif
-
-    }
-
-     
-    // // add all rewritable constraints to the stack
-    // for(i=0; i<to_rewrite.size; ++i)
-    //   active_constraints.add(constraints[to_rewrite[i]]);
-   
-
-#ifdef _DEBUG_REWRITE
-    std::cout << " rewrite: " << to_rewrite << std::endl;
-#endif
-
-
-    // // rewriting 
-    // while(!active_constraints.empty()) {
-     
-    //   con = active_constraints.select(constraints);
-    for(i=to_rewrite.size; i--;) {
-      con = constraints[to_rewrite[i]];
-
-
-#ifdef _DEBUG_REWRITE
-      std::cout << "   [rewrite " << con << std::endl;
-#endif
-
-      rewritten = con.rewrite();
-       
-      switch(rewritten) {
-      case NO_EVENT: {
-
-#ifdef _DEBUG_REWRITE
-	std::cout << "    -> no event] " << std::endl;
-#endif
-
-      }
-	break;
-	 
-      case SUPPRESSED: { 
-
-#ifdef _DEBUG_REWRITE
-	std::cout << "    -> suppressed] " << std::endl;
-#endif
-
-	to_rewrite.remove(con.id());
-	if(posted_constraints.contain(con.id())) posted_constraints.remove(con.id());
-
 	// #ifdef _DEBUG_REWRITE
-	// 	 std::cout << to_rewrite << std::endl;
-	// 	 std::cout << posted_constraints << std::endl;
+	//       std::cout << "   " << constraints[con_i] ;
 	// #endif
+	
+	if(constraints[con_i].rewritable()) {
+	  to_rewrite.safe_add(con_i);
+	  
+	  // #ifdef _DEBUG_REWRITE
+	  // 	std::cout << " in" << std::endl;
+	  // #endif
+	  
+	} 
+	
+	// #ifdef _DEBUG_REWRITE
+	//       else {
+	// 	std::cout << " out" << std::endl;
+	//       }
+	// #endif
+	
+      }
 
-
-	  } break;
-      default: { 
-
-
+     
+      // // add all rewritable constraints to the stack
+      // for(i=0; i<to_rewrite.size; ++i)
+      //   active_constraints.add(constraints[to_rewrite[i]]);
+      
+      
 #ifdef _DEBUG_REWRITE
-	std::cout << "   -> replaced] " << std::endl;
-	exit(1);
+      std::cout << " rewrite: " << to_rewrite << std::endl;
 #endif
+      
+      
+      // // rewriting 
+      // while(!active_constraints.empty()) {
+      
+      //   con = active_constraints.select(constraints);
+      for(i=to_rewrite.size; i--;) {
+	con = constraints[to_rewrite[i]];
+	
+	
+#ifdef _DEBUG_REWRITE
+	std::cout << "   [rewrite c" << con.id() << " " << con << std::endl;
+#endif
+	
+	rewritten = con.rewrite();
+	
+	switch(rewritten) {
+	case NO_EVENT: {
+	  
+#ifdef _DEBUG_REWRITE
+	  std::cout << "    -> no event] " << std::endl;
+#endif
+	  
+	}
+	  break;
+	  
+	case SUPPRESSED: { 
+	  
+#ifdef _DEBUG_REWRITE
+	  std::cout << "    -> suppressed] " << std::endl;
+#endif
+	  
+	  to_rewrite.remove(con.id());
+	  if(posted_constraints.contain(con.id())) posted_constraints.remove(con.id());
+	  
+	  // #ifdef _DEBUG_REWRITE
+	  // 	 std::cout << to_rewrite << std::endl;
+	  // 	 std::cout << posted_constraints << std::endl;
+	  // #endif
+	  
+	  
+	  } break;
+	default: { 
 
-	to_rewrite.remove(con.id()); 
-	if(constraints[rewritten].rewritable()) {
-	  to_rewrite.add(rewritten);
-	  active_constraints.add(constraints[rewritten]);
+	  
+#ifdef _DEBUG_REWRITE
+	  std::cout << "   -> replaced] " << std::endl;
+	  //exit(1);
+#endif
+	  
+	  to_rewrite.remove(con.id()); 
+	  if(posted_constraints.contain(con.id())) posted_constraints.remove(con.id());
+	  
+	  
+	  // if(constraints[rewritten].rewritable()) {
+	  //   to_rewrite.add(rewritten);
+	  //   active_constraints.add(constraints[rewritten]);
+	  // }
+	}
 	}
       }
-      }
+      
     }
-
-
 #ifdef _DEBUG_REWRITE
-
-    std::cout << "==>\n" << (*this) << std::endl;
-
+      
+      std::cout << "==>\n" << (*this) << std::endl;
+      
 #endif
-
+      
 #ifdef _DEBUG_REWRITE
-    std::cout << " propagate: " << active_variables << std::endl;
-    std::cout << "       and: " << active_constraints << std::endl;
+      std::cout << " propagate: " << active_variables << std::endl;
+      std::cout << "       and: " << active_constraints << std::endl;
 #endif
 
       //fix_point = active_variables.empty();
@@ -2997,9 +3214,6 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 bool Mistral::Solver::propagate() 
 {
 
-  // findprop
-
-
 #ifdef _DEBUG_AC
   if(_DEBUG_AC) {
     std::cout << "c start propagation" << std::endl;
@@ -3066,20 +3280,23 @@ bool Mistral::Solver::propagate()
       vidx = var_evt.first;
 
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-      std::cout << "react to " << event2str(var_evt.second) << " on " << variables[vidx] 
-		<< " in " << variables[vidx].get_domain() ;
-      if(var_evt.third)
-	std::cout << " because of " << var_evt.third ;
-      std::cout << ". var stack: " << active_variables << std::endl;
-  }
+      if(_DEBUG_AC) {
+	std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+	std::cout << "react to " << event2str(var_evt.second) << " on " << variables[vidx] 
+		  << " in " << variables[vidx].get_domain() ;
+	if(var_evt.third)
+	  std::cout << " because of " << var_evt.third ;
+	std::cout << ". var stack: " << active_variables << std::endl;
+      }
 #endif      
+      
 
+      
+      
       if(ASSIGNED(var_evt.second)) {
-
-	//assigned.add(vidx);
-
+	
+	assigned.add(vidx);
+	
 	if(sequence.contain(variables[vidx]))
 	  sequence.remove(variables[vidx]);
 
@@ -3336,7 +3553,12 @@ bool Mistral::Solver::propagate()
 #endif
 
 
+  // if(assigned.size) {
 
+  //   std::cout << "must clear assigned" << std::endl;
+
+  //   exit(1);
+  // }
 
   
   if(IS_OK(wiped_idx)) {
@@ -3374,6 +3596,16 @@ bool Mistral::Solver::propagate()
 
 
 void Mistral::Solver::fail() {
+
+#ifdef _DEBUG_SEARCH
+   if(_DEBUG_SEARCH) {
+      std::cout << parameters.prefix_comment;
+      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+      std::cout << "failure!" << std::endl;
+    }
+#endif
+  
+
   wiped_idx = FAILURE(0);
 }
 
@@ -3914,6 +4146,7 @@ void Mistral::Solver::learn_nogood() {
 
 
 #ifdef _DEBUG_NOGOOD
+  int vidx;
   if(_DEBUG_NOGOOD) {
     //int depth = 0;
     std::cout << "\nExplain failure (sequence = [\n" ;
@@ -4838,10 +5071,18 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::SolverStatis
 void Mistral::SearchMonitor::add(Variable x) {
   sequence.add(0);
   sequence.add(x.id());
+  
+  sequence_type.add(0);
+  sequence_var.add(x);
+ 
+
 }
 void Mistral::SearchMonitor::add(Constraint x) {
   sequence.add(1);
   sequence.add(x.id());
+
+  sequence_type.add(1);
+  sequence_con.add(x);
 }
 // void Mistral::SearchMonitor::add(std::string& x) {
 //   sequence.add(2);
@@ -4851,17 +5092,35 @@ void Mistral::SearchMonitor::add(Constraint x) {
 void Mistral::SearchMonitor::add(const char* x) {
   sequence.add(2);
   sequence.add(strs.size());
+
   strs.push_back(x);
+  sequence_type.add(2);
+  //strs.push_back(x);
 }
 
 std::ostream& Mistral::SearchMonitor::display( std::ostream& os ) const {
-  for(unsigned int i=0; i<sequence.size; i+=2) {
-    if(sequence[i] == 0) {
-      os << solver->variables[sequence[i+1]].get_domain();
-    } else if(sequence[i] == 1) {
-      os << solver->constraints[sequence[i+1]];
+  // for(unsigned int i=0; i<sequence.size; i+=2) {
+  //   if(sequence[i] == 0) {
+  //     os << solver->variables[sequence[i+1]].get_domain();
+  //   } else if(sequence[i] == 1) {
+  //     os << solver->constraints[sequence[i+1]];
+  //   } else {
+  //     os << strs[sequence[i+1]];
+  //   }
+  // }
+  // return os;
+
+
+  int v=0;
+  int c=0;
+  int s=0;
+ for(unsigned int i=0; i<sequence_type.size; ++i) {
+    if(sequence_type[i] == 0) {
+      os << sequence_var[v++].get_domain();
+    } else if(sequence_type[i] == 1) {
+      os << sequence_con[c++];
     } else {
-      os << strs[sequence[i+1]];
+      os << strs[s++];
     }
   }
   return os;
@@ -5552,7 +5811,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided< RandomMinMax > > (this); 
       } 
     }
-  } else if(var_ordering == "dom/activity") {
+  } else if(var_ordering == "dom/activity" || var_ordering == "dom/pruning") {
     if(randomness < 2) {
       if(branching == "minval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinValue > (this); 
@@ -6196,7 +6455,7 @@ void Mistral::SolverCmdLine::initialise() {
     voallowed.push_back("dom/activity");
     voallowed.push_back("activity");
     vo_allowed = new TCLAP::ValuesConstraint<std::string>( voallowed );
-    orderingArg = new TCLAP::ValueArg<std::string>("c","choice","variable selection",false,"dom/activity",vo_allowed);
+    orderingArg = new TCLAP::ValueArg<std::string>("c","choice","variable selection",false,"dom/wdeg",vo_allowed);
     add( *orderingArg ); 
 
     // VALUE ORDERING
@@ -6236,6 +6495,9 @@ void Mistral::SolverCmdLine::set_parameters(Mistral::Solver& s) {
     s.parameters.prefix_objective = pobjectiveArg->getValue();
     s.parameters.prefix_solution = psolutionArg->getValue();
     s.parameters.prefix_outcome = poutcomeArg->getValue();
+    //s.parameters.find_all = allsolArg->getValue();
+
+    std::cout << s.parameters.prefix_solution << std::endl;
 
   }
 
@@ -6295,6 +6557,10 @@ std::string Mistral::SolverCmdLine::get_filename() {
 
 bool Mistral::SolverCmdLine::use_rewrite() {
   return rewriteArg->getValue();
+}
+
+bool Mistral::SolverCmdLine::enumerate_solutions() {
+  return allsolArg->getValue();
 }
 
 #ifdef _CHECK_NOGOOD

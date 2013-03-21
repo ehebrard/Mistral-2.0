@@ -1384,6 +1384,12 @@ namespace FlatZinc {
                           const ConExpr& ce, AST::Node* ann) {
 
       Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
+      //if(!bv.empty())
+      s.add(Parity(bv, 1));
+      
+
+      /*
+      Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
       Variable count(0, bv.size/2);
       Vector<int> coefs(bv.size+1);
       for(unsigned int i=0; i<bv.size; ++i) coefs[i] = 1;
@@ -1392,7 +1398,7 @@ namespace FlatZinc {
         
       if(!bv.empty())
         s.add(Sum(bv, coefs, 1, 1));
-    
+      */
     }
 
     void p_array_bool_and(Solver& s, FlatZincModel& m,
@@ -1878,16 +1884,20 @@ namespace FlatZinc {
 
     void p_set_in_reif(Solver &s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
+
+      
+
        Variable x = getIntVar(s, m, ce[0]);
-       Variable A = getSetVar(s, m, ce[1]);
        Variable b = getBoolVar(s, m, ce[2]);
 
-       // std::cout << x << std::endl;
-       // std::cout << " in " << A << std::endl;
-       // std::cout << " <-> " << b << std::endl; 
+      if(ce[1]->isSetVar()) {
+        Variable A = getSetVar(s, m, ce[1]);
+        s.add( b == Member(x,A));
+      } else if(ce[1]->isSet()) {        
+        Vector<int> elts = arg2intvec(s, ce[1]);
+        s.add( b == Member(x, elts) );
+      }
 
-
-       s.add( b == Member(x,A) );
     }
 
     void p_set_isect(Solver &s, FlatZincModel& m,

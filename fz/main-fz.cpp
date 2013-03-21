@@ -56,6 +56,13 @@ int main(int argc, char *argv[])
 #endif
   
   SolverCmdLine cmd("Mistral (fzn)", ' ', "2.0");      
+  
+  TCLAP::SwitchArg annotationArg("","follow_annotations","Uses the annotations", false);
+  cmd.add( annotationArg );
+
+  TCLAP::ValueArg<int> parityArg("","parity","Uses parity processing", false, 0, "int");
+  cmd.add( parityArg );
+
   cmd.parse(argc, argv);
   
   usrand(cmd.get_seed());
@@ -94,7 +101,10 @@ int main(int argc, char *argv[])
   fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_restart_policy());
   fm->set_display_model(cmd.print_model());
   fm->set_display_solution(cmd.print_solution());
-  //fm->set_annotations(annotationArg.getValue());
+  fm->set_annotations(annotationArg.getValue());
+  fm->set_rewriting(cmd.use_rewrite());
+  fm->set_parity_processing(parityArg.getValue());
+  fm->set_enumeration(cmd.enumerate_solutions());
 
   fm->run(cout , p);
   

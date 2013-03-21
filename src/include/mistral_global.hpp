@@ -102,7 +102,7 @@ namespace Mistral {
   // };
 
 
-
+  //#define _DEBUG_PARITY ((id == 2))
   //#define _DEBUG_BUILD true
   //#define _DEBUG_BACKTRACK true
   //#define _DEBUG_RESTORE true
@@ -295,6 +295,7 @@ namespace Mistral {
 #define FAIL_EVENT   32
 
 #define SUPPRESSED   1
+  //#define REPLACED     1
 
 #define DOMAIN_CHANGED(e) (bool)((e)&DOMAIN_C)
 #define RANGE_CHANGED(e)  (bool)((e)&RANGE_C)
@@ -341,7 +342,7 @@ namespace Mistral {
 
 
 
-#define IS_FAIL(e) ((e)&FAIL_EVENT)
+  //#define IS_FAIL(e) ((e)&FAIL_EVENT)
 
 #define SAT      1
 #define OPT      3

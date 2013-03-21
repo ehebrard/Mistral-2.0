@@ -264,13 +264,31 @@ namespace Mistral {
     FailureCountManager(Solver *s) : solver(s) {// }
 
       weight_unit = solver->parameters.activity_increment;
+      
+      variable_weight.initialise(solver->variables.size, solver->variables.size);
 
       for(unsigned int i=0; i<solver->variables.size; ++i) {
-	variable_weight.add(weight_unit * solver->variables[i].get_degree());
+	variable_weight[i] = 0;
+      // 	variable_weight.add(weight_unit * solver->variables[i].get_degree());
       }
+      Variable *scope;
+      int arity, j;
       for(unsigned int i=0; i<solver->constraints.size; ++i) {
 	constraint_weight.add(weight_unit);
+	arity = solver->constraints[i].arity();
+	scope = solver->constraints[i].get_scope();
+	for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
+	    variable_weight[scope[j].id()] += weight_unit/(double)arity;
+	  }
       }
+
+      
+      // std::cout << variable_weight.stack_ << ":";
+      // for(unsigned int i=0; i<solver->variables.size; ++i) {
+      // 	std::cout << " " << variable_weight[i] ;
+      // }
+      // std::cout << std::endl;
+
 
       solver->add((FailureListener*)this);
       solver->add((ConstraintListener*)this);
@@ -425,9 +443,22 @@ namespace Mistral {
 
     //PruningCountManager(Solver *s, void *a=NULL) : solver(s) {
     PruningCountManager(Solver *s) : solver(s) {
+
+      weight_unit = solver->parameters.activity_increment;
+      variable_weight.initialise(solver->variables.size, solver->variables.size);
+
       for(unsigned int i=0; i<solver->variables.size; ++i) {
-	variable_weight.add(weight_unit * solver->variables[i].get_degree());
+	//variable_weight.add(weight_unit * (double)(solver->variables[i].get_degree()));
+	variable_weight[i] = (weight_unit * (double)(solver->variables[i].get_degree()));
       }
+
+      // std::cout << variable_weight.stack_ << ":";
+      // for(unsigned int i=0; i<solver->variables.size; ++i) {
+      // 	std::cout << " " << solver->variables[i] << ": " << variable_weight[i] ;
+      // }
+      // std::cout << std::endl;
+
+
       solver->add((SuccessListener*)this);
       //solver->add((VariableListener*)this);
     }
@@ -859,7 +890,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     GenericDVO() { solver = NULL; manager = NULL; }
-    GenericDVO(Solver* s) : Solver(s) {}
+    GenericDVO(Solver* s) : Solver(s) { manager = NULL; }
    
     virtual void initialise(Solver *s) { 
       solver = s; 
@@ -867,6 +898,9 @@ namespace Mistral {
     }
     virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     virtual void initialise_manager() {
+
+      //std::cout << "initialise manager (" << manager << ") \n";
+
       if(!manager) {
 	manager = new WeightManager(solver);
 	current.initialise(manager->get_variable_weight());
@@ -1712,7 +1746,9 @@ namespace Mistral {
     /**@name Utils*/
     //@{
     inline double value() { return (wei_ ? (double)dom_/wei_ : (double)INFTY); } 
-    inline bool operator<( const MinDomainOverWeight& x ) const { return dom_*x.wei_ < x.dom_*wei_; }
+    inline bool operator<( const MinDomainOverWeight& x ) const { 
+      return dom_*x.wei_ < x.dom_*wei_; 
+    }
 
 
     // inline MinDomainOverWeight& operator*( const MinDomainOverWeight& x ) const { MinDomainOverWeight d; d.dom_=(dom_ * x.dom_); d.wei_=(wei_ * x.wei_); return d; }

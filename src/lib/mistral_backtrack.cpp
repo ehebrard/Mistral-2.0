@@ -67,6 +67,10 @@ std::string Mistral::Constraint::symbol() const {
   return propagator->name();
 }
 
+bool Mistral::Constraint::explained() const { 
+  return propagator->explained();
+}
+
 void Mistral::Constraint::consolidate() {
   propagator->consolidate();
 }

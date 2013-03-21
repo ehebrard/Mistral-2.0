@@ -306,6 +306,7 @@ namespace Mistral {
     virtual bool absorb_negation(const int var) { return false; }
     virtual Constraint get_negation(const int var, Variable x) { return Constraint(); }
     virtual bool rewritable() { return false; }
+    virtual bool explained() { return false; }
     virtual RewritingOutcome rewrite() { return NO_EVENT; }
     virtual void consolidate() = 0; 
     virtual void consolidate_var(const int idx) = 0; 
@@ -1849,6 +1850,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new PredicateEqual(scope[0], scope[1], scope[2], spin)// , type
 						   ); }
     virtual void initialise();
+    virtual bool rewritable() { return true; }
     virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual ~PredicateEqual() {}
@@ -1902,6 +1904,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
       return Constraint( new PredicateConstantEqual( scope[0], x, value, !spin ) );
     }
     virtual void initialise();
+    virtual bool rewritable() { return true; }
     virtual void mark_domain();
     virtual int idempotent() { return 1;}
     virtual bool absorb_negation(const int var) { return var==1; }
@@ -1913,7 +1916,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int check( const int* sol ) const { return((sol[0] == value) == (sol[1] ^ spin)); }
     virtual PropagationOutcome propagate();
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
-    //virtual RewritingOutcome rewrite();
+    virtual RewritingOutcome rewrite();
     //@}
 
     /**@name Miscellaneous*/
@@ -1934,6 +1937,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   {
 
   public:
+
+    Literal explanation[2];
+
+
     /**@name Constructors*/
     //@{
     PredicateNot() : BinaryConstraint() {}
@@ -1947,6 +1954,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint get_negation(const int var, Variable x) { 
       return Constraint( new ConstraintEqual( (var?scope[0]:x), (var?x:scope[1]) ) );
     }
+    virtual bool explained() { return true; }
     virtual void initialise();
     virtual int idempotent() { return 1; }
     virtual bool absorb_negation(const int var) { return true; }
@@ -1963,6 +1971,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual bool rewritable() { return true; }
     virtual RewritingOutcome rewrite();
     //virtual RewritingOutcome rewrite();
+
+    virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
     //@}
 
     /**@name Miscellaneous*/
@@ -3920,6 +3930,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new ConstraintBoolSumInterval(scope, lower_bound, upper_bound)); }
     virtual void initialise();
     virtual void mark_domain();
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -3998,6 +4009,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new ConstraintWeightedBoolSumInterval(scope, lower_bound, upper_bound)); }
     virtual void initialise();
     virtual void mark_domain();
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -4043,6 +4055,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     // coefficients should be in decreasing order
     Vector< int > weight;
  
+    bool init_prop;
 
     // utils for the propagation
     BoolDomain *domains;
@@ -4073,6 +4086,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new ConstraintIncrementalWeightedBoolSumInterval(scope, lower_bound, upper_bound)); }
     virtual void initialise();
     virtual void mark_domain();
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -4140,6 +4154,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new PredicateWeightedBoolSum(scope)); }
     virtual void initialise();
     virtual void mark_domain();
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -4193,6 +4208,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new PredicateBoolSum(scope)); }
     virtual void initialise();
     virtual void mark_domain();
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -4313,6 +4329,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~ConstraintParity();
     virtual Constraint clone() { return Constraint(new ConstraintParity(scope, target_parity)); }
     //virtual bool rewritable() { return true; }
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
@@ -4332,7 +4349,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "sum="; }
+    virtual std::string name() const { return "parity"; }
     //@}
   };
 
@@ -4374,6 +4391,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual Constraint clone() { return Constraint(new ConstraintMultiAtMostSeqCard(scope, _k, _d, _p, _q)); }
     virtual void initialise();
     virtual void mark_domain();
+    virtual bool explained() { return true; }
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}

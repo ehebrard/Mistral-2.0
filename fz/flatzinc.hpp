@@ -271,12 +271,17 @@ protected:
 
 	/// Options
 	BranchingHeuristic *_option_heuristic;
+  std::string _variable_ordering;
+  std::string _value_ordering;
+  //std::string _restart_policy;
+
 	RestartPolicy *_option_policy;
 	bool _option_rewriting;
   bool _option_enumerate;
   bool _option_display_mistral_model;
   bool _option_display_solution;
   bool _option_annotations;
+  int _option_parity;
 	////
 
 
@@ -356,6 +361,9 @@ public:
 
 	/// setup the rewriting step
 	void set_rewriting(const bool on);
+
+	/// setup the rewriting step
+	void set_parity_processing(const int lvl);
 
 	/// setup the rewriting step
   void set_enumeration(const bool on);
