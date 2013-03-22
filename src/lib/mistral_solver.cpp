@@ -451,7 +451,7 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NOGOODSIZE"
      << std::right << std::setw(46) << avg_learned_size << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  LEARNEDSIZE"
-     << std::right << std::setw(46) << ( size_learned/num_learned) << std::endl
+     << std::right << std::setw(46) << (num_learned ? size_learned/num_learned : 0) << std::endl
     //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NEGWEIGHT"
     //<< std::right << std::setw(46) << negative_weight << std::endl
      << " " << solver->parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
@@ -466,7 +466,7 @@ std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
   os << std::right << std::setw(9) << num_learned << " " ;
   os << std::right << std::setw(4) << (int)avg_learned_size << " " ;
   if(num_learned)
-    os << std::right << std::setw(4) << size_learned/num_learned << " |";
+    os << std::right << std::setw(4) << (num_learned ? size_learned/num_learned : 0) << " |";
   else
     os << " n/a |";
   os << std::right << std::setw(9) << num_nodes << " " ;
@@ -3654,6 +3654,10 @@ bool Mistral::Solver::propagate()
       for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
       std::cout << "failure!" << std::endl;
     }
+#endif
+
+#ifdef _DEBUG_FAIL
+   std::cout << "failure of c" << culprit.id() << " " << culprit << std::endl;
 #endif
 
     //std::cout << "solver: notify failure" << std::endl;

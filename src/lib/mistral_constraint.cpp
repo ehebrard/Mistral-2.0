@@ -35,7 +35,7 @@
 //#define _DEBUG_IWEIGHTEDBOOLSUM (id == 13)
 //#define _DEBUG_REASONIWBS (id == 13)
 //#define _DEBUG_REASONIWBS (this == (ConstraintIncrementalWeightedBoolSumInterval*)0x10034d310)
-//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 7)
+#define _DEBUG_IWEIGHTEDBOOLSUM (id == 2553)
 //#define _DEBUG_PWEIGHTEDBOOLSUM (id == 7)
 //#define _DEBUG_REASONRIWBS (get_solver()->statistics.num_filterings == 10037)
 //#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
@@ -11402,14 +11402,20 @@ Mistral::PropagationOutcome Mistral::ConstraintIncrementalWeightedBoolSumInterva
     int _min_ = 0;
     int _max_ = 0;
     for(unsigned int i=0; i<weight.size; ++i) {
+
       if(scope[i].is_ground()) {
-	_min_ += weight[i];
-	_max_ += weight[i];
+	if(scope[i].get_value()) {
+	  _min_ += weight[i];
+	  _max_ += weight[i];
+	}
       } else if(weight[i]<0) {
 	_min_ += weight[i];
       } else {
 	_max_ += weight[i];
       }
+
+      //std::cout << weight[i] << " * " << scope[i].get_domain() << " [" << _min_ << ".." << _max_ << "]\n";
+
     }
     
     init_prop = false;
@@ -12238,8 +12244,10 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
     int _max_ = 0;
     for(unsigned int i=0; i<weight.size; ++i) {
       if(scope[i].is_ground()) {
-	_min_ += weight[i];
-	_max_ += weight[i];
+	if(scope[i].get_value()) {
+	  _min_ += weight[i];
+	  _max_ += weight[i];
+	}
       } else if(weight[i]<0) {
 	_min_ += weight[i];
       } else {
