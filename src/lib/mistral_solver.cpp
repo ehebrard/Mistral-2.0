@@ -445,9 +445,13 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  VARIABLES"
      << std::right << std::setw(46) << num_variables << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  CONSTRAINTS"
-     << std::right << std::setw(46) << num_constraints << std::endl
+     << std::right << std::setw(46) << num_constraints + (solver->base ? solver->base->clauses.size : 0) << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  ARITY"
      << std::right << std::setw(46) << max_arity << std::endl
+     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NOGOODSIZE"
+     << std::right << std::setw(46) << avg_learned_size << std::endl
+     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  LEARNEDSIZE"
+     << std::right << std::setw(46) << ( size_learned/num_learned) << std::endl
     //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NEGWEIGHT"
     //<< std::right << std::setw(46) << negative_weight << std::endl
      << " " << solver->parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
