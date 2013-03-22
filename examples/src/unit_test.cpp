@@ -1878,6 +1878,7 @@ int main(int argc, char *argv[])
   // tests.push_back(new RandomRevNumAffectations<int>());
   // //tests.push_back(new ConstraintArrayTest());
   // tests.push_back(new RandomIntervalTest());
+
  
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
@@ -4829,11 +4830,11 @@ void SatTest::run() {
   solver.parameters.backjump = 1;
 
   solver.depth_first_search(solver.variables,
-			    new GenericHeuristic< VSIDS<1>, BoolMinWeightValue >(&solver),
+			    new GenericHeuristic< VSIDS<4>, Guided<RandomMinMax> >(&solver),
 			    new Geometric()
 			    );
   
-  if(solver.statistics.num_backtracks != 600) {
+  if(solver.statistics.num_backtracks != 14848) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (solver.statistics.num_backtracks) << ")" << endl;
     //exit(1);

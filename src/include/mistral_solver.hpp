@@ -172,6 +172,9 @@ namespace Mistral {
     /// Objective value (ub for minimization, lb for maximization, -1 otherwise)
     long int objective_value;
 
+    /// maximum length of a partial solution
+    unsigned long int max_depth;
+
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_variables; 
     /// Number of nodes, that is recursive calls to  the dfs algo
@@ -185,7 +188,7 @@ namespace Mistral {
     ///
     unsigned long int num_learned;
     ///
-    unsigned long int max_learned;
+    unsigned long int size_learned;
     ///
     double avg_learned_size;
 

@@ -100,7 +100,13 @@ int main(int argc, char **argv)
       X.add(solver.variables[i]);
   }
 
-  
+  /*
+  solver.monitor_list << "objective = ";
+  solver.monitor_list << solver.objective->objective;
+  solver.monitor_list << " c13 = ";
+  solver.monitor_list << solver.constraints[13];
+  */
+
   Outcome result = solver.depth_first_search(X, strategy, policy);
   
   if(cmd.print_statistics())

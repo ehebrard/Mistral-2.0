@@ -255,7 +255,7 @@ namespace Mistral {
     void remove_clause( Vector<Clause*>& clauseList, 
 		       const int cidx,
 		       double& avgsize );
-    /// Forget learnt clauses that do not meet a given criterion
+    /// Forget learnt clauses that do not meet a given criterion 
     void forget();
     /// Add a clause to the original base
     void add_original_clause( Vector<Literal>& conflict );
@@ -321,7 +321,8 @@ namespace Mistral {
     void learn( Vector < Literal >& clause, double init_activity=0.0 );
     void remove( const int cidx );
     //void forget( const double forgetfulness, const Vector< double >& activity );
-    void forget( const double forgetfulness, const double * activity );
+    // (returns the toal removed size)
+    int forget( const double forgetfulness, const double * vactivity, const double * lactivity );
     //@}
 
     /**@name Solving*/

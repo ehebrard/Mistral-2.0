@@ -1396,6 +1396,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
       // 	relax();
       //       }
+
+      if(enforce_nfc1 && active.size == 1) {
+	relax_from(active.back());
+      }
+
       if(changes.list_ == events.list_)
 	// if idempotent, clear the events list
 	events.size = 0;	
@@ -1620,9 +1625,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 	
 	active.reversible_remove(var);
        
-	if(enforce_nfc1 && active.size == 1) {
-	  relax_from(active.back());
-	}
+	// if(enforce_nfc1 && active.size == 1) {
+	//   relax_from(active.back());
+	// }
 	
       }
       

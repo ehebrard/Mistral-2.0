@@ -458,8 +458,9 @@ namespace Mistral {
     void extendStack( const unsigned int l=0 )
     {
 
-      //std::cerr << "extend " << size << std::endl;
-      // display(std::cout);
+      // if(size > 1400) {
+      // std::cerr << "extend " << size << std::endl;
+      // //display(std::cout);
       // std::cout << std::endl;
 
       unsigned int increment = (l ? l : (capacity+1) << 1);
@@ -475,9 +476,9 @@ namespace Mistral {
       std::fill(stack_+capacity-increment, stack_+capacity, DATA_TYPE());
 
 
-    // std::cout << "extended " ;
-    //   display(std::cout);
-    //   std::cout << std::endl << std::endl;
+      // std::cout << "extended " ;
+      // //display(std::cout);
+      // std::cout << std::endl << std::endl;
 
 
     }

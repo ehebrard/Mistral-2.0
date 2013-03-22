@@ -531,8 +531,12 @@ namespace Mistral {
 	//display(std::cout, true);
       }
 
+
       solver->lit_activity = lit_activity.stack_;
       solver->var_activity = var_activity.stack_;
+
+
+      //std::cout << "k " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
 
       solver->add((DecisionListener*)this);
       //solver->add((VariableListener*)this);
@@ -548,6 +552,9 @@ namespace Mistral {
     double **get_value_weight() { return NULL; }
 
     virtual void notify_decision() {
+
+      //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
+
       if(decay > 0 && decay < 1) {
 	int i=var_activity.size;
 	while(i--) var_activity[i] *= decay;
@@ -2642,20 +2649,32 @@ namespace Mistral {
     virtual ~Guided() {};
     
     inline Decision make(Variable x) {
+      // Decision d;
+      
+      // int val, num_sol = solver->statistics.num_solutions;
+
+      // if(cool < num_sol) {
+      // 	num_sol = num_sol - cool + 1;
+      // 	val = solver->last_solution_lb[x.id()];
+      // 	if(val != -INFTY && x.contain(val) && randint(num_sol))
+      // 	  d = Decision(x, Decision::ASSIGNMENT, val);
+      // }
+      
+      // if(d.is_void()) {
+      // 	d = init_choice.make(x);
+      // }
+      // return d;
+
+
+
       Decision d;
       
-      int val, num_sol = solver->statistics.num_solutions;
-
-      if(cool < num_sol) {
-	num_sol = num_sol - cool + 1;
-	val = solver->last_solution_lb[x.id()];
-	if(val != -INFTY && x.contain(val) && randint(num_sol))
-	  d = Decision(x, Decision::ASSIGNMENT, val);
-      }
-      
-      if(d.is_void()) {
+      int val = solver->last_solution_lb[x.id()];
+      if(val != -INFTY && x.contain(val)) {
+	d = Decision(x, Decision::ASSIGNMENT, val);
+      } else
 	d = init_choice.make(x);
-      }
+ 
       return d;
 
       // //if(cool < 3+solver->statistics.num_solutions) {

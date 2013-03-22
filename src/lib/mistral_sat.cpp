@@ -914,25 +914,31 @@ void Mistral::ConstraintClauseBase::remove( const int cidx )
   free(clause);
 }
 
+//#define _DEBUG_FORGET true
 
-void Mistral::ConstraintClauseBase::forget(const double forgetfulness, 
-					   const double *lit_activity
-					   //const Vector< double >& lit_activity
-					   )
+
+int Mistral::ConstraintClauseBase::forget(const double forgetfulness, 
+					  const double *var_activity,
+					  const double *lit_activity
+					  //const Vector< double >& lit_activity
+					  )
 {
 
-  //std::cout << "FORGET " << forgetfulness << std::endl;
+  int removed = 0;
+  int * solution = get_solver()->last_solution_lb.stack_;
 
-  int * solution = NULL;
-  if(get_solver()->statistics.num_solutions)
-    solution = get_solver()->last_solution_lb.stack_;
 
+  int nlearnt = learnt.size;
+  int keep=0;
+  int i=0;
+  Atom a;
+  
 
   if( forgetfulness > 0.0 ) {
-    int nlearnt = learnt.size;
+    // int nlearnt = learnt.size;
     double sa[nlearnt];
     Clause *tmp[nlearnt];
-    int i, j, order[nlearnt], real_size;
+    int j, order[nlearnt], real_size;
     initSort(&(sa[0]));
     for(i=0; i<nlearnt; ++i)
       {
@@ -944,24 +950,32 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 	  real_size = j = clause.size;
 	  while(j--) // THE ACTIVITY OF A LITERAL IS A MEASURE OF HOW MUCH IT IS "WANTED" BY THE FORMULA - SHORT CLAUSE WITH UNWANTED LITERALS ARE THEREFORE GOOD
 	    {
+	      a = UNSIGNED(clause[j]);
 	      // real_size is the number of free literal in hte clause.
 	      // For correcteness, we need to not forget any clause that currently explains a literal.
 	      // It seems like a good idea to keep clauses with small real size anyway (they matter the most right now)
 	      //if(scope[UNSIGNED(clause[j])].is_ground()) --real_size;
-	      if(solution && solution[UNSIGNED(clause[j])] != (int)(SIGN(clause[j]))) --real_size;
-	      else 
-		sa[i] += lit_activity[NOT(clause[j])];
+	      if(solution[a] != -INFTY && solution[a] != (int)(SIGN(clause[j]))) --real_size;
+	      //else 
+	      sa[i] += (var_activity[a] + lit_activity[NOT(clause[j])]);
 	    }
-	  if(real_size)
-	    sa[i] /= //(real_size * clause.size);
-	      (real_size * real_size); //
-	  //(clause.size * clause.size);
-	  else
-	    sa[i] = INFTY;
+	  // if(real_size) {
+	  //   sa[i] /= (double)(real_size);
+	  //   sa[i] /= (double)(clause.size *clause.size);
+	  // //(real_size * real_size); //
+	  // //(clause.size * clause.size);
+	  // }
+	  // else
+	  //   sa[i] = INFTY;
+	
+	
+
+	  sa[i] /= (double)((real_size+1) *clause.size *clause.size);
+	  //sa[i] /= (double)(clause.size *clause.size *clause.size);
 	}
       }
 
-    int keep = (int)((double)nlearnt * (1.0-forgetfulness));
+    keep = (int)((double)nlearnt * (1.0-forgetfulness));
 
     if(lit_activity)
       qsort(order, nlearnt, sizeof(int), compar);
@@ -981,6 +995,31 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
       learnt[i] = tmp[i];
     }
     
+
+#ifdef _DEBUG_FORGET
+    //bool weird = true;
+    for(i=nlearnt; --i>=0;) {
+      double weight = 0;
+      Clause& clause = *(learnt[i]);
+      real_size = j = clause.size;
+      while(j--)
+	{
+	  a = UNSIGNED(clause[j]);
+	  if(solution[a] != -INFTY && solution[a] != (int)(SIGN(clause[j]))) --real_size;
+	  // else 
+	  weight += lit_activity[NOT(clause[j])];
+	}
+
+      std::cout << setw(3) << i << ": " << learnt[i]->size << " " << real_size << " " << sa[order[i]] << "/" << weight/(double)((real_size+1) * clause.size * clause.size) << std::endl;
+      if(i==keep) std::cout << "=================================\n";
+
+      // if(weird && i<keep && i && sa[order[i]] != sa[order[i-1]]) {
+      // 	std::cout << "=================================\n";
+      // 	weird = false;
+      // }
+    }
+#endif
+
 
   // double avg_fgt_size = 0;
   // double avg_fgt_size_weight = 0;
@@ -1004,13 +1043,18 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 
     // exit(1);
 
-    
+
+
+    //std::cout << "remove " << (nlearnt-keep) << " clauses out of " << nlearnt << "\n";
     for(i=nlearnt; i>keep && sa[order[i-1]] != INFTY;) {
       
       // std::cout << sa[order[i-1]] << " remove " ;
       // print_clause(std::cout, learnt[i-1]) ;
       // std::cout << std::endl;
 
+      //avg_rem1_size += learnt[i-1]->size;
+
+      removed += learnt[i-1]->size;
       remove( --i );
     }
 
@@ -1026,22 +1070,43 @@ void Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 
     
 
-
-    /// PIECE OF CODE THAT I CAN'T UNDERSTAND!!!!
-    while(i>1 && sa[order[i-1]] != INFTY) {
-      --i;
-      if(sa[order[i]] == sa[order[i-1]]) {
+    
+    // /// PIECE OF CODE THAT I CAN'T UNDERSTAND!!!!
+    // while(i>1 && sa[order[i-1]] != INFTY) {
+    //   --i;
+    //   if(sa[order[i]] == sa[order[i-1]]) {
 	
-	// std::cout << "REMOVE  ";
-	// print_clause(std::cout, learnt[i]) ;
-	// std::cout << "\nBECAUSE ";
-	// print_clause(std::cout, learnt[i-1]) ;
-	// std::cout << std::endl;
+    // 	// std::cout << "REMOVE  ";
+    // 	// print_clause(std::cout, learnt[i]) ;
+    // 	// std::cout << "\nBECAUSE ";
+    // 	// print_clause(std::cout, learnt[i-1]) ;
+    // 	// std::cout << std::endl;
 
-    	remove( i );
-      }
-    }
+    // 	avg_rem2_size += learnt[i]->size;
+
+    // 	removed += learnt[i]->size;
+    // 	remove( i );
+    //   }
+    // }
+
+    // for(int kk=i; kk; ) {
+
+    //   // std::cout << sa[order[kk-1]] << " keep " ;
+    //   // print_clause(std::cout, learnt[kk-1]) ;
+    //   // std::cout << std::endl;
+
+    //   --kk;
+      
+    //   avg_kept_size += learnt[kk]->size;
+    // }
+
   }
+
+  // std::cout << "rem1: " << (nlearnt-keep ? avg_rem1_size/(nlearnt - keep) : -1) 
+  // 	    << " rem2: " << (keep-i ? avg_rem2_size/(keep-i) : -1 )
+  //  	    << " kept: " << (i ? avg_kept_size/(i) : -1 ) << std::endl;
+
+  return removed;
 }
 
 
