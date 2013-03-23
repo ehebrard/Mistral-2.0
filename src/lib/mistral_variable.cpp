@@ -4626,7 +4626,7 @@ Mistral::LinearExpression::LinearExpression(Vector< Variable >& args,
       else weighted = -1;
     } else weighted = 2;
     if(!children[i].is_boolean()) {
-      if(bool_domains==0) bool_domains = i;
+      if(bool_domains==0) bool_domains = i+1;
       else if(bool_domains>0) bool_domains = -1;
     } 
   }
@@ -4651,7 +4651,7 @@ Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args,
       else weighted = -1;
     } else weighted = 2;
     if(!children[i].is_boolean()) {
-      if(bool_domains==0) bool_domains = i;
+      if(bool_domains==0) bool_domains = i+1;
       else if(bool_domains>0) bool_domains = -1;
     } 
   }
@@ -4701,6 +4701,7 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
       s->add(Constraint(new PredicateAdd(children)));
     }  
   }
+
   
   if(!post_add) {
     if(!bool_domains) {
@@ -4710,20 +4711,21 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
 	s->add(Constraint(new ConstraintBoolSumInterval(children, lower_bound, upper_bound)));
       }
     } else if(lower_bound == 0 && upper_bound == 0 && bool_domains>0 && 
-	      (weight[bool_domains] == 1 || weight[bool_domains] == -1)) {
+	      (weight[bool_domains-1] == 1 || weight[bool_domains-1] == -1)) {
       int n = children.size-1;
       Variable last = children[n];
       int wswap = weight[n];
       
-      children[n] = children[bool_domains];
-      weight[n] = weight[bool_domains];
-      children[bool_domains] = last;
-      weight[bool_domains] = wswap;
+      children[n] = children[bool_domains-1];
+      weight[n] = weight[bool_domains-1];
+      children[bool_domains-1] = last;
+      weight[bool_domains-1] = wswap;
       
-      if(weight[bool_domains] == 1) {
+      if(weight[n] == 1) {
 	for(int i=0; i<n; ++i)
 	  weight[i] = -weight[i];
       }
+
       weight.pop();
       s->add(Constraint(new PredicateWeightedBoolSum(children, weight)));
     } else {

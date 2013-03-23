@@ -11719,7 +11719,7 @@ int Mistral::ConstraintIncrementalWeightedBoolSumInterval::check( const int* s )
 std::ostream& Mistral::ConstraintIncrementalWeightedBoolSumInterval::display(std::ostream& os) const {
 
 #ifdef _GET_SUM_NAME
-  os << " ciwbsi: ";
+  os << " ciwbsi: (" << id << ") ";
 #endif
 
   if(lower_bound > -INFTY) 
@@ -12563,7 +12563,7 @@ int Mistral::PredicateWeightedBoolSum::check( const int* s ) const
 
 std::ostream& Mistral::PredicateWeightedBoolSum::display(std::ostream& os) const {
 #ifdef _GET_SUM_NAME
-  os << " pwbs: " ;
+  os << " pwbs: (" << id << ") " ;
 #endif
 
   os << weight[0] << "*" << scope[0]/*.get_var()*/ ;

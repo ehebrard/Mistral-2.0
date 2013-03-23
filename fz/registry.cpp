@@ -1384,21 +1384,21 @@ namespace FlatZinc {
                           const ConExpr& ce, AST::Node* ann) {
 
       Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
-      //if(!bv.empty())
+      if(!bv.empty())
       s.add(Parity(bv, 1));
       
 
-      /*
-      Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
-      Variable count(0, bv.size/2);
-      Vector<int> coefs(bv.size+1);
-      for(unsigned int i=0; i<bv.size; ++i) coefs[i] = 1;
-      coefs[bv.size] = -2;
-      bv.add(count);
+      
+      // Vector<Variable> bv = arg2boolvarargs(s, m, ce[0]);
+      // Variable count(0, bv.size/2);
+      // Vector<int> coefs(bv.size+1);
+      // for(unsigned int i=0; i<bv.size; ++i) coefs[i] = 1;
+      // coefs[bv.size] = -2;
+      // bv.add(count);
         
-      if(!bv.empty())
-        s.add(Sum(bv, coefs, 1, 1));
-      */
+      // if(!bv.empty())
+      //   s.add(Sum(bv, coefs, 1, 1));
+      
     }
 
     void p_array_bool_and(Solver& s, FlatZincModel& m,
