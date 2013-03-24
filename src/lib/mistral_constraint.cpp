@@ -13609,33 +13609,173 @@ int Mistral::ConstraintMultiAtMostSeqCard::check( const int* s ) const
 
 Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
 {
-	int arity=scope.size, tmp_idx, idx, l_pruning, r_pruning;
+	//Note : nogoods for Multi_AMSC are not supported yet
+	int arity=scope.size, tmp_idx, idx, l_pruning, r_pruning, last_l, last_r;
 	int literal__;
 	int *rank = get_solver()->assignment_order.stack_;
 	int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
 
+
 	explanation.clear();
+	//
 
 	if (a != NULL_ATOM)
 	{
-
-#ifdef _DEBUG_AMSC_NOGOOD
-		std::cout << "Explaning a pruning " << std::endl ;
-#endif
-
+		sequence_image.clear();
 		arity=scope.size;
-
-//		for(int i=0; i<arity; ++i) {
-//			wl[i] = scope[i].get_min();
-//			wr[arity-i-1] = wl[i];
-//		}
-
 		while(arity--)
 		{
-		  idx = scope[arity].id();
-		  if ((Atom)idx == a)
+			if (scope[arity].id() == a)
 				break;
 		}
+
+
+		//idx represents the index of a
+		idx=arity;
+		arity=scope.size;
+		//l_pruning represents the last index to consider in the disentailement rules
+		l_pruning = idx -1;
+		r_pruning = INVERSE(arity,idx) -1;
+		if(scope[idx].get_value()==0)
+		{
+			l_pruning++;
+			r_pruning++;
+		}
+		//last_l is the first left index to consider in the intersection
+		last_l = INVERSE(arity, r_pruning)-_q[0]+1;
+		//last_r is the latest index to consider in the intersection
+		//		last_r = INVERSE(l_pruning)-_q[0]+1;
+		last_r = l_pruning +_q[0]-1;
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout << "arity " << arity << std::endl;
+		std::cout <<"index of a = " << arity  << std::endl;
+		std::cout <<"l_pruning = " << l_pruning << "because x_i =" <<scope[idx].get_value() << std::endl;
+		std::cout <<"r_pruning = " << r_pruning << "because x_i =" <<scope[idx].get_value() << std::endl;
+		std::cout <<"last_l : " << last_l << "because q =" <<_q[0] << std::endl;
+		std::cout <<"last_r : " << last_r <<"because q =" <<_q[0] << std::endl;
+#endif
+		//the total length to consider in the set_max_equal_to_p_at_rank is last_r
+		//increment last_r!
+		last_r++;
+		if (last_r>arity)last_r= arity;
+
+		set_max_equal_to_p_at_rank(a_rank, last_r, scope);
+
+
+		for (int i=0; i< last_l; ++i)
+		{
+			if(scope[i].is_ground())
+			{
+				tmp_idx = scope[i].id();
+				if (rank[tmp_idx] < a_rank)
+				{
+					if (max_equal_to_p[i] == scope[i].get_value())
+					{
+						literal__= (literal(scope[i]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		}
+
+		left_right_intersection.clear();
+
+		if (last_l<0) last_l=0;
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout <<"Final last_l : " << last_l <<  std::endl;
+		std::cout <<"Final last_r after increment: " << last_r-1 <<std::endl;
+		std::cout <<"intersection from index :" << last_l  << " to " << last_r << std::endl;
+		std::cout <<"sequence_image size " << sequence_image.size  <<std::endl;
+#endif
+		for(int i=last_l; i< last_r; ++i)
+		{
+			if (i==idx)
+				continue;
+#ifdef _DEBUG_AMSC_NOGOOD
+			std::cout <<"sequence_image" << sequence_image[i]  <<std::endl;
+#endif
+			left_right_intersection.add(sequence_image[i]);
+		}
+
+		last_r--;
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
+#endif
+		/*
+		if (r_pruning==0)
+		{
+			std::cout <<"finish r_pruning=0" << std::endl;
+			exit(1);
+			end = explanation.end();
+			return explanation.begin();
+		}
+		 */
+
+		last_l= INVERSE(arity,last_l);
+		last_l++;
+		if (last_l>arity)last_l= arity;
+
+		set_max_equal_to_p_at_rank(a_rank, last_l, reverse);
+		last_r= INVERSE(arity, last_r);
+		last_l--;
+		for (int i=0; i< last_r; ++i)
+		{
+			if(scope[ INVERSE(arity,i)].is_ground())
+			{
+				tmp_idx = scope[ INVERSE(arity,i)].id();
+				if (rank[tmp_idx] < a_rank)
+				{
+					if (max_equal_to_p[i] == scope[ INVERSE(arity,i)].get_value())
+					{
+						literal__= (literal(scope[ INVERSE(arity,i)]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		}
+
+		//reload last_l & last_r
+		last_l = INVERSE(arity, r_pruning)-_q[0]+1;
+		last_r = l_pruning +_q[0]-1;
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout <<"AGAIN \n last_l : " << last_l << "because q =" <<_q[0] << std::endl;
+		std::cout <<"last_r : " << last_r <<"because q =" <<_q[0] << std::endl;
+		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
+		std::cout <<"last_r - last_l +1= " << last_r-last_l  << std::endl;
+#endif
+
+		if (last_l<0) last_l=0;
+		last_r++;
+		if (last_r>arity)last_r= (arity-1);
+
+		for (int i=last_l; i< last_r; ++i)
+		{
+			if (i==idx)
+				continue;
+			if(scope[i].is_ground())
+			{
+				tmp_idx = scope[i].id();
+				if (rank[tmp_idx] < a_rank)
+				{
+					if (left_right_intersection[i-last_l] == max_equal_to_p[INVERSE(arity, i)])
+					{
+						if (max_equal_to_p[INVERSE(arity,i)] == scope[i].get_value())
+
+						{
+							literal__= (literal(scope[i]));
+							explanation.add(NOT(literal__));
+						}
+					}
+					else
+					{
+						literal__= (literal(scope[i]));
+						explanation.add(NOT(literal__));
+					}
+				}
+			}
+		}
+
+		/*
 		idx=arity;
 		arity=scope.size;
 		l_pruning=idx-_q[0];
@@ -13665,22 +13805,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 				}
 			}
 		}
-		/*
-		l_pruning--;
-		while(arity--)
-		{
-		if (arity ==l_pruning)
-				break;
-			if(scope[arity].is_ground()) {
-				idx = scope[arity].id();
-				if (idx != a && rank[idx] < a_rank)
-				{
-					literal__= (literal(scope[arity]));
-					explanation.add(NOT(literal__));
-				}
-			}
-		}
-		 */
+
 
 		arity=scope.size;
 		r_pruning=arity-1 - idx - _q[0];
@@ -13702,7 +13827,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 			{
 				if(scope[i].is_ground()) {
 					tmp_idx = scope[i].id();
-					if ((Atom)tmp_idx != a && rank[tmp_idx] < a_rank)
+					if (tmp_idx != a && rank[tmp_idx] < a_rank)
 					{
 						literal__= (literal(scope[i]));
 						explanation.add(NOT(literal__));
@@ -13740,21 +13865,6 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 				}
 			}
 		}
-
-
-
-		/*
-		while(arity--)
-			{
-				if(scope[arity].is_ground()) {
-					idx = scope[arity].id();
-					if (idx != a && rank[idx] < a_rank)
-					{
-						literal__= (literal(scope[arity]));
-						explanation.add(NOT(literal__));
-					}
-				}
-			}
 		 */
 	}
 	else
@@ -13764,12 +13874,12 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 #endif
 		arity=scope.size;
 
-	//	for(int i=0; i<arity; ++i) {
-	//		wl[i] = scope[i].get_min();
+		//	for(int i=0; i<arity; ++i) {
+		//		wl[i] = scope[i].get_min();
 		//	wr[arity-i-1] = wl[i];
-	//	}
+		//	}
 
-//		greedy_assign_for_explanation(wl, lcumulated, scope, arity);
+		//		greedy_assign_for_explanation(wl, lcumulated, scope, arity);
 		set_max_equal_to_p_at_rank(a_rank, arity, scope);
 
 
@@ -13794,7 +13904,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		{
 			if(scope[arity].is_ground()) {
 				idx = scope[arity].id();
-				if ((Atom)idx != a && rank[idx] < a_rank)
+				if (idx != a && rank[idx] < a_rank)
 				{
 					if (max_equal_to_p[arity] == scope[arity].get_value())
 					{
@@ -13809,7 +13919,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 #ifdef _DEBUG_AMSC_NOGOOD
 
-//std::cout<< "The explanation: \n" << explanation;
+	//std::cout<< "The explanation: \n" << explanation;
 
 #endif
 

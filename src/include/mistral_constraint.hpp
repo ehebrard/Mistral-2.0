@@ -55,6 +55,9 @@
   if(FAILED(event_type[(var)])) wiped = FAILURE(var);			\
   else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var); 
 
+//returning the corresponding index ogf the variable from right to left
+#define INVERSE(size, index) ((size - index - 1))
+
 
 //#define  _DEBUG_TABLE (id == 6)
 //((scope[0].id() == 9 || scope[1].id() == 9 || scope[2].id() == 9))
@@ -4390,6 +4393,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //we need this for the explanation to check if the maximum cardinality of all subsequences at position i is equal to p.
     Vector< bool> max_equal_to_p ;
 	Vector<int> sequence_image;
+	Vector<int> left_right_intersection;
     //@}
 
     /**@name Constructors*/
