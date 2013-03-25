@@ -13689,8 +13689,8 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 #endif
 		for(int i=last_l; i< last_r; ++i)
 		{
-			if (i==idx)
-				continue;
+		//	if (i==idx)
+		//		continue;
 #ifdef _DEBUG_AMSC_NOGOOD
 			std::cout <<"sequence_image" << sequence_image[i]  <<std::endl;
 #endif
@@ -13741,13 +13741,12 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		std::cout <<"AGAIN \n last_l : " << last_l << "because q =" <<_q[0] << std::endl;
 		std::cout <<"last_r : " << last_r <<"because q =" <<_q[0] << std::endl;
 		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
-		std::cout <<"last_r - last_l +1= " << last_r-last_l  << std::endl;
+		std::cout <<"(should be equal to intersection size )last_r - last_l +1= " << last_r-last_l+1  << std::endl;
 #endif
 
 		if (last_l<0) last_l=0;
 		last_r++;
-		if (last_r>arity)last_r= (arity-1);
-
+		if (last_r>arity) last_r= arity;
 		for (int i=last_l; i< last_r; ++i)
 		{
 			if (i==idx)
@@ -13760,7 +13759,6 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 					if (left_right_intersection[i-last_l] == max_equal_to_p[INVERSE(arity, i)])
 					{
 						if (max_equal_to_p[INVERSE(arity,i)] == scope[i].get_value())
-
 						{
 							literal__= (literal(scope[i]));
 							explanation.add(NOT(literal__));
