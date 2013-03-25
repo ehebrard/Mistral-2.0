@@ -4413,7 +4413,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
     
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
-    void greedy_assign_for_explanation(int *w, int *cumulated, Vector<Variable>& X, int __size);
+    void greedy_assign_for_explanation(Vector<Variable>& X, int __size, int __rank);
     void set_max_equal_to_p_at_rank(int __rank, int __size,  Vector<Variable>& X);
     /**@name Solving*/
     //@{
