@@ -55,6 +55,9 @@
   if(FAILED(event_type[(var)])) wiped = FAILURE(var);			\
   else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var); 
 
+//returning the corresponding index ogf the variable from right to left
+#define INVERSE(size, index) ((size - index - 1))
+
 
 #define FILTER3( var, method ) \
   Event evt = scope[(var)].method ; \
@@ -4403,6 +4406,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //we need this for the explanation to check if the maximum cardinality of all subsequences at position i is equal to p.
     Vector< bool> max_equal_to_p ;
 	Vector<int> sequence_image;
+	Vector<int> left_right_intersection;
     //@}
 
     /**@name Constructors*/
@@ -4422,7 +4426,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
     
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
-    void greedy_assign_for_explanation(int *w, int *cumulated, Vector<Variable>& X, int __size);
+    void greedy_assign_for_explanation(Vector<Variable>& X, int __size, int __rank);
     void set_max_equal_to_p_at_rank(int __rank, int __size,  Vector<Variable>& X);
     /**@name Solving*/
     //@{
