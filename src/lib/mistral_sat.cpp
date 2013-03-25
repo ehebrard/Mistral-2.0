@@ -929,7 +929,7 @@ int Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 
 
   int nlearnt = learnt.size;
-  int keep=0;
+  int keep=1;
   int i=0;
   Atom a;
   
@@ -972,6 +972,8 @@ int Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 
 	  sa[i] /= (double)((real_size+1) *clause.size *clause.size);
 	  //sa[i] /= (double)(clause.size *clause.size *clause.size);
+	} else {
+	  sa[i] = 1.0/(double)(learnt[i]->size);
 	}
       }
 

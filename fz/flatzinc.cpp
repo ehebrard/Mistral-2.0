@@ -881,8 +881,9 @@ solver.add(solver.variables[66] == 0);
     solver.objective = goal;
 
 
-    // if(solver.is_pseudo_boolean())
-    //   solver.set_learning_on();
+    if(solver.is_pseudo_boolean())
+      solver.set_learning_on();
+
 
     if(_option_annotations) {
       fz_search_goals.add(goal);

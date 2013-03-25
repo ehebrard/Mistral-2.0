@@ -4403,9 +4403,9 @@ void Mistral::Solver::learn_nogood() {
 #ifdef _DEBUG_NOGOOD
 	if(_DEBUG_NOGOOD) {
 	//for(int i=0; i<depth; ++i) 
-	std::cout << "   "; 
-	print_literal(std::cout, q); 
-	std::cout << ": ";
+	  std::cout << "   " << lvl << " "; 
+	  print_literal(std::cout, q); 
+	  std::cout << ": ";
 	}
 #endif
 	

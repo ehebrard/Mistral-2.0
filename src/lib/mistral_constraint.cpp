@@ -30,12 +30,13 @@
 #define _GET_SUM_NAME true
 //#define _DEBUG_IWEIGHTEDBOOLSUM (id == 75)
 //#define _DEBUG_CARD true
+//#define _DEBUG_MIN (id == 1184)
 //#define _DEBUG_PARITY true
 //#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
 //#define _DEBUG_IWEIGHTEDBOOLSUM (id == 13)
 //#define _DEBUG_REASONIWBS (id == 13)
 //#define _DEBUG_REASONIWBS (this == (ConstraintIncrementalWeightedBoolSumInterval*)0x10034d310)
-#define _DEBUG_IWEIGHTEDBOOLSUM (id == 2553)
+//#define _DEBUG_IWEIGHTEDBOOLSUM (id == 2553)
 //#define _DEBUG_PWEIGHTEDBOOLSUM (id == 7)
 //#define _DEBUG_REASONRIWBS (get_solver()->statistics.num_filterings == 10037)
 //#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
@@ -14598,51 +14599,64 @@ int Mistral::PredicateMin::check( const int* sol ) const {
 }
 
 
+
+
 void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int changed_idx, const Event evt) {
   //PropagationOutcome wiped = CONSISTENT;
   int n = scope.size-1, i, var, ub, lb;
   int cs = candidates.size;
 
 #ifdef _DEBUG_MIN
-  std::cout << "react to " << event2str(evt) << " on " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << std::endl;
+  if(_DEBUG_MIN) {
+    std::cout << "react to " << event2str(evt) << " on " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << std::endl;
+  }
 #endif
   
   if(changed_idx<n) {
-    event_type[n] = 0;
+    //??event_type[n] = 0;
     if(candidates.contain(changed_idx)) {
 #ifdef _DEBUG_MIN
-      std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is a candidate" << std::endl;
+      if(_DEBUG_MIN) {
+	std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is a candidate" << std::endl;
+      }
 #endif
       if(candidates.size == 1) { // equality
 #ifdef _DEBUG_MIN
-	std::cout << "    => the only one! (enforce equality)" << std::endl;
+	if(_DEBUG_MIN) {
+	  std::cout << "    => the only one! (enforce equality) (1)" << std::endl;
+	  for(i=0; i<n; ++i) {
+	    if(i != candidates.back() && scope[i].get_min() <= scope[n].get_max()) {
+	      std::cout << "ERROR CANDIDATES!\n";
+	      exit(1);
+	    }
+	  }
+	}
 #endif
 	FILTER3(n, set_domain(scope[changed_idx]));
 #ifdef _DEBUG_MIN
-	if(IS_OK(wiped)) {
-	  std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
-	} else {
-	  std::cout << "    => fail!" << std::endl;
+	if(_DEBUG_MIN) {
+	  if(IS_OK(wiped)) {
+	    std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+	  } else {
+	    std::cout << "    => fail!" << std::endl;
+	  }
 	}
 #endif
       } else {// scope[i] >= scope[n]
 	if(UB_CHANGED(evt)) {
 #ifdef _DEBUG_MIN
-	  std::cout << "    => update " << scope[n] << "'s ub" << std::endl;
+	  if(_DEBUG_MIN) {
+	    std::cout << "    => update " << scope[n] << "'s ub (" << scope[n].get_domain() << ")" << std::endl;
+	  }
 #endif
-
-	  //std::cout << wiped << std::endl;
-
 	  FILTER3(n, set_max(scope[changed_idx].get_max()));
-
-	  // std::cout << scope[n] << " in " << scope[n].get_domain() << " <= "
-	  // 	    << scope[changed_idx].get_max() << " " << wiped << std::endl;
-	
 #ifdef _DEBUG_MIN
-	  if(IS_OK(wiped)) {
-	    std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
-	  } else {
-	    std::cout << "    => fail!" << std::endl;
+	  if(_DEBUG_MIN) {
+	    if(IS_OK(wiped)) {
+	      std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+	    } else {
+	      std::cout << "    => fail!" << std::endl;
+	    }
 	  }
 #endif
 	} 
@@ -14650,19 +14664,45 @@ void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int change
 	  
 	  if(scope[n].get_max() < scope[changed_idx].get_min()) { 
 #ifdef _DEBUG_MIN
-	    std::cout << "    => update " << scope[changed_idx] << "'s possibility" << std::endl;
+	    if(_DEBUG_MIN) {
+	      std::cout << "    => update " << scope[changed_idx] << "'s possibility" << std::endl;
+	    }
 #endif
 	    // scope[i] may not be the minimum variable anymore?
 	    candidates.reversible_remove(changed_idx);
 #ifdef _DEBUG_MIN
-	    std::cout << "    => " << candidates << std::endl;
+	    if(_DEBUG_MIN) {
+	      std::cout << "    => " << candidates << std::endl;
+	      for(i=0; i<n; ++i) {
+		// if(candidates.contain(i) && scope[i].get_min() > scope[n].get_max()) {
+		//   std::cout << "ERROR CANDIDATES (2)!\n";
+		//   exit(1);
+		// }
+		if(!candidates.contain(i) && scope[i].get_min() <= scope[n].get_max()) {
+		  std::cout << "ERROR CANDIDATES (2)!\n";
+		  exit(1);
+		}
+	      }
+	    }
 #endif
 	  } 
 	  if(scope[n].get_min() < scope[changed_idx].get_min()) {
 #ifdef _DEBUG_MIN
-	    std::cout << "    => " << scope[changed_idx] << " was (maybe) the witness for " 
-		      << scope[n] << "'s min" << std::endl;
+	    if(_DEBUG_MIN) {
+	      std::cout << "    => " << scope[changed_idx] << " was (maybe) the witness for " 
+			<< scope[n] << "'s min" << std::endl;
+	    }
 #endif
+	    
+#ifdef _DEBUG_MIN
+	    int real_min = scope[0].get_min();
+	    if(_DEBUG_MIN) {
+	      for(i=1; i<n; ++i) {
+		if(scope[i].get_min() < real_min) real_min = scope[i].get_min();
+	      }
+	    }
+#endif   
+
 	    lb = INFTY;
 	    for(i=candidates.size; i;) {
 	      --i;
@@ -14671,49 +14711,94 @@ void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int change
 		lb = scope[var].get_min();
 	      }
 	    }
+
 #ifdef _DEBUG_MIN
-	    std::cout << "      => new lb = " << lb << std::endl;
+	    if(_DEBUG_MIN) {
+	      std::cout << "      => new lb = " << lb << std::endl;
+	    }
 #endif
+
+#ifdef _DEBUG_MIN
+	    if(_DEBUG_MIN) {
+	      if(real_min < lb  && real_min <= scope[n].get_max()
+		 ) {
+		std::cout << "ERROR SETMIN!\n";
+		exit(1);
+	      }
+	    }
+#endif 
+
 	    FILTER3(n, set_min(lb));
+#ifdef _DEBUG_MIN
+	    if(_DEBUG_MIN) {
+	      if(IS_OK(wiped)) {
+		std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+	      } else {
+		std::cout << "    => fail!" << std::endl;
+	      }
+	    }
+#endif
 	  }
 	}
       }
     }
 #ifdef _DEBUG_MIN
     else {
-      std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is not a candidate" << std::endl;
+      if(_DEBUG_MIN) {
+	std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is not a candidate" << std::endl;
+      }
     }
 #endif
   } else {
 #ifdef _DEBUG_MIN
-    std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is the MIN" << std::endl;
+    if(_DEBUG_MIN) {
+      std::cout << "  " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " is the MIN" << std::endl;
+    }
 #endif
     if(candidates.size == 1) { // equality
 #ifdef _DEBUG_MIN
-      std::cout << "    => only one candidate (enforce equality)" << std::endl;
+      if(_DEBUG_MIN) {
+	std::cout << "    => only one candidate (enforce equality) (2)" << std::endl;
+	for(i=0; i<n; ++i) {
+	  // if(candidates.contain(i) && scope[i].get_min() > scope[n].get_max()) {
+	  //   std::cout << "ERROR CANDIDATES (2.5)!\n";
+	  //   exit(1);
+	  // }
+	  if(!candidates.contain(i) && scope[i].get_min() <= scope[n].get_max()) {
+	    std::cout << "ERROR CANDIDATES (2.5)!\n";
+	    exit(1);
+	  }
+	}
+      }
 #endif
       FILTER3(candidates.back(), set_domain(scope[n]));	
 #ifdef _DEBUG_MIN
-      if(IS_OK(wiped)) {
-	std::cout << "    => " << scope[candidates.back()] << " in " << scope[candidates.back()].get_domain() << std::endl;
-      } else {
-	std::cout << "    => fail!" << std::endl;
+      if(_DEBUG_MIN) {
+	if(IS_OK(wiped)) {
+	  std::cout << "    => " << scope[candidates.back()] << " in " << scope[candidates.back()].get_domain() << std::endl;
+	} else {
+	  std::cout << "    => fail!" << std::endl;
+	}
       }
 #endif
     } else {
       if(LB_CHANGED(evt)) {
 #ifdef _DEBUG_MIN
-	std::cout << "    => update " << candidates << "'s lb" << std::endl;
+	if(_DEBUG_MIN) {
+	  std::cout << "    => update " << candidates << "'s lb" << std::endl;
+	}
 #endif
 	for(i=candidates.size; IS_OK(wiped) && i;) {
 	  --i;
 	  var = candidates[i];
 	  FILTER3(var, set_min(scope[n].get_min()));	
 #ifdef _DEBUG_MIN
-	  if(IS_OK(wiped)) {
-	    std::cout << "    => " << scope[var] << " in " << scope[var].get_domain() << std::endl;
-	  } else {
-	    std::cout << "    => fail!" << std::endl;
+	  if(_DEBUG_MIN) {
+	    if(IS_OK(wiped)) {
+	      std::cout << "    => " << scope[var] << " in " << scope[var].get_domain() << std::endl;
+	    } else {
+	      std::cout << "    => fail!" << std::endl;
+	    }
 	  }
 #endif
 	}
@@ -14721,54 +14806,87 @@ void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int change
       if(UB_CHANGED(evt)) {
 	ub = scope[n].get_max();
 #ifdef _DEBUG_MIN
-	std::cout << "    => update " << candidates << std::endl;
+	if(_DEBUG_MIN) {
+	  std::cout << "    => update " << candidates << std::endl;
+	}
 #endif
 	for(i=candidates.size; i;) {
 	  --i;
 	  var = candidates[i];
 	  if(scope[var].get_min() > ub) {
 #ifdef _DEBUG_MIN
-	    std::cout << "      => remove " << scope[var] << " in " << scope[var].get_domain() 
-		      << " (" << scope[var].get_min() << " > " << ub << ")" << std::endl;
+	    if(_DEBUG_MIN) {
+	      std::cout << "      => remove " << scope[var] << " in " << scope[var].get_domain() 
+			<< " (" << scope[var].get_min() << " > " << ub << ")" << std::endl;
+	    }
 #endif
 	    candidates.reversible_remove(var);
 	  }
 	}
 	if(candidates.empty()) wiped = FAILURE(n);
 #ifdef _DEBUG_MIN
-	if(IS_OK(wiped)) {
-	  std::cout << "    => " << candidates << std::endl;
-	} else {
-	  std::cout << "    => fail!" << std::endl;
+	if(_DEBUG_MIN) {
+	  if(IS_OK(wiped)) {
+	    std::cout << "    => " << candidates << std::endl;
+	  } else {
+	    std::cout << "    => fail!" << std::endl;
+	  }
+
+	  for(i=0; i<n; ++i) {
+	    if(candidates.contain(i) && scope[i].get_min() > scope[n].get_max()) {
+	      std::cout << "ERROR CANDIDATES (3)!\n";
+	      exit(1);
+	    }
+	    if(!candidates.contain(i) && scope[i].get_min() <= scope[n].get_max()) {
+	      std::cout << "ERROR CANDIDATES (3)!\n";
+	      exit(1);
+	    }
+	  }
 	}
 #endif
       }
     }
   }
-
+  
   if(cs>1 && candidates.size == 1) {
 #ifdef _DEBUG_MIN
-    std::cout << "  => only one candidate! (enforce equality)" << std::endl;
+    if(_DEBUG_MIN) {
+      std::cout << "  => only one candidate! (enforce equality) (3)" << std::endl;
+	  for(i=0; i<n; ++i) {
+	    // if(candidates.contain(i) && scope[i].get_min() > scope[n].get_max()) {
+	    //   std::cout << "ERROR CANDIDATES (4)!\n";
+	    //   exit(1);
+	    // }
+	    if(!candidates.contain(i) && scope[i].get_min() <= scope[n].get_max()) {
+	      std::cout << "ERROR CANDIDATES (4)!\n";
+	      exit(1);
+	    }
+	  }
+    }
 #endif
     var = candidates.back();
     if(IS_OK(wiped)) FILTER3(var, set_domain(scope[n]));
-
+    
 #ifdef _DEBUG_MIN
-	  if(IS_OK(wiped)) {
-	    std::cout << "    => " << scope[var] << " in " << scope[var].get_domain() << std::endl;
-	  } else {
-	    std::cout << "    => fail!" << std::endl;
-	  }
+    if(_DEBUG_MIN) {
+      if(IS_OK(wiped)) {
+	std::cout << "    => " << scope[var] << " in " << scope[var].get_domain() << std::endl;
+	} else {
+	std::cout << "    => fail!" << std::endl;
+      }
+    }
 #endif
 
     if(IS_OK(wiped)) FILTER3(n, set_domain(scope[var]));
-
+    
 #ifdef _DEBUG_MIN
-	  if(IS_OK(wiped)) {
-	    std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
-	  } else {
-	    std::cout << "    => fail!" << std::endl;
-	  }
+    if(_DEBUG_MIN) {
+      if(IS_OK(wiped)) {
+	std::cout << "    => " << scope[n] << " in " << scope[n].get_domain() << std::endl;
+      } else {
+	std::cout << "    => fail!" << std::endl;
+      }
+    }
 #endif
   }
 }
@@ -14782,14 +14900,225 @@ void Mistral::PredicateMin::react_to(PropagationOutcome& wiped, const int change
 // 'candidates' stores the indices of the variables that could possibly take the minimum value
 
 
+//#define _CHECKED_MINMAX
+
 Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
 
   PropagationOutcome wiped = CONSISTENT;
   int var;
   Event evt;
 
+
+#ifdef _SAFE_MINMAX
+
+  int i, n=scope.size-1;
+  int __min_min__=scope[0].get_min();
+  int __min_max__=scope[0].get_max();
+  bool fix_point = false;
+  int alone;
+
+  //bool is_consistent = true;
+  while(!fix_point && IS_OK(wiped)) {
+    fix_point = true;
+    alone = -1;
+    for(i=0; IS_OK(wiped) && i<n; ++i) {
+      // used to check if we found the min
+      if(alone == -1 && scope[i].get_min() <= scope[n].get_max())
+	alone = i;
+      else if(alone >= 0 && scope[i].get_min() <= scope[n].get_max())
+	alone = -2;
+	
+      evt = scope[i].set_min(scope[n].get_min());
+      if(FAILED(evt)) wiped = FAILURE(i);
+      else if(evt != NO_EVENT) {
+      	fix_point = false;
+      } 
+
+      if(__min_min__ > scope[i].get_min()) {
+	__min_min__ = scope[i].get_min();
+      }
+      if(__min_max__ > scope[i].get_max()) {
+	__min_max__ = scope[i].get_max();
+      }
+    }
+
+
+
+    if(IS_OK(wiped)) {
+      evt = scope[n].set_min(__min_min__);
+      if(FAILED(evt)) wiped = FAILURE(n);
+      else if(evt != NO_EVENT) {
+    	fix_point = false;
+      } 
+    }
+    
+    if(IS_OK(wiped)) {
+      scope[n].set_max(__min_max__);
+      if(FAILED(evt)) wiped = FAILURE(n);
+      else if(evt != NO_EVENT) {
+    	fix_point = false;
+      } 
+    }
+
+   if(alone >= 0) {
+      if(IS_OK(wiped)) {
+      	evt = scope[alone].set_domain(scope[n]);
+      	if(FAILED(evt)) wiped = FAILURE(alone);
+      	else if(evt != NO_EVENT) {
+      	  fix_point = false;
+      	} 
+
+      if(IS_OK(wiped)) {
+      	evt = scope[n].set_domain(scope[alone]);
+      	if(FAILED(evt)) wiped = FAILURE(n);
+      	else if(evt != NO_EVENT) {
+      	  fix_point = false;
+      	} 
+      }
+    }
+  }
+ 
+
+#else
+
+
+#ifdef _CHECKED_MINMAX
+
+  int i, n=scope.size-1;
+  int __min_min__; //=scope[0].get_min();
+  int __min_max__; //=scope[0].get_max();
+  bool fix_point = false;
+  int alone;
+  bool is_failed = false;
+
+  int lb_x[n];
+  int ub_x[n];
+
+  int lb_min = scope[n].get_min();
+  int ub_min = scope[n].get_max();
+  
+  for(i=0; i<n; ++i) {
+    lb_x[i] = scope[i].get_min();
+    ub_x[i] = scope[i].get_max();
+  }
+
+
+  int iter = 0;
+
+  //bool is_consistent = true;
+  while(!fix_point && !is_failed) {
+
+   __min_min__=lb_x[0];
+   __min_max__=ub_x[0];
+
+    fix_point = true;
+    alone = -1;
+    for(i=0; !is_failed && i<n; ++i) {
+      // used to check if we found the min
+      if(alone == -1 && lb_x[i] <= ub_min)
+	alone = i;
+      else if(alone >= 0 && lb_x[i] <= ub_min)
+	alone = -2;
+	
+      if(ub_x[i] < lb_min) {
+	//std::cout << "fail! (1)\n";
+	is_failed = true;
+      } else if(lb_x[i] < lb_min) {
+	//std::cout << "! (1)\n";
+	fix_point = false;
+	if(scope[i].contain(lb_min)) {
+	  lb_x[i] = lb_min;
+	} else {
+	  lb_x[i] = scope[i].next(lb_min);
+	}
+      }
+
+      if(__min_min__ > lb_x[i]) {
+	//fix_point = false;
+	__min_min__ = lb_x[i];
+      }
+      if(__min_max__ > ub_x[i]) {
+	//fix_point = false;
+	__min_max__ = ub_x[i];
+      }
+    }
+
+
+    if(__min_min__ > lb_min) {
+      fix_point = false;
+      if(scope[n].contain(__min_min__)) {
+	lb_min = __min_min__;
+      } else {
+	lb_min = scope[n].next(__min_min__);
+      }
+    }
+
+    if(__min_max__ < ub_min) {
+      fix_point = false;
+     if(scope[n].contain(__min_max__)) {
+	ub_min = __min_max__;
+      } else {
+	ub_min = scope[n].prev(__min_max__);
+      }
+    }
+    
+    if(lb_min > ub_min) is_failed = true;
+
+    if(alone >= 0) {
+      if(!is_failed) {
+	if(lb_x[alone] > ub_min || ub_x[alone] < lb_min) is_failed = true;
+	else if(lb_x[alone] != lb_min || ub_x[alone] != ub_min) {
+	  fix_point = false;
+	  if(lb_x[alone] < lb_min) {
+	    if(scope[alone].contain(lb_min))
+	      lb_x[alone] = lb_min;
+	    else
+	      lb_x[alone] = scope[alone].next(lb_min);
+	  } else if(lb_x[alone] > lb_min) {
+	    if(scope[n].contain(lb_x[alone]))
+	      lb_min = lb_x[alone];
+	    else
+	      lb_min = scope[n].next(lb_x[alone]);
+	  }
+	  if(ub_x[alone] > ub_min) {
+	    if(scope[alone].contain(ub_min))
+	      ub_x[alone] = ub_min;
+	    else
+	      ub_x[alone] = scope[alone].prev(ub_min);
+	  } else {
+	    if(scope[n].contain(ub_x[alone]))
+	      ub_min = ub_x[alone];
+	    else
+	      ub_min = scope[n].prev(ub_x[alone]);
+	  }
+	}
+      }
+    }
+
+
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN){ 
+  std::cout << "min([" << lb_x[0] << ".." << ub_x[0] << "]";
+  for(i=1; i<n; ++i) {
+    std::cout << ", [" << lb_x[i] << ".." << ub_x[i] << "]";
+  }
+  std::cout << ") = [" <<  lb_min << ".." << ub_min << "]\n";
+  }
+#endif
+
+  }
+  //std::cout << std::endl;
+
+
+
+#endif
+
+
+
+#ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
   std::cout << "\nbeg propagate " << (*this) << std::endl;
+  }
 #endif
 
   while(IS_OK(wiped) && !changes.empty()) {
@@ -14801,219 +15130,59 @@ Mistral::PropagationOutcome Mistral::PredicateMin::propagate() {
   }
 
 #ifdef _DEBUG_MIN
+  if(_DEBUG_MIN) {
   std::cout << "end propagate " << (*this) << std::endl;
+  }
+#endif
+
+#ifdef _CHECKED_MINMAX
+
+  //std::cout << "here\n"; 
+
+  if(IS_OK(wiped)) {
+    for(i=0; i<n; ++i) {
+      if(scope[i].get_min() > lb_x[i]) {
+	std::cout << "WRONG MIN(" << scope[i] << ") in c" << id << " !\n";
+	exit(1);
+      }
+      if(scope[i].get_max() < ub_x[i]) {
+	std::cout << "WRONG MAX(" << scope[i] << ") in c" << id << " !\n";
+	exit(1);
+      }
+    }
+     if(scope[n].get_min() > lb_min) {
+	std::cout << "WRONG MIN(" << scope[n] << ") in c" << id << " !\n";
+	exit(1);
+      }
+      if(scope[n].get_max() < ub_min) {
+	std::cout << "WRONG MAX(" << scope[n] << ") in c" << id << " !\n";
+	exit(1);
+      }
+  } else {
+    if(!is_failed) {
+      std::cout << "WRONG FAILURE in c" << id << " !\n";
+      exit(1);
+    }
+  } 
+
+
+
+  // delete [] lb_x;
+  // delete [] ub_x;
+ 
+#endif
+
 #endif
 
   return wiped;
 
 
-
-//   PropagationOutcome wiped = CONSISTENT;
-//   unsigned int n = scope.size-1, evt;
-//   int i, val, aux, var; 
-//   Event evt_ty;
-
-
-// #ifdef _DEBUG_MIN
-//   if(_DEBUG_MIN) {
-//     std::cout << std::endl << active << std::endl << candidates << std::endl << changes << std::endl;
-//   }
-// #endif
-
-//   if(candidates.size != 1) {
-//     while(IS_OK(wiped) && !changes.empty()) {
-//       if(changes.contain(n)) { 
-// #ifdef _DEBUG_MIN
-// 	if(_DEBUG_MIN) {
-// 	  std::cout << " " << scope[n] << " has changed "  << event2str(event_type[n]) << std::endl;
-// 	}
-// #endif
-// 	changes.remove(n);
-// 	evt_ty = event_type[n];
-// 	event_type[n] = NO_EVENT;
-// 	// the "self" variable has changed.
-// 	// if the lower bound has been changed, we need to update the lb of every active variable
-// 	if(LB_CHANGED(evt_ty)) {
-// 	  val = scope[n].get_min();
-// 	  for(i=candidates.size; IS_OK(wiped) && --i>=0; ) {
-// 	    var = candidates[i];
-// 	    if(scope[var].get_min() < val) {
-// #ifdef _DEBUG_MIN
-// 	      if(_DEBUG_MIN) {
-// 		std::cout << " => " << scope[var] << " in " << scope[var].get_domain() << " >= " << val << std::endl;
-// 	      }
-// #endif
-// 	      event_type[var] |= scope[var].set_min(val);
-// 	      if(FAILED(event_type[var])) wiped = FAILURE(var);
-// 	      else if(!changes.contain(var)) {
-// #ifdef _DEBUG_MIN
-// 		if(_DEBUG_MIN) {
-// 		  std::cout << "    " << scope[var] << " has changed: " << scope[var].get_domain() << std::endl;
-// 		}
-// #endif
-// 		changes.add(var);
-// 		if((scope[var].get_min() > scope[n].get_max()) && candidates.contain(var)) {
-// 		  candidates.reversible_remove(var);
-// #ifdef _DEBUG_MIN
-// 		  if(_DEBUG_MIN) {
-// 		    std::cout << "    " << scope[var] << " can no longer be min" << std::endl;
-// 		  }
-// #endif
-// 		}
-// 	      }	
-// 	    }
-// 	  }
-// 	}
-// 	// if the upper bound has been changed, some active variables may become unactive
-// 	// The min(maximum) might also change because variables became unactive
-// 	if(IS_OK(wiped) && UB_CHANGED(evt_ty)) {
-// 	  aux = val = scope[n].get_max();
-// #ifdef _DEBUG_MIN
-// 	  if(_DEBUG_MIN) {
-// 	    std::cout << " relax the constraint from vars greater than " << val << std::endl;
-// 	  }
-// #endif
-// 	  for(i=candidates.size; IS_OK(wiped) && i;) {
-// 	    --i;
-// 	    var = candidates[i];
-// 	    if(scope[var].get_min() > val) {
-// #ifdef _DEBUG_MIN
-// 	      if(_DEBUG_MIN) {
-// 		std::cout << "    relax1 " << this << " from " << scope[var] << " in " << scope[var].get_domain() << std::endl;
-// 	      }
-// #endif 
-// 	      if(candidates.contain(var)) candidates.reversible_remove(var);
-// 	    } else if(aux > scope[var].get_max()) aux = scope[var].get_max();
-// 	  }
-// #ifdef _DEBUG_MIN
-// 	  if(_DEBUG_MIN) {
-// 	    std::cout << " => " << scope[n] << " in " << scope[n].get_domain() << " <= " << aux << std::endl;
-// 	  }
-// #endif
-// 	  if(aux < scope[n].get_max()) {
-// 	    event_type[n] |= scope[n].set_max(aux);
-// 	    if(FAILED(event_type[n])) wiped = FAILURE(n);
-// 	    else if(!changes.contain(n)) changes.add(n); 
-// 	  }
-// 	}
-//       } 
-//       if(IS_OK(wiped)) {
-// 	// store the min min of the changed vars in aux, and the min max in val
-// 	aux = INFTY;
-// 	val = INFTY;
-// 	while(!changes.empty()) {
-// 	  evt = changes.pop();
-// 	  evt_ty = event_type[evt];
-// 	  event_type[evt] = NO_EVENT;
-// #ifdef _DEBUG_MIN
-// 	  if(_DEBUG_MIN) {
-// 	    std::cout << "-event on " << scope[evt] 
-// 		      << (LB_CHANGED(evt_ty) ? " (lb) " : " ")
-// 		      << (UB_CHANGED(evt_ty) ? "(ub) " : " ")
-// 		      << std::endl;
-// 	  }
-// #endif
-
-// 	  if(candidates.contain(evt)) {
-// 	    if(LB_CHANGED(evt_ty) 
-// 	       && scope[evt].get_min()<aux
-// 	       ) {
-// 	      aux = scope[evt].get_min();
-// 	      if(aux > scope[n].get_max()) {
-// #ifdef _DEBUG_MIN
-// 		if(_DEBUG_MIN) {
-// 		  std::cout << "    relax2 " << this << " from " << scope[evt] << " in " << scope[evt].get_domain() << std::endl;
-// 		}
-// #endif 
-// 		candidates.reversible_remove(evt);
-// 	      }
-// 	    }
-// 	    if(UB_CHANGED(evt_ty) && scope[evt].get_max()<val)
-// 	      val = scope[evt].get_max();
-// 	  }
-// 	}
-// #ifdef _DEBUG_MIN
-// 	if(_DEBUG_MIN) {
-// 	  if(val < INFTY) 
-// 	    std::cout << " New min maximum: " << val << std::endl;
-// 	  if(aux < INFTY) 
-// 	    std::cout << " New min minimum: " << aux << std::endl;
-// 	}
-// #endif
-// 	if(val < scope[n].get_max()) {
-// #ifdef _DEBUG_MIN
-// 	  if(_DEBUG_MIN) {
-// 	    std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
-// 		      << " <= " << val << std::endl;
-// 	  }
-// #endif
-// 	  event_type[n] |= scope[n].set_max(val);
-// 	  if(FAILED(event_type[n])) wiped = FAILURE(n);
-// 	  else if(!changes.contain(n)) changes.add(n);
-// 	}
-// 	if(aux < INFTY) {
-// 	  val = scope[n].get_min();
-// #ifdef _DEBUG_MIN
-// 	  if(_DEBUG_MIN) {
-// 	    std::cout << " previous min minimum witness: " << scope[last_min] 
-// 		      << " in " << scope[last_min].get_domain() << std::endl;
-// 	  }
-// #endif
-// 	  if(aux > val && scope[last_min].get_min() >  val) {
-// 	    // look for a new witness for the min
-// 	    i = candidates.size;
-// 	    while( i > 0 ) {
-// 	      --i;
-// 	      var = scope[candidates[i]].get_min();
-// 	      if(aux > var) aux = var;
-// 	      if(var <= val) {
-// 		last_min = candidates[i];
-// 		break;
-// 	      } 
-// 	    }
-// 	    if(aux > val) {
-// #ifdef _DEBUG_MIN
-// 	      if(_DEBUG_MIN) {
-// 		std::cout << " => " << scope[n] << " in " << scope[n].get_domain() 
-// 			  << " >= " << aux << std::endl;
-// 	      }
-// #endif
-// 	      event_type[n] |= scope[n].set_min(aux);
-// 	      if(FAILED(event_type[n])) wiped = FAILURE(n);
-// 	      else if(!changes.contain(n)) changes.add(n);
-// 	    }
-// 	  } else {
-// #ifdef _DEBUG_MIN
-// 	    if(_DEBUG_MIN) {
-// 	      std::cout << " no need to update " << scope[n] << "'s min" << std::endl;
-// 	    }
-// #endif
-// 	  }
-// 	}
-//       }
-//     }  
-//   }
-
-//   if(candidates.size == 1) {
-
-// #ifdef _DEBUG_MIN
-//     if(_DEBUG_MIN) {
-//       std::cout << scope[candidates[0]] << " is the last min var " << std::endl;
-//     }
-// #endif
-
-//     if(scope[candidates[0]].set_domain(scope[n]) == FAIL_EVENT) wiped = FAILURE(candidates[0]);
-//     if(scope[n].set_domain(scope[candidates[0]]) == FAIL_EVENT) wiped = FAILURE(n);
-//   }
-
-
-//   return wiped;
 }
 
 std::ostream& Mistral::PredicateMin::display(std::ostream& os) const {
-  os << scope.back() << " == min(" << scope[0]/*.get_var()*/;
+  os << scope.back() << ":" << scope.back().get_domain() << " == min(" << scope[0]/*.get_var()*/ << ":" << scope[0].get_domain();
   for(unsigned int i=1; i<scope.size-1; ++i) {
-    os << ", " << scope[i]/*.get_var()*/ ;
+    os << ", " << scope[i]/*.get_var()*/ << ":" << scope[i].get_domain();
   }
   os << ")";
   return os;
@@ -15192,9 +15361,7 @@ void Mistral::PredicateMax::react_to(PropagationOutcome& wiped, const int change
 	std::cout << "    => only one candidate (enforce equality)" << std::endl;
       }
 #endif
-
       FILTER3(candidates.back(), set_domain(scope[n]));
-
 #ifdef _DEBUG_MAX
       if(_DEBUG_MAX) {
 	if(IS_OK(wiped)) {
@@ -15301,6 +15468,73 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
   int var;
   Event evt;
 
+
+#ifdef _CHECKED_MINMAX
+
+  int i, n=scope.size-1;
+  int __max_min__=scope[0].get_min();
+  int __max_max__=scope[0].get_max();
+  bool fix_point = false;
+  int alone;
+
+  while(!fix_point && IS_OK(wiped)) {
+    fix_point = true;
+    alone = -1;
+    for(i=0; IS_OK(wiped) && i<n; ++i) {
+      // used to check if we found the min
+      if(alone == -1 && scope[i].get_max() >= scope[n].get_min())
+	alone = i;
+      else if(alone >= 0 && scope[i].get_max() >= scope[n].get_min())
+	alone = -2;
+	
+      evt = scope[i].set_max(scope[n].get_max());
+      if(FAILED(evt)) wiped = FAILURE(i);
+      else if(evt != NO_EVENT) {
+	fix_point = false;
+      } 
+
+      if(__max_min__ > scope[i].get_min()) __max_min__ = scope[i].get_min();
+      if(__max_max__ > scope[i].get_max()) __max_max__ = scope[i].get_max();
+    }
+
+    if(alone >= 0) {
+      if(IS_OK(wiped)) {
+	evt = scope[alone].set_domain(scope[n]);
+	if(FAILED(evt)) wiped = FAILURE(alone);
+	else if(evt != NO_EVENT) {
+	  fix_point = false;
+	} 
+      }
+      
+      if(IS_OK(wiped)) {
+	evt = scope[n].set_domain(scope[alone]);
+	if(FAILED(evt)) wiped = FAILURE(n);
+	else if(evt != NO_EVENT) {
+	  fix_point = false;
+	} 
+      }
+    }
+
+    if(IS_OK(wiped)) {
+      evt = scope[n].set_min(__max_min__);
+      if(FAILED(evt)) wiped = FAILURE(n);
+      else if(evt != NO_EVENT) {
+	fix_point = false;
+      } 
+    }
+    
+    if(IS_OK(wiped)) {
+      scope[n].set_max(__max_max__);
+      if(FAILED(evt)) wiped = FAILURE(n);
+      else if(evt != NO_EVENT) {
+	fix_point = false;
+      } 
+    }
+  }
+
+#else
+
+
 #ifdef _DEBUG_MAX
  if(_DEBUG_MAX) { 
   std::cout << "\nbeg propagate " << (*this) << std::endl;
@@ -15319,6 +15553,8 @@ Mistral::PropagationOutcome Mistral::PredicateMax::propagate() {
  if(_DEBUG_MAX) { 
   std::cout << "end propagate " << (*this) << std::endl;
  }
+#endif
+
 #endif
 
   return wiped;

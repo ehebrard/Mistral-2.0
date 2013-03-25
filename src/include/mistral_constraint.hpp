@@ -50,10 +50,23 @@
   event_type[(var)] |= evt; \
   }
 
-#define FILTER3( var, method )				    \
+#define FILTER4( var, method )				    \
   event_type[(var)] |= scope[(var)].method ;		     \
   if(FAILED(event_type[(var)])) wiped = FAILURE(var);			\
   else if(event_type[(var)] != NO_EVENT && !changes.contain(var)) changes.add(var); 
+
+
+#define FILTER3( var, method ) \
+  Event evt = scope[(var)].method ; \
+  if(FAILED(evt)) wiped = FAILURE(var);	\
+  else if(evt != NO_EVENT) { \
+    if(changes.contain(var)) { \
+      event_type[(var)] |= evt; \
+    } else { \
+      event_type[(var)] = evt; \
+      changes.add(var); \
+    } \
+  } \
 
 
 //#define  _DEBUG_TABLE (id == 6)
