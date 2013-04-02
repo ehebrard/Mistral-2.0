@@ -181,7 +181,10 @@ CarSequencingInstance::CarSequencingInstance(const char *filename) {
 				cla--;
 			}
 			else
+			{
 				class_demand[cla] = demand_tmp;
+				index_0= cla;
+			}
 		}
 		else
 		{
