@@ -480,7 +480,10 @@ public:
 
 	//Clauses
 	Vector< Vector< Literal > > clauses;
-	PseudoBoolModel(CarSequencingInstance *inst) : CarSequencingModel(inst) {}
+	PseudoBoolModel(CarSequencingInstance *inst, bool s) : CarSequencingModel(inst) {
+		__less_clauses = s;
+	//	cout << (__less_clauses?  "YES" : "NO");
+	}
 	virtual ~PseudoBoolModel() {}
 
 	virtual void setup();
@@ -492,6 +495,8 @@ public:
 protected:
 	void initialise_setup();
 	void setup_clauses();
+	void setup_with_less_clauses();
+	bool __less_clauses;
 
 };
 
@@ -526,7 +531,11 @@ void PseudoBoolModel::__get_var() {
 void PseudoBoolModel::setup()
 {
 	initialise_setup();
-	setup_clauses();
+
+	if (__less_clauses)
+		setup_with_less_clauses();
+	else
+		setup_clauses();
 }
 
 void PseudoBoolModel::initialise_setup()
@@ -581,6 +590,107 @@ void PseudoBoolModel::initialise_setup()
 	}
 }
 
+
+
+void PseudoBoolModel::setup_with_less_clauses()
+{
+
+	clauses.clear();
+	//Chanelling bool_class with option through SAT :
+	Vector< Literal > new_clause;
+	Literal  lit;
+
+	/*
+	for(int i=0; i<instance->nb_cars(); ++i)
+	{
+		for(int cla=0; cla<instance->nb_classes(); ++cla)
+		{
+			for(int k=0; k<instance->nb_options(); ++k)
+			{
+				new_clause.clear();
+				lit =  2* bool_class[cla][i].id();
+				new_clause.add(lit);
+				lit = 2* option[k][i].id() ;
+				if (instance->has_option(cla,k)) lit++;
+				new_clause.add(lit);
+				clauses.add(new_clause);
+			}
+		}
+
+		for(int k=0; k<instance->nb_options(); ++k)
+		{
+			new_clause.clear();
+			lit = (2* option[k][i].id());
+			new_clause.add(lit);
+			bool emty = true;
+			for(int cla=0; cla<instance->nb_classes(); ++cla)
+			{
+				if (instance->has_option (cla, k))
+				{
+					lit =  2* bool_class[cla][i].id() +1;
+					new_clause.add(lit);
+					emty = false;
+				}
+			}
+			if (emty)
+				std::cout << " c Option " << k << " without any class! lit = " << lit  << std::endl;
+			else
+				clauses.add(new_clause);
+		}
+	}
+*/
+
+
+
+	for(int i=0; i<instance->nb_cars(); ++i)
+	{
+		for(int cla=0; cla<instance->nb_classes(); ++cla)
+		{
+			for(int k=0; k<instance->nb_options(); ++k)
+			{
+				new_clause.clear();
+				lit =  2* bool_class[cla][i].id();
+				new_clause.add(lit);
+				lit = 2* option[k][i].id() ;
+				if (instance->has_option(cla,k))
+					lit = (2* option[k][i].id()) +1 ;
+				else
+					continue;
+				new_clause.add(lit);
+				clauses.add(new_clause);
+			}
+		}
+
+		for(int k=0; k<instance->nb_options(); ++k)
+		{
+			new_clause.clear();
+			lit = (2* option[k][i].id());
+			new_clause.add(lit);
+			bool emty = true;
+			for(int cla=0; cla<instance->nb_classes(); ++cla)
+			{
+				if (instance->has_option (cla, k))
+				{
+					lit =  2* bool_class[cla][i].id() +1;
+					new_clause.add(lit);
+					emty = false;
+				}
+			}
+			if (emty)
+				std::cout << " c Option " << k << " without any class! lit = " << lit  << std::endl;
+			else
+				clauses.add(new_clause);
+		}
+	}
+
+
+	for(int i=0; i<clauses.size; ++i) {
+		add(clauses[i]);
+	}
+}
+
+
+
 void PseudoBoolModel::setup_clauses()
 {
 	clauses.clear();
@@ -613,7 +723,7 @@ class PseudoBoolLazyAMSCModel : public PseudoBoolModel {
 
 public:
 
-	PseudoBoolLazyAMSCModel(CarSequencingInstance *inst) : PseudoBoolModel(inst) {}
+	PseudoBoolLazyAMSCModel(CarSequencingInstance *inst, bool s) : PseudoBoolModel(inst,s) {}
 	virtual ~PseudoBoolLazyAMSCModel() {}
 
 	virtual void setup();
@@ -635,7 +745,11 @@ void PseudoBoolLazyAMSCModel::setup()
 				instance->max_capacity(opt),
 				instance->sequence_length(opt) ) );
 	}
-	setup_clauses();
+
+	if (__less_clauses)
+		setup_with_less_clauses();
+	else
+		setup_clauses();
 }
 
 
@@ -644,7 +758,7 @@ class PseudoBoolLazyAMSCNAIVEModel : public PseudoBoolLazyAMSCModel {
 
 public:
 
-	PseudoBoolLazyAMSCNAIVEModel(CarSequencingInstance *inst) : PseudoBoolLazyAMSCModel(inst) {}
+	PseudoBoolLazyAMSCNAIVEModel(CarSequencingInstance *inst, bool s) : PseudoBoolLazyAMSCModel(inst, s) {}
 	virtual void setup();
 };
 
@@ -660,7 +774,11 @@ void PseudoBoolLazyAMSCNAIVEModel::setup()
 				instance->max_capacity(opt),
 				instance->sequence_length(opt) ) );
 	}
-	setup_clauses();
+
+	if (__less_clauses)
+		setup_with_less_clauses();
+	else
+		setup_clauses();
 }
 
 
@@ -1867,7 +1985,7 @@ public:
 
 
 
-CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, bool rewrite) {
+CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, bool rewrite , bool lessclauses) {
 	CarSequencingModel *solver;
 	if(model == "sum") {
 		solver = new SumModel(instance);
@@ -1876,11 +1994,11 @@ CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, 
 	} else if(model == "mamsc+sum") {
 		solver = new SumMultiAmscModel(instance);
 	} else if(model == "pseudoB") {
-		solver = new PseudoBoolModel(instance);
+		solver = new PseudoBoolModel(instance,lessclauses);
 	} else if(model == "lazyamsc") {
-		solver = new PseudoBoolLazyAMSCModel(instance);
+		solver = new PseudoBoolLazyAMSCModel(instance,lessclauses);
 	} else if(model == "naivelazyamsc") {
-		solver = new PseudoBoolLazyAMSCNAIVEModel(instance);
+		solver = new PseudoBoolLazyAMSCNAIVEModel(instance, lessclauses);
 	}
 	else {
 		throw ArgException(string(" "),
@@ -2084,69 +2202,75 @@ int main(int argc, char **argv)
 	try
 	{
 
-	  // Define the command line object.
-	  SolverCmdLine cmd("Mistral (car-sequencing)", ' ', "2.0");      
+		// Define the command line object.
+		SolverCmdLine cmd("Mistral (car-sequencing)", ' ', "2.0");
 
-	  vector<string> mallowed;
-	  mallowed.push_back("sum");
-	  mallowed.push_back("amsc+sum");
-	  mallowed.push_back("gsc");
-	  mallowed.push_back("amsc");
-	  mallowed.push_back("mamsc+sum");
-	  mallowed.push_back("pseudoB");
-	  mallowed.push_back("lazyamsc");
-	  mallowed.push_back("naivelazyamsc");
-	  ValuesConstraint<string> m_allowed( mallowed );
-	  ValueArg<string> modelArg("","model","type of model",false,"sum",&m_allowed); //"amsc","string");
-	  cmd.add( modelArg );
-	  
-	  vector<string> ballowed;
-	  ballowed.push_back("slot");
-	  ballowed.push_back("class");
-	  ballowed.push_back("option");
-	  ValuesConstraint<string> b_allowed( ballowed );
-	  ValueArg<string> branchingArg("","branch","type of branching",false,"class",&b_allowed);
-	  cmd.add( branchingArg );
-	  
-	  vector<string> eallowed;
-	  eallowed.push_back("lex");
-	  eallowed.push_back("middle");
-	  ValuesConstraint<string> e_allowed( eallowed );
-	  ValueArg<string> explorationArg("","explore","type of exploration",false,"lex",&e_allowed);
-	  cmd.add( explorationArg );
-	  
-	  vector<string> callowed;
-	  //callowed.push_back("id");
-	  callowed.push_back("demand");
-	  callowed.push_back("pq");
-	  callowed.push_back("load");
-	  callowed.push_back("rate");
-	  callowed.push_back("slack");
-	  ValuesConstraint<string> c_allowed( callowed );
-	  ValueArg<string> criterionArg("","criterion","option criterion",false,"demand",&c_allowed);
-	  cmd.add( criterionArg );
-	  
-	  vector<string> aallowed;
-	  aallowed.push_back("sum");
-	  aallowed.push_back("euc");
-	  //aallowed.push_back("max");
-	  aallowed.push_back("lex");
-	  aallowed.push_back("card+lex");
-	  ValuesConstraint<string> a_allowed( aallowed );
-	  ValueArg<string> aggregationArg("","aggregation","aggregation method",false,"sum",&a_allowed);
-	  cmd.add( aggregationArg );
-	  
-		// Parse the args.
+		vector<string> mallowed;
+		mallowed.push_back("sum");
+		mallowed.push_back("amsc+sum");
+		mallowed.push_back("gsc");
+		mallowed.push_back("amsc");
+		mallowed.push_back("mamsc+sum");
+		mallowed.push_back("pseudoB");
+		mallowed.push_back("lazyamsc");
+		mallowed.push_back("naivelazyamsc");
+		ValuesConstraint<string> m_allowed( mallowed );
+		ValueArg<string> modelArg("","model","type of model",false,"sum",&m_allowed); //"amsc","string");
+		cmd.add( modelArg );
+
+		vector<string> ballowed;
+		ballowed.push_back("slot");
+		ballowed.push_back("class");
+		ballowed.push_back("option");
+		ValuesConstraint<string> b_allowed( ballowed );
+		ValueArg<string> branchingArg("","branch","type of branching",false,"class",&b_allowed);
+		cmd.add( branchingArg );
+
+		vector<string> eallowed;
+		eallowed.push_back("lex");
+		eallowed.push_back("middle");
+		ValuesConstraint<string> e_allowed( eallowed );
+		ValueArg<string> explorationArg("","explore","type of exploration",false,"lex",&e_allowed);
+		cmd.add( explorationArg );
+
+		vector<string> callowed;
+		//callowed.push_back("id");
+		callowed.push_back("demand");
+		callowed.push_back("pq");
+		callowed.push_back("load");
+		callowed.push_back("rate");
+		callowed.push_back("slack");
+		ValuesConstraint<string> c_allowed( callowed );
+		ValueArg<string> criterionArg("","criterion","option criterion",false,"demand",&c_allowed);
+		cmd.add( criterionArg );
+
+		vector<string> aallowed;
+		aallowed.push_back("sum");
+		aallowed.push_back("euc");
+		//aallowed.push_back("max");
+		aallowed.push_back("lex");
+		aallowed.push_back("card+lex");
+		ValuesConstraint<string> a_allowed( aallowed );
+		ValueArg<string> aggregationArg("","aggregation","aggregation method",false,"sum",&a_allowed);
+		cmd.add( aggregationArg );
+
+	//	vector<string> lessclauses_allowed;
+	//	lessclauses_allowed.push_back("0");
+	//	lessclauses_allowed.push_back("1");
+	//	ValuesConstraint<string> lessCst( lessclauses_allowed );
+
+		SwitchArg lessCst ("","rewriteClauses","rewrite clauses", false);
+		cmd.add(lessCst);
+
 		cmd.parse( argc, argv );
 
-	       
 		// Get the value parsed by each arg.
 		string model = modelArg.getValue();
 		string branching = branchingArg.getValue();
 		string exploration = explorationArg.getValue();
 		string criterion = criterionArg.getValue();
 		string aggregation = aggregationArg.getValue();
-
+		bool lessclauses = lessCst.getValue();
 		usrand(cmd.get_seed());
 
 		CarSequencingInstance instance(cmd.get_filename().c_str()); //file.c_str());
@@ -2155,7 +2279,7 @@ int main(int argc, char **argv)
 			cout << instance << endl;
 		}
 
-		CarSequencingModel *solver = modelFactory(model, &instance, cmd.use_rewrite());
+		CarSequencingModel *solver = modelFactory(model, &instance, cmd.use_rewrite(), lessclauses);
 
 		cmd.set_parameters(*solver);
 
@@ -2184,14 +2308,14 @@ int main(int argc, char **argv)
 
 
 		if(result) {
-		  if(cmd.print_solution()) {
-		    for(int opt=0; opt<solver->instance->nb_options(); ++opt)
-		      {
-			Solution sol(solver->option[opt]);
-			cout << " c  solution: " << sol << endl;
-			
-		      }
-		  }
+			if(cmd.print_solution()) {
+				for(int opt=0; opt<solver->instance->nb_options(); ++opt)
+				{
+					Solution sol(solver->option[opt]);
+					cout << " c  solution: " << sol << endl;
+
+				}
+			}
 		} 
 		if(cmd.print_statistics()) { 
 			cout << solver->statistics << endl;
