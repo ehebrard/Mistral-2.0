@@ -719,6 +719,58 @@ void PseudoBoolModel::setup_clauses()
 }
 
 
+//SAT-Encoding for the AtMostSeqCard
+class PseudoBoolEagerAMSCModel : public PseudoBoolModel {
+
+public:
+
+	PseudoBoolEagerAMSCModel(CarSequencingInstance *inst, bool s) : PseudoBoolModel(inst,s) {}
+	virtual ~PseudoBoolEagerAMSCModel() {}
+
+	virtual void setup();
+
+
+};
+//not yet
+ void PseudoBoolEagerAMSCModel::setup() {
+
+	initialise_setup();
+//Not yet
+	clauses.clear();
+	//Chanelling bool_class with option through SAT :
+	Vector< Literal > new_clause;
+	Literal lit;
+	for(int i=0; i<instance->nb_cars(); ++i)
+	{
+		for(int cla=0; cla<instance->nb_classes(); ++cla)
+		{
+			for(int k=0; k<instance->nb_options(); ++k)
+			{
+				new_clause.clear();
+				lit =  2* bool_class[cla][i].id();
+				new_clause.add(lit);
+				lit = 2* option[k][i].id() ;
+				if (instance->has_option(cla,k)) lit++;
+				new_clause.add(lit);
+				clauses.add(new_clause);
+			}
+		}
+	}
+
+
+
+
+
+	for(int i=0; i<clauses.size; ++i) {
+		add(clauses[i]);
+	}
+
+
+}
+
+
+
+
 class PseudoBoolLazyAMSCModel : public PseudoBoolModel {
 
 public:
@@ -819,9 +871,92 @@ void SumModel::setup() {
 }
 
 
+//A CP Model using the SAT encoding of the AtmostSeqCard constraint)
+class SumEagerAmscModel : public CarSequencingModel {
+
+public:
+
+	SumEagerAmscModel(CarSequencingInstance *inst) : CarSequencingModel(inst) {}
+	virtual ~SumEagerAmscModel() {}
+
+	virtual void setup();
+
+};
+
+void SumEagerAmscModel::setup(){
+
+	CarSequencingModel::setup();
+	/*
+	for(int opt=0; opt<instance->nb_options(); ++opt) {
+		// demand on options as boolean sums too
+		add( BoolSum(option[opt], instance->nb_cars_with_option(opt)) );
+
+		// capacity constraint as boolean sums
+		int p = instance->max_capacity(opt);
+		int q = instance->sequence_length(opt);
+		int n = instance->nb_cars()-q+1;
+		VarArray subsequence;
+		for(int i=0; i<n; ++i) {
+			subsequence.clear();
+			for(int j=0; j<q; ++j) subsequence.add(option[opt][i+j]);
+			add( BoolSum( subsequence, -INFTY, p ) );
+		}
+	}
+	 */
+
+	for(int cla=0; cla<instance->nb_classes(); ++cla) {
+		// demand
+		add( BoolSum(bool_class[cla], instance->nb_cars_of_class(cla)) );
+	}
 
 
+	vector< VarArray > cumulative_sum_for_option;
+	VarArray subsequence;
 
+	cumulative_sum_for_option.resize(instance->nb_options());
+	for(int opt=0; opt<instance->nb_options(); ++opt)
+	{
+		cumulative_sum_for_option[opt].initialise(instance->nb_cars(), 0, instance->nb_cars_with_option(opt));
+		add(cumulative_sum_for_option[opt]);
+	}
+
+
+	/*
+
+	cumulative_sum_for_option.resize(instance->nb_options());
+	for(int opt=0; opt<instance->nb_options(); ++opt) {
+		subsequence.clear();
+		for(int i=0; i<instance->nb_cars(); ++i) {
+			subsequence.add(option[opt][i]);
+		//	for(int j=0; j<instance->option_demand(j); ++j)
+			cumulative_sum_for_option[opt].add(BoolSum(subsequence));
+		}
+		add( Free(cumulative_sum_for_option[opt].back()));
+
+		//add( Free(option[opt]) );
+	}
+	 */
+
+	for(int opt=0; opt<instance->nb_options(); ++opt) {
+
+		for(int i=0; i<instance->nb_cars()-1; ++i) {
+
+			add(cumulative_sum_for_option[opt][i+1] >= cumulative_sum_for_option[opt][i]);
+			add(cumulative_sum_for_option[opt][i+1] <= (cumulative_sum_for_option[opt][i]+1));
+			add(cumulative_sum_for_option[opt][i+1] == (cumulative_sum_for_option[opt][i] + option[opt][i+1]));
+
+		}
+
+		add(cumulative_sum_for_option[opt][instance->nb_cars()-1]==instance->nb_cars_with_option(opt));
+		int p = instance->max_capacity(opt);
+		int q = instance->sequence_length(opt);
+		int n = instance->nb_cars()-q;
+		VarArray subsequence;
+		for(int i=0; i<n; ++i)
+			add(cumulative_sum_for_option[opt][i+q] <= (cumulative_sum_for_option[opt][i] +p));
+	}
+
+}
 
 class SumAmscModel : public SumModel {
 
@@ -1999,6 +2134,8 @@ CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, 
 		solver = new PseudoBoolLazyAMSCModel(instance,lessclauses);
 	} else if(model == "naivelazyamsc") {
 		solver = new PseudoBoolLazyAMSCNAIVEModel(instance, lessclauses);
+	} else if(model == "cpeageramsc") {
+		solver = new SumEagerAmscModel(instance);
 	}
 	else {
 		throw ArgException(string(" "),
@@ -2214,6 +2351,7 @@ int main(int argc, char **argv)
 		mallowed.push_back("pseudoB");
 		mallowed.push_back("lazyamsc");
 		mallowed.push_back("naivelazyamsc");
+		mallowed.push_back("cpeageramsc");
 		ValuesConstraint<string> m_allowed( mallowed );
 		ValueArg<string> modelArg("","model","type of model",false,"sum",&m_allowed); //"amsc","string");
 		cmd.add( modelArg );
