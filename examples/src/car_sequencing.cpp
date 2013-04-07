@@ -600,7 +600,7 @@ void PseudoBoolModel::setup_with_less_clauses()
 	Vector< Literal > new_clause;
 	Literal  lit;
 
-	/*
+
 	for(int i=0; i<instance->nb_cars(); ++i)
 	{
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
@@ -638,10 +638,10 @@ void PseudoBoolModel::setup_with_less_clauses()
 				clauses.add(new_clause);
 		}
 	}
-*/
 
 
 
+/*
 	for(int i=0; i<instance->nb_cars(); ++i)
 	{
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
@@ -683,7 +683,7 @@ void PseudoBoolModel::setup_with_less_clauses()
 		}
 	}
 
-
+*/
 	for(int i=0; i<clauses.size; ++i) {
 		add(clauses[i]);
 	}
@@ -720,6 +720,7 @@ void PseudoBoolModel::setup_clauses()
 
 
 //SAT-Encoding for the AtMostSeqCard
+/*
 class PseudoBoolEagerAMSCModel : public PseudoBoolModel {
 
 public:
@@ -731,45 +732,7 @@ public:
 
 
 };
-//not yet
- void PseudoBoolEagerAMSCModel::setup() {
-
-	initialise_setup();
-//Not yet
-	clauses.clear();
-	//Chanelling bool_class with option through SAT :
-	Vector< Literal > new_clause;
-	Literal lit;
-	for(int i=0; i<instance->nb_cars(); ++i)
-	{
-		for(int cla=0; cla<instance->nb_classes(); ++cla)
-		{
-			for(int k=0; k<instance->nb_options(); ++k)
-			{
-				new_clause.clear();
-				lit =  2* bool_class[cla][i].id();
-				new_clause.add(lit);
-				lit = 2* option[k][i].id() ;
-				if (instance->has_option(cla,k)) lit++;
-				new_clause.add(lit);
-				clauses.add(new_clause);
-			}
-		}
-	}
-
-
-
-
-
-	for(int i=0; i<clauses.size; ++i) {
-		add(clauses[i]);
-	}
-
-
-}
-
-
-
+*/
 
 class PseudoBoolLazyAMSCModel : public PseudoBoolModel {
 
