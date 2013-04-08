@@ -170,7 +170,7 @@ void Mistral::ConstraintImplementation::trigger_on(const int t, Variable x) {
   
   //std::cout << x.domain_type << " " << CONST_VAR << std::endl;
 
-  if(x.domain_type != CONST_VAR) {
+  if(t != _NEVER_ && x.domain_type != CONST_VAR) {
     //Solver *solver = x.get_solver();
 
     // std::cout << (*this) << " triggers on "  << t << " "
@@ -254,8 +254,9 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
     Constraint c;
 
     for(unsigned int i=0; i<on.size; ++i) {
-      if(!(_scope[i].is_ground())) {
-	
+      //if(!(_scope[i].is_ground())) {
+      if(on[i]) {
+
         c = self[i];
 	c.data |= POSTED;
 

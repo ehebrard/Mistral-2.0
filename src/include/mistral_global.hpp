@@ -145,7 +145,7 @@ namespace Mistral {
   //#define _DEBUG_DIV true  
   //#define _DEBUG_OFFSET ((id==1309))
   //#define _DEBUG_AMSC  ((id==2912))
-  //#define _DEBUG_AC ((statistics.num_filterings == 38666))
+  //#define _DEBUG_AC true //((statistics.num_filterings >= 177))
 
   
 #define NORESTART 0
@@ -357,6 +357,7 @@ namespace Mistral {
 #define _VALUE_ 0
 #define _RANGE_ 1
 #define _DOMAIN_ 2
+#define _NEVER_ -1
 
 #define EVENT_TYPE(e) (2-(RANGE_CHANGED(e))-(ASSIGNED(e)))
 

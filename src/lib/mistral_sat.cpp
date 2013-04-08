@@ -418,6 +418,11 @@ void Mistral::ConstraintClauseBase::initialise() {
   for(unsigned int i=0; i<scope.size; ++i) {
     if(scope[i].is_bool())
       trigger_on(_VALUE_, scope[i]);
+    else { 
+      trigger_on(_NEVER_, scope[i]);
+      // std::cout << scope[i] << " " << scope[i].get_domain() << std::endl;
+      // exit(1);
+    }
   }
   //set_idempotent(true);
 
@@ -593,99 +598,7 @@ int Mistral::ConstraintClauseBase::check( const int* sol ) const {
 
 
 
-///! THIS VERSION NO LONGER WORKS BECAUSE TH ARRAY SEQUENCE IS NOT UPDATED IMMEDIATLY ON CHANGE ////
-// Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
-// //   conflict=NULL;
-// //   PropagationOutcome wiped = CONSISTENT;
-
-// //   int x, v, cw;
-// //   Literal p;
-
-// //   while( !conflict && !changes.empty() ) {
-// //     x = changes.pop();
-// //     v = scope[x].get_min();
-// //     p = NOT(2*x+v);
-
-// // #ifdef _DEBUG_UNITPROP
-// //     for(unsigned int i=0; i<solver->level; ++i) std::cout << " " ;
-// //     std::cout << "propagate " ;
-// //     print_literal(std::cout, NOT(p));
-// //     std::cout << " " << is_watched_by[p].size << std::endl;
-// // #endif
-
-// //     cw = is_watched_by[p].size;
-// //     while(cw-- && !conflict) {
-// //       conflict = update_watcher(cw, p, wiped);
-// //     }
-// //   }
-
-// //   return wiped;
-
-//   conflict=NULL;
-//   Variable *assumptions = ((Solver*)solver)->sequence.list_;
-//   int i=0, n=changes.size, index = ((Solver*)solver)->sequence.size;
-//   PropagationOutcome wiped = CONSISTENT;
-
-//   int x, v, cw;
-//   Literal p;
-
-//   //std::cout << solver->sequence << std::endl;
-//   //std::cout << "+++++++++++++++++" << std::endl;
-
-//   while( !conflict && i<n ) {
-//     x = changes[i];
-//     v = scope[x].get_min();
-//     p = NOT(2*x+v);
-
-// #ifdef _DEBUG_UNITPROP
-//     for(int j=0; j<solver->level; ++j) std::cout << " " ;
-//     std::cout << "propagate1 " ;
-//     print_literal(std::cout, NOT(p));
-//     std::cout << " " << is_watched_by[p].size << std::endl;
-// #endif
-
-//     cw = is_watched_by[p].size;
-//     while(cw-- && !conflict) {
-//       conflict = update_watcher(cw, p, wiped);
-//     }
-
-//     ++i;
-//   }
-
-
-//   //std::cout << "::::::::::::::::+" << std::endl;
-
-//   //std::cout << solver->sequence << std::endl;
-
-//   //std::cout << changes
-
-//   //n = solver->sequence.size;
-//   while( !conflict && --index>=(int)(((Solver*)solver)->sequence.size) ) {
-
-//     //std::cout << index << std::endl;
-
-//     x = assumptions[index].id();
-//     v = assumptions[index].get_min();
-//     p = NOT(2*x+v);
-
-// #ifdef _DEBUG_UNITPROP
-//     for(int j=0; j<solver->level; ++j) std::cout << " " ;
-//     std::cout << "propagate2 " ;
-//     print_literal(std::cout, NOT(p));
-//     std::cout << " " << is_watched_by[p].size << std::endl;
-// #endif
-
-//     cw = is_watched_by[p].size;
-//     while(cw-- && !conflict) {
-//       conflict = update_watcher(cw, p, wiped);
-//     }
-//   }
-
-//   //std::cout << "]]]]]]]]]]]]]]]]+" << std::endl;
-
-//   return wiped;
-// }
-
+//#define _CHECKED_CLAUSES
 
 Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
   conflict=NULL;
@@ -712,71 +625,63 @@ Mistral::PropagationOutcome Mistral::ConstraintClauseBase::propagate() {
     }
   }
 
+#ifdef _CHECKED_CLAUSES
+  unsigned int i, j;
+  if(IS_OK(wiped)) {
+    bool violated = false;
+    int num_literals = 0;
+    for(i=0; !violated && num_literals != 1 && i<clauses.size; ++i) {
+      Clause& clause = *(clauses[i]);
+      violated = true;
+      num_literals = clause.size;
+      for(j=0; j<clause.size; ++j) {
+	Atom a = UNSIGNED(clause[j]);
+	if(scope[a].is_ground()) {
+	  --num_literals;
+	  violated &= !scope[a].equal(SIGN(clause[j]));
+	} else violated = false;
+      }
+    }
+    if(violated || num_literals==1) {
+      std::cout << "unit propagation was not complete!!" << std::endl;
+      print_clause(std::cout, clauses[i]);
+      std::cout << std::endl;
+      exit(1);
+    } else {
+      for(i=0; !violated && num_literals != 1 && i<learnt.size; ++i) {
+	Clause& clause = *(learnt[i]);
+	violated = true;
+	num_literals = clause.size;
+	// if(clause.size == 23) {
+	//   std::cout << "check ";
+	//   print_clause(std::cout, learnt[i]);
+	//   std::cout << std::endl;
+	//   for(j=0; j<clause.size; ++j) {
+	//     Atom a = UNSIGNED(clause[j]);
+	//     std::cout << scope[a].get_domain() << " ";
+	//   }
+	//   std::cout << std::endl;
+	// }
+
+	for(j=0; j<clause.size; ++j) {
+	  Atom a = UNSIGNED(clause[j]);
+	  if(scope[a].is_ground()) {
+	    --num_literals;
+	    violated &= !scope[a].equal(SIGN(clause[j]));
+	  } else violated = false;
+	}
+      }
+      if(violated || num_literals==1) {
+	std::cout << "unit propagation was not complete!!" << std::endl;
+	print_clause(std::cout, learnt[i]);
+	std::cout << std::endl;
+	exit(1);
+      }
+    }
+  }
+#endif
+
   return wiped;
-
-//   conflict=NULL;
-//   Variable *assumptions = ((Solver*)solver)->sequence.list_;
-//   int i=0, n=changes.size, index = ((Solver*)solver)->sequence.size;
-//   PropagationOutcome wiped = CONSISTENT;
-
-//   int x, v, cw;
-//   Literal p;
-
-//   //std::cout << solver->sequence << std::endl;
-//   //std::cout << "+++++++++++++++++" << std::endl;
-
-//   while( !conflict && i<n ) {
-//     x = changes[i];
-//     v = scope[x].get_min();
-//     p = NOT(2*x+v);
-
-// #ifdef _DEBUG_UNITPROP
-//     for(int j=0; j<solver->level; ++j) std::cout << " " ;
-//     std::cout << "propagate1 " ;
-//     print_literal(std::cout, NOT(p));
-//     std::cout << " " << is_watched_by[p].size << std::endl;
-// #endif
-
-//     cw = is_watched_by[p].size;
-//     while(cw-- && !conflict) {
-//       conflict = update_watcher(cw, p, wiped);
-//     }
-
-//     ++i;
-//   }
-
-
-//   //std::cout << "::::::::::::::::+" << std::endl;
-
-//   //std::cout << solver->sequence << std::endl;
-
-//   //std::cout << changes
-
-//   //n = solver->sequence.size;
-//   while( !conflict && --index>=(int)(((Solver*)solver)->sequence.size) ) {
-
-//     //std::cout << index << std::endl;
-
-//     x = assumptions[index].id();
-//     v = assumptions[index].get_min();
-//     p = NOT(2*x+v);
-
-// #ifdef _DEBUG_UNITPROP
-//     for(int j=0; j<solver->level; ++j) std::cout << " " ;
-//     std::cout << "propagate2 " ;
-//     print_literal(std::cout, NOT(p));
-//     std::cout << " " << is_watched_by[p].size << std::endl;
-// #endif
-
-//     cw = is_watched_by[p].size;
-//     while(cw-- && !conflict) {
-//       conflict = update_watcher(cw, p, wiped);
-//     }
-//   }
-
-//   //std::cout << "]]]]]]]]]]]]]]]]+" << std::endl;
-
-//   return wiped;
 }
 
 
