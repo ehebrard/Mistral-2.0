@@ -596,11 +596,11 @@ void PseudoBoolModel::setup_with_less_clauses()
 {
 
 	clauses.clear();
-	//Chanelling bool_class with option through SAT :
+	//reformulate chanelling bool_class with option through SAT :
 	Vector< Literal > new_clause;
 	Literal  lit;
 
-
+/*
 	for(int i=0; i<instance->nb_cars(); ++i)
 	{
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
@@ -639,9 +639,9 @@ void PseudoBoolModel::setup_with_less_clauses()
 		}
 	}
 
+*/
 
 
-/*
 	for(int i=0; i<instance->nb_cars(); ++i)
 	{
 		for(int cla=0; cla<instance->nb_classes(); ++cla)
@@ -683,7 +683,6 @@ void PseudoBoolModel::setup_with_less_clauses()
 		}
 	}
 
-*/
 	for(int i=0; i<clauses.size; ++i) {
 		add(clauses[i]);
 	}
