@@ -13917,6 +13917,18 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 #endif
 
+
+	Solver *sol = get_solver();
+	// sol->statistics.avg_amsc_expl_size = 
+	//   ((sol->statistics.avg_amsc_expl_size * sol->statistics.num_amsc_explanations) + explanation.size)/
+	//   (++sol->statistics.num_amsc_explanations);
+
+	// std::cout << " + " << (explanation.size) << " : " << sol->statistics.num_amsc_explanations << " x " << sol->statistics.avg_amsc_expl_size << std::endl;
+
+	++sol->statistics.num_amsc_explanations;
+	sol->statistics.avg_amsc_expl_size += explanation.size;
+
+
 	end = explanation.end();
 	return explanation.begin();
 }
@@ -16441,6 +16453,19 @@ Mistral::Explanation::iterator Mistral::ConstraintNaiveMultiAtMostSeqCard::get_r
 			}
 		}
 	}
+
+
+	Solver *sol = get_solver();
+	// sol->statistics.avg_amsc_expl_size = 
+	//   ((sol->statistics.avg_amsc_expl_size * sol->statistics.num_amsc_explanations) + explanation.size)/
+	//   (++sol->statistics.num_amsc_explanations);
+
+	// std::cout << " + " << (explanation.size) << " : " << sol->statistics.num_amsc_explanations << " x " << sol->statistics.avg_amsc_expl_size << std::endl;
+
+	++sol->statistics.num_amsc_explanations;
+	sol->statistics.avg_amsc_expl_size += explanation.size;
+
+
 	end = explanation.end();
 	return explanation.begin();
 }

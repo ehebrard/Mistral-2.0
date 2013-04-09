@@ -191,6 +191,10 @@ namespace Mistral {
     unsigned long int size_learned;
     ///
     double avg_learned_size;
+    ///
+    unsigned long int avg_amsc_expl_size;
+    /// 
+    unsigned long int num_amsc_explanations;
 
     
 

@@ -264,6 +264,11 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
   //literals = 0;
   //small = 0;
 
+
+  avg_amsc_expl_size = 0;
+    /// 
+  num_amsc_explanations = 0;
+
   //negative_weight = false;
   max_arity = 0;
 
@@ -425,10 +430,22 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
     //<< std::left << std::setw(46) << " " << solver->parameters.prefix_solution << " " << sol << std::endl
     //<< std::left << std::setw(46) << " " << solver->parameters.prefix_statistics << "  OBJECTIVE"
      << std::left << " " << solver->parameters.prefix_solution << std::right << std::setw(90-lps) 
-     << num_solutions << std::endl
-     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OBJECTIVE"
-     << std::right << std::setw(46) << objective_value  << std::endl
-     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  TIME"
+     << num_solutions << std::endl;
+
+  if(solver->objective) {
+    if(solver->objective->is_optimization()) {
+      os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OBJECTIVE"
+	 << std::right << std::setw(46) << objective_value  << std::endl;
+    } else if(solver->objective->is_satisfaction()) {
+      os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  MAXDEPTH"
+	 << std::right << std::setw(46) << max_depth  << std::endl;
+    } else if(solver->objective->is_enumeration()) {
+      os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NUMSOL"
+	 << std::right << std::setw(46) << num_solutions  << std::endl;
+    } 
+  }
+
+  os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  TIME"
      << std::right << std::setw(46) << (end_time - start_time)  << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  MEMORY"
      << std::right << std::setw(46) << (mem_used() / 1048576.0) << std::endl
@@ -452,6 +469,8 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::right << std::setw(46) << avg_learned_size << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  LEARNEDSIZE"
      << std::right << std::setw(46) << (num_learned ? size_learned/num_learned : 0) << std::endl
+     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  AMSCEXPLSIZE"
+     << std::right << std::setw(46) << (num_amsc_explanations ? avg_amsc_expl_size/num_amsc_explanations : 0) << std::endl
     //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NEGWEIGHT"
     //<< std::right << std::setw(46) << negative_weight << std::endl
      << " " << solver->parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=') << "+" << std::endl << std::setfill(' ');
@@ -5240,12 +5259,17 @@ std::ostream& Mistral::SearchMonitor::display( std::ostream& os ) const {
   // return os;
 
 
+
   int v=0;
   int c=0;
   int s=0;
  for(unsigned int i=0; i<sequence_type.size; ++i) {
     if(sequence_type[i] == 0) {
-      os << sequence_var[v++].get_domain();
+      if(sequence_var[v].is_ground() || !(sequence_var[v].is_boolean()))
+	os << sequence_var[v].get_domain();
+      else
+	os << ".";
+      ++v;
     } else if(sequence_type[i] == 1) {
       os << sequence_con[c++];
     } else {
@@ -5259,7 +5283,7 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, VarArra
   os.add("(");
   os.add(x[0]);
   for(unsigned int i=1; i<x.size; ++i) {
-    os.add(" ");
+    //os.add(" ");
     os.add(x[i]);
   }
   os.add(")");
