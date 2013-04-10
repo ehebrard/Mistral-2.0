@@ -26,6 +26,7 @@
 #include <mistral_constraint.hpp>
 
 //#define _DEBUG_AMSC_NOGOOD true
+//#define _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION true
 
 #define _GET_SUM_NAME true
 //#define _DEBUG_IWEIGHTEDBOOLSUM (id == 75)
@@ -13619,7 +13620,6 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 
 	explanation.clear();
-	//
 
 	if (a != NULL_ATOM)
 	{
@@ -13661,9 +13661,31 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		last_r++;
 		if (last_r>arity)last_r= arity;
 
-		set_max_equal_to_p_at_rank(a_rank, last_r, scope);
-//		greedy_assign_for_explanation(scope, last_r,a_rank);
+#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+		std::cout << "CHECK_LINEAR_IMPLEMENTATION" << sid::endl;
+		set_max_equal_to_p_at_rank(a_rank, last_r +_q[0], scope);
+		Vector< bool> TMP ;
+		for (int i=0; i< last_r; i++)
+			TMP.push_back(max_equal_to_p[i]);
+#endif
 
+		greedy_assign_for_explanation(scope, last_r  +_q[0],a_rank);
+#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+		for (int i=0; i< last_r; i++)
+			if (TMP[i]!=max_equal_to_p[i] )
+			{
+				std::cout << "\n \n \n \n Difference at index " << i <<  " ; set_max_equal_to_p_at_rank max_equal_to_p  \n" ;
+				for (int i=0; i< last_r; i++)
+					std::cout<< ' ' << TMP[i] ;
+
+				std::cout << "\n greedy_assign_for_explanation max_equal_to_p ? \n" ;
+				arity=scope.size;
+				for (int i=0; i< last_r; i++)
+					std::cout<< ' ' << max_equal_to_p[i] ;
+				break;
+			}
+
+#endif
 		for (int i=0; i< last_l; ++i)
 		{
 			if(scope[i].is_ground())
@@ -13691,8 +13713,8 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 #endif
 		for(int i=last_l; i< last_r; ++i)
 		{
-		//	if (i==idx)
-		//		continue;
+			//	if (i==idx)
+			//		continue;
 #ifdef _DEBUG_AMSC_NOGOOD
 			std::cout <<"sequence_image" << sequence_image[i]  <<std::endl;
 #endif
@@ -13700,6 +13722,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		}
 
 		last_r--;
+
 #ifdef _DEBUG_AMSC_NOGOOD
 		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
 #endif
@@ -13708,8 +13731,31 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		last_l++;
 		if (last_l>arity)last_l= arity;
 
-		set_max_equal_to_p_at_rank(a_rank, last_l, reverse);
-//		greedy_assign_for_explanation(reverse, last_l,a_rank);
+#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+		set_max_equal_to_p_at_rank(a_rank, last_l  +_q[0], reverse);
+		Vector< bool> TMP2 ;
+		for (int i=0; i< last_l; i++)
+			TMP2.push_back(max_equal_to_p[i]) ;
+#endif
+
+		greedy_assign_for_explanation(reverse, last_l  +_q[0],a_rank);
+
+#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+		for (int i=0; i< last_l; i++)
+			if (TMP2[i]!=max_equal_to_p[i])
+			{
+				std::cout <<  "\n \n \n \n Difference at index " << i <<  " ;  set_max_equal_to_p_at_rank max_equal_to_p ? \n" ;
+				arity=scope.size;
+				for (int i=0; i< last_l; i++)
+					std::cout<< ' ' << TMP2[i] ;
+
+				std::cout << "\n greedy_assign_for_explanation max_equal_to_p ? \n" ;
+				arity=scope.size;
+				for (int i=0; i< last_l; i++)
+					std::cout<< ' ' << max_equal_to_p[i] ;
+				break;
+			}
+#endif
 
 		last_r= INVERSE(arity, last_r);
 		last_l--;
@@ -13768,97 +13814,6 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 			}
 		}
 
-		/*
-		idx=arity;
-		arity=scope.size;
-		l_pruning=idx-_q[0];
-		l_pruning++;
-		if(scope[idx].get_value()==0)
-			l_pruning++;
-		//greedy_assign_for_explanation(wl, lcumulated, scope, arity);
-//lpruning : the smallest index not to consider
-		set_max_equal_to_p_at_rank(a_rank, l_pruning, scope);
-
-		for (int i=0; i< l_pruning; ++i)
-		{
-#ifdef _DEBUG_AMSC_NOGOOD
-			//std::cout << "learn at index " << i << std::endl;
-#endif
-			if(scope[i].is_ground())
-			{
-				tmp_idx = scope[i].id();
-				if (rank[tmp_idx] < a_rank)
-				{
-					if (max_equal_to_p[i] == scope[i].get_value())
-					{
-
-						literal__= (literal(scope[i]));
-						explanation.add(NOT(literal__));
-					}
-				}
-			}
-		}
-
-
-		arity=scope.size;
-		r_pruning=arity-1 - idx - _q[0];
-		r_pruning++;
-		if(scope[idx].get_value()==0)
-			r_pruning++;
-		//r_pruning : the smallest index not to consider from right to left
-#ifdef _DEBUG_AMSC_NOGOOD
-
-//		std::cout << "idx = " << idx << std::endl;
-//		std::cout << "l_pruning* " << l_pruning << std::endl;
-//		std::cout << "r_pruning init" << r_pruning << std::endl;
-#endif
-
-		if (r_pruning<0)
-			r_pruning=0;
-		if (l_pruning>=0)
-			for (int i=l_pruning; i< (arity - r_pruning); ++i)
-			{
-				if(scope[i].is_ground()) {
-					tmp_idx = scope[i].id();
-					if (tmp_idx != a && rank[tmp_idx] < a_rank)
-					{
-						literal__= (literal(scope[i]));
-						explanation.add(NOT(literal__));
-					}
-				}
-			}
-
-#ifdef _DEBUG_AMSC_NOGOOD
-		//std::cout << "r_pruning* = 0?" << r_pruning << std::endl;
-		//std::cout << "q=" << _q[0] << std::endl;
-
-#endif
-
-		if (r_pruning==0)
-		{
-			end = explanation.end();
-			return explanation.begin();
-		}
-
-//		greedy_assign_for_explanation(wr, rcumulated, reverse, r_pruning+1);
-		set_max_equal_to_p_at_rank(a_rank, r_pruning, reverse);
-
-		for (int i=0; i< r_pruning; ++i)
-		{
-			if(scope[arity-i-1].is_ground())
-			{
-				tmp_idx = scope[arity-i-1].id();
-				if (rank[tmp_idx] < a_rank)
-				{
-					if (max_equal_to_p[i] == scope[arity-i-1].get_value())
-					{
-						literal__= (literal(scope[arity-i-1]));
-						explanation.add(NOT(literal__));
-					}
-				}
-			}
-		}
-		 */
 	}
 	else
 	{
@@ -13866,16 +13821,32 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		std::cout << "Explaning FAILURE " << std::endl ;
 #endif
 		arity=scope.size;
-
-		//	for(int i=0; i<arity; ++i) {
-		//		wl[i] = scope[i].get_min();
-		//	wr[arity-i-1] = wl[i];
-		//	}
-
-		//		greedy_assign_for_explanation(wl, lcumulated, scope, arity);
+#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
 		set_max_equal_to_p_at_rank(a_rank, arity, scope);
-//		greedy_assign_for_explanation(scope, arity,a_rank);
+		Vector< bool> TMP ;
+		for (int i=0; i< arity; i++)
+			TMP.push_back(max_equal_to_p[i]) ;
 
+#endif
+
+		greedy_assign_for_explanation(scope, arity,a_rank);
+
+#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+		for (int i=0; i< arity; i++)
+			if (TMP[i]!=max_equal_to_p[i])
+			{
+				std::cout <<  "\n \n \n \n Difference at index " << i <<  " ;  set_max_equal_to_p_at_rank max_equal_to_p ? \n" ;
+				arity=scope.size;
+				for (int i=0; i< arity; i++)
+					std::cout<< ' ' << TMP[i] ;
+
+				std::cout << "\n greedy_assign_for_explanation max_equal_to_p ? \n" ;
+				arity=scope.size;
+				for (int i=0; i< arity; i++)
+					std::cout<< ' ' << max_equal_to_p[i] ;
+				break;
+			}
+#endif
 
 #ifdef _DEBUG_AMSC_NOGOOD
 		std::cout << "P= "<< _p[0] << "Q=" << _q[0] << "D=" << _d << std::endl;
@@ -13935,21 +13906,22 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __rank, int __size, Vector<Variable>& X) {
 	//__size=4;
+	if (__size>X.size) __size= X.size;
+
 	sequence_image.clear();
 	int *rank = get_solver()->assignment_order.stack_;
 	int tmp_idx;
+	int sizeOfX = X.size;
 #ifdef _DEBUG_AMSC_NOGOOD
-
 	std::cout << "__size" << __size ;
 	std::cout << "__rank" << __rank ;
 
 #endif
+//	sequence_image shall represent the result of greedy
+
 	for (int i=0; i< __size; ++i)
 	{
-#ifdef _DEBUG_AMSC_NOGOOD
 
-		//std::cout << "learn at index " << i << std::endl;
-#endif
 		if(X[i].is_ground())
 		{
 			tmp_idx = X[i].id();
@@ -13977,53 +13949,52 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 
 #ifdef _DEBUG_AMSC_NOGOOD
 	std::cout << "\n P= "<< _p[0] << " Q=" << _q[0] << " D=" << _d << std::endl;
-	std::cout << "The initial sequence : \n" ;
-	int arity=__size;
-	while(arity--)
-		if(X[__size-1-arity].is_ground())
-			std::cout << ' ' <<X[__size-1-arity].get_value();
-		else
-			std::cout << " .";
+	std::cout << "The sequence of variables at the moment of calling the conflict : \n" ;
+	for (int i=0; i< __size; ++i)
+	if(X[i].is_ground())
+		std::cout << ' ' <<X[i].get_value();
+			else
+				std::cout << " .";
 
-	std::cout << "\n The sequence at rank : " << __rank << std::endl ;
-	arity=__size;
-	while(arity--)
-		if(X[__size-1-arity].is_ground())
+	std::cout << "\n A snapshot of the sequence at rank : " << __rank << std::endl;
+
+	for (int i=0; i< __size; ++i)
+		if(X[i].is_ground())
 		{
-			tmp_idx = X[__size-1-arity].id();
+			tmp_idx = X[i].id();
 			if (rank[tmp_idx] < __rank)
-				std::cout << ' ' <<X[__size-1-arity].get_value();
+				std::cout << ' ' <<X[i].get_value();
 			else
 				std::cout << " .";
 		}
 		else
 			std::cout << " .";
 
-
-
-	std::cout << "\n The initial sequence_image at rank : " << __rank << std::endl ;
-	arity=__size;
-
-	while(arity--)
-			std::cout << ' ' <<sequence_image[__size-1-arity];
-
+	std::cout << "\n The initialization of greedy on the snapshot : " << __rank << std::endl ;
+	for (int i=0; i< __size; ++i)
+		std::cout << ' ' <<sequence_image[i];
 	std::cout<< std::endl;
 #endif
 
 	for (int i=0; i<__size; ++i)
 	{
-
-#ifdef _DEBUG_AMSC_NOGOOD
-	//	std::cout << "\n The cardinality vector :with q= "  << _q[0]<< std::endl ;
-	//	for (int c=0; c<_q[0]; ++c )
-	//		std::cout << ' ' <<card[c];
-	//	std::cout << std::endl ;
-#endif
 		max=0;
 		for (int j=0; j< _q[0];++j)
 		{
 			if (card[j] > max ) max =card[j];
 		}
+#ifdef _DEBUG_AMSC_NOGOOD
+	//	if (__size< 25)
+	//	{
+		//	std::cout << "\n The cardinality vector :with q= "  << _q[0]<< std::endl ;
+	//	std::cout << "\n the cardinalities at position "  << i << std::endl;
+	//	for (int c=0; c<_q[0]; ++c )
+	//		std::cout << ' ' <<card[c];
+	//	std::cout << std::endl ;
+	//	std::cout << "\n max card = "  << max << std::endl ;
+	//	}
+#endif
+
 		max_equal_to_p.add(max==_p[0]);
 		if (sequence_image[i]==0)
 			if (max!=_p[0])
@@ -14035,33 +14006,16 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 						card[j]++;
 				}
 				else
-					if (rank[i] > (__rank-1))
-					{
-						sequence_image[i]=1;
-						for (int j=0; j< _q[0];j++)
-							card[j]++;
-					}
-				/*
-			if (sequence_image[i]==0)
-			{
-				if (! X[i].is_ground())
 				{
-					sequence_image[i]=1;
-
-					for (int j=0; j< _q[0];j++)
-						card[j]++;
-				}
-				else
-					if (rank[i] > __rank)
+					tmp_idx = X[i].id();
+					if (rank[tmp_idx] > (__rank-1))
 					{
+						//if (__size< 25)	std::cout << "\n  (rank[i] > (__rank-1)) "  << std::endl ;
 						sequence_image[i]=1;
 						for (int j=0; j< _q[0];j++)
 							card[j]++;
 					}
-			}
-				 */
-
-
+				}
 			}
 		card[i % _q[0]] = card[(i+_q[0] -1) % _q[0]] - sequence_image[i] +  sequence_image[i+_q[0]];
 	}
@@ -14069,19 +14023,13 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 
 #ifdef _DEBUG_AMSC_NOGOOD
 
-	std::cout << "\n The new sequence_image at rank : \n" << __rank << std::endl ;
-	arity=__size;
+	std::cout << "\n The result of greedy at rank : \n" << __rank << std::endl ;
 
-	while(arity--)
-	//	if(X[arity].is_ground())
-			std::cout << ' ' << sequence_image[__size-1-arity];
-	//	else
-	//		std::cout << " .";
-
-
+	for (int i=0; i< __size; ++i)
+		std::cout << ' ' <<sequence_image[i];
 	std::cout << "\n max_equal_to_p ? \n" ;
-	arity=__size;
-	for (int i=0; i< arity; i++)
+
+	for (int i=0; i< __size; i++)
 		std::cout<< ' ' << max_equal_to_p[i] ;
 	std::cout<< std::endl;
 #endif
@@ -14092,6 +14040,8 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector
 {
 
 	int arity = __size;
+	if (arity>X.size) arity= X.size;
+
 	int i, k;
 	bool is_ground_before_rank;
 	int max_cardinality[_k];
@@ -14131,7 +14081,7 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector
 				wl[i] =0;
 		}
 		else
-			wl[i] = X[i].get_min();
+			wl[i] = 0;
 	}
 
 	for(i=0; i<arity; ++i) {
