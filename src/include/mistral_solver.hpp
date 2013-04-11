@@ -197,7 +197,8 @@ namespace Mistral {
     unsigned long int num_amsc_explanations;
 
     
-
+    /// timestamp
+    double creation_time;
     /// timestamp
     double start_time;
     /// timestamp

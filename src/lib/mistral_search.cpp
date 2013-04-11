@@ -136,12 +136,12 @@ void Mistral::HeuristicPoolManager::notify_restart() {
   if(solver->statistics.num_restarts == threshold) // && ++counter < pool.size
       {
     
-    std::cout << " c SWITCH HEURISTIC!!\n";
+	//std::cout << " c SWITCH HEURISTIC!!\n";
     
-    solver->heuristic = pool.back();
-    //solver->heuristic = pool[counter];
-    //solver->heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
-  }
+	solver->heuristic = pool.back();
+	//solver->heuristic = pool[counter];
+	//solver->heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+      }
 }
 
 

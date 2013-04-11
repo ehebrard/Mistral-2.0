@@ -253,8 +253,9 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
   num_solutions = 0;
   num_filterings = 0;
   //start_time = 0.0;
-  start_time = get_run_time();
+  creation_time = get_run_time();
   end_time = -1.0;
+  start_time = end_time;
 
   outcome = UNKNOWN;
 
@@ -445,8 +446,10 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
     } 
   }
 
-  os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  TIME"
+  os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  RUNTIME"
      << std::right << std::setw(46) << (end_time - start_time)  << std::endl
+     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  PREPROCTIME"
+     << std::right << std::setw(46) << (start_time - creation_time)  << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  MEMORY"
      << std::right << std::setw(46) << (mem_used() / 1048576.0) << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NODES"
@@ -1575,6 +1578,7 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
   //std::cout << "\nINIT LEVEL = " << level << std::endl;
   initialise_search(seq, heu, pol, goal);
 
+  statistics.start_time = get_run_time();
   return restart_search();
 }
  
@@ -1584,6 +1588,8 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
 						  Vector< RestartPolicy * >& policies,
 						  Vector< Goal * >& goals
 						  ) {
+  statistics.start_time = get_run_time();
+
 #ifdef _DEBUG_SEARCH
   std::cout << " " << parameters.prefix_comment << " start new sequence search (in " << sequences.size << " phases)" << std::endl;
 #endif
