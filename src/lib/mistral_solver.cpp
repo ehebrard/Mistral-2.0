@@ -1780,6 +1780,10 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
     ++statistics.num_restarts;
 
 
+    //std::cout << " c notify restart" << std::endl;
+    notify_restart();
+
+
     // std::cout << "seq: [";
     // for(int i=sequence.size; i<variables.size; ++i) {
     //   std::cout << (sequence[i].get_value() ? " +" : " -") << sequence[i]; 
@@ -2348,6 +2352,7 @@ void Mistral::Solver::notify_decision() { //Decision d) {
 
 void Mistral::Solver::notify_restart() { 
   for(unsigned int i=0; i<restart_triggers.size; ++i) {
+    //std::cout << " c notify restart (2)" << std::endl;
     restart_triggers[i]->notify_restart();
   }
 } 
@@ -6364,6 +6369,7 @@ Mistral::RestartPolicy *Mistral::Solver::restart_factory(std::string rpolicy) {
 void Mistral::Solver::initialise_random_seed(const int seed) {
   usrand(seed);
 }
+
 
 void Mistral::Solver::set_learning_on() {
   parameters.backjump = true;

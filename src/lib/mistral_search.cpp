@@ -131,6 +131,19 @@ void Mistral::ConsolidateListener::notify_change(const int idx) {
 }
 
 
+void Mistral::HeuristicPoolManager::notify_restart() {
+  //std::cout << " c notify restart (3): " << solver->statistics.num_restarts << std::endl;
+  if(solver->statistics.num_restarts == threshold) // && ++counter < pool.size
+      {
+    
+    std::cout << " c SWITCH HEURISTIC!!\n";
+    
+    solver->heuristic = pool.back();
+    //solver->heuristic = pool[counter];
+    //solver->heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+  }
+}
+
 
 // //Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s, void *a) 
 // Mistral::LiteralActivityManager::LiteralActivityManager(Solver *s) 
@@ -510,6 +523,46 @@ std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool
 
       return os;
     }    
+
+
+Mistral::LearningActivityManager::LearningActivityManager(Solver *s) : solver(s) {
+  weight_unit = solver->parameters.activity_increment;
+  decay = solver->parameters.activity_decay;
+  
+  var_activity.initialise(solver->variables.size, solver->variables.size, 0);
+  lit_activity.initialise(2*solver->variables.size, 2*solver->variables.size, 0);
+  
+  int i = solver->constraints.size;
+  Constraint *cons = solver->constraints.stack_;
+  while(i--) {
+    cons[i].initialise_activity(lit_activity.stack_, var_activity.stack_, weight_unit);
+  }
+  
+  solver->lit_activity = lit_activity.stack_;
+  solver->var_activity = var_activity.stack_;
+  
+  solver->add((DecisionListener*)this);
+}
+
+Mistral::LearningActivityManager::~LearningActivityManager() {
+  solver->remove((DecisionListener*)this);
+}
+
+
+void Mistral::LearningActivityManager::notify_decision() {
+
+      // //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
+
+      if(decay > 0 && decay < 1) {
+      	int i=var_activity.size;
+      	while(i--) var_activity[i] *= decay;
+      	// i=lit_activity.size;
+      	// while(i--) lit_activity[i] *= decay;
+      }
+
+  //solver->parameters.activity_increment *= (2.0-decay);
+
+}
 
 
 std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const bool all) const {

@@ -242,6 +242,70 @@ namespace Mistral {
 
 
 
+  /*! \class HeuristicPoolManager
+    \brief HeuristicPoolManager Class
+
+    * Listener interface for handling a pool of search strategies *
+  */
+  //class BranchingHeuristic;
+  class HeuristicPoolManager : public RestartListener {
+
+  public:
+
+    Solver *solver;
+
+    Vector<BranchingHeuristic*> pool;
+    int threshold;
+    int counter;
+
+
+    HeuristicPoolManager(Solver *s) : solver(s) {// }
+
+      //std::cout << " c add restart listener" << std::endl;
+
+      counter = 0;
+      solver->add((RestartListener*)this);
+    }
+
+    virtual ~HeuristicPoolManager() {// }
+      // for(unsigned int i=0; i<pool.size; ++i) {
+      // 	if(solver->heuristic != pool[i]) {
+      // 	  delete [] pool[i];
+      // 	}
+      // }
+      solver->remove((RestartListener*)this);
+    }
+
+
+    void add(BranchingHeuristic *h) {
+      pool.add(h);
+    }
+
+    void set_threshold(const int t) {
+      threshold = t;
+    }
+
+    virtual void notify_restart();//  {
+    //   if(!(solver->statistics.num_restarts % threshold) && ++counter < pool.size) {
+
+    // 	std::cout << " c SWITCH HEURISTIC!!\n";
+
+    // 	//solver->heuristic = pool[counter];
+    // 	solver->heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+    //   }
+    // }
+
+    virtual std::ostream& display(std::ostream& os, const bool all) const {
+      for(unsigned int i=0; i<pool.size; ++i) {
+	os << pool[i] << std::endl;
+      }
+    }
+
+  };
+
+
+
+
   /*! \class FailureCountManager
     \brief FailureCountManager Class
 
@@ -513,56 +577,46 @@ namespace Mistral {
     double decay;
 
     //LearningActivityManager(Solver *s, void *a=NULL) : solver(s) {
-    LearningActivityManager(Solver *s) : solver(s) {
-      weight_unit = solver->parameters.activity_increment;
-      decay = solver->parameters.activity_decay;
+    LearningActivityManager(Solver *s);//  : solver(s) {
+    //   weight_unit = solver->parameters.activity_increment;
+    //   decay = solver->parameters.activity_decay;
 
-      var_activity.initialise(solver->variables.size, solver->variables.size, 0);
-      lit_activity.initialise(2*solver->variables.size, 2*solver->variables.size, 0);
+    //   var_activity.initialise(solver->variables.size, solver->variables.size, 0);
+    //   lit_activity.initialise(2*solver->variables.size, 2*solver->variables.size, 0);
 
-      int i = solver->constraints.size;
-      Constraint *cons = solver->constraints.stack_;
-      while(i--) {
+    //   int i = solver->constraints.size;
+    //   Constraint *cons = solver->constraints.stack_;
+    //   while(i--) {
+    //    	cons[i].initialise_activity(lit_activity.stack_, var_activity.stack_, weight_unit);
+    //   }
 
-	//std::cout << "\ninitialise with respect to C" << cons[i].id() << std::endl;
+    //   solver->lit_activity = lit_activity.stack_;
+    //   solver->var_activity = var_activity.stack_;
 
-       	cons[i].initialise_activity(lit_activity.stack_, var_activity.stack_, weight_unit);
+    //   solver->add((DecisionListener*)this);
+    // }
 
-	//display(std::cout, true);
-      }
-
-
-      solver->lit_activity = lit_activity.stack_;
-      solver->var_activity = var_activity.stack_;
-
-
-      //std::cout << "k " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
-
-      solver->add((DecisionListener*)this);
-      //solver->add((VariableListener*)this);
-    }
-
-    virtual ~LearningActivityManager() {
-      solver->remove((DecisionListener*)this);
-      //solver->remove((VariableListener*)this);
-    }
+    virtual ~LearningActivityManager();//  {
+    //   solver->remove((DecisionListener*)this);
+    //   //solver->remove((VariableListener*)this);
+    // }
 
     double *get_variable_weight() { return var_activity.stack_; }     
     double *get_bound_weight() { return lit_activity.stack_; }
     double **get_value_weight() { return NULL; }
 
-    virtual void notify_decision() {
+    virtual void notify_decision() ;//{
 
-      //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
+    //   //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
 
-      if(decay > 0 && decay < 1) {
-	int i=var_activity.size;
-	while(i--) var_activity[i] *= decay;
-	i=lit_activity.size;
-	while(i--) lit_activity[i] *= decay;
-      }
+    //   if(decay > 0 && decay < 1) {
+    // 	int i=var_activity.size;
+    // 	while(i--) var_activity[i] *= decay;
+    // 	i=lit_activity.size;
+    // 	while(i--) lit_activity[i] *= decay;
+    //   }
 
-    }
+    // }
 
     virtual std::ostream& display(std::ostream& os, const bool all) const ;
   };

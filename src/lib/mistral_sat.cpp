@@ -848,7 +848,6 @@ int Mistral::ConstraintClauseBase::forget(const double forgetfulness,
     for(i=0; i<nlearnt; ++i)
       {
 	order[i] = i;
-
 	if(lit_activity) {
 	  sa[i] = 0.0;
 	  Clause& clause = *(learnt[i]);
@@ -872,9 +871,6 @@ int Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 	  // }
 	  // else
 	  //   sa[i] = INFTY;
-	
-	
-
 	  sa[i] /= (double)((real_size+1) *clause.size *clause.size);
 	  //sa[i] /= (double)(clause.size *clause.size *clause.size);
 	} else {
@@ -928,54 +924,10 @@ int Mistral::ConstraintClauseBase::forget(const double forgetfulness,
 #endif
 
 
-  // double avg_fgt_size = 0;
-  // double avg_fgt_size_weight = 0;
-
-  // double avg_kpt_size = 0;
-  // double avg_kpt_size_weight = 0;
-
-
-    // std::cout << nlearnt << " " << keep << " " << forgetfulness << std::endl;
-
-    // std::cout << sa[order[nlearnt-1]] << std::endl;
-
-    // for(i=0; i<scope.size; ++i) {
-    //   std::cout << scope[i].get_domain();
-    // }
-    // std::cout << std::endl;
-
-    // for(i=nlearnt; i--;) {
-    //   std::cout << sa[order[i-1]] << std::endl;
-    // }
-
-    // exit(1);
-
-
-
-    //std::cout << "remove " << (nlearnt-keep) << " clauses out of " << nlearnt << "\n";
     for(i=nlearnt; i>keep && sa[order[i-1]] != INFTY;) {
-      
-      // std::cout << sa[order[i-1]] << " remove " ;
-      // print_clause(std::cout, learnt[i-1]) ;
-      // std::cout << std::endl;
-
-      //avg_rem1_size += learnt[i-1]->size;
-
       removed += learnt[i-1]->size;
       remove( --i );
     }
-
-
-    // for(int kk=keep; kk; ) {
-
-    //   std::cout << sa[order[kk-1]] << " keep " ;
-    //   print_clause(std::cout, learnt[kk-1]) ;
-    //   std::cout << std::endl;
-
-    //   --kk;
-    // }
-
-    
 
     
     // /// PIECE OF CODE THAT I CAN'T UNDERSTAND!!!!
@@ -1008,10 +960,6 @@ int Mistral::ConstraintClauseBase::forget(const double forgetfulness,
     // }
 
   }
-
-  // std::cout << "rem1: " << (nlearnt-keep ? avg_rem1_size/(nlearnt - keep) : -1) 
-  // 	    << " rem2: " << (keep-i ? avg_rem2_size/(keep-i) : -1 )
-  //  	    << " kept: " << (i ? avg_kept_size/(i) : -1 ) << std::endl;
 
   return removed;
 }

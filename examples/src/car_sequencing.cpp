@@ -2362,6 +2362,9 @@ int main(int argc, char **argv)
 		SwitchArg lessCst ("","rewriteClauses","rewrite clauses", false);
 		cmd.add(lessCst);
 
+		ValueArg<int> satProof ("","satProof","switch to  clauses", false, -1, "int");
+		cmd.add(satProof);
+
 		cmd.parse( argc, argv );
 
 		// Get the value parsed by each arg.
@@ -2371,6 +2374,7 @@ int main(int argc, char **argv)
 		string criterion = criterionArg.getValue();
 		string aggregation = aggregationArg.getValue();
 		bool lessclauses = lessCst.getValue();
+		int tSatProof = satProof.getValue();
 		usrand(cmd.get_seed());
 
 		CarSequencingInstance instance(cmd.get_filename().c_str()); //file.c_str());
@@ -2386,6 +2390,14 @@ int main(int argc, char **argv)
 		//solver->setLearning();
 
 		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
+
+		if(tSatProof > 0) {
+		  BranchingHeuristic *sat_heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+		  HeuristicPoolManager *hpool = new HeuristicPoolManager(solver);
+		  hpool->add(heuristic);
+		  hpool->add(sat_heuristic);
+		  hpool->set_threshold(tSatProof);
+		}
 
 
 #ifdef _MONITOR
