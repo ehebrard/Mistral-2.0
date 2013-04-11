@@ -19,6 +19,10 @@ using namespace TCLAP;
 
 #define CS_RAND_MAX 1000
 
+#define CLASS_IMPLIES_OPTION 1
+#define CLASS_IMPLIES_NOT_OPTION 2
+#define OPTION_IMPLIES_SET_OF_CLAUSES 4
+#define NOT_OPTION_IMPLIES_SET_OF_CLAUSES 8
 //#define _PRINT_SEARCH true
 //#define _PRINT_CLASSES true
 //#define _DEBUG_HEURISTIC true
@@ -480,9 +484,8 @@ public:
 
 	//Clauses
 	Vector< Vector< Literal > > clauses;
-	PseudoBoolModel(CarSequencingInstance *inst, bool s) : CarSequencingModel(inst) {
-		__less_clauses = s;
-	//	cout << (__less_clauses?  "YES" : "NO");
+	PseudoBoolModel(CarSequencingInstance *inst, int clauses_model__ ) : CarSequencingModel(inst) {
+		clauses_model = clauses_model__;
 	}
 	virtual ~PseudoBoolModel() {}
 
@@ -495,8 +498,7 @@ public:
 protected:
 	void initialise_setup();
 	void setup_clauses();
-	void setup_with_less_clauses();
-	bool __less_clauses;
+	int clauses_model;
 
 };
 
@@ -531,11 +533,7 @@ void PseudoBoolModel::__get_var() {
 void PseudoBoolModel::setup()
 {
 	initialise_setup();
-
-	if (__less_clauses)
-		setup_with_less_clauses();
-	else
-		setup_clauses();
+	setup_clauses();
 }
 
 void PseudoBoolModel::initialise_setup()
@@ -590,108 +588,133 @@ void PseudoBoolModel::initialise_setup()
 	}
 }
 
-
-
-void PseudoBoolModel::setup_with_less_clauses()
+void PseudoBoolModel::setup_clauses()
 {
-
 	clauses.clear();
 	//reformulate chanelling bool_class with option through SAT :
 	Vector< Literal > new_clause;
 	Literal  lit;
 
-/*
+#ifdef _DEBUG_INSTANCE
+	cout << "clauses_model == " << clauses_model << std::endl;
+
+	if (clauses_model & CLASS_IMPLIES_OPTION)
+		cout << "USING FLAG CLASS_IMPLIES_OPTION"<< std::endl;
+	if (clauses_model & CLASS_IMPLIES_NOT_OPTION)
+		cout << "USING FLAG CLASS_IMPLIES_NOT_OPTION"<< std::endl;
+
+	if (clauses_model & OPTION_IMPLIES_SET_OF_CLAUSES )
+		cout << "USING FLAG OPTION_IMPLIES_SET_OF_CLAUSES"<< std::endl;
+
+	if (clauses_model & NOT_OPTION_IMPLIES_SET_OF_CLAUSES )
+		cout << "USING FLAG NOT_OPTION_IMPLIES_SET_OF_CLAUSES"<< std::endl;
+
+#endif
+
 	for(int i=0; i<instance->nb_cars(); ++i)
 	{
-		for(int cla=0; cla<instance->nb_classes(); ++cla)
+		if (clauses_model & CLASS_IMPLIES_OPTION)
 		{
-			for(int k=0; k<instance->nb_options(); ++k)
-			{
-				new_clause.clear();
-				lit =  2* bool_class[cla][i].id();
-				new_clause.add(lit);
-				lit = 2* option[k][i].id() ;
-				if (instance->has_option(cla,k)) lit++;
-				new_clause.add(lit);
-				clauses.add(new_clause);
-			}
-		}
-
-		for(int k=0; k<instance->nb_options(); ++k)
-		{
-			new_clause.clear();
-			lit = (2* option[k][i].id());
-			new_clause.add(lit);
-			bool emty = true;
 			for(int cla=0; cla<instance->nb_classes(); ++cla)
 			{
-				if (instance->has_option (cla, k))
+				for(int k=0; k<instance->nb_options(); ++k)
 				{
-					lit =  2* bool_class[cla][i].id() +1;
-					new_clause.add(lit);
-					emty = false;
+					if (instance->has_option(cla,k))
+					{
+						new_clause.clear();
+						//lit <-- Not class
+						lit =  2* bool_class[cla][i].id();
+						new_clause.add(lit);
+						//lit <-- option
+						lit = (2* option[k][i].id()) +1 ;
+						new_clause.add(lit);
+						clauses.add(new_clause);
+					}
+
 				}
 			}
-			if (emty)
-				std::cout << " c Option " << k << " without any class! lit = " << lit  << std::endl;
-			else
-				clauses.add(new_clause);
 		}
-	}
 
-*/
+		if (clauses_model & CLASS_IMPLIES_NOT_OPTION)
+		{
+			for(int cla=0; cla<instance->nb_classes(); ++cla)
+			{
+				for(int k=0; k<instance->nb_options(); ++k)
+				{
+					if (! instance->has_option(cla,k))
+					{
+						new_clause.clear();
+						//lit <-- Not class
+						lit =  2* bool_class[cla][i].id();
+						new_clause.add(lit);
+						//lit <-- option
+						lit = (2* option[k][i].id());
+						new_clause.add(lit);
+						clauses.add(new_clause);
+					}
 
+				}
+			}
+		}
 
-	for(int i=0; i<instance->nb_cars(); ++i)
-	{
-		for(int cla=0; cla<instance->nb_classes(); ++cla)
+		if (clauses_model & OPTION_IMPLIES_SET_OF_CLAUSES )
 		{
 			for(int k=0; k<instance->nb_options(); ++k)
 			{
 				new_clause.clear();
-				lit =  2* bool_class[cla][i].id();
+				//lit <-- not option
+				lit = (2* option[k][i].id());
 				new_clause.add(lit);
-				lit = 2* option[k][i].id() ;
-				if (instance->has_option(cla,k))
-					lit = (2* option[k][i].id()) +1 ;
+				bool emty = true;
+				for(int cla=0; cla<instance->nb_classes(); ++cla)
+				{
+					if (instance->has_option (cla, k))
+					{
+						lit =  (2* bool_class[cla][i].id()) +1;
+						new_clause.add(lit);
+						emty = false;
+					}
+				}
+				if (emty)
+					std::cout << " c Option " << k << " without any class! " << std::endl;
 				else
-					continue;
-				new_clause.add(lit);
-				clauses.add(new_clause);
+					clauses.add(new_clause);
 			}
 		}
 
-		for(int k=0; k<instance->nb_options(); ++k)
+
+		if (clauses_model & NOT_OPTION_IMPLIES_SET_OF_CLAUSES )
 		{
-			new_clause.clear();
-			lit = (2* option[k][i].id());
-			new_clause.add(lit);
-			bool emty = true;
-			for(int cla=0; cla<instance->nb_classes(); ++cla)
+			for(int k=0; k<instance->nb_options(); ++k)
 			{
-				if (instance->has_option (cla, k))
+				new_clause.clear();
+				//lit <-- option
+				lit = (2* option[k][i].id()) +1 ;
+				new_clause.add(lit);
+				bool always = true;
+				for(int cla=0; cla<instance->nb_classes(); ++cla)
 				{
-					lit =  2* bool_class[cla][i].id() +1;
-					new_clause.add(lit);
-					emty = false;
+					if (! instance->has_option (cla, k))
+					{
+						lit =  (2* bool_class[cla][i].id()) +1;
+						new_clause.add(lit);
+						always = false;
+					}
 				}
+				if (always)
+					std::cout << " c Option " << k << "appears always !!" << std::endl;
+				else
+					clauses.add(new_clause);
 			}
-			if (emty)
-				std::cout << " c Option " << k << " without any class! lit = " << lit  << std::endl;
-			else
-				clauses.add(new_clause);
 		}
 	}
 
+	// add the set of clauses to the solver
 	for(int i=0; i<clauses.size; ++i) {
 		add(clauses[i]);
 	}
-}
 
-
-
-void PseudoBoolModel::setup_clauses()
-{
+	/*
 	clauses.clear();
 	//Chanelling bool_class with option through SAT :
 	Vector< Literal > new_clause;
@@ -715,6 +738,7 @@ void PseudoBoolModel::setup_clauses()
 	for(int i=0; i<clauses.size; ++i) {
 		add(clauses[i]);
 	}
+	 */
 }
 
 
@@ -737,7 +761,7 @@ class PseudoBoolLazyAMSCModel : public PseudoBoolModel {
 
 public:
 
-	PseudoBoolLazyAMSCModel(CarSequencingInstance *inst, bool s) : PseudoBoolModel(inst,s) {}
+	PseudoBoolLazyAMSCModel(CarSequencingInstance *inst, int clauses_model__) : PseudoBoolModel(inst,clauses_model__) {}
 	virtual ~PseudoBoolLazyAMSCModel() {}
 
 	virtual void setup();
@@ -759,11 +783,7 @@ void PseudoBoolLazyAMSCModel::setup()
 				instance->max_capacity(opt),
 				instance->sequence_length(opt) ) );
 	}
-
-	if (__less_clauses)
-		setup_with_less_clauses();
-	else
-		setup_clauses();
+	setup_clauses();
 }
 
 
@@ -772,7 +792,7 @@ class PseudoBoolLazyAMSCNAIVEModel : public PseudoBoolLazyAMSCModel {
 
 public:
 
-	PseudoBoolLazyAMSCNAIVEModel(CarSequencingInstance *inst, bool s) : PseudoBoolLazyAMSCModel(inst, s) {}
+	PseudoBoolLazyAMSCNAIVEModel(CarSequencingInstance *inst, int clauses_model__ ) : PseudoBoolLazyAMSCModel(inst, clauses_model__) {}
 	virtual void setup();
 };
 
@@ -789,10 +809,7 @@ void PseudoBoolLazyAMSCNAIVEModel::setup()
 				instance->sequence_length(opt) ) );
 	}
 
-	if (__less_clauses)
-		setup_with_less_clauses();
-	else
-		setup_clauses();
+	setup_clauses();
 }
 
 
@@ -2082,7 +2099,7 @@ public:
 
 
 
-CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, bool rewrite , bool lessclauses) {
+CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, bool rewrite , int clauses_model) {
 	CarSequencingModel *solver;
 	if(model == "sum") {
 		solver = new SumModel(instance);
@@ -2091,11 +2108,11 @@ CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, 
 	} else if(model == "mamsc+sum") {
 		solver = new SumMultiAmscModel(instance);
 	} else if(model == "pseudoB") {
-		solver = new PseudoBoolModel(instance,lessclauses);
+		solver = new PseudoBoolModel(instance,clauses_model);
 	} else if(model == "lazyamsc") {
-		solver = new PseudoBoolLazyAMSCModel(instance,lessclauses);
+		solver = new PseudoBoolLazyAMSCModel(instance,clauses_model);
 	} else if(model == "naivelazyamsc") {
-		solver = new PseudoBoolLazyAMSCNAIVEModel(instance, lessclauses);
+		solver = new PseudoBoolLazyAMSCNAIVEModel(instance, clauses_model);
 	} else if(model == "cpeageramsc") {
 		solver = new SumEagerAmscModel(instance);
 	}
@@ -2354,13 +2371,8 @@ int main(int argc, char **argv)
 		ValueArg<string> aggregationArg("","aggregation","aggregation method",false,"sum",&a_allowed);
 		cmd.add( aggregationArg );
 
-	//	vector<string> lessclauses_allowed;
-	//	lessclauses_allowed.push_back("0");
-	//	lessclauses_allowed.push_back("1");
-	//	ValuesConstraint<string> lessCst( lessclauses_allowed );
-
-		SwitchArg lessCst ("","rewriteClauses","rewrite clauses", false);
-		cmd.add(lessCst);
+		ValueArg<int>	clauses_allowed_ValueArg ("","rewriteClauses","Clauses Model using binary flags \n CLASS_IMPLIES_OPTION 1 \n CLASS_IMPLIES_NOT_OPTION 2 \n OPTION_IMPLIES_SET_OF_CLAUSES 3 \n NOT_OPTION_IMPLIES_SET_OF_CLAUSES 4",false,3,"int");
+		cmd.add(clauses_allowed_ValueArg );
 
 		ValueArg<int> satProof ("","satProof","switch to  clauses", false, -1, "int");
 		cmd.add(satProof);
@@ -2373,7 +2385,7 @@ int main(int argc, char **argv)
 		string exploration = explorationArg.getValue();
 		string criterion = criterionArg.getValue();
 		string aggregation = aggregationArg.getValue();
-		bool lessclauses = lessCst.getValue();
+		int clauses_model = clauses_allowed_ValueArg.getValue();
 		int tSatProof = satProof.getValue();
 		usrand(cmd.get_seed());
 
@@ -2383,7 +2395,7 @@ int main(int argc, char **argv)
 			cout << instance << endl;
 		}
 
-		CarSequencingModel *solver = modelFactory(model, &instance, cmd.use_rewrite(), lessclauses);
+		CarSequencingModel *solver = modelFactory(model, &instance, cmd.use_rewrite(), clauses_model);
 
 		cmd.set_parameters(*solver);
 
