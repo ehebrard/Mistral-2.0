@@ -131,17 +131,36 @@ void Mistral::ConsolidateListener::notify_change(const int idx) {
 }
 
 
-void Mistral::HeuristicPoolManager::notify_restart() {
+Mistral::HeuristicPoolManager::HeuristicPoolManager(Solver *s) : solver(s) {// }
+
+  //std::cout << " c add restart listener" << std::endl;
+  
+  heu_index = 1;
+  solver->add((RestartListener*)this);
+}
+
+Mistral::HeuristicPoolManager::~HeuristicPoolManager() {// }
+  for(unsigned int i=0; i<pool.size; ++i) {
+    if(solver->heuristic != pool[i]) {
+      delete [] pool[i];
+    }
+  }
+  solver->remove((RestartListener*)this);
+}
+
+
+void Mistral::HeuristicPoolManager::notify_restart(const double prog) {
   //std::cout << " c notify restart (3): " << solver->statistics.num_restarts << std::endl;
-  if(solver->statistics.num_restarts == threshold) // && ++counter < pool.size
-      {
-    
-	//std::cout << " c SWITCH HEURISTIC!!\n";
-    
-	solver->heuristic = pool.back();
-	//solver->heuristic = pool[counter];
-	//solver->heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
-      }
+  if(heu_index<pool.size) {
+    if(prog > 0.0) {
+      counter = threshold;
+    } else if(--counter <= 0) {
+      counter = threshold;
+      //std::cout << " c switch heuristic!\n";
+      solver->heuristic = pool[heu_index++];
+    }
+  }
+  //std::cout << " c " << counter << std::endl;
 }
 
 

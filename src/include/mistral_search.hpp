@@ -65,7 +65,7 @@ namespace Mistral {
   class RestartListener {
   public:
     int rid;
-    virtual void notify_restart() = 0;
+    virtual void notify_restart(const double prog) = 0;
     
     std::ostream& display(std::ostream& os) { os << "restart-L"; return os; }    
   };
@@ -257,24 +257,25 @@ namespace Mistral {
     Vector<BranchingHeuristic*> pool;
     int threshold;
     int counter;
+    int heu_index;
 
 
-    HeuristicPoolManager(Solver *s) : solver(s) {// }
+    HeuristicPoolManager(Solver *s);//  : solver(s) {// }
 
-      //std::cout << " c add restart listener" << std::endl;
+    //   //std::cout << " c add restart listener" << std::endl;
 
-      counter = 0;
-      solver->add((RestartListener*)this);
-    }
+    //   heu_index = 1;
+    //   solver->add((RestartListener*)this);
+    // }
 
-    virtual ~HeuristicPoolManager() {// }
-      // for(unsigned int i=0; i<pool.size; ++i) {
-      // 	if(solver->heuristic != pool[i]) {
-      // 	  delete [] pool[i];
-      // 	}
-      // }
-      solver->remove((RestartListener*)this);
-    }
+    virtual ~HeuristicPoolManager();//  {// }
+    //   // for(unsigned int i=0; i<pool.size; ++i) {
+    //   // 	if(solver->heuristic != pool[i]) {
+    //   // 	  delete [] pool[i];
+    //   // 	}
+    //   // }
+    //   solver->remove((RestartListener*)this);
+    // }
 
 
     void add(BranchingHeuristic *h) {
@@ -283,9 +284,10 @@ namespace Mistral {
 
     void set_threshold(const int t) {
       threshold = t;
+      counter = t;
     }
 
-    virtual void notify_restart();//  {
+    virtual void notify_restart(const double prog);//  {
     //   if(!(solver->statistics.num_restarts % threshold) && ++counter < pool.size) {
 
     // 	std::cout << " c SWITCH HEURISTIC!!\n";

@@ -663,7 +663,7 @@ namespace Mistral {
     void notify_failure();
     void notify_success();
     void notify_decision();
-    void notify_restart();
+    void notify_restart(const double prog);
     void notify_relax(Constraint c);
     void notify_post(Constraint c);
     void notify_add_constraint(Constraint c);
@@ -759,6 +759,7 @@ namespace Mistral {
     Outcome conflict_directed_backjump();
     void learn_nogood();
     void forget();
+    double get_current_target();
     // //@}
 
 

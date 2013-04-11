@@ -886,6 +886,9 @@ Mistral::Solver::Solver()
   : monitor_list(this)
 #endif
 { 
+  // statistics
+  statistics.initialise(this);
+
   consolidate_manager = NULL;
   search_started = false;
 
@@ -939,8 +942,6 @@ Mistral::Solver::Solver()
   // params
   parameters.initialise();
 
-  // statistics
-  statistics.initialise(this);
 
   heuristic = NULL; //new GenericHeuristic< GenericDVO< MinDomain >, MinValue >(this);
   policy = NULL; //new Geometric();
@@ -1759,6 +1760,25 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
   return satisfiability;
 }
 
+
+double Mistral::Solver::get_current_target() {
+  double target = 0;
+  if(objective) {
+    if(objective->is_optimization()) {
+      target = objective->upper_bound - objective->lower_bound;
+    } else if(objective->is_satisfaction()) {
+      target = variables.size - statistics.max_depth;
+    } else if(objective->is_enumeration()) {
+      if(statistics.num_solutions)
+	target = 1.0/(double)(statistics.num_solutions);
+      else
+	target = 2.0;
+    } 
+  }
+  return target;
+}
+
+
 Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _restore_) { //const bool _restore_, const bool _exit_on_solution_) {
 
   //int initial_level = level; 
@@ -1766,6 +1786,11 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
   Outcome satisfiability = UNKNOWN;
 
   statistics.objective_value = objective->value();
+
+  double last_target = get_current_target();
+  double target_i;
+  double progress_i=0;
+
 
 
   while(satisfiability == UNKNOWN) {
@@ -1780,14 +1805,14 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
     
     if(parameters.verbosity>1) {
       statistics.print_short(std::cout);
-      std::cout << std::endl;
+      std::cout << " " << (int)(100*progress_i) << "%" << std::endl;
     }
 
     ++statistics.num_restarts;
 
 
     //std::cout << " c notify restart" << std::endl;
-    notify_restart();
+    notify_restart(progress_i);
 
 
     // std::cout << "seq: [";
@@ -1816,6 +1841,10 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
     if(_restore_) restore(root);
 
     forget();
+
+    target_i = get_current_target();
+    progress_i = (last_target-target_i)/last_target;
+    last_target = target_i;
 
   }
 
@@ -2356,10 +2385,10 @@ void Mistral::Solver::notify_decision() { //Decision d) {
   }
 } 
 
-void Mistral::Solver::notify_restart() { 
+void Mistral::Solver::notify_restart(const double prog) { 
   for(unsigned int i=0; i<restart_triggers.size; ++i) {
     //std::cout << " c notify restart (2)" << std::endl;
-    restart_triggers[i]->notify_restart();
+    restart_triggers[i]->notify_restart(prog);
   }
 } 
 

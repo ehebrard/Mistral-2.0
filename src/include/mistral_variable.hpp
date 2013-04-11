@@ -3354,7 +3354,8 @@ namespace Mistral {
     bool has_function() const;
     bool improving(const int val) const;
     //int worst() const;
-    //int best() const;
+    //int best() const
+    //int get_range() const;
     int value() const;
     bool enforce();
 
