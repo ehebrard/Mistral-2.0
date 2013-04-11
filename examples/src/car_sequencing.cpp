@@ -2371,7 +2371,7 @@ int main(int argc, char **argv)
 		ValueArg<string> aggregationArg("","aggregation","aggregation method",false,"sum",&a_allowed);
 		cmd.add( aggregationArg );
 
-		ValueArg<int>	clauses_allowed_ValueArg ("","rewriteClauses","Clauses Model using binary flags \n CLASS_IMPLIES_OPTION 1 \n CLASS_IMPLIES_NOT_OPTION 2 \n OPTION_IMPLIES_SET_OF_CLAUSES 3 \n NOT_OPTION_IMPLIES_SET_OF_CLAUSES 4",false,3,"int");
+		ValueArg<int>	clauses_allowed_ValueArg ("","rewriteClauses","Clauses Model using binary flags \n CLASS_IMPLIES_OPTION 1 \n CLASS_IMPLIES_NOT_OPTION 2 \n OPTION_IMPLIES_SET_OF_CLAUSES 4 \n NOT_OPTION_IMPLIES_SET_OF_CLAUSES 8",false,3,"int");
 		cmd.add(clauses_allowed_ValueArg );
 
 		ValueArg<int> satProof ("","satProof","switch to  clauses", false, -1, "int");
