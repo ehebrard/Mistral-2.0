@@ -14178,10 +14178,10 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector
 
 			if(o_c[k] != n_c[k]) {
 
-				if(n_c[k] > _p[k]) {
+			//	if(n_c[k] > _p[k]) {
 					//	  std::cerr << id << " k=" << k << " / 1" << std::endl
 					//		    << id << " n_c[k]=" << n_c[k] << " / [" << (-arity) << "," << _p[k] << "]" << std::endl << std::endl;
-				}
+			//	}
 
 				++occurrences[k][n_c[k]];
 				if((n_c[k]+lcumulated[i+1])>max_cardinality[k]) ++max_cardinality[k];
