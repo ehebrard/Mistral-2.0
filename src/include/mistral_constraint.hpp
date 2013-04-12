@@ -4405,7 +4405,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     Vector<Literal> explanation;
     //we need this for the explanation to check if the maximum cardinality of all subsequences at position i is equal to p.
     Vector< bool> max_equal_to_p ;
-	Vector<int> sequence_image;
+	//Vector<int> sequence_image;
 	Vector<int> left_right_intersection;
     //@}
 

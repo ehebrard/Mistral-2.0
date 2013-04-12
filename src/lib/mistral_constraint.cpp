@@ -13618,12 +13618,10 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 	int *rank = get_solver()->assignment_order.stack_;
 	int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
 
-
 	explanation.clear();
-
 	if (a != NULL_ATOM)
 	{
-		sequence_image.clear();
+
 		arity=scope.size;
 		while(arity--)
 		{
@@ -13649,14 +13647,16 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		//		last_r = INVERSE(l_pruning)-_q[0]+1;
 		last_r = l_pruning +_q[0]-1;
 #ifdef _DEBUG_AMSC_NOGOOD
+		std::cout << "last_l is the first left index to consider in the intersection \n";
+		std::cout << "last_r is the last index to consider in the intersection\n" ;
 		std::cout << "arity " << arity << std::endl;
-		std::cout <<"index of a = " << arity  << std::endl;
+		std::cout <<"index of a = " << idx  << std::endl;
 		std::cout <<"l_pruning = " << l_pruning << "because x_i =" <<scope[idx].get_value() << std::endl;
 		std::cout <<"r_pruning = " << r_pruning << "because x_i =" <<scope[idx].get_value() << std::endl;
 		std::cout <<"last_l : " << last_l << "because q =" <<_q[0] << std::endl;
 		std::cout <<"last_r : " << last_r <<"because q =" <<_q[0] << std::endl;
 #endif
-		//the total length to consider in the set_max_equal_to_p_at_rank is last_r
+		//the total length to consider in the set_max_equal_to_p_at_rank is last_r + q
 		//increment last_r!
 		last_r++;
 		if (last_r>arity)last_r= arity;
@@ -13707,21 +13707,17 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		if (last_l<0) last_l=0;
 #ifdef _DEBUG_AMSC_NOGOOD
 		std::cout <<"Final last_l : " << last_l <<  std::endl;
-		std::cout <<"Final last_r after increment: " << last_r-1 <<std::endl;
-		std::cout <<"intersection from index :" << last_l  << " to " << last_r << std::endl;
-		std::cout <<"sequence_image size " << sequence_image.size  <<std::endl;
+		std::cout <<"Final last_r : " << last_r-1 <<std::endl;
+		std::cout <<"intersection from index :" << last_l  << " to " << last_r -1 << std::endl;
 #endif
 		for(int i=last_l; i< last_r; ++i)
 		{
 			//	if (i==idx)
 			//		continue;
-#ifdef _DEBUG_AMSC_NOGOOD
-			std::cout <<"sequence_image" << sequence_image[i]  <<std::endl;
-#endif
 			left_right_intersection.add(max_equal_to_p[i]);
 		}
 
-		last_r--;
+
 
 #ifdef _DEBUG_AMSC_NOGOOD
 		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
@@ -13778,16 +13774,18 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		//reload last_l & last_r
 		last_l = INVERSE(arity, r_pruning)-_q[0]+1;
 		last_r = l_pruning +_q[0]-1;
-#ifdef _DEBUG_AMSC_NOGOOD
-		std::cout <<"AGAIN \n last_l : " << last_l << "because q =" <<_q[0] << std::endl;
-		std::cout <<"last_r : " << last_r <<"because q =" <<_q[0] << std::endl;
-		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
-		std::cout <<"(should be equal to intersection size )last_r - last_l +1= " << last_r-last_l+1  << std::endl;
-#endif
+
 
 		if (last_l<0) last_l=0;
 		last_r++;
 		if (last_r>arity) last_r= arity;
+#ifdef _DEBUG_AMSC_NOGOOD
+		std::cout <<"AGAIN \n last_l : " << last_l << "because q =" <<_q[0] << std::endl;
+		std::cout <<"last_r : " << last_r <<"because q =" <<_q[0] << std::endl;
+		std::cout <<"intersection size :" << left_right_intersection.size << std::endl;
+		std::cout <<"(should be equal to intersection size )last_r - last_l +1= " << last_r-last_l  << std::endl;
+#endif
+
 		for (int i=last_l; i< last_r; ++i)
 		{
 			if (i==idx)
@@ -13884,11 +13882,36 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 #ifdef _DEBUG_AMSC_NOGOOD
 
-	//std::cout<< "The explanation: \n" << explanation;
+	std::cout<< "The explanation: \n" << explanation;
+	Vector<Literal> naive_explanation;
+	//	std::cout<< "d\n" ;
+	arity=scope.size;
+	naive_explanation.clear();
+	while(arity--)
+	{
+		if(scope[arity].is_ground()) {
+			idx = scope[arity].id();
+			if (idx != a && rank[idx] < a_rank)
+			{
+				literal__= (literal(scope[arity]));
+				naive_explanation.add(NOT(literal__));
+			}
+		}
+	}
 
+	std::cout<< "\n The naive explanation: \n" << naive_explanation << std::endl;
+	for (int i=0; i< explanation.size; i++)
+	{
+		int j= naive_explanation.size;
+		while(j && naive_explanation[--j] != explanation[i]);
+		if (j==0)
+			if (naive_explanation[0] != explanation[i])
+			{
+				std::cout<< "Error, literal " <<explanation[i] << "not contained in the naive explanation \n" << std::endl;
+				exit(1);
+			}
+	}
 #endif
-
-
 	Solver *sol = get_solver();
 	// sol->statistics.avg_amsc_expl_size = 
 	//   ((sol->statistics.avg_amsc_expl_size * sol->statistics.num_amsc_explanations) + explanation.size)/
@@ -13899,7 +13922,6 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 	++sol->statistics.num_amsc_explanations;
 	sol->statistics.avg_amsc_expl_size += explanation.size;
 
-
 	end = explanation.end();
 	return explanation.begin();
 }
@@ -13907,7 +13929,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __rank, int __size, Vector<Variable>& X) {
 	//__size=4;
 	if (__size>X.size) __size= X.size;
-
+	Vector<int> sequence_image;
 	sequence_image.clear();
 	int *rank = get_solver()->assignment_order.stack_;
 	int tmp_idx;
@@ -14034,6 +14056,10 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 	std::cout<< std::endl;
 #endif
 	delete[] card;
+#ifdef _DEBUG_AMSC_NOGOOD
+			std::cout <<"Final sequence_image size " << sequence_image.size  <<std::endl;
+			for (int i=0; i< sequence_image.size ; ++i) std::cout <<"sequence_image" << sequence_image[i]  <<std::endl;
+#endif
 
 }
 void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector<Variable>& X, int __size, int __rank)
