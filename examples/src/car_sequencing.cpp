@@ -788,6 +788,31 @@ void PseudoBoolLazyAMSCModel::setup()
 
 
 
+class PseudoBoolSimplifiedLazyAMSCNAIVEModel : public PseudoBoolLazyAMSCModel {
+
+public:
+
+	PseudoBoolSimplifiedLazyAMSCNAIVEModel(CarSequencingInstance *inst, int clauses_model__ ) : PseudoBoolLazyAMSCModel(inst, clauses_model__) {}
+	virtual void setup();
+};
+
+
+void PseudoBoolSimplifiedLazyAMSCNAIVEModel::setup()
+{
+	initialise_setup();
+	for(int opt=0; opt<instance->nb_options(); ++opt)
+	{
+		// demand on options as boolean sums too
+		add( AtMostSeqCardSimplifiedReason( option[opt],
+				instance->nb_cars_with_option(opt),
+				instance->max_capacity(opt),
+				instance->sequence_length(opt) ) );
+	}
+
+	setup_clauses();
+}
+
+
 class PseudoBoolLazyAMSCNAIVEModel : public PseudoBoolLazyAMSCModel {
 
 public:
@@ -2113,6 +2138,8 @@ CarSequencingModel *modelFactory(string model, CarSequencingInstance *instance, 
 		solver = new PseudoBoolLazyAMSCModel(instance,clauses_model);
 	} else if(model == "naivelazyamsc") {
 		solver = new PseudoBoolLazyAMSCNAIVEModel(instance, clauses_model);
+	} else if(model == "simplifiedlazyamsc") {
+		solver = new PseudoBoolSimplifiedLazyAMSCNAIVEModel(instance, clauses_model);
 	} else if(model == "cpeageramsc") {
 		solver = new SumEagerAmscModel(instance);
 	}
@@ -2147,7 +2174,7 @@ BranchingHeuristic *heuristicFactory(CarSequencingModel *solver,
 	cout << "aggregation " <<aggregation << endl;
 #endif
 
-	if (model=="pseudoB" || model=="lazyamsc" || model=="naivelazyamsc" )
+	if (model=="pseudoB" || model=="lazyamsc" || model=="naivelazyamsc" || model =="simplifiedlazyamsc")
 	{
 		if(branching == "option") {
 			if(criterion == "demand") {
@@ -2330,6 +2357,7 @@ int main(int argc, char **argv)
 		mallowed.push_back("pseudoB");
 		mallowed.push_back("lazyamsc");
 		mallowed.push_back("naivelazyamsc");
+		mallowed.push_back("simplifiedlazyamsc");
 		mallowed.push_back("cpeageramsc");
 		ValuesConstraint<string> m_allowed( mallowed );
 		ValueArg<string> modelArg("","model","type of model",false,"sum",&m_allowed); //"amsc","string");
