@@ -1767,7 +1767,7 @@ double Mistral::Solver::get_current_target() {
     if(objective->is_optimization()) {
       target = objective->upper_bound - objective->lower_bound;
     } else if(objective->is_satisfaction()) {
-      target = variables.size - statistics.max_depth;
+      target = statistics.num_variables - statistics.max_depth;
     } else if(objective->is_enumeration()) {
       if(statistics.num_solutions)
 	target = 1.0/(double)(statistics.num_solutions);
@@ -1786,12 +1786,17 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
   Outcome satisfiability = UNKNOWN;
 
   statistics.objective_value = objective->value();
+  statistics.num_variables = sequence.size;  
 
   double last_target = get_current_target();
   double target_i;
   double progress_i=0;
 
+  double total_progress = 0;
+  //unsigned int tprog = 0;
 
+   // std::cout << "[" << std::right << std::setw(33) << "]";
+   // std::cout.flush();
 
   while(satisfiability == UNKNOWN) {
 
@@ -1807,6 +1812,21 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
       statistics.print_short(std::cout);
       std::cout << " " << (int)(100*progress_i) << "%" << std::endl;
     }
+
+    // if(progress_i > 0) {
+    //   total_progress += (1.0-total_progress)*progress_i;
+    //   tprog = (4294977296.0*total_progress);
+    //   unsigned int i, j=31;
+    //   //for(i=0; i<33; ++i) std::cout << "\b";
+    //   for(i=(1<<j); j && i <= tprog; i+=(1<<(--j))) ;
+
+    //   std::cout << (32-j) << " "<< tprog << std::endl; 
+
+    //   i = tprog = 32-j;
+    //   // while(i--) std::cout << "=";
+    //   // std::cout << std::right << std::setw(33-tprog) << "]";
+    //   // std::cout.flush();
+    // }
 
     ++statistics.num_restarts;
 

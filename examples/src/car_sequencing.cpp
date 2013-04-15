@@ -2404,7 +2404,7 @@ int main(int argc, char **argv)
 		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
 
 		if(tSatProof > 0) {
-		  BranchingHeuristic *sat_heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+		  BranchingHeuristic *sat_heuristic = new GenericHeuristic< VSIDS<2>, Guided< MaxValue > >(solver);
 		  HeuristicPoolManager *hpool = new HeuristicPoolManager(solver);
 		  hpool->add(heuristic);
 		  hpool->add(sat_heuristic);
