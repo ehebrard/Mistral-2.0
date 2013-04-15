@@ -2721,6 +2721,7 @@ namespace Mistral {
   Variable AtMostSeqCard(Vector< Variable >& args, const int d, const int p, const int q);
   Variable MultiAtMostSeqCard(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c);
   Variable AtMostSeqCardNaiveReason(Vector< Variable >& args, const int d, const int p, const int q);
+  Variable AtMostSeqCardSimplifiedReason(Vector< Variable >& args, const int d, const int p, const int q);
 
 
   class AtMostSeqCardExpressionNaiveReason : public AtMostSeqCardExpression {
@@ -2728,6 +2729,19 @@ namespace Mistral {
   public:
 
 	  AtMostSeqCardExpressionNaiveReason(Vector< Variable >& args, const int d, const int p, const int q);
+
+	  virtual void extract_constraint(Solver*);
+	  //virtual void extract_predicate(Solver*);
+	  virtual const char* get_name() const;
+
+  };
+
+
+  class AtMostSeqCardExpressionSimplifiedReason : public AtMostSeqCardExpression {
+
+  public:
+
+	  AtMostSeqCardExpressionSimplifiedReason(Vector< Variable >& args, const int d, const int p, const int q);
 
 	  virtual void extract_constraint(Solver*);
 	  //virtual void extract_predicate(Solver*);
