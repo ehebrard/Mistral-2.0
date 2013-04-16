@@ -2431,13 +2431,21 @@ int main(int argc, char **argv)
 
 		BranchingHeuristic *heuristic = heuristicFactory(solver,model, branching, exploration, criterion, aggregation, cmd.get_value_ordering(), cmd.get_randomization());
 
-		if(tSatProof > 0) {
-		  BranchingHeuristic *sat_heuristic = new GenericHeuristic< VSIDS<2>, MaxValue >(solver);
+		if(tSatProof != 0) {
+		  BranchingHeuristic *sat_heuristic = new GenericHeuristic< VSIDS<3>, MaxValue >(solver);
 		  HeuristicPoolManager *hpool = new HeuristicPoolManager(solver);
+
+		  if(tSatProof < 0) {
+		    BranchingHeuristic *aux = heuristic;
+		    heuristic = sat_heuristic;
+		    sat_heuristic = aux;
+		    tSatProof = -tSatProof;
+		  }
+
 		  hpool->add(heuristic);
 		  hpool->add(sat_heuristic);
 		  hpool->set_threshold(tSatProof);
-		}
+		} 
 
 
 #ifdef _MONITOR

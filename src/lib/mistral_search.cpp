@@ -156,7 +156,7 @@ void Mistral::HeuristicPoolManager::notify_restart(const double prog) {
       counter = threshold;
     } else if(--counter <= 0) {
       counter = threshold;
-      //std::cout << " c switch heuristic!\n";
+      std::cout << " c switch heuristic!\n";
       solver->heuristic = pool[heu_index++];
     }
   }

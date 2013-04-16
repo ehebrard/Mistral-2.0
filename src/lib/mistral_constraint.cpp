@@ -13355,10 +13355,10 @@ bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w, int *cumulated
       
       if(o_c[k] != n_c[k]) {
 
-	if(n_c[k] > _p[k]) {
-	  std::cerr << id << " k=" << k << " / 1" << std::endl
-		    << id << " n_c[k]=" << n_c[k] << " / [" << (-arity) << "," << _p[k] << "]" << std::endl << std::endl;
-	}
+	// if(n_c[k] > _p[k]) {
+	//   std::cerr << id << " k=" << k << " / 1" << std::endl
+	// 	    << id << " n_c[k]=" << n_c[k] << " / [" << (-arity) << "," << _p[k] << "]" << std::endl << std::endl;
+	// }
 
 	++occurrences[k][n_c[k]];
 	if((n_c[k]+cumulated[i+1])>max_cardinality[k]) ++max_cardinality[k];
@@ -13610,8 +13610,15 @@ int Mistral::ConstraintMultiAtMostSeqCard::check( const int* s ) const
   return !ok;
 }
 
+//#define _CHECK_NOGOOD_AMSC
+
 Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
 {
+#ifdef _CHECK_NOGOOD_AMSC
+  Vector<int> index_var;
+  std::cout << scope.size << " " << _d << " " << _p[0] << " " << _q[0] ;
+#endif
+
 	//Note : nogoods for Multi_AMSC are not supported yet
 	int arity=scope.size, tmp_idx, idx, l_pruning, r_pruning, last_l, last_r;
 	int literal__;
@@ -13629,6 +13636,9 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 				break;
 		}
 
+#ifdef _CHECK_NOGOOD_AMSC
+		std::cout << " " << arity << " " << scope[arity].get_value() << " ";
+#endif
 
 		//idx represents the index of a
 		idx=arity;
@@ -13697,6 +13707,11 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 					{
 						literal__= (literal(scope[i]));
 						explanation.add(NOT(literal__));
+						
+#ifdef _CHECK_NOGOOD_AMSC
+						index_var.add(i);
+						//std::cout << " " << i << " " << SIGN(literal__);
+#endif
 					}
 				}
 			}
@@ -13770,6 +13785,11 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 					{
 						literal__= (literal(scope[ INVERSE(arity,i)]));
 						explanation.add(NOT(literal__));
+
+#ifdef _CHECK_NOGOOD_AMSC
+						index_var.add(INVERSE(arity,i));
+						//std::cout << " " << INVERSE(arity,i) << " " << SIGN(literal__);
+#endif
 					}
 				}
 			}
@@ -13808,12 +13828,24 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 						{
 							literal__= (literal(scope[i]));
 							explanation.add(NOT(literal__));
+
+#ifdef _CHECK_NOGOOD_AMSC
+							index_var.add(i);
+							//std::cout << " " << i << " " << SIGN(literal__);
+#endif
+
 						}
 					}
 					else
 					{
 						literal__= (literal(scope[i]));
 						explanation.add(NOT(literal__));
+
+#ifdef _CHECK_NOGOOD_AMSC
+							index_var.add(i);
+							//std::cout << " " << i << " " << SIGN(literal__);
+#endif
+
 					}
 				}
 			}
@@ -13824,9 +13856,16 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 	//	std::cout <<  std::endl;
 
 
+
+
 	}
 	else
 	{
+
+#ifdef _CHECK_NOGOOD_AMSC
+	  std::cout << " " << -1 << " " << -1 << " ";
+#endif
+
 #ifdef _DEBUG_AMSC_NOGOOD
 		std::cout << "Explaning FAILURE " << std::endl ;
 #endif
@@ -13885,6 +13924,12 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 					{
 						literal__= (literal(scope[arity]));
 						explanation.add(NOT(literal__));
+
+#ifdef _CHECK_NOGOOD_AMSC
+						index_var.add(arity);
+						//std::cout << " " << arity << " " << SIGN(literal__);
+#endif
+
 					}
 				}
 			}
@@ -13933,6 +13978,15 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 	++sol->statistics.num_amsc_explanations;
 	sol->statistics.avg_amsc_expl_size += explanation.size;
+
+#ifdef _CHECK_NOGOOD_AMSC
+	std::cout << explanation.size << " ";
+	for(unsigned int i=0; i<explanation.size; ++i)
+	  {
+	    std::cout << index_var[i] << " " << 1-SIGN(explanation[i]) << " ";
+	  }
+	std::cout << std::endl;
+#endif
 
 	end = explanation.end();
 	return explanation.begin();
