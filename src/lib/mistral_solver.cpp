@@ -4628,6 +4628,15 @@ void Mistral::Solver::learn_nogood() {
 
   
   if( learnt_clause.size != 1 ) {
+
+    // if(lit_activity) {
+    //   int i=learnt_clause.size;
+    //   while(i--) {
+    // 	var_activity[UNSIGNED(learnt_clause[i])] += parameters.activity_increment;
+    //   }
+    // }
+
+
     base->learn(learnt_clause, (parameters.init_activity ? parameters.activity_increment : 0.0));
     //add_clause( learnt, learnt_clause, stats.learnt_avg_size );
     //reason[UNSIGNED(p)] = base->learnt.back();
