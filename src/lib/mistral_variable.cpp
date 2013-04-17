@@ -7848,6 +7848,12 @@ Mistral::Variable Mistral::AtMostSeqCardSimplifiedReason(Vector< Variable >& arg
 	return exp;
 }
 
+//left
+Mistral::Variable Mistral::AtMostSeqCardLeftExplanationReason(Vector< Variable >& args, const int d, const int p, const int q) {
+	Variable exp(new AtMostSeqCardExpressionLeftExplanationReason(args,d,p,q));
+	return exp;
+}
+
 
 
 Mistral::AtMostSeqCardExpressionNaiveReason::AtMostSeqCardExpressionNaiveReason(
@@ -7877,4 +7883,19 @@ void Mistral::AtMostSeqCardExpressionSimplifiedReason::extract_constraint(Solver
 }
 const char* Mistral::AtMostSeqCardExpressionSimplifiedReason::get_name() const {
 	return "simplified reason amsc";
+}
+
+//left
+Mistral::AtMostSeqCardExpressionLeftExplanationReason::AtMostSeqCardExpressionLeftExplanationReason(
+		Vector<Variable>& args, const int d, const int p, const int q)
+: AtMostSeqCardExpression(args, d, p, q)
+{
+}
+
+void Mistral::AtMostSeqCardExpressionLeftExplanationReason::extract_constraint(Solver* s)
+{
+	s->add(Constraint(new ConstraintLeftExplanationMultiAtMostSeqCard(children, _k, _d, _p, _q)));
+}
+const char* Mistral::AtMostSeqCardExpressionLeftExplanationReason::get_name() const {
+	return "left reason amsc";
 }

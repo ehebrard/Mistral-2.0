@@ -16514,6 +16514,364 @@ Mistral::Explanation::iterator Mistral::ConstraintNaiveMultiAtMostSeqCard::get_r
 
 
 
+Mistral::ConstraintLeftExplanationMultiAtMostSeqCard::ConstraintLeftExplanationMultiAtMostSeqCard(Vector< Variable >& scp, const int k, const int d, const int* p, const int* q)
+: ConstraintMultiAtMostSeqCard(scp,k, d, p, q)
+{
+}
+
+Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
+{
+
+	//	std::cout << "LeftExplanation  " << std::endl;
+
+		//Note : nogoods for Multi_AMSC are not supported yet
+		int arity=scope.size, idx;
+		int literal__;
+		int *rank = get_solver()->assignment_order.stack_;
+		int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
+
+		explanation.clear();
+		if (a != NULL_ATOM)
+		{
+			arity=scope.size;
+			while(arity--)
+			{
+				if (scope[arity].id() == a)
+					break;
+			}
+
+			//idx represents the index of a
+			idx=arity;
+			arity=scope.size;
+			simple_greedy_assign_for_explanation(scope, a_rank,idx);
+			while(arity--)
+			{
+				if(scope[arity].is_ground()) {
+					idx = scope[arity].id();
+					if (idx != a && rank[idx] < a_rank)
+					{
+						if (max_equal_to_p[arity] == scope[arity].get_value())
+						{
+							literal__= (literal(scope[arity]));
+							explanation.add(NOT(literal__));
+						}
+					}
+				}
+			}
+
+
+		}
+		else
+		{
+	#ifdef _DEBUG_AMSC_NOGOOD
+			std::cout << "Explaning FAILURE " << std::endl ;
+	#endif
+			arity=scope.size;
+	#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+			set_max_equal_to_p_at_rank(a_rank, arity, scope);
+			Vector< bool> TMP ;
+			for (int i=0; i< arity; i++)
+				TMP.push_back(max_equal_to_p[i]) ;
+
+	#endif
+
+			greedy_assign_for_explanation(scope, arity,a_rank);
+
+	#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
+			for (int i=0; i< arity; i++)
+				if (TMP[i]!=max_equal_to_p[i])
+				{
+					std::cout <<  "\n \n \n \n Difference at index " << i <<  " ;  set_max_equal_to_p_at_rank max_equal_to_p ? \n" ;
+					arity=scope.size;
+					for (int i=0; i< arity; i++)
+						std::cout<< ' ' << TMP[i] ;
+
+					std::cout << "\n greedy_assign_for_explanation max_equal_to_p ? \n" ;
+					arity=scope.size;
+					for (int i=0; i< arity; i++)
+						std::cout<< ' ' << max_equal_to_p[i] ;
+					break;
+				}
+	#endif
+
+	#ifdef _DEBUG_AMSC_NOGOOD
+			std::cout << "P= "<< _p[0] << "Q=" << _q[0] << "D=" << _d << std::endl;
+			std::cout << "The current sequence : \n" ;
+			while(arity--)
+				if(scope[arity].is_ground())
+					std::cout << ' ' <<scope[arity].get_value();
+				else
+					std::cout << " .";
+
+			std::cout << "\n max_equal_to_p ? \n" ;
+			arity=scope.size;
+			for (int i=0; i< arity; i++)
+				std::cout<< ' ' << max_equal_to_p[i] ;
+			std::cout<< std::endl;
+
+	#endif
+
+			while(arity--)
+			{
+				if(scope[arity].is_ground()) {
+					idx = scope[arity].id();
+					if (idx != a && rank[idx] < a_rank)
+					{
+						if (max_equal_to_p[arity] == scope[arity].get_value())
+						{
+							literal__= (literal(scope[arity]));
+							explanation.add(NOT(literal__));
+						}
+					}
+				}
+			}
+		}
+
+
+	#ifdef _DEBUG_AMSC_NOGOOD
+
+		std::cout<< "The explanation: \n" << explanation;
+		Vector<Literal> naive_explanation;
+		//	std::cout<< "d\n" ;
+		arity=scope.size;
+		naive_explanation.clear();
+		while(arity--)
+		{
+			if(scope[arity].is_ground()) {
+				idx = scope[arity].id();
+				if (idx != a && rank[idx] < a_rank)
+				{
+					literal__= (literal(scope[arity]));
+					naive_explanation.add(NOT(literal__));
+				}
+			}
+		}
+
+		std::cout<< "\n The naive explanation: \n" << naive_explanation << std::endl;
+		for (int i=0; i< explanation.size; i++)
+		{
+			int j= naive_explanation.size;
+			while(j && naive_explanation[--j] != explanation[i]);
+			if (j==0)
+				if (naive_explanation[0] != explanation[i])
+				{
+					std::cout<< "Error, literal " <<explanation[i] << "not contained in the naive explanation \n" << std::endl;
+					exit(1);
+				}
+		}
+	#endif
+		Solver *sol = get_solver();
+		// sol->statistics.avg_amsc_expl_size =
+		//   ((sol->statistics.avg_amsc_expl_size * sol->statistics.num_amsc_explanations) + explanation.size)/
+		//   (++sol->statistics.num_amsc_explanations);
+
+		// std::cout << " + " << (explanation.size) << " : " << sol->statistics.num_amsc_explanations << " x " << sol->statistics.avg_amsc_expl_size << std::endl;
+
+		++sol->statistics.num_amsc_explanations;
+		sol->statistics.avg_amsc_expl_size += explanation.size;
+
+		end = explanation.end();
+		return explanation.begin();
+}
+
+void Mistral::ConstraintLeftExplanationMultiAtMostSeqCard::simple_greedy_assign_for_explanation(Vector<Variable>& X, int __rank, int index_a)
+{
+	int arity = X.size;
+	//if (arity>X.size) arity= X.size;
+
+	int i, k;
+	bool is_ground_before_rank;
+	int max_cardinality[_k];
+	int count = 0;
+	int *rank = get_solver()->assignment_order.stack_;
+
+	int o_c[_k];
+	int n_c[_k];
+	max_equal_to_p.clear();
+#ifdef _DEBUG_AMSC
+	int j;
+	int _max_card[_k*arity];
+	int _count[_k*arity];
+
+	int max_p = _p[0];
+	for(k=1; k<_k; ++k) if(max_p < _p[k]) max_p = _p[k];
+	int **_occ = new int*[_k];
+	int **_card = new int*[_k];
+
+
+	for(k=0; k<_k; ++k) {
+		_occ[k] = new int[(arity*(arity+_p[k]+1))];
+		std::fill(_occ[k], _occ[k]+(arity*(arity+_p[k]+1)), 0);
+		_card[k] = new int[(arity*_q[k])];
+	}
+#endif
+
+// bool maybe_inconsistent = true;
+	for(int i=0; i<arity; ++i)
+	{
+		if (i==index_a)
+		{
+			wl[i]= 1 - X[i].get_min();
+		}
+		else
+		{
+			//check ground & rank
+			if (X[i].is_ground())
+			{
+				if (rank[X[i].id()] < __rank)
+					wl[i] = X[i].get_min();
+				else
+					wl[i] =0;
+			}
+			else
+				wl[i] = 0;
+		}
+	}
+
+	for(i=0; i<arity; ++i) {
+		count += wl[i];
+		lcumulated[i] = 0;
+		for(k=0; k<_k; ++k) {
+			occurrences[k][i-arity] = 0;
+		}
+	}
+
+	for(k=0; k<_k; ++k) {
+		max_cardinality[k] = 0;
+		for(i=0; i<=_p[k] && i<arity; ++i) {
+			occurrences[k][i] = 0;
+		}
+
+		for(i=0; i<_q[k] && i<arity; ++i) {
+			cardinality[k][i] = cardinality[k][i-1]+wl[i];
+			++(occurrences[k][cardinality[k][i]]);
+			if(cardinality[k][i] > max_cardinality[k]) max_cardinality[k] = cardinality[k][i];
+		}
+	}
+	__rank++;
+	for(i=0; i<arity; ++i) {
+
+		bool card_ok = true;
+		for(k=0; card_ok && k<_k; ++k) {
+			card_ok = (max_cardinality[k] < _p[k]);
+		}
+		max_equal_to_p.add(!card_ok);
+		is_ground_before_rank = (X[i].is_ground() && (rank[X[i].id()] < __rank));
+		if(card_ok && !is_ground_before_rank) {
+			for(k=0; k<_k; ++k) ++max_cardinality[k];
+			lcumulated[i+1] = lcumulated[i]+1;
+			wl[i] = 1;
+			// if(cumulated[i+1]+count > _d) {
+				//	maybe_inconsistent = false;
+			//	break;
+			//   }
+		} else {
+			lcumulated[i+1] = lcumulated[i];
+		}
+
+#ifdef _DEBUG_AMSC
+		if(_DEBUG_AMSC) {
+			_count[i] = count;
+			for(k=0; k<_k; ++k) {
+				_max_card[i*_k+k] = max_cardinality[k];
+				for(j=0; j<_q[k]; ++j) _card[k][(j*arity+i)] = cardinality[k][(i+j)%_q[k]]+lcumulated[i+1];
+				for(j=0; j<=arity+_p[k]; ++j) {
+
+					// if(occurrences[k][j-arity] > 10) {
+					//   cout << "_occ[" << k << "][" << j << "][" << i << "] = "
+					//        << "occurrences[" << k << "][" << j-arity << "] = "
+					//        << occurrences[k][j-arity] << endl;
+					// }
+
+					_occ[k][(j*arity+i)] = occurrences[k][j-arity];
+				}
+			}
+		}
+#endif
+
+		for(k=0; k<_k; ++k) {
+			o_c[k] = cardinality[k][i%_q[k]];
+			n_c[k] = cardinality[k][(i+_q[k]-1)%_q[k]]+wl[i+_q[k]]-wl[i];
+			cardinality[k][i%_q[k]] = n_c[k];
+
+			if(o_c[k] != n_c[k]) {
+
+			//	if(n_c[k] > _p[k]) {
+					//	  std::cerr << id << " k=" << k << " / 1" << std::endl
+					//		    << id << " n_c[k]=" << n_c[k] << " / [" << (-arity) << "," << _p[k] << "]" << std::endl << std::endl;
+			//	}
+
+				++occurrences[k][n_c[k]];
+				if((n_c[k]+lcumulated[i+1])>max_cardinality[k]) ++max_cardinality[k];
+				if(!(--occurrences[k][o_c[k]]) && (o_c[k]+lcumulated[i+1])==max_cardinality[k]) --max_cardinality[k];
+			}
+		}
+
+	}
+
+
+#ifdef _DEBUG_AMSC
+	if(_DEBUG_AMSC) {
+		if(maybe_inconsistent) {
+			std::cerr << std::endl << "propag " << _d-count  ;
+			for(k=0; k<_k; ++k)
+				std::cerr << " " << _p[k] << "/" << _q[k] ;
+			std::cerr << std::endl;
+			for(i=0; i<arity; ++i) {
+				if(scope[i].is_ground()) std::cerr << scope[i].get_min();
+				else std::cerr << ".";
+			}
+			std::cerr << std::endl;
+			for(i=0; i<arity; ++i) {
+				std::cerr << wl[i];
+			}
+			std::cerr << std::endl;
+			for(k=0; k<_k; ++k) {
+				std::cerr << std::endl;
+				for(i=0; i<arity; ++i) {
+					std::cerr << _max_card[_k*i+k];
+				}
+				std::cerr << std::endl;
+				std::cerr << std::endl;
+				for(j=0; j<_q[k]; ++j) {
+					for(i=0; i<arity; ++i) {
+						std::cerr << _card[k][(j*arity+i)];
+					}
+					std::cerr << std::endl;
+				}
+				std::cerr << std::endl;
+				for(j=arity+_p[k]; j; --j) {
+					int tmax = 0;
+					for(i=0; i<arity; ++i) {
+						if(lcumulated[i+1]+j+1 == arity)
+							std::cerr << "-";
+						else
+							std::cerr << _occ[k][(j*arity+i)];
+						tmax = (lcumulated[i+1]+j+1 > arity);
+					}
+					std::cerr << std::endl;
+					if(!tmax) break;
+				}
+				std::cerr << std::endl;
+			}
+		}
+	}
+
+	for(k=0; k<_k; ++k) {
+		delete [] _card[k];
+		delete [] _occ[k];
+	}
+	delete [] _card;
+	delete [] _occ;
+
+	//exit(1);
+	//}
+#endif
+
+	//  return maybe_inconsistent;
+}
+
+
 Mistral::ConstraintSimplifiedExplanationMultiAtMostSeqCard::ConstraintSimplifiedExplanationMultiAtMostSeqCard(Vector< Variable >& scp, const int k, const int d, const int* p, const int* q)
 : ConstraintMultiAtMostSeqCard(scp,k, d, p, q)
 {
