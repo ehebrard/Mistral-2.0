@@ -4474,6 +4474,19 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
+  //lazyleft Explanation
+    class ConstraintLeftExplanationMultiAtMostSeqCard : public ConstraintMultiAtMostSeqCard {
+
+    public:
+  	  /**@name Constructors*/
+  	  //@{
+  	  //ConstraintNaiveMultiAtMostSeqCard();
+	  ConstraintLeftExplanationMultiAtMostSeqCard(Vector< Variable >& scp, const int k, const int d, const int* p, const int* q);
+  	  //ConstraintNaiveMultiAtMostSeqCard(std::vector< Variable >& scp, const int k, const int d, const int* p, const int* q);
+  	  virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+  	  void simple_greedy_assign_for_explanation(Vector<Variable>& X, int __rank, int index_a);
+    };
+
 
 
 
