@@ -40,6 +40,7 @@
 
 //#define _DEBUG_RESTORE true
 //#define _DEBUG_REWRITE true
+//#define _OUTPUT_TIKZ false
 
 Mistral::Solver* active_solver;
 static void Mistral_SIGINT_handler(int signum) {
@@ -4765,17 +4766,7 @@ Mistral::Outcome Mistral::Solver::branch_right() {
 #endif
 
     Mistral::Decision deduction;
-    //backtrack_level = level-1;
-    // if(parameters.backjump) {
-    //   //int backtrack_level=level-1;
-    //   decision = learn_nogood_and_backjump(); //backtrack_level);
-    //   else {
-    //     while(level>backtrack_level) {
-    // 	restore();
-    // 	decisions.pop();
-    //     }
-    //   }
-    // } else {
+
     
     
     if(parameters.backjump && !culprit.empty()) {
@@ -4784,39 +4775,19 @@ Mistral::Outcome Mistral::Solver::branch_right() {
 
 #else
 
-      //std::cout << "LEARN " << culprit.empty() << std::endl;
-      //if( parameters.backjump ) 
       learn_nogood();
+
 #endif
 
-      //decisions.size += (backtrack_level-level);
       Literal p = learnt_clause[0];
       deduction = Decision(variables[UNSIGNED(p)], Decision::REMOVAL, NOT(SIGN(p)));
     } else {
       backtrack_level = level-1;
-      //deduction = decisions.pop();
       deduction = decisions.back();
-      
-      //std::cout << "DEDUCE " << deduction << std::endl;
-      
       deduction.invert();
     }
     
-    //decisions.size = backtrack_level;
-    
-    // if(backtrack_level == level)
-    //   {
-    //     std::cout << "CA ALORS!" << std::endl;
-    //   }
-    
     restore(backtrack_level);  
-    
-    //decision = decisions.pop(); 
-    //decision.invert();
-    //}
-    
-    // if( limits_expired() ) status = LIMITOUT;
-    // else {
     
 #ifdef _DEBUG_SEARCH
     if(_DEBUG_SEARCH) {
@@ -4832,6 +4803,13 @@ Mistral::Outcome Mistral::Solver::branch_right() {
     std::cout << std::endl;
     //display(std::cout, 2);
     //check_constraint_graph_integrity();
+#endif
+
+
+#ifdef _OUTPUT_TIKZ
+    std::cout << "node (Refutation" << statistics.num_nodes << ") [refutation] {" ;
+    deduction.display_latex(std::cout);
+      std::cout << "}\n";
 #endif
 
 
@@ -4868,48 +4846,11 @@ void Mistral::Solver::backjump() {
 
 void Mistral::Solver::branch_left() {
 
-
   save();
-
-  //heuristic->check_consistency();
-  
-  // ((GenericHeuristic< 
-  //   GenericWeightedDVO< 
-  //     FailureCountManager, 
-  //     //PruningCountManager, 
-  //     MinDomainOverWeight >,
-  //   //GenericDVO< MinDomainOverDegree >,			    
-  //     MinValue >*)heuristic)->var.manager->check_consistency();
-
-  //heuristic->display(std::cout);
 
   Mistral::Decision decision = heuristic->branch();
 
-
-  // std::cout << variables[95] << " == 0 " << ((GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, BoolMinWeightValue >*)heuristic)->var.manager->lit_activity[190] << std::endl;
-
-
-
-
-  // std::cout << variables[95] << " == 1 " << ((GenericHeuristic< GenericWeightedDVO< LiteralActivityManager, MaxWeight >, BoolMinWeightValue >*)heuristic)->var.manager->lit_activity[NOT(190)] << std::endl;
-
-
-  // std::cout << decision << " " << decision.var.get_domain() << std::endl;
-  
-  //if(decision.var.is_ground()) exit(1);
-
-
-  // if(decisions.size && (decisions.back() == decision)) {
-  //   exit(1);
-  // }
-
-  //reason[decision.var.id()] = NULL;
-  //EXPL
-
-  //std::cout << "REASON FOR x" << decision.var.id() << ": decision" << std::endl;
-
   reason_for[decision.var.id()] = NULL;
-  //reason_for[decision.var.id()].store_reason_for_change();
 
   decisions.add(decision);
 
@@ -4921,6 +4862,14 @@ void Mistral::Solver::branch_left() {
   }
 #endif
 
+#ifdef _OUTPUT_TIKZ
+  std::cout << "node (Decision" << statistics.num_nodes << ") [decision] {" ;
+  decision.display_latex(std::cout);
+  std::cout << "}\n";
+#endif
+
+
+
 #ifdef _SAFE
   if(decision.var.is_ground()) {
 
@@ -4931,23 +4880,10 @@ void Mistral::Solver::branch_left() {
   }
 #endif
 
-  //if(decision.var.id() == 16) exit(1);
-
-  //std::cout << 11 << std::endl;
-
   decision.make();
-
-  //std::cout << 21 << std::endl;
 
   notify_decision();
 
-  //std::cout << 31 << std::endl;
-
-  // //if(level>=2)
-  // std::cout << "X4's trail: " << (variables[4].domain_type == RANGE_VAR ?
-  // 				  ((VariableRange*)(variables[4].variable))->trail_ :
-  // 				  ((VariableBitmap*)(variables[4].variable))->trail_)
-  // 	    << " " << variables[4].get_domain() << std::endl;
 }
 
 
@@ -5172,43 +5108,86 @@ Mistral::Outcome Mistral::Solver::exhausted() {
 Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root) 
 {
   search_root = _root;
-  //std::cout << "start search rooted at level " << search_root << std::endl;
+
+#ifdef _OUTPUT_TIKZ
+  int tikz_level = 0;
+  Vector<int> deficit;
+  deficit.add(0);
+  //int last = tikz_level;
+  if(!_OUTPUT_TIKZ) {
+    std::cout << "\\node (Root) [refutation] {$\\emptyset$}\n";
+  }
+#endif
 
   int status = UNKNOWN;
   while(status == UNKNOWN) {
 
-    // if(decisions.size != level) {
-    //   std::cout << "decisions.size/level = " << decisions.size << "/" << level << std::endl;
-    //   exit(1);
-    // }
-
-    //std::cout << sequence << std::endl;
-
-    //std::cout << constraints[0] << std::endl;
-
-
     if(propagate()) {
 
-      // for(int i=sequence.size; i<variables.size-1; ++i) {
-      // 	std::cout << (sequence[i].get_value() ? " " : " -") << sequence[i];
-      // }
-      // std::cout << std::endl;
-
-      //std::cout << "sequence: " << sequence << std::endl;
-
+#ifdef _OUTPUT_TIKZ
+      if(_OUTPUT_TIKZ) {
+	if(tikz_level > 0)
+	  std::cout << "child{\n";
+	else
+	  std::cout << "\\";
+	std::cout << "node (state" << statistics.num_filterings << ") [state] {\n";
+	std::cout << "\\begin{tabular}{ll}\n";
+	for(unsigned int i=0; i<variables.size; ++i) {
+	  std::cout << "${\\cal D}(x_" << variables[i].id() << ")$ & $" << variables[i].get_domain(true) << "$ \\\\\n";
+	}
+	std::cout << "\\end{tabular}\n}\n";
+      } 
+#endif
+      
 #ifdef _MONITOR
       monitor_list.display(std::cout);
       std::cout << std::endl;
       //display(std::cout, 2);
       //check_constraint_graph_integrity();
 #endif
-            
+
+#ifdef _OUTPUT_TIKZ
+      deficit.add(0);
+      ++tikz_level;
+      //last = tikz_level;
+      std::cout << "child{ [sibling distance=" << (tikz_level > 5 ? 4 : (1<<(7-tikz_level))) << "mm]\n";
+#endif
+      
       ++statistics.num_nodes;
-      if( sequence.empty()  ) //status = satisfied(_exit_on_solution_);
-	status = satisfied();//objective);
+      if( sequence.empty()  ) 
+	status = satisfied();
       else branch_left();
 
     } else {
+
+#ifdef _OUTPUT_TIKZ
+      std::cout << "child{ \nnode[fail] (Fail" << statistics.num_failures << ") {\\bf fail}\n}\n";
+
+      //std::cout << "LEVEL=" << level << " deficit=" << deficit << std::endl;
+
+      int open = deficit.pop();
+      while(open--) {
+	--tikz_level;
+
+    if(_OUTPUT_TIKZ) {
+      std::cout << "}\n";
+    } 
+
+	std::cout << "}\n";
+      } 
+      ++deficit[level-1];
+
+      //std::cout << "LEVEL=" << level << " deficit=" << deficit << std::endl;
+
+
+      if(level != search_root) {
+	// if(_OUTPUT_TIKZ) {
+	//   std::cout << "}\n";
+	// } 
+	std::cout << "}\nchild{ [sibling distance=" << (tikz_level > 5 ? 4 : (1<<(7-tikz_level))) << "mm]\n";
+      }
+#endif
+      
 #ifdef _OLD_
       if( parameters.backjump ) learn_nogood();
       if( limits_expired() ) {
@@ -5218,18 +5197,28 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
       status = branch_right();
 #endif	
 
-      // if( parameters.backjump ) learn_nogood();
-      // //if( decisions.empty() ) status = exhausted(); //objective);
-      // if( level == root ) status = exhausted(); //objective);
-      // else if( limits_expired() ) {
-      // 	status = LIMITOUT;
-      // } else branch_right();
-
     }
+
+
 
   }
 
   //std::cout << outcome2str(status) << std::endl;
+
+#ifdef _OUTPUT_TIKZ
+  if(deficit.size) {
+    int open = deficit.pop();
+    if(open>0)
+      while(--open) {
+	if(_OUTPUT_TIKZ
+	   ) {
+	  std::cout << "}\n";
+	} 
+	std::cout << "}\n";
+      }
+  }
+  std::cout << ";\n";
+#endif
 
   return status;
 }

@@ -528,8 +528,10 @@ unsigned int Mistral::Variable::get_degree() const {
 }
 
 
-std::string Mistral::Variable::get_domain() const {
+std::string Mistral::Variable::get_domain(const bool latex) const {
   std::ostringstream buf;
+
+  if(latex && domain_type ==  BITSET_VAR) buf << "\\";
 
   if     (domain_type ==  BITSET_VAR) buf << bitset_domain->domain;
   else if(domain_type ==    LIST_VAR) buf << list_domain->domain;
@@ -561,6 +563,10 @@ std::string Mistral::Variable::get_domain() const {
     else if(*bool_domain == 2) buf << "1";
     else buf << "0";
   }
+
+  if(latex && domain_type ==  BITSET_VAR) buf << "\b\\}";
+
+
   return buf.str();
 }
 

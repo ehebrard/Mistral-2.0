@@ -1647,7 +1647,7 @@ namespace Mistral {
     int get_solution_max() const ; 
     /// Returns the domain 
     //Bitset_domain get_domain() const ; 
-    std::string get_domain() const ; 
+    std::string get_domain(const bool latex=false) const ; 
     std::string get_history() const ; 
     //DomainIterator get_domain_iterator();
     /// Returns the domain size
@@ -2137,6 +2137,18 @@ namespace Mistral {
       case UPPERBOUND: { os << " <= "  ; } break;
       }
       os << value();
+      return os;
+    }
+
+   std::ostream& display_latex(std::ostream& os) const {
+     os << "$x_" << var.id();
+      switch(type()) {
+      case REMOVAL:    { os << " \\neq " ; } break;
+      case ASSIGNMENT: { os << " = "  ; } break;
+      case LOWERBOUND: { os << " > "   ; } break;
+      case UPPERBOUND: { os << " \\leq "  ; } break;
+      }
+      os << value() << "$";
       return os;
     }
 

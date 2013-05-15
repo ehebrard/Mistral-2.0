@@ -3220,10 +3220,10 @@ void CostasAllDiffAllSolutions::run() {
   int num_solutions = 0;
   while(s.get_next_solution() == SAT) {
     ++num_solutions;
-//     for(i=0; i<size; ++i) {
-//       cout << " " << setw(2) << X[i].get_solution_str_value() ;
-//     }
-//     cout << endl;
+     // for(i=0; i<size; ++i) {
+     //   cout << " " << X[i].get_solution_int_value() ;
+     // }
+     // cout << endl;
   }
 
   if(Verbosity) cout << "(" << num_solutions << ") " ;
@@ -4834,7 +4834,7 @@ void SatTest::run() {
 			    new Geometric()
 			    );
   
-  if(solver.statistics.num_backtracks != 14848) {
+  if(solver.statistics.num_backtracks != 54349) {
     cout << "Error: wrong number of backtracks! (" 
 	 << (solver.statistics.num_backtracks) << ")" << endl;
     //exit(1);
