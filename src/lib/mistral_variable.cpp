@@ -1881,18 +1881,13 @@ int Mistral::VariableImplementation::get_solution_max() const {
 }  
 
 
-//void Mistral::VariableImplementation::trigger_value_event_and_save(Mistral::Variable *x) {
-void Mistral::VariableImplementation::trigger_value_event_and_save() {
-  solver->trigger_event(id, VALUE_EVENT);
-  //solver->save(*x);
-  //solver->save(this, BOOL_VAR);
-  solver->save(id);
-}
+// void Mistral::VariableImplementation::trigger_value_event() {
+//   solver->trigger_event(id, VALUE_EVENT);
+//   solver->save(id);
+// }
 
 void Mistral::VariableImplementation::trigger_event_and_save(const Event evt) {
   solver->trigger_event(id, evt);
-  //solver->save(*x);
-  //solver->save(this, BOOL_VAR);
   solver->save(id);
 }
 
@@ -1900,7 +1895,6 @@ Mistral::BitsetDomain::BitsetDomain(const int lb, const int ub) {
   min = lb;
   max = ub;
   size = ub-lb+1;
-  //values.initialise();
 }
 
 void Mistral::BitsetDomain::initialise(const int lb, const int ub, const bool vals) {

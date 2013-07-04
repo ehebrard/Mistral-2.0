@@ -301,6 +301,7 @@ namespace Mistral {
       for(unsigned int i=0; i<pool.size; ++i) {
 	os << pool[i] << std::endl;
       }
+      return os;
     }
 
   };
@@ -1601,7 +1602,7 @@ namespace Mistral {
     /**@name Utils*/
     //@{
     inline double value() { return (double)deg_; } 
-    inline bool operator<( const MaxDegree& x ) const { return deg_ < x.deg_; }
+    inline bool operator<( const MaxDegree& x ) const { return deg_ > x.deg_; }
 
     // inline MaxDegree& operator*( const int x ) const { MaxDegree d; d.deg_=(deg_ * x); return d; }
     // inline MaxDegree& operator+( const int x ) const { MaxDegree d; d.deg_=(deg_ + x); return d; }

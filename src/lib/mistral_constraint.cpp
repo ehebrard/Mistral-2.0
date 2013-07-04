@@ -10454,7 +10454,7 @@ in fact, only parity pruning must be stored. Otherwise, we can deduce it from th
 
       // a=1 and coeff is positive or
       // a=0 and coeff is negative => 0 <=> pushed toward the upper value (negative_contributors are the reason)
-      direction = (GET_VAL(domains[i]) != weight[i]>0);
+      direction = ((GET_VAL(domains[i])) != (weight[i]>0));
 
     } else if(IS_GROUND(domains[i]) && rank[idx] < a_rank) {
 
@@ -10468,7 +10468,7 @@ in fact, only parity pruning must be stored. Otherwise, we can deduce it from th
 	bounds[1] += weight[i];
       }
 
-      if(val == weight[i]>0) {
+      if(val == (weight[i]>0)) {
 	positive_contributors.add(NOT(literal(scope[i])));
 	pweight.add(weight[i]);
 	pvar.add(i);
@@ -11283,7 +11283,8 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
 #endif
 
   explanation.clear();
-  int i, idx;
+  int i;
+  unsigned int idx;
   int *rank = get_solver()->assignment_order.stack_;
   int a_rank = INFTY-1;
   //Explanation **reason = get_solver()->reason_for.stack_;
@@ -12135,7 +12136,7 @@ Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for
     for(i=weight.size; i--;) {
       idx = scope[i].id();
       if(idx == a) {
-	direction = (GET_VAL(domains[i]) == weight[i]>0);
+	direction = ((GET_VAL(domains[i])) == (weight[i]>0));
 	break;
       }
     }
@@ -12198,8 +12199,8 @@ Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for
   i = weight.size;
   while(i--) {
     idx = scope[i].id();
-    if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
-      if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
+    if((idx != a) && (IS_GROUND(domains[i])) && (rank[idx] < a_rank)) {
+      if(((GET_VAL(domains[i])) == (weight[i]>0)) != direction) {
 	explanation.add(NOT(literal(scope[i])));
       }
     }
@@ -12286,7 +12287,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
     while(!changes.empty()) {
       i = changes.pop();
       
-      if(i<weight.size) {
+      if(i<(int)(weight.size)) {
 	
 	w = weight[i]<0;
 	
@@ -13632,7 +13633,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		arity=scope.size;
 		while(arity--)
 		{
-			if (scope[arity].id() == a)
+		  if ((Atom)(scope[arity].id()) == a)
 				break;
 		}
 
@@ -13918,7 +13919,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 		{
 			if(scope[arity].is_ground()) {
 				idx = scope[arity].id();
-				if (idx != a && rank[idx] < a_rank)
+				if ((Atom)idx != a && rank[idx] < a_rank)
 				{
 					if (max_equal_to_p[arity] == scope[arity].get_value())
 					{
@@ -13994,7 +13995,7 @@ Mistral::Explanation::iterator Mistral::ConstraintMultiAtMostSeqCard::get_reason
 
 void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __rank, int __size, Vector<Variable>& X) {
 	//__size=4;
-	if (__size>X.size) __size= X.size;
+  if (__size>(int)(X.size)) __size= X.size;
 	Vector<int> sequence_image;
 	sequence_image.clear();
 	int *rank = get_solver()->assignment_order.stack_;

@@ -22,7 +22,16 @@
 
 
 /*! \file mistral_variable.hpp
-  \brief Header for the variables
+  \brief Header for variables
+
+  The 'Variable' class involves:
+  1/ a pointer to an implementation;
+  2/ a type flag;
+  3/ a list of accessors;
+  
+  When calling an accessor, the type flag is checked,
+  the pointer is cast accordingly and called with the same accessor.
+    
 */
 
 #include <vector>
@@ -35,52 +44,62 @@
 
 
 
-
-
 //
 namespace Mistral {
 
-  /*!
-    The 'Variable' class involves:
-    1/ a pointer to an implementation;
-    2/ a type flag;
-    3/ a list of accessors;
-    
-    When calling an accessor, the type flag is checked,
-    the pointer is cast accordingly and called with the same accessor.
-  */  
 
   class VarArray;
   class Variable;
   class Solver;
+
+  /**********************************************
+   * VariableImplementation
+   **********************************************/
+  /*! \class VariableImplementation
+    \brief Shared attributes for all variable implementation classes
+  */
   class VariableImplementation {
   public:
 
-    /// Attributes common to all variables:
-    /////////////////////////////////////
+    /*!@name Attributes*/
+    //@{
     /// The linked solver
     Environment *solver;
     /// unique identifier, corresponds to its rank in the variables list of the solver
     int id;
-    /////////////////////////////////////
+    //@}
 
+    /*!@name Constructors*/
+    //@{
     VariableImplementation() {solver=NULL; id=-1;}
     virtual ~VariableImplementation() {}
-
     virtual void initialise(Solver *s);
+    //@}
 
+
+    /*!@name Accessors*/
+    //@{
+    // get value in solution (as an integer)
+    virtual int get_solution_int_value() const ;//{ return solver->last_solution_lb[id] } ; 
+    // get value in solution (as a string)
+    virtual std::string get_solution_str_value() const ;//{ return solver->last_solution_lb[id] } ; 
+    // get min value in solution (same as value if assigned)
+    virtual int get_solution_min() const ;//{ return solver->last_solution_lb[id] } ; 
+    // get max value in solution (same as value if assigned)
+    virtual int get_solution_max() const ;//{ return solver->last_solution_ub[id] } ; 
+    // used when creating the model
     bool is_initialised() const { 
       return id!=-1;
     }
+    //@}
 
-    virtual int get_solution_int_value() const ;//{ return solver->last_solution_lb[id] } ; 
-    virtual std::string get_solution_str_value() const ;//{ return solver->last_solution_lb[id] } ; 
-    virtual int get_solution_min() const ;//{ return solver->last_solution_lb[id] } ; 
-    virtual int get_solution_max() const ;//{ return solver->last_solution_ub[id] } ; 
-
-    //void trigger_value_event_and_save(Variable *x);
-    void trigger_value_event_and_save();
+    /*!@name Utils*/
+    //@{
+    // // notify the solver of an assignment event on the variable
+    // void trigger_value_event();
+    // notify the solver of an event of type <evt> on the variable
     void trigger_event_and_save(const Event evt);
+    //@}
   };
 
 

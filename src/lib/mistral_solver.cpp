@@ -42,6 +42,7 @@
 //#define _DEBUG_REWRITE true
 //#define _OUTPUT_TIKZ false
 
+
 Mistral::Solver* active_solver;
 static void Mistral_SIGINT_handler(int signum) {
   std::cout << std::endl 
@@ -5205,13 +5206,14 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
 
   //std::cout << outcome2str(status) << std::endl;
 
+  //  std::cout << deficit << std::endl;
+
 #ifdef _OUTPUT_TIKZ
   if(deficit.size) {
     int open = deficit.pop();
     if(open>0)
       while(--open) {
-	if(_OUTPUT_TIKZ
-	   ) {
+	if(_OUTPUT_TIKZ) {
 	  std::cout << "}\n";
 	} 
 	std::cout << "}\n";
