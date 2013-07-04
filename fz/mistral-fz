@@ -10,7 +10,7 @@ if len(sys.argv) > 1:
     if '-f' in cmd:
         cmd[cmd.index['-f']] = '--follow_annotations'
 
-    mcmd = ['/Users/ehebrard/work/dev/git/Mistral-2.0/fz/mistral-fzn']
+    mcmd = ['./mistral-fzn']
     mcmd.extend(cmd)
     mcmd.extend(['--print_sol', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', '-f', filename, '-c', 'dom/wdeg', '-b', 'minval+guided', '-r', 'luby'])
 
