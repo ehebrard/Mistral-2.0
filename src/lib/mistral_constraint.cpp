@@ -1423,7 +1423,6 @@ Mistral::PropagationOutcome Mistral::ConstraintNotEqual::rewrite() {
 
 	if(scope[0].id() == scope[1].id())
 	{
-		std::cout << "2";
 		get_solver()->fail();
 		//return NO_EVENT;
 		return FAIL_EVENT;
