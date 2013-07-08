@@ -2878,11 +2878,19 @@ bool Mistral::Solver::rewrite()
 	  // 	 std::cout << posted_constraints << std::endl;
 	  // #endif
 	  
-	  
-	  } break;
+
+	} break;
+	case FAIL_EVENT: {
+
+#ifdef _DEBUG_REWRITE
+		std::cout << "    -> fail event] " << std::endl;
+#endif
+		return FAILURE(0);
+	}
+	break;
 	default: { 
 
-	  
+
 #ifdef _DEBUG_REWRITE
 	  std::cout << "   -> replaced] " << std::endl;
 	  //exit(1);

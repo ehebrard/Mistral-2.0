@@ -1420,7 +1420,15 @@ void Mistral::ConstraintNotEqual::mark_domain() {
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintNotEqual::rewrite() {
-  RewritingOutcome r_evt = NO_EVENT; 
+
+	if(scope[0].id() == scope[1].id())
+	{
+		std::cout << "2";
+		get_solver()->fail();
+		//return NO_EVENT;
+		return FAIL_EVENT;
+	}
+	RewritingOutcome r_evt = NO_EVENT;
 
   if(scope[0].is_ground() || scope[1].is_ground() || !(scope[0].intersect(scope[1]))) {
 
