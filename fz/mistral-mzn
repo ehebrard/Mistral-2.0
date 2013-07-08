@@ -81,7 +81,7 @@ cleanup () {
 
 #MISTRAL_DIR=${MISTRAL_DIR:-.}
 
-MISTRAL_DIR=/Users/ehebrard/work/dev/git/Mistral-2.0/fz
+MISTRAL_DIR=.
 
 MZN2FZN=${MZN2FZN:-mzn2fzn}
 FLATZINC=$MISTRAL_DIR/mistral-fz
