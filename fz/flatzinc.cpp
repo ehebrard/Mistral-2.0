@@ -182,7 +182,7 @@ FlatZincModel::FlatZincModel(Solver &s)
 : solver(s), 
   _option_heuristic(NULL), 
   _option_policy(NULL), 
-  _option_rewriting(false),
+  _option_rewriting(true),
   _option_enumerate(false),
   _option_display_mistral_model(false),
   _option_annotations(false),

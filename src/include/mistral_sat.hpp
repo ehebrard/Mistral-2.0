@@ -315,7 +315,7 @@ namespace Mistral {
     virtual int idempotent() { return 1;}
     virtual int postponed() { return 1;}
     virtual int pushed() { return 1;}
-
+    virtual bool explained() { return true; }
     void add( Variable x );
     void add( Vector < Literal >& clause, double init_activity=0.0 );
     void learn( Vector < Literal >& clause, double init_activity=0.0 );

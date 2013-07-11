@@ -1514,12 +1514,53 @@ namespace FlatZinc {
       Vector<Variable> pos = arg2boolvarargs(s, m, ce[0]);
       Vector<Variable> neg = arg2boolvarargs(s, m, ce[1]);
 
+      //Posting a clause instead of boolean sums
+      Vector< Literal > clause;
+      Literal  lit;
+      clause.clear();
+
+      if(! pos.empty())
+      {
+
+    	  for (int i=0; i< pos. size ; i++)
+    	  {
+    		  if (!pos[i].is_ground())
+    		  {
+    			  s.add(pos[i]);
+    			  lit =  (2* pos[i].id()) +1;
+    			  clause.add(lit);
+    		  }
+    		  else
+    			  if (pos[i].get_value())
+    				  return;
+    	  }
+      }
+      if(! neg.empty())
+      {
+    	  for (int i=0; i< neg.size ; i++)
+    	  {
+    		  if (!neg[i].is_ground())
+    		  {
+    			  s.add(neg[i]);
+    			  lit =  2* neg[i].id();
+    			  clause.add(lit);
+    		  }
+    		  else
+    			  if (!neg[i].get_value())
+    				  return;
+    	  }
+      }
+      if ( (!neg.empty()) || (!pos.empty()))
+    	  s.add(clause);
+
+/*
       if(pos.empty())
         s.add( BoolSum(neg) < neg.size );
       else if(neg.empty())
         s.add( BoolSum(pos) > 0 );
       else 
         s.add( (BoolSum(pos) > 0) || (BoolSum(neg) < neg.size) );
+*/
 
       // vector<Variable> x1 = arg2boolvarargs(s, m, ce[1]);
 
