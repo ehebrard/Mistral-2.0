@@ -1722,10 +1722,46 @@ namespace FlatZinc {
 
     void p_bool_le(Solver& s, FlatZincModel& m,
                    const ConExpr& ce, AST::Node* ann) {
-      Variable a = getBoolVar(s, m, ce[0]); 
-      Variable b = getBoolVar(s, m, ce[1]);
+    	Variable a = getBoolVar(s, m, ce[0]);
+    	Variable b = getBoolVar(s, m, ce[1]);
 
-      s.add( a <= b );
+    	//s.add( a <= b );
+
+    	//Add clause not(a) \/ b instead of a <= b
+    	Vector< Literal > clause;
+    	Literal  lit;
+    	clause.clear();
+
+    	if (!a.is_ground())
+    	{
+    		s.add(a);
+    		lit =  (2* a.id());
+    		clause.add(lit);
+    	}
+    	else
+    		if (! a.get_value())
+    			return;
+
+    	if (!b.is_ground())
+    	{
+    		s.add(b);
+    		lit =  (2* b.id())+1;
+    		clause.add(lit);
+    	}
+    	else
+    		if (b.get_value())
+    			return;
+
+    	if(clause.size==2)
+    		s.add(clause);
+    	else
+    	{
+    		if (a.is_ground())
+    			s.add(b==1);
+    		else
+    			s.add(a==0);
+    	}
+
     }
 
     void p_bool_le_reif(Solver& s, FlatZincModel& m,
