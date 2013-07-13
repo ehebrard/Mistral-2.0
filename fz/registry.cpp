@@ -582,6 +582,74 @@ namespace FlatZinc {
           s.fail();
       }
     }
+
+    //encode the clause having all the positive literals in the vector of variables pos and the negative ones in neg
+    inline   void encode_clause (Solver& s,Vector<Variable> pos ,  Vector<Variable> neg)
+    {
+
+    	/*We use the variable alone only when the size of the clause is 1.
+    	 *In that case we force it to take the value sign_alone
+    	 */
+
+    	Variable alone;
+    	int sign_alone;
+
+    	Vector< Literal > clause;
+    	Literal  lit;
+    	clause.clear();
+
+    	if(! pos.empty())
+    	{
+    		for (int i=0; i< pos. size ; i++)
+    		{
+    			if (!pos[i].is_ground())
+    			{
+    				s.add(pos[i]);
+    				lit =  (2* pos[i].id()) +1;
+    				clause.add(lit);
+    				if(clause.size ==1)
+    				{
+    					sign_alone=1;
+    					alone=pos[i];
+    				}
+    			}
+    			else
+    				if (pos[i].get_value())
+    					return;
+    		}
+    	}
+    	if(! neg.empty())
+    	{
+    		for (int i=0; i< neg.size ; i++)
+    		{
+    			if (!neg[i].is_ground())
+    			{
+    				s.add(neg[i]);
+    				lit =  2* neg[i].id();
+    				clause.add(lit);
+    				if(clause.size ==1)
+    				{
+    					sign_alone=0;
+    					alone=neg[i];
+    				}
+    			}
+    			else
+    				if (!neg[i].get_value())
+    					return;
+    		}
+    	}
+    	if (clause.size ==1)
+    	{
+    		s.add(alone==sign_alone);
+    		return ;
+    	}
+    	else if (clause.size >0)
+    	{
+    		clause.sort();
+    		s.add(clause);
+    	}
+    }
+
     void p_bool_lin_eq(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
@@ -1492,7 +1560,42 @@ namespace FlatZinc {
       Variable x1 = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
-      s.add( (x0 || x1) == r );
+//      s.add( (x0 || x1) == r );
+
+      /*Can be decomposed into
+       * not(r) \/ x0  \/x1
+       * r  \/ not(x0)
+       * r  \/ not(x1)
+       */
+
+
+
+      Vector<Variable> pos;
+      Vector<Variable> neg;
+      //not(r) \/ x0  \/x1
+      pos.clear();
+      neg.clear();
+      pos.add(x0);
+      pos.add(x1);
+      neg.add(r);
+      encode_clause(s,pos,neg );
+
+    // r  \/ not(x0)
+      pos.clear();
+      neg.clear();
+      pos.add(r);
+      neg.add(x0);
+      encode_clause(s,pos,neg );
+
+
+     // r  \/ not(x1)
+      pos.clear();
+      neg.clear();
+      pos.add(r);
+      neg.add(x1);
+      encode_clause(s,pos,neg );
+
+
 
       // vec<Lit> ps1, ps2, ps3;
       // ps1.push( safeLit(s, r) );
@@ -1507,73 +1610,6 @@ namespace FlatZinc {
       // s.addClause(ps3);
     }
 
-
-    //encode the clause having all the positive literals in the vector of variables pos and the negative ones in neg
-    inline   void encode_clause (Solver& s,Vector<Variable> pos ,  Vector<Variable> neg)
-    {
-
-    	/*We use the variable alone only when the size of the clause is 1.
-    	 *In that case we force it to take the value sign_alone
-    	 */
-
-    	Variable alone;
-    	int sign_alone;
-
-    	Vector< Literal > clause;
-    	Literal  lit;
-    	clause.clear();
-
-    	if(! pos.empty())
-    	{
-    		for (int i=0; i< pos. size ; i++)
-    		{
-    			if (!pos[i].is_ground())
-    			{
-    				s.add(pos[i]);
-    				lit =  (2* pos[i].id()) +1;
-    				clause.add(lit);
-    				if(clause.size ==1)
-    				{
-    					sign_alone=1;
-    					alone=pos[i];
-    				}
-    			}
-    			else
-    				if (pos[i].get_value())
-    					return;
-    		}
-    	}
-    	if(! neg.empty())
-    	{
-    		for (int i=0; i< neg.size ; i++)
-    		{
-    			if (!neg[i].is_ground())
-    			{
-    				s.add(neg[i]);
-    				lit =  2* neg[i].id();
-    				clause.add(lit);
-    				if(clause.size ==1)
-    				{
-    					sign_alone=0;
-    					alone=neg[i];
-    				}
-    			}
-    			else
-    				if (!neg[i].get_value())
-    					return;
-    		}
-    	}
-    	if (clause.size ==1)
-    	{
-    		s.add(alone==sign_alone);
-    		return ;
-    	}
-    	else if (clause.size >0)
-    	{
-    		clause.sort();
-    		s.add(clause);
-    	}
-    }
 
     void p_bool_clause(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
@@ -1649,13 +1685,60 @@ namespace FlatZinc {
       // s.addClause(ps2);
     }
 
+
     void p_bool_eq_reif(Solver& s, FlatZincModel& m,
                         const ConExpr& ce, AST::Node* ann) {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
-      s.add((a == b) == r);
+      //s.add((a == b) == r);
+      //    p_bool_eq_reif can be decomposed as follows :
+      /* r \/ a \/ b
+       * r \/ not(a) \/ not(b)
+       * not(r) \/ a \/ not(b)
+       * not(r) \/ not(a) \/ b
+       */
+
+      Vector<Variable> pos;
+      Vector<Variable> neg;
+      pos.clear();
+      neg.clear();
+
+      pos.add(r);
+      pos.add(a);
+      pos.add(b);
+
+      encode_clause(s,pos,neg );
+
+      pos.clear();
+      neg.clear();
+
+      pos.add(r);
+      neg.add(a);
+      neg.add(b);
+
+      encode_clause(s,pos,neg );
+
+      pos.clear();
+      neg.clear();
+
+      neg.add(r);
+      pos.add(a);
+      neg.add(b);
+
+      encode_clause(s,pos,neg );
+
+      pos.clear();
+      neg.clear();
+
+      neg.add(r);
+      neg.add(a);
+      pos.add(b);
+
+      encode_clause(s,pos,neg );
+
+
 
       // vec<Lit> ps1, ps2, ps3, ps4;
       // ps1.push(~safeLit(s, a));
@@ -1773,7 +1856,8 @@ namespace FlatZinc {
        * a \/ r
        * Not(b) \/ r
        * Not(r) \/ Not(a) \/ b
-       * However, the solver stops when asking for all solutions
+       * However, the solver stops when asking for all solutions! So we use the old constraint
+      ( (a <= b) == r)
        */
     void p_bool_le_reif(Solver& s, FlatZincModel& m,
                         const ConExpr& ce, AST::Node* ann) {
@@ -1820,7 +1904,9 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]); 
       Variable b = getBoolVar(s, m, ce[1]);
 
-      s.add( a < b );
+      s.add (a==0);
+      s.add (b==1);
+      //s.add( a < b );
     }
 
     void p_bool_lt_reif(Solver& s, FlatZincModel& m,
@@ -1856,7 +1942,56 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
-      s.add( (a != b) == r );
+      // s.add( (a != b) == r );
+
+      /* Can be decomposed as follows
+       * not(a) \/ b  \/ r
+       * a \/ not(b)  \/ r
+       * not(a) \/ not(b)  \/ not(r)
+       * a \/ b  \/ not(r)
+       */
+
+      Vector<Variable> pos;
+      Vector<Variable> neg;
+      // not(a) \/ b  \/ r
+      pos.clear();
+      neg.clear();
+
+      pos.add(b);
+      pos.add(r);
+      neg.add(a);
+
+      encode_clause(s,pos,neg);
+      // a \/ not(b)  \/ r
+      pos.clear();
+      neg.clear();
+
+      pos.add(a);
+      pos.add(r);
+      neg.add(b);
+
+      encode_clause(s,pos,neg);
+
+      //  not(a) \/ not(b)  \/ not(r)
+      pos.clear();
+      neg.clear();
+
+      neg.add(a);
+      neg.add(r);
+      neg.add(b);
+
+      encode_clause(s,pos,neg);
+
+      //  a \/ b  \/ not(r)
+      pos.clear();
+      neg.clear();
+
+      pos.add(a);
+      pos.add(b);
+      neg.add(r);
+
+      encode_clause(s,pos,neg);
+
     }
 
     void p_bool_xor(Solver& s, FlatZincModel& m,
