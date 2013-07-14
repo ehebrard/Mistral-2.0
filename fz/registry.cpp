@@ -1659,7 +1659,7 @@ namespace FlatZinc {
       Variable x1 = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
-//      s.add( (x0 || x1) == r );
+      s.add( (x0 || x1) == r );
 
       /*Can be decomposed into
        * not(r) \/ x0  \/x1
@@ -1667,7 +1667,7 @@ namespace FlatZinc {
        * r  \/ not(x1)
        */
 
-
+/*
 
       Vector<Variable *> pos;
       Vector<Variable *> neg;
@@ -1694,7 +1694,7 @@ namespace FlatZinc {
       neg.add(&x1);
       encode_clause(s,pos,neg );
 
-
+*/
 
       // vec<Lit> ps1, ps2, ps3;
       // ps1.push( safeLit(s, r) );
@@ -1716,7 +1716,7 @@ namespace FlatZinc {
       //report_unsupported("p_bool_clause");
       Vector<Variable> pos = arg2boolvarargs(s, m, ce[0]);
       Vector<Variable> neg = arg2boolvarargs(s, m, ce[1]);
-
+/*
       int size__ = pos.size;
         Vector<Variable*> pos_ptr;
         Vector<Variable*> neg_ptr;
@@ -1732,15 +1732,15 @@ namespace FlatZinc {
         //      Vector<Variable> pos
         //Posting a clause instead of boolean sums
         encode_clause(s,pos_ptr, neg_ptr);
+*/
 
-/*
       if(pos.empty())
         s.add( BoolSum(neg) < neg.size );
       else if(neg.empty())
         s.add( BoolSum(pos) > 0 );
       else 
         s.add( (BoolSum(pos) > 0) || (BoolSum(neg) < neg.size) );
-*/
+
 
       // vector<Variable> x1 = arg2boolvarargs(s, m, ce[1]);
 
@@ -1956,10 +1956,10 @@ namespace FlatZinc {
     	Variable a = getBoolVar(s, m, ce[0]);
     	Variable b = getBoolVar(s, m, ce[1]);
 
-    	//s.add( a <= b );
+    	s.add( a <= b );
 
     	//Add clause not(a) \/ b instead of a <= b
-
+/*
     	Vector<Variable*> pos;
     	Vector<Variable*> neg;
     	pos.clear();
@@ -1967,7 +1967,7 @@ namespace FlatZinc {
     	pos.add(&b);
     	neg.add(&a);
     	encode_clause(s,pos,neg );
-
+*/
     }
     /* bool_le_reif is : (Not(a) \/ b ) <--> r can be decomposed as follows
        * a \/ r
@@ -2059,7 +2059,7 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
-      // s.add( (a != b) == r );
+       s.add( (a != b) == r );
 
       /* Can be decomposed as follows
        * not(a) \/ b  \/ r
@@ -2067,7 +2067,7 @@ namespace FlatZinc {
        * not(a) \/ not(b)  \/ not(r)
        * a \/ b  \/ not(r)
        */
-
+/*
       Vector<Variable *> pos;
       Vector<Variable *> neg;
       // not(a) \/ b  \/ r
@@ -2108,7 +2108,7 @@ namespace FlatZinc {
       neg.add(&r);
 
       encode_clause(s,pos,neg);
-
+*/
     }
 
     void p_bool_xor(Solver& s, FlatZincModel& m,
