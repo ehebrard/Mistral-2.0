@@ -1817,45 +1817,45 @@ namespace FlatZinc {
        */
 
 /*
-      Vector<Variable> pos;
-      Vector<Variable> neg;
+      Vector<Variable *> pos;
+      Vector<Variable *> neg;
       pos.clear();
       neg.clear();
 
-      pos.add(r);
-      pos.add(a);
-      pos.add(b);
+      pos.add(&r);
+      pos.add(&a);
+      pos.add(&b);
 
       encode_clause(s,pos,neg );
 
       pos.clear();
       neg.clear();
 
-      pos.add(r);
-      neg.add(a);
-      neg.add(b);
+      pos.add(&r);
+      neg.add(&a);
+      neg.add(&b);
 
       encode_clause(s,pos,neg );
 
       pos.clear();
       neg.clear();
 
-      neg.add(r);
-      pos.add(a);
-      neg.add(b);
+      neg.add(&r);
+      pos.add(&a);
+      neg.add(&b);
 
       encode_clause(s,pos,neg );
 
       pos.clear();
       neg.clear();
 
-      neg.add(r);
-      neg.add(a);
-      pos.add(b);
+      neg.add(&r);
+      neg.add(&a);
+      pos.add(&b);
 
       encode_clause(s,pos,neg );
-
 */
+
 
       // vec<Lit> ps1, ps2, ps3, ps4;
       // ps1.push(~safeLit(s, a));
@@ -1983,32 +1983,33 @@ namespace FlatZinc {
       Variable r = getBoolVar(s, m, ce[2]);
 
       s.add( (a <= b) == r );
+
       /*
-          Vector<Variable> pos;
-            Vector<Variable> neg;
+          Vector<Variable *> pos;
+            Vector<Variable *> neg;
 
             pos.clear();
             neg.clear();
 
-            pos.add(a);
-            pos.add(r);
+            pos.add(&a);
+            pos.add(&r);
 
             encode_clause(s,pos,neg);
 
             pos.clear();
             neg.clear();
 
-            pos.add(r);
-            neg.add(b);
+            pos.add(&r);
+            neg.add(&b);
 
             encode_clause(s,pos,neg);
 
             pos.clear();
             neg.clear();
 
-            pos.add(b);
-            neg.add(a);
-            neg.add(r);
+            pos.add(&b);
+            neg.add(&a);
+            neg.add(&r);
 
             encode_clause(s,pos,neg);
        */
