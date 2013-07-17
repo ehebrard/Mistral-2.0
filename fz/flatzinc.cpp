@@ -183,6 +183,7 @@ FlatZincModel::FlatZincModel(Solver &s)
   _option_heuristic(NULL), 
   _option_policy(NULL), 
   _option_rewriting(false),
+  _option_simple_rewriting(false),
   _option_enumerate(false),
   _option_display_mistral_model(false),
   _option_annotations(false),
@@ -657,6 +658,11 @@ FlatZincModel::set_rewriting(const bool on) {
 }
 
 void
+FlatZincModel::set_simple_rewriting(const bool on) {
+	_option_simple_rewriting = on;
+}
+
+void
 FlatZincModel::set_parity_processing(const int lvl) {
 	_option_parity = lvl;
 }
@@ -790,6 +796,19 @@ FlatZincModel::set_annotations(const bool on) {
       std::cout << "after rewriting:\n" << solver << std::endl;
 #endif
     }
+    else
+        if(_option_simple_rewriting) {
+    #ifdef _DEBUG_FLATZINC
+          std::cout << "before simple_rewriting:\n" << solver << std::endl;
+    #endif
+
+          solver.simple_rewrite() ;
+
+    #ifdef _DEBUG_FLATZINC
+          std::cout << "after simple_rewriting:\n" << solver << std::endl;
+    #endif
+        }
+
 
     /*
 solver.add(solver.variables[1] == 0);

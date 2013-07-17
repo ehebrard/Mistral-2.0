@@ -277,6 +277,7 @@ protected:
 
 	RestartPolicy *_option_policy;
 	bool _option_rewriting;
+	bool _option_simple_rewriting;
   bool _option_enumerate;
   bool _option_display_mistral_model;
   bool _option_display_solution;
@@ -373,6 +374,8 @@ public:
 
 	/// setup the rewriting step
 	void set_rewriting(const bool on);
+	/// setup a rewriting step (mainly to eliminate bool2int)
+	void set_simple_rewriting(const bool on);
 
 	/// setup the rewriting step
 	void set_parity_processing(const int lvl);

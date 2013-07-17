@@ -322,6 +322,7 @@ namespace Mistral {
     virtual bool absorb_negation(const int var) { return false; }
     virtual Constraint get_negation(const int var, Variable x) { return Constraint(); }
     virtual bool rewritable() { return false; }
+    virtual bool simple_rewritable() { return false; }
     virtual bool explained() { return false; }
     virtual RewritingOutcome rewrite() { return NO_EVENT; }
     virtual void consolidate() = 0; 
@@ -1778,6 +1779,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
     virtual bool rewritable() { return true; }
+    virtual bool simple_rewritable() { return true; }
     virtual RewritingOutcome rewrite();
     //@}
 

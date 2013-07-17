@@ -681,6 +681,7 @@ namespace Mistral {
     void fail();
 
     void parity_processing(const int k=1);
+    bool simple_rewrite();
     bool rewrite(); 
     bool is_pseudo_boolean() const; 
     void consolidate(); 
