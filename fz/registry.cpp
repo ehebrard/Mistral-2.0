@@ -1907,8 +1907,9 @@ namespace FlatZinc {
        Variable a = getBoolVar(s, m, ce[0]);
        Variable b = getBoolVar(s, m, ce[1]);
       
-       s.add(a > b);
-
+ //      s.add(a > b);
+       s.add(a==1);
+       s.add(b==0);
        // if( s.value(safeLit(s, a)) == l_False )
       //   throw unsat();
       // if( s.value(~safeLit(s, b)) == l_False )

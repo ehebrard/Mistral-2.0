@@ -1373,8 +1373,8 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 			if (! pos[i].is_ground())
 			{
 				//	solver.add(pos[i]);
-				lit =  (2* pos[i].id()) +1;
-				clause.add(lit);
+//				lit =  (2* pos[i].id()) +1;
+				clause.add(literal(pos[i],1));
 				if(clause.size ==1)
 				{
 					sign_alone=1;
@@ -1393,8 +1393,8 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 			if (!neg[i].is_ground())
 			{
 				//				solver.add(neg[i]);
-				lit =  2* neg[i].id();
-				clause.add(lit);
+				//lit =  2* neg[i].id();
+				clause.add(literal(neg[i],0));
 				if(clause.size ==1)
 				{
 					sign_alone=0;
