@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
   fm->set_rewriting(cmd.use_rewrite());
   fm->set_parity_processing(parityArg.getValue());
   fm->set_enumeration(cmd.enumerate_solutions());
-
+  fm->encode_clauses();
   fm->run(cout , p);
   
   if(cmd.print_solution())

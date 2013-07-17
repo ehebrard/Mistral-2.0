@@ -182,7 +182,7 @@ FlatZincModel::FlatZincModel(Solver &s)
 : solver(s), 
   _option_heuristic(NULL), 
   _option_policy(NULL), 
-  _option_rewriting(true),
+  _option_rewriting(false),
   _option_enumerate(false),
   _option_display_mistral_model(false),
   _option_annotations(false),
@@ -1334,6 +1334,109 @@ Printer::print(std::ostream& out,
 Printer::~Printer(void) {
 	delete _output;
 }
+
+
+void FlatZincModel::add_clause(Vector<Variable> pos ,  Vector<Variable> neg)
+{
+
+	clause_struct v;
+	v.pos =pos;
+	v.neg =neg;
+	_clauses.add(v);
+
+	if(! pos.empty())
+		for (int i=0; i< pos. size ; i++)
+			solver.add(pos[i]);
+
+	if(! neg.empty())
+		for (int i=0; i< neg. size ; i++)
+			solver.add(neg[i]);
+}
+
+//encode the clause having all the positive literals in the vector of variables pos and the negative ones in neg
+void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
+{
+
+	/*We use the variable alone only when the size of the clause is 1.
+	 *In that case we force it to take the value sign_alone
+	 */
+	Variable  alone;
+	int sign_alone;
+	Vector< Literal > clause;
+	Literal  lit;
+	clause.clear();
+
+	if(! pos.empty())
+	{
+		for (int i=0; i< pos. size ; i++)
+		{
+			if (! pos[i].is_ground())
+			{
+				//	solver.add(pos[i]);
+				lit =  (2* pos[i].id()) +1;
+				clause.add(lit);
+				if(clause.size ==1)
+				{
+					sign_alone=1;
+					alone= pos[i];
+				}
+			}
+			else
+				if (pos[i].get_value())
+					return;
+		}
+	}
+	if(! neg.empty())
+	{
+		for (int i=0; i< neg.size ; i++)
+		{
+			if (!neg[i].is_ground())
+			{
+				//				solver.add(neg[i]);
+				lit =  2* neg[i].id();
+				clause.add(lit);
+				if(clause.size ==1)
+				{
+					sign_alone=0;
+					alone=neg[i];
+				}
+			}
+			else
+				if (!neg[i].get_value())
+					return;
+		}
+	}
+	if (clause.size ==1)
+	{
+		solver.add(alone==sign_alone);
+		return ;
+	}
+	else
+	{
+		if (clause.size >0)
+		{
+			clause.sort();
+//			std::cout<< "add clause : " <<clause<< std::endl;
+			cnf.add(clause);
+		}
+		else if (clause.size ==0)
+			solver.fail();
+	}
+}
+
+
+void FlatZincModel::encode_clauses()
+{
+	int size =_clauses.size;
+	cnf.clear();
+	if(size)
+		while(--size)
+			encode_clause(_clauses[size].pos, _clauses[size].neg);
+
+	for(int i=0; i<cnf.size; ++i)
+		solver.add(cnf[i]);
+}
+
 
 }
 

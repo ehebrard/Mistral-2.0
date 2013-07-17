@@ -1716,31 +1716,19 @@ namespace FlatZinc {
       //report_unsupported("p_bool_clause");
       Vector<Variable> pos = arg2boolvarargs(s, m, ce[0]);
       Vector<Variable> neg = arg2boolvarargs(s, m, ce[1]);
-/*
-      int size__ = pos.size;
-        Vector<Variable*> pos_ptr;
-        Vector<Variable*> neg_ptr;
-        while (size__--)
-        {
-      	  pos_ptr.add(& pos[size__]);
-        }
-        size__= neg.size;
-        while (size__--)
-        {
-      	  neg_ptr.add(& neg[size__]);
-        }
-        //      Vector<Variable> pos
-        //Posting a clause instead of boolean sums
-        encode_clause(s,pos_ptr, neg_ptr);
-*/
 
-      if(pos.empty())
+      //
+      //Posting a clause instead of boolean sums
+      m.add_clause(pos, neg);
+
+
+/*      if(pos.empty())
         s.add( BoolSum(neg) < neg.size );
       else if(neg.empty())
         s.add( BoolSum(pos) > 0 );
       else 
         s.add( (BoolSum(pos) > 0) || (BoolSum(neg) < neg.size) );
-
+*/
 
       // vector<Variable> x1 = arg2boolvarargs(s, m, ce[1]);
 

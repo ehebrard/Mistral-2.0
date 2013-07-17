@@ -300,6 +300,18 @@ protected:
 
 	/// Annotations on the solve item
 	AST::Array* _solveAnnotations;
+	struct clause_struct
+	{
+		//Variables appearing positively in the clause
+		Vector<Variable > pos;
+		//Variables appearing negatively in the clause
+		Vector<Variable > neg;
+	};
+
+	//structure used for encoding clauses
+	Vector<clause_struct> _clauses;
+	Vector< Vector< Literal > > cnf;
+
 public:
 
 
@@ -429,6 +441,12 @@ public:
 		//std::cout << outcome;
 		return ((outcome == SAT) || (outcome == OPT) || ((outcome == LIMITOUT) && (solver.statistics.num_solutions >0)));
 	}
+
+	void add_clause(Vector<Variable> pos ,  Vector<Variable> neg);
+	void encode_clause(Vector<Variable> pos ,  Vector<Variable> neg);
+	void encode_clauses();
+
+
 #ifdef _VERIFICATION
 	//Verification
 	std::vector<std::pair<std::string, std::vector<SolutionValue > > > verif_constraints;
