@@ -191,6 +191,8 @@ namespace Mistral {
     void re_link_to(Trigger* t);
     // whether the pointed constraint is succeptible to be rewritten
     bool rewritable(); 
+    // a temporal solution for rewriting in flatzinc
+    bool simple_rewritable();
     // whether the constraint can be rewritten to accommodate the not(x[i]) instead of x[i]
     bool absorb_negation(const int i);
     // return the constraint C such that C(x1,..,xi-1,not(xi),i+1,..,xk) <=> this(x1,..,xk)

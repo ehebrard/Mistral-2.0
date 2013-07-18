@@ -2768,6 +2768,176 @@ bool Mistral::Solver::is_pseudo_boolean() const {
   return is_pb;
 }
 
+bool Mistral::Solver::simple_rewrite()
+{
+
+  int i=0;
+  unsigned int con_i=0;
+  IntStack to_rewrite(0, 2*constraints.size, false);
+  Constraint con;
+  RewritingOutcome rewritten;
+  //bool fix_point;
+  //Vector<Constraint> to_rewrite;
+
+
+
+  //fix_point =
+
+  // enforce AC
+  //while( !fix_point ) {
+
+#ifdef _DEBUG_REWRITE
+    std::cout << "\n===================START REWRITING=====================\n" ;
+#endif
+
+  do {
+
+#ifdef _DEBUG_REWRITE
+    std::cout << " propagate  " ;
+#endif
+
+
+    if( !propagate() ) break;
+
+#ifdef _DEBUG_REWRITE
+    std::cout << (*this) << std::endl;
+    //std::cout << "Collect rewritable constraints: " << std::endl;
+#endif
+
+    while(con_i < constraints.size) {
+      // add the unseen constraints that might be rewritten
+      for(; con_i<constraints.size; ++con_i) {
+
+	// #ifdef _DEBUG_REWRITE
+	//       std::cout << "   " << constraints[con_i] ;
+	// #endif
+
+	if(constraints[con_i].simple_rewritable()) {
+	  to_rewrite.safe_add(con_i);
+
+	  // #ifdef _DEBUG_REWRITE
+	  // 	std::cout << " in" << std::endl;
+	  // #endif
+
+	}
+
+	// #ifdef _DEBUG_REWRITE
+	//       else {
+	// 	std::cout << " out" << std::endl;
+	//       }
+	// #endif
+
+      }
+
+
+      // // add all rewritable constraints to the stack
+      // for(i=0; i<to_rewrite.size; ++i)
+      //   active_constraints.add(constraints[to_rewrite[i]]);
+
+
+#ifdef _DEBUG_REWRITE
+      std::cout << " rewrite: " << to_rewrite << std::endl;
+#endif
+
+
+      // // rewriting
+      // while(!active_constraints.empty()) {
+
+      //   con = active_constraints.select(constraints);
+      for(i=to_rewrite.size; i--;) {
+	con = constraints[to_rewrite[i]];
+
+
+#ifdef _DEBUG_REWRITE
+	std::cout << "   [rewrite c" << con.id() << " " << con << std::endl;
+#endif
+
+	rewritten = con.rewrite();
+
+	switch(rewritten) {
+	case NO_EVENT: {
+
+#ifdef _DEBUG_REWRITE
+	  std::cout << "    -> no event] " << std::endl;
+#endif
+
+	}
+	  break;
+
+	case SUPPRESSED: {
+
+#ifdef _DEBUG_REWRITE
+	  std::cout << "    -> suppressed] " << std::endl;
+#endif
+
+	  to_rewrite.remove(con.id());
+	  if(posted_constraints.contain(con.id())) posted_constraints.remove(con.id());
+
+	  // #ifdef _DEBUG_REWRITE
+	  // 	 std::cout << to_rewrite << std::endl;
+	  // 	 std::cout << posted_constraints << std::endl;
+	  // #endif
+
+
+	} break;
+	case FAIL_EVENT: {
+
+#ifdef _DEBUG_REWRITE
+		std::cout << "    -> fail event] " << std::endl;
+#endif
+		return FAILURE(0);
+	}
+	break;
+	default: {
+
+
+#ifdef _DEBUG_REWRITE
+	  std::cout << "   -> replaced] " << std::endl;
+	  //exit(1);
+#endif
+
+	  to_rewrite.remove(con.id());
+	  if(posted_constraints.contain(con.id())) posted_constraints.remove(con.id());
+
+
+	  // if(constraints[rewritten].rewritable()) {
+	  //   to_rewrite.add(rewritten);
+	  //   active_constraints.add(constraints[rewritten]);
+	  // }
+	}
+	}
+      }
+
+    }
+#ifdef _DEBUG_REWRITE
+
+      std::cout << "==>\n" << (*this) << std::endl;
+
+#endif
+
+#ifdef _DEBUG_REWRITE
+      std::cout << " propagate: " << active_variables << std::endl;
+      std::cout << "       and: " << active_constraints << std::endl;
+#endif
+
+      //fix_point = active_variables.empty();
+  } while (!active_variables.empty() || !active_constraints.empty());
+
+
+#ifdef _DEBUG_REWRITE
+  std::cout << "\n====================END REWRITING======================\n" ;
+#endif
+
+
+  bool consistent = IS_OK(wiped_idx);
+  wiped_idx = CONSISTENT;
+  return consistent;
+
+  //return IS_OK(wiped_idx);
+
+}
+
+
 bool Mistral::Solver::rewrite() 
 {
   

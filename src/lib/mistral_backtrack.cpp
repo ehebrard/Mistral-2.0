@@ -83,6 +83,10 @@ bool Mistral::Constraint::rewritable() {
   return propagator->rewritable(); 
 }
 
+bool Mistral::Constraint::simple_rewritable() {
+  return propagator->simple_rewritable();
+}
+
 bool Mistral::Constraint::absorb_negation(const int i) {
   return propagator->absorb_negation(i); 
 }

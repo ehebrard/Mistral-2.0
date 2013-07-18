@@ -585,79 +585,6 @@ namespace FlatZinc {
 
 
 
-    //encode the clause having all the positive literals in the vector of variables pos and the negative ones in neg
-   void encode_clause (Solver& s,Vector<Variable*> pos ,  Vector<Variable*> neg)
- {
-
- 	/*We use the variable alone only when the size of the clause is 1.
- 	 *In that case we force it to take the value sign_alone
- 	 */
-
- 	Variable* alone;
- 	int sign_alone;
-
- 	Vector< Literal > clause;
- 	Literal  lit;
- 	clause.clear();
-
- 	if(! pos.empty())
- 	{
- 		for (int i=0; i< pos. size ; i++)
- 		{
- 			if (! pos[i]->is_ground())
- 			{
- 				s.add(*pos[i]);
- 				lit =  (2* pos[i]->id()) +1;
- 				clause.add(lit);
- 				if(clause.size ==1)
- 				{
- 					sign_alone=1;
- 					alone= pos[i];
- 				}
- 			}
- 			else
- 				if (pos[i]->get_value())
- 					return;
- 		}
- 	}
- 	if(! neg.empty())
- 	{
- 		for (int i=0; i< neg.size ; i++)
- 		{
- 			if (!neg[i]->is_ground())
- 			{
- 				s.add(*neg[i]);
- 				lit =  2* neg[i]->id();
- 				clause.add(lit);
- 				if(clause.size ==1)
- 				{
- 					sign_alone=0;
- 					alone=neg[i];
- 				}
- 			}
- 			else
- 				if (!neg[i]->get_value())
- 					return;
- 		}
- 	}
-	  if (clause.size ==1)
- 	  {
- 		  s.add((*alone) ==sign_alone);
- 		  return ;
- 	  }
- 	  else
- 	  {
- 		  if (clause.size >0)
- 		  {
- 			  clause.sort();
- 			  s.add(clause);
- 		  }
- 		  else if (clause.size ==0)
- 			  s.fail();
- 	  }
- }
-
-
     void p_bool_lin_eq(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
       Vector<int> ia = arg2intargs(ce[0]);
@@ -1077,7 +1004,7 @@ namespace FlatZinc {
     	Vector<int> ia ;
     	Vector<Variable> iv ;
     	//s.add( Sum(iv, ia, 0, 0) );
-    	int c =0;
+   /* 	int c =0;
     	if (!ce[0]->isIntVar())
     	{
     		c-=ce[0]->getInt();
@@ -1113,9 +1040,9 @@ namespace FlatZinc {
     	else
     		if (c!=0)
     			s.fail();
+*/
 
-
-    	/*      if (!ce[0]->isIntVar()) {
+    	      if (!ce[0]->isIntVar()) {
         s.add((getIntVar(s, m, ce[1]) + ce[0]->getInt()) == getIntVar(s, m, ce[2]));
       } else if (!ce[1]->isIntVar()) {
         s.add((getIntVar(s, m, ce[0]) + ce[1]->getInt()) == getIntVar(s, m, ce[2]));
@@ -1124,7 +1051,7 @@ namespace FlatZinc {
       } else {
         s.add((getIntVar(s, m, ce[0]) + getIntVar(s, m, ce[1])) == getIntVar(s, m, ce[2]));
       }
-      */
+
     }
 
     void p_int_minus(Solver& s, FlatZincModel& m,
@@ -1717,23 +1644,11 @@ namespace FlatZinc {
       //report_unsupported("p_bool_clause");
       Vector<Variable> pos = arg2boolvarargs(s, m, ce[0]);
       Vector<Variable> neg = arg2boolvarargs(s, m, ce[1]);
-/*
-      int size__ = pos.size;
-        Vector<Variable*> pos_ptr;
-        Vector<Variable*> neg_ptr;
-        while (size__--)
-        {
-      	  pos_ptr.add(& pos[size__]);
-        }
-        size__= neg.size;
-        while (size__--)
-        {
-      	  neg_ptr.add(& neg[size__]);
-        }
-        //      Vector<Variable> pos
-        //Posting a clause instead of boolean sums
-        encode_clause(s,pos_ptr, neg_ptr);
-*/
+
+      //
+      //Posting a clause instead of boolean sums
+      //m.add_clause(pos, neg);
+
 
       if(pos.empty())
         s.add( BoolSum(neg) < neg.size );
@@ -1920,8 +1835,9 @@ namespace FlatZinc {
        Variable a = getBoolVar(s, m, ce[0]);
        Variable b = getBoolVar(s, m, ce[1]);
       
-       s.add(a > b);
-
+ //      s.add(a > b);
+       s.add(a==1);
+       s.add(b==0);
        // if( s.value(safeLit(s, a)) == l_False )
       //   throw unsat();
       // if( s.value(~safeLit(s, b)) == l_False )

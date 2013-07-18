@@ -63,6 +63,9 @@ int main(int argc, char *argv[])
   TCLAP::ValueArg<int> parityArg("","parity","Uses parity processing", false, 0, "int");
   cmd.add( parityArg );
 
+  TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);
+  cmd.add( simple_rewriteArg );
+
   cmd.parse(argc, argv);
   
   usrand(cmd.get_seed());
@@ -103,9 +106,10 @@ int main(int argc, char *argv[])
   fm->set_display_solution(cmd.print_solution());
   fm->set_annotations(annotationArg.getValue());
   fm->set_rewriting(cmd.use_rewrite());
+  fm->set_simple_rewriting(simple_rewriteArg.getValue());
   fm->set_parity_processing(parityArg.getValue());
   fm->set_enumeration(cmd.enumerate_solutions());
-
+  fm->encode_clauses();
   fm->run(cout , p);
   
   if(cmd.print_solution())
