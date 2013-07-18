@@ -804,6 +804,10 @@ FlatZincModel::set_annotations(const bool on) {
 
           solver.simple_rewrite() ;
 
+
+  
+
+
     #ifdef _DEBUG_FLATZINC
           std::cout << "after simple_rewriting:\n" << solver << std::endl;
     #endif
@@ -859,6 +863,10 @@ solver.add(solver.variables[66] == 0);
 
 
     solver.consolidate();
+
+
+    //std::cout << "after consolidate: " << solver.active_constraints.empty() << std::endl;
+
     solver.sequence.clear();
 
 
@@ -897,26 +905,25 @@ solver.add(solver.variables[66] == 0);
     }
 
 
+
+    //std::cout << "after goal: " << solver.active_constraints.empty() << std::endl;
+
     solver.objective = goal;
 
 
     if(solver.is_pseudo_boolean())
       solver.set_learning_on();
 
-
     if(_option_annotations) {
       fz_search_goals.add(goal);
       get_annotations();
     }
 
-
     if(_option_parity)
       solver.parity_processing(_option_parity);
 
-
     _option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering);
     
-
       
     if(fz_search_sequences.size < 2) {
 
@@ -946,8 +953,6 @@ solver.add(solver.variables[66] == 0);
       //exit(1);
 
       //std::cout <<  solver << std::endl;
-
-
       // there is no annotation, we use the default strategy
       if(fz_search_sequences.empty()) {
         //std::cout << solver.variables << std::endl;
