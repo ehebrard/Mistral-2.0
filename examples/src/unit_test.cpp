@@ -1843,7 +1843,7 @@ int main(int argc, char *argv[])
   int N = 8; //atoi(argv[1]);
   if(argc>1) N=atoi(argv[1]);
 
-
+  /*
   tests.push_back(new CheckerTest());
   tests.push_back(new SymmetricDifferenceTest());
   tests.push_back(new LexTest());
@@ -1862,7 +1862,9 @@ int main(int argc, char *argv[])
   tests.push_back(new OpshopTest());
   tests.push_back(new BoolPigeons(N+1, EXPRESSION));
   tests.push_back(new BoolPigeons(N+1, BITSET_VAR));
+  */
   tests.push_back(new SatTest());
+  /*
   tests.push_back(new Pigeons(N+2)); 
   tests.push_back(new CostasAllDiffAllSolutions(N+1, FORWARD_CHECKING));
   tests.push_back(new CostasAllDiffAllSolutions(N+1, BOUND_CONSISTENCY, RANGE_VAR));
@@ -1878,7 +1880,7 @@ int main(int argc, char *argv[])
   // tests.push_back(new RandomRevNumAffectations<int>());
   // //tests.push_back(new ConstraintArrayTest());
   // tests.push_back(new RandomIntervalTest());
-
+  */
  
   //tests[0]->Verbosity = HIGH;
   //tests[0]->Quality = HIGH;
@@ -4826,7 +4828,7 @@ void SatTest::run() {
   Solver solver;
 
   solver.parse_dimacs("cnf/gen-1.3/unif-c1000-v250-s542677735.cnf");
-  solver.parameters.verbosity = 0;
+  solver.parameters.verbosity = 2;
   solver.parameters.backjump = 1;
 
   solver.depth_first_search(solver.variables,

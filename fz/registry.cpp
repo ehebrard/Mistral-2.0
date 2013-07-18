@@ -204,7 +204,7 @@ namespace FlatZinc {
           Vector<int> e = arg2intvec(s, a->a[i]);
 
 
-           std::cout << e << std::endl;
+          //std::cout << e << std::endl;
 
           Variable ex = SetVariable(e,e,e.size,e.size);
 
@@ -1416,10 +1416,11 @@ namespace FlatZinc {
 
       report_unsupported("p_array_set_element");
 
+      /*
       std::cout << selector.get_domain() << std::endl;
       std::cout << result << std::endl;
       std::cout << sv << std::endl;
-
+      */
 
       s.add(selector > 0);
       s.add(selector <= sv.size);
@@ -1984,6 +1985,9 @@ namespace FlatZinc {
 
       s.add( (a <= b) == r );
 
+
+      //cout << "(" << a << " <= " << b << ") = " << r << endl;
+
       /*
           Vector<Variable *> pos;
             Vector<Variable *> neg;
@@ -2012,7 +2016,7 @@ namespace FlatZinc {
             neg.add(&r);
 
             encode_clause(s,pos,neg);
-       */
+      */
 
 
     }
