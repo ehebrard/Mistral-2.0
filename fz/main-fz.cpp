@@ -104,7 +104,8 @@ int main(int argc, char *argv[])
   fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_restart_policy());
   fm->set_display_model(cmd.print_model());
   fm->set_display_solution(cmd.print_solution());
-  fm->set_annotations(annotationArg.getValue());
+//  fm->set_annotations(annotationArg.getValue());
+  fm->set_annotations(false);
   fm->set_rewriting(cmd.use_rewrite());
   fm->set_simple_rewriting(simple_rewriteArg.getValue());
   fm->set_parity_processing(parityArg.getValue());
