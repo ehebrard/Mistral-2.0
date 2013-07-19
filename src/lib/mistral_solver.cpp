@@ -608,7 +608,7 @@ void Mistral::ConstraintQueue::declare(Constraint c, Solver *s) {
     }
 
     // std::cout << "now: [" << new_min_p << ","
-    // 	    << new_max_p << "]" << std::endl;
+    // 	      << new_max_p << "]" << std::endl;
 
 
     int new_cardinality = (new_max_p-new_min_p+1);
@@ -625,6 +625,7 @@ void Mistral::ConstraintQueue::declare(Constraint c, Solver *s) {
     aux_triggers += min_priority;
     delete [] aux_triggers;
 
+    if(higher_priority < min_priority) higher_priority = new_min_p-1;
     min_priority = new_min_p;
     cardinality = new_cardinality;
 
@@ -690,7 +691,7 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
 {
 // #ifdef _DEBUG_AC
 //  if(_DEBUG_AC) {
-//   std::cout << " initial trigger for " << cons << "(" << (cons->id) << ")" << std::endl;
+//  std::cout << " initial trigger for " << cons << "(" << (cons->id) << ") "<< empty() << std::endl;
 //  }
 // #endif
   
@@ -706,8 +707,6 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
       evt = (// cons->scope[i].domain_type != BOOL_VAR &&
 	     x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
       
-
-
       
       if(cons->is_triggered_on(i, EVENT_TYPE(evt))) {
 	//std::cout << "trigger " << cons << " because " << event2str(evt) << " on "<< x << std::endl;
@@ -835,7 +834,9 @@ std::ostream& Mistral::ConstraintQueue::display(std::ostream& os) {
   int elt=INFTY;
   int end;
 
-  os << "[";
+  os 
+    //<< cardinality << " (" << min_priority << ".." << higher_priority << ")" 
+    << "[";
   for(int i=cardinality-1; i>=0; --i) {
     if(!triggers[i+min_priority].empty()) {
       if(elt != INFTY) os << " | ";
@@ -1452,8 +1453,6 @@ void Mistral::Solver::add(Constraint c) {
 
   if(c.id() < 0) {
 
-    //std::cout << "solver init " << c << std::endl;
-
     c.initialise(this);
 
     // get a name for the constraint and add it to the list
@@ -1477,7 +1476,8 @@ void Mistral::Solver::add(Constraint c) {
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
   
   c.trigger();
-  //active_constraints.trigger(c);
+
+   //active_constraints.trigger(c);
 
   // if(con_trail_.back() != level) {
   //   con_trail_.add(posted_constraints.size);
@@ -1503,6 +1503,7 @@ void Mistral::Solver::add(Constraint c) {
   }//  else {
   //   std::cout << "ADD " << c.id() << "?" << " nope " << std::endl;
   // }
+
 
   //std::cout <<  11 << std::endl;
 
@@ -6529,10 +6530,12 @@ void Mistral::Solver::initialise_random_seed(const int seed) {
 
 
 void Mistral::Solver::set_learning_on() {
+
   parameters.backjump = true;
   if(!base) {
     base = new ConstraintClauseBase(variables);
-    add(base);
+    add(Constraint(base));
+    //add(base);
   }
 }
 
