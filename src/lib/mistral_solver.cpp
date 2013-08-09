@@ -6773,6 +6773,19 @@ void Mistral::SolverCmdLine::initialise() {
     voallowed.push_back("dom/pruning");
     voallowed.push_back("dom/activity");
     voallowed.push_back("activity");
+    voallowed.push_back("neighbor");
+    voallowed.push_back("mindomain");
+    voallowed.push_back("maxdegree");
+    voallowed.push_back("lexicographic");
+    voallowed.push_back("input_order");
+    voallowed.push_back("first_fail");
+    voallowed.push_back("anti_first_fail");
+    voallowed.push_back("smallest");
+    voallowed.push_back("largest");
+    voallowed.push_back("occurrence");
+    voallowed.push_back("most_constrained");
+    voallowed.push_back("max_regret");
+
     vo_allowed = new TCLAP::ValuesConstraint<std::string>( voallowed );
     orderingArg = new TCLAP::ValueArg<std::string>("c","choice","variable selection",false,"dom/wdeg",vo_allowed);
     add( *orderingArg ); 
@@ -6786,11 +6799,22 @@ void Mistral::SolverCmdLine::initialise() {
     boallowed.push_back("halfsplit");
     boallowed.push_back("random");
     boallowed.push_back("randminmax");
+    boallowed.push_back("guided");
     boallowed.push_back("minweight+guided");
     boallowed.push_back("maxweight+guided");
     boallowed.push_back("minval+guided");
     boallowed.push_back("maxval+guided");
     boallowed.push_back("random+guided");
+
+    boallowed.push_back("indomain_min");
+    boallowed.push_back("indomain_max");
+    boallowed.push_back("indomain_middle");
+    boallowed.push_back("indomain_median");
+    boallowed.push_back("indomain_random");
+    boallowed.push_back("indomain_split");
+    boallowed.push_back("indomain_reverse_split");
+    boallowed.push_back("indomain_interval");
+
     bo_allowed = new TCLAP::ValuesConstraint<std::string>( boallowed );
     branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"minval+guided",bo_allowed);
     add( *branchingArg );    
