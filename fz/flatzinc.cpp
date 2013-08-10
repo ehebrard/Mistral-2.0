@@ -922,9 +922,6 @@ solver.add(solver.variables[66] == 0);
     if(_option_parity)
       solver.parity_processing(_option_parity);
 
-    std::cout<< "_variable_ordering" << _variable_ordering << std::endl;
-    std::cout<< "_value_ordering" << _value_ordering << std::endl;
-
     _option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering);
     
       
