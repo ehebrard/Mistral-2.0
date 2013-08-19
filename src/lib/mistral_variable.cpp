@@ -4609,13 +4609,14 @@ Mistral::Variable Mistral::Parity(Vector< Variable >& args, const int p) {
 
 Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 
 					    Vector< int >& wgts, 
-					    const int l, const int u) 
+					    const int l, const int u, const int o) 
   : Expression(args) {
   weighted = 0;
   bool_domains = 0;
 
   lower_bound = l;
   upper_bound = u;
+  offset = o;
   for(unsigned int i=0; i<wgts.size; ++i) {
     weight.add(wgts[i]);
     if(wgts[i]==1) {
@@ -4634,13 +4635,14 @@ Mistral::LinearExpression::LinearExpression(Vector< Variable >& args,
 
 Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args, 
 					    std::vector< int >& wgts, 
-					    const int l, const int u) 
+					    const int l, const int u, const int o) 
   : Expression(args) {
   weighted = 0;
   bool_domains = true;
 
   lower_bound = l;
   upper_bound = u;
+  offset = o;
   for(unsigned int i=0; i<wgts.size(); ++i) {
     weight.add(wgts[i]);
     if(wgts[i]==1) {
@@ -4770,7 +4772,7 @@ void Mistral::LinearExpression::initialise_bounds() {
 void Mistral::LinearExpression::extract_variable(Solver *s) {
   initialise_bounds();
 
-  Variable aux(lower_bound, upper_bound, DYN_VAR);
+  Variable aux(lower_bound+offset, upper_bound+offset, DYN_VAR);
   _self = aux;
 
   _self.initialise(s, 1);
@@ -4784,29 +4786,29 @@ const char* Mistral::LinearExpression::get_name() const {
 }
 
 void Mistral::LinearExpression::extract_predicate(Solver *s) {
-  s->add(Constraint(new PredicateWeightedSum(children, weight, 0, 0)));
+  s->add(Constraint(new PredicateWeightedSum(children, weight, -offset, -offset)));
 }
 
-Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T) {
-  LinearExpression *lexpr = new LinearExpression(args,wgts,0,0);
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T, const int offset) {
+  LinearExpression *lexpr = new LinearExpression(args,wgts,0,0,offset);
   lexpr->children.add(T);
   lexpr->weight.add(-1);
   Variable exp(lexpr);
   return exp;
 }
-Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T) {
-  LinearExpression *lexpr = new LinearExpression(args,wgts,0,0);
+Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T, const int offset) {
+  LinearExpression *lexpr = new LinearExpression(args,wgts,0,0,offset);
   lexpr->children.add(T);
   lexpr->weight.add(-1);
   Variable exp(lexpr);
   return exp;
 }
-Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, const int l, const int u) {
-  Variable exp( new LinearExpression(args, wgts, l, u) );
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, const int l, const int u, const int offset) {
+  Variable exp( new LinearExpression(args, wgts, l, u,offset) );
   return exp;
 }
-Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l, const int u) {
-  Variable exp( new LinearExpression(args, wgts, l, u) );
+Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l, const int u, const int offset) {
+  Variable exp( new LinearExpression(args, wgts, l, u,offset) );
   return exp;
 }
 

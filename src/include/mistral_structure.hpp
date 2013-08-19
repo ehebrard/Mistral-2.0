@@ -37,6 +37,10 @@
 #ifndef __STRUCTURE_HPP
 #define __STRUCTURE_HPP
 
+
+namespace Mistral {
+
+
 template <class WORD_TYPE>
 void showUint(WORD_TYPE n, std::ostream& os) {
   WORD_TYPE mask=1;
@@ -51,9 +55,6 @@ const int getlast[256] = {-1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4,
 
 const int NOVAL = (int)((~(unsigned int)0)/2);
 #define INFTY  NOVAL/2
-
-namespace Mistral {
-
 
 
 //   /**********************************************
