@@ -171,7 +171,7 @@ void Mistral::ConstraintImplementation::trigger_on(const int t, Variable x) {
   
   //std::cout << x.domain_type << " " << CONST_VAR << std::endl;
 
-  if(t != _NEVER_ && x.domain_type != CONST_VAR) {
+  if(t != _NEVER_ && !x.is_ground()) { //x.domain_type != CONST_VAR) {
     //Solver *solver = x.get_solver();
 
     // std::cout << (*this) << " triggers on "  << t << " "
@@ -227,7 +227,7 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 #ifdef _DEBUG_BUILD
   std::cout << "[" << std::setw(4) << id << "]: post on: " ;
 #endif
-
+    
 #ifdef _DEBUG_RELAX
   std::cout << "[" << std::setw(4) << id << "]: first post on: " ;
 #endif
@@ -256,6 +256,8 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 
     for(unsigned int i=0; i<on.size; ++i) {
       //if(!(_scope[i].is_ground())) {
+      //std::cout << _scope[i] << " "  << (on[i] != NULL) << " " << _scope[i].get_min() << ".." << _scope[i].get_max() << std::endl;
+
       if(on[i]) {
 
         c = self[i];
@@ -3413,6 +3415,10 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate(const int changed_i
   // 	    << scope[1].get_domain() << " <-> "
   // 	    << scope[2].get_domain() << std::endl; 
 
+
+  // std::cout << "changed_idx: " << changed_idx << std::endl;
+  // std::cout << "LB_CHANGED(evt): " << LB_CHANGED(evt) << std::endl;
+
   if(changed_idx == 2) {
     if(LB_CHANGED(evt)) {
       if( FAILED(scope[0].remove(0)) ) wiped = FAILURE(0);
@@ -3424,17 +3430,22 @@ Mistral::PropagationOutcome Mistral::PredicateAnd::propagate(const int changed_i
 	if( FAILED(scope[1].set_domain(0)) ) wiped = FAILURE(1);
       }
     }
-  } else { // either z is not yet set, or it is a not(x and y) constraint
-    if( scope[2].is_ground() ) {
+  } else { // 
+    if( scope[2].equal(0) ) {
+      //it is a not(x and y) constraint
       if(LB_CHANGED(evt)) {
 	// it is an "not(AND)" and one of the variable was set to 1
 	if(FAILED(scope[1-changed_idx].set_domain(0))) wiped = FAILURE(1-changed_idx);
       } 
+    } else if( scope[2].equal(1) ) {
+      //it is a (x and y) constraint
+      if(UB_CHANGED(evt) || FAILED(scope[1-changed_idx].set_domain(1))) wiped = FAILURE(1-changed_idx);
     } else {
+      // either z is not yet set
       if(UB_CHANGED(evt)) {
 	if(FAILED(scope[2].set_domain(0))) wiped = FAILURE(2);
       } else if(scope[1-changed_idx].is_ground()) {
-	if(FAILED(scope[2].remove(0))) wiped = FAILURE(2);
+	if(FAILED(scope[2].set_domain(scope[1-changed_idx].get_value()))) wiped = FAILURE(2);
       }
     }
   }
@@ -9511,6 +9522,7 @@ Mistral::PredicateWeightedSum::PredicateWeightedSum(std::vector< Variable >& scp
 }
 
 void Mistral::PredicateWeightedSum::initialise() {
+
   ConstraintImplementation::initialise();
   //set_idempotent(true);
   //set_idempotent(false);

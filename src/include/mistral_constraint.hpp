@@ -684,7 +684,8 @@ namespace Mistral {
 	Constraint c;
 	
 	for(i=on.size; i--;) {
-	  if(!scope[i].is_ground()) {
+	  //if(!scope[i].is_ground()) {
+	  if(on[i]) {
 
 	    //std::cout << "c *** " << scope[i] << " in " << scope[i].get_domain() << std::endl;
 

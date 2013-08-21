@@ -965,7 +965,7 @@ int Mistral::Variable::get_min_pos() const {
     else if(domain_type ==   RANGE_VAR) answer = range_domain->is_ground();
     //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_ground();
     else if(domain_type ==   CONST_VAR) answer = true;
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().is_ground();
+    else if(domain_type ==   EXPRESSION) answer = (id() == -2 || expression->get_self().is_ground());
     else  answer = (*bool_domain != 3);
 
 #ifdef _PROFILING_PRIMITIVE
@@ -4738,12 +4738,13 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
 
 
 void Mistral::LinearExpression::initialise_bounds() {
+
   int tlb=0;
   int tub=0;
 
   int lb = children[0].get_min()*weight[0];
   int ub = children[0].get_max()*weight[0];
-  
+
   if(lb < ub) {
     tlb += lb;
     tub += ub;
@@ -4767,6 +4768,7 @@ void Mistral::LinearExpression::initialise_bounds() {
 
   if(tlb > lower_bound) lower_bound = tlb;
   if(tub < upper_bound) upper_bound = tub;
+
 }
 
 void Mistral::LinearExpression::extract_variable(Solver *s) {
