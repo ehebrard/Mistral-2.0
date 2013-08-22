@@ -483,6 +483,13 @@ namespace Mistral {
     /// Whether the domain is included in the interval [l..u]
     inline bool includes(const int lo, const int up) const { return (domain.min <= lo && domain.max >= up && domain.values.includes(lo, up)); }
 
+    /// Whether the domain has a nonempty intersection with the interval [l..u]
+    inline bool intersect(const Interval I) const { return (domain.min <= I.max && domain.max >= I.min && domain.values.intersect(I.min, I.max)); }
+    /// Whether the domain is included in the interval [l..u]
+    inline bool included(const Interval I) const { return (domain.min >= I.min && domain.max <= I.max); }
+    /// Whether the domain is included in the interval [l..u]
+    inline bool includes(const Interval I) const { return (domain.min <= I.min && domain.max >= I.max && domain.values.includes(I.min, I.max)); }
+
     /// Whether the domain has a nonempty intersection with the set s 
     inline bool intersect(const BitSet& s) const { return domain.values.intersect(s); }
     /// Whether the domain is included in the set s 
@@ -1135,6 +1142,13 @@ namespace Mistral {
     /// Whether the domain is included in the interval [l..u]
     inline bool includes(const int lo, const int up) const { /*TODO*/ exit(1); } //return (min <= lo && max >= up); }
 
+    /// Whether the domain has a nonempty intersection with the interval [l..u]
+    inline bool intersect(const Interval I) const { /*TODO*/ exit(1); } //return (min <= up && max >= lo); }
+    /// Whether the domain is included in the interval [l..u]
+    inline bool included(const Interval I) const { /*TODO*/ exit(1); } //return (min >= lo && max <= up); }
+    /// Whether the domain is included in the interval [l..u]
+    inline bool includes(const Interval I) const { /*TODO*/ exit(1); } //return (min <= lo && max >= up); }
+
     /// Whether the domain has a nonempty intersection with the set s 
     //inline bool intersect(const BitSet& s) const { return (min <= s.max() && max >= s.min()); }
     inline bool intersect(const BitSet& s) const { /*TODO*/ exit(1); } //return s.intersect(min, max); }
@@ -1369,6 +1383,13 @@ namespace Mistral {
     inline bool included(const int lo, const int up) const { return (min >= lo && max <= up); }
     /// Whether the domain is included in the interval [l..u]
     inline bool includes(const int lo, const int up) const { return (min <= lo && max >= up); }
+
+    /// Whether the domain has a nonempty intersection with the interval [l..u]
+    inline bool intersect(const Interval I) const { return (min <= I.max && max >= I.min); }
+    /// Whether the domain is included in the interval [l..u]
+    inline bool included(const Interval I) const { return (min >= I.min && max <= I.max); }
+    /// Whether the domain is included in the interval [l..u]
+    inline bool includes(const Interval I) const { return (min <= I.min && max >= I.max); }
 
     /// Whether the domain has a nonempty intersection with the set s 
     //inline bool intersect(const BitSet& s) const { return (min <= s.max() && max >= s.min()); }
@@ -1710,6 +1731,13 @@ namespace Mistral {
     bool included(const int lo, const int up) const ;
     /// Whether the domain is included in the interval [l..u]
     bool includes(const int lo, const int up) const ;
+
+    /// Whether the domain has a nonempty intersection with the interval [l..u]
+    bool intersect(const Interval I) const ;
+    /// Whether the domain is included in the interval [l..u]
+    bool included(const Interval I) const ;
+    /// Whether the domain is included in the interval [l..u]
+    bool includes(const Interval I) const ;
 
     /// Whether the domain has a nonempty intersection with the set s 
     bool intersect(const BitSet& s) const ;
@@ -2704,6 +2732,30 @@ namespace Mistral {
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 
 
+  class OccurrencesExpression : public Expression {
+
+  public:
+
+    int consistency_level;
+    
+    int firstval;
+    int lastval;
+    const int *lower_bounds;
+    const int *upper_bounds;
+
+    OccurrencesExpression(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct);
+    virtual ~OccurrencesExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct=BOUND_CONSISTENCY);
+
+
   // class CardinalityExpression : public Expression {
   //   // count the number of occurrences 
 
@@ -3079,6 +3131,135 @@ namespace Mistral {
   // };
 
 
+  class OccExpression : public Expression {
+    
+  public:
+    
+    /**
+       OccExpression are constraints gluing together Boolean variables (plus a cardinality integer var) 
+       to define set variables
+
+       There will be as many variables as elements in ub\lb
+    */
+ 
+    int lower_bound;
+    int upper_bound;
+
+    // ground occurrence
+    int current_occ;
+
+    // the scope of the Boolean sum
+    Vector<Variable> scope;
+
+    // the first children are the interger variables
+    // following children will be the Boolean extra variables
+    //int num_args;
+
+    OccExpression() : Expression() { }
+    OccExpression(Vector< Variable >& args, const int lo, const int up);
+    OccExpression(VarArray& args, const int lo, const int up);
+    virtual ~OccExpression();
+
+    virtual void encode() = 0;
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+  };
+
+  class ValOccExpression : public OccExpression {
+
+  public:
+    int value;
+
+    ValOccExpression() : OccExpression() { }
+    ValOccExpression(Vector< Variable >& args, const int val, const int lo, const int up);
+
+    virtual void encode();
+
+  };
+
+  Variable Occurrence(Vector<Variable>& X, const int value, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(VarArray& X, const int value, const int lo=-INFTY, const int up=INFTY);
+
+
+  class VarOccExpression : public OccExpression {
+
+  public:
+    Variable X;
+
+    VarOccExpression() : OccExpression() { }
+    VarOccExpression(Vector< Variable >& args, Variable x, const int lo, const int up);
+
+    virtual void encode();
+
+  };
+
+ 
+  Variable Occurrence(Vector<Variable>& X, Variable Y, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(VarArray& X, Variable Y, const int lo=-INFTY, const int up=INFTY);
+
+
+  class SetOccExpression : public OccExpression {
+
+  public:
+    BitSet S;
+
+    SetOccExpression() : OccExpression() { }
+    SetOccExpression(Vector< Variable >& args, const BitSet& s, const int lo, const int up);
+    SetOccExpression(Vector< Variable >& args, const Vector<int>& s, const int lo, const int up);
+    SetOccExpression(Vector< Variable >& args, const std::vector<int>& s, const int lo, const int up);
+
+    virtual void encode();
+
+  };
+
+  Variable Occurrence(Vector<Variable>& X, const BitSet& s, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(VarArray& X, const BitSet& s, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(Vector<Variable>& X, const Vector<int>& s, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(VarArray& X, const Vector<int>& s, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(Vector<Variable>& X, const std::vector<int>& s, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(VarArray& X, const std::vector<int>& s, const int lo=-INFTY, const int up=INFTY);
+
+
+  class IntOccExpression : public OccExpression {
+
+  public:
+    Interval I;
+
+    IntOccExpression() : OccExpression() { }
+    IntOccExpression(Vector< Variable >& args, const Interval s, const int lo, const int up);
+
+    virtual void encode();
+
+  };
+
+  Variable Occurrence(Vector<Variable>& X, const Interval s, const int lo=-INFTY, const int up=INFTY);
+  Variable Occurrence(VarArray& X, const Interval s, const int lo=-INFTY, const int up=INFTY);
+  //Variable Occurrence(Vector<Variable>& X, const int l, const int u, const int lo=-INFTY, const int up=INFTY);
+  //Variable Occurrence(VarArray& X, const int l, const int u, const int lo=-INFTY, const int up=INFTY);
+
+
+  /*
+ Variable Occurrence(Vector<Variable>& X, const Interval I);
+  Variable Occurrence(VarArray& X, const Interval I);
+
+  Variable Occurrence(Vector<Variable>& X, const int Vector<int>& s);
+  Variable Occurrence(VarArray& X, const int Vector<int>& s);
+
+  Variable Occurrence(Vector<Variable>& X, const int std::vector<int>& s);
+  Variable Occurrence(VarArray& X, const int std::vector<int>& s);
+  */
+
+
+  // Variable SetVariable(std::vector<int> lb, std::vector<int> ub, const int clb, const int cub);
+  // Variable SetVariable(BitSet lb, Bitset ub, const int clb, const int cub);
+
+  Variable Card(Variable S); //{ return S; }
+
+
+
   class SetExpression : public BoolSumExpression {
     
   public:
@@ -3345,10 +3526,15 @@ namespace Mistral {
   };
 
   Variable Member(Variable X, Variable Y);
+  Variable Member(Variable X, const Interval I);
   Variable Member(Variable X, const int lo, const int up);
   Variable Member(Variable X, const BitSet& s);
   Variable Member(Variable X, const Vector<int>& s);
   Variable Member(Variable X, const std::vector<int>& s);
+
+
+
+
 
 
   class VarArray : public Vector< Variable > {

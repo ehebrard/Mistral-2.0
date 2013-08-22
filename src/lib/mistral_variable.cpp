@@ -32,24 +32,24 @@
 
 
 
-#define PROFILING_HEAD \
-double __t_tag__ = 0;		 \
-  if(domain_type != CONST_VAR) { \
-  __t_tag__ = get_run_time(); \
-  } \
+#define PROFILING_HEAD				\
+  double __t_tag__ = 0;				\
+  if(domain_type != CONST_VAR) {		\
+    __t_tag__ = get_run_time();			\
+  }						\
 
-#define PROFILING_FOOT(method) \
-if(domain_type != CONST_VAR) {	\
-  __t_tag__ = get_run_time() - __t_tag__; \
-  int __idx__ = VARTYPE[(domain_type < DYN_VAR ? domain_type : BOOL_VAR)]; \
-  variable->solver->statistics.prof_time[method][__idx__] += __t_tag__; \
-  ++variable->solver->statistics.prof_num[method][__idx__]; \
-  } \
+#define PROFILING_FOOT(method)						\
+  if(domain_type != CONST_VAR) {					\
+    __t_tag__ = get_run_time() - __t_tag__;				\
+    int __idx__ = VARTYPE[(domain_type < DYN_VAR ? domain_type : BOOL_VAR)]; \
+    variable->solver->statistics.prof_time[method][__idx__] += __t_tag__; \
+    ++variable->solver->statistics.prof_num[method][__idx__];		\
+  }									\
 
 
 
 /**
-Constructors for variable
+   Constructors for variable
 */
 
 // 
@@ -317,8 +317,8 @@ void Mistral::Variable::initialise(Solver *s, const int level) {
   //std::cout << "call initialise on " << *this << std::endl;
 
 #ifdef _DEBUG_BUILD
-      for(int i=0; i<level; ++i) std::cout << "  " ;
-      std::cout << "initialise " << *this << std::endl;
+  for(int i=0; i<level; ++i) std::cout << "  " ;
+  std::cout << "initialise " << *this << std::endl;
 #endif
       
 
@@ -473,23 +473,23 @@ int Mistral::Variable::get_solution_max() const {
   return value;
 }
 
-  int Mistral::Variable::get_value() const {
-    if     (domain_type ==  BITSET_VAR) return bitset_domain->get_value();
-    else if(domain_type ==    LIST_VAR) return list_domain->get_value();
-    else if(domain_type ==   RANGE_VAR) return range_domain->get_value();
-    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_value();
-    else if(domain_type ==   CONST_VAR) return constant_value;
-    else if(domain_type ==   EXPRESSION) return expression->get_self().get_value();
-    else  return (*bool_domain-1);
-  }
+int Mistral::Variable::get_value() const {
+  if     (domain_type ==  BITSET_VAR) return bitset_domain->get_value();
+  else if(domain_type ==    LIST_VAR) return list_domain->get_value();
+  else if(domain_type ==   RANGE_VAR) return range_domain->get_value();
+  //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_value();
+  else if(domain_type ==   CONST_VAR) return constant_value;
+  else if(domain_type ==   EXPRESSION) return expression->get_self().get_value();
+  else  return (*bool_domain-1);
+}
 
 unsigned int Mistral::Variable::get_size() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
       
-      unsigned int r_size = 0;
+    unsigned int r_size = 0;
 
   if     (domain_type ==  BITSET_VAR) r_size = bitset_domain->get_size();
   else if(domain_type ==    LIST_VAR) r_size = list_domain->get_size();
@@ -500,7 +500,7 @@ unsigned int Mistral::Variable::get_size() const {
   else  r_size = ((*bool_domain+1)/2);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_size_)
+  PROFILING_FOOT(_m_get_size_)
 #endif
 
     return r_size;
@@ -510,10 +510,10 @@ unsigned int Mistral::Variable::get_size() const {
 unsigned int Mistral::Variable::get_degree() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      unsigned int r_degree = NO_EVENT;
+    unsigned int r_degree = NO_EVENT;
 
   if(domain_type ==   CONST_VAR) r_degree = 0;
   else if(domain_type ==   EXPRESSION) r_degree = expression->get_self().get_degree();
@@ -521,7 +521,7 @@ unsigned int Mistral::Variable::get_degree() const {
 
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_degree_)
+  PROFILING_FOOT(_m_get_degree_)
 #endif
 
     return r_degree;
@@ -606,65 +606,65 @@ bool Mistral::Variable::is_boolean() const {
 int Mistral::Variable::get_first() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
     
     int of_the_living_dead = 0;
-    if     (domain_type ==  BITSET_VAR) {
-      //std::cout << "bitset " << bitset_domain->get_min() << std::endl;
-      of_the_living_dead =  bitset_domain->get_first();
-    } else if(domain_type ==    LIST_VAR)  {
-      //std::cout << "list" << std::endl;
-      of_the_living_dead =  list_domain->get_first();
-    } else if(domain_type ==   RANGE_VAR)  {
-      //std::cout << "range " << range_domain->get_min() << std::endl;
-      of_the_living_dead =  range_domain->get_first();
-      //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
-    } else if(domain_type ==   CONST_VAR)  {
-      //std::cout << "constant" << std::endl;
-      of_the_living_dead =  constant_value;
-    } else if(domain_type ==   EXPRESSION)  {
-      //std::cout << "expression" << expression->get_self().get_min() << std::endl;
-      of_the_living_dead =  expression->get_self().get_first();
-    } else  of_the_living_dead = !(*bool_domain & 1);
+  if     (domain_type ==  BITSET_VAR) {
+    //std::cout << "bitset " << bitset_domain->get_min() << std::endl;
+    of_the_living_dead =  bitset_domain->get_first();
+  } else if(domain_type ==    LIST_VAR)  {
+    //std::cout << "list" << std::endl;
+    of_the_living_dead =  list_domain->get_first();
+  } else if(domain_type ==   RANGE_VAR)  {
+    //std::cout << "range " << range_domain->get_min() << std::endl;
+    of_the_living_dead =  range_domain->get_first();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
+  } else if(domain_type ==   CONST_VAR)  {
+    //std::cout << "constant" << std::endl;
+    of_the_living_dead =  constant_value;
+  } else if(domain_type ==   EXPRESSION)  {
+    //std::cout << "expression" << expression->get_self().get_min() << std::endl;
+    of_the_living_dead =  expression->get_self().get_first();
+  } else  of_the_living_dead = !(*bool_domain & 1);
 
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_first_)
+  PROFILING_FOOT(_m_get_first_)
 #endif
 
     return of_the_living_dead;
-  }
+}
 
-  int Mistral::Variable::get_last() const {
+int Mistral::Variable::get_last() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
     int of_the_mummy = 0;
 
-    if     (domain_type ==  BITSET_VAR) of_the_mummy = bitset_domain->get_last();
-    else if(domain_type ==    LIST_VAR) of_the_mummy = list_domain->get_last();
-    else if(domain_type ==   RANGE_VAR) of_the_mummy = range_domain->get_last();
-    //else if(domain_type == VIRTUAL_VAR) of_the_mummy = virtual_domain->get_max();
-    else if(domain_type ==   CONST_VAR) of_the_mummy = constant_value;
-    else if(domain_type ==   EXPRESSION) of_the_mummy = expression->get_self().get_last();
-    else  of_the_mummy = (*bool_domain >> 1);
+  if     (domain_type ==  BITSET_VAR) of_the_mummy = bitset_domain->get_last();
+  else if(domain_type ==    LIST_VAR) of_the_mummy = list_domain->get_last();
+  else if(domain_type ==   RANGE_VAR) of_the_mummy = range_domain->get_last();
+  //else if(domain_type == VIRTUAL_VAR) of_the_mummy = virtual_domain->get_max();
+  else if(domain_type ==   CONST_VAR) of_the_mummy = constant_value;
+  else if(domain_type ==   EXPRESSION) of_the_mummy = expression->get_self().get_last();
+  else  of_the_mummy = (*bool_domain >> 1);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_last_)
+  PROFILING_FOOT(_m_get_last_)
 #endif
 
     return of_the_mummy;
-  }
+}
 
 
 int Mistral::Variable::get_min() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
     // if     (domain_type ==  BITSET_VAR) {
@@ -692,100 +692,100 @@ int Mistral::Variable::get_min() const {
     // std::cout << std::endl;
     
     int of_the_living_dead = 0;
-    if     (domain_type ==  BITSET_VAR) {
-      //std::cout << "bitset " << bitset_domain->get_min() << std::endl;
-      of_the_living_dead =  bitset_domain->get_min();
-    } else if(domain_type ==    LIST_VAR)  {
-      //std::cout << "list" << std::endl;
-      of_the_living_dead =  list_domain->get_min();
-    } else if(domain_type ==   RANGE_VAR)  {
-      //std::cout << "range " << range_domain->get_min() << std::endl;
-      of_the_living_dead =  range_domain->get_min();
-      //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
-    } else if(domain_type ==   CONST_VAR)  {
-      //std::cout << "constant" << std::endl;
-      of_the_living_dead =  constant_value;
-    } else if(domain_type ==   EXPRESSION)  {
-      //std::cout << "expression" << expression->get_self().get_min() << std::endl;
-      of_the_living_dead =  expression->get_self().get_min();
-    } else  of_the_living_dead = !(*bool_domain & 1);
+  if     (domain_type ==  BITSET_VAR) {
+    //std::cout << "bitset " << bitset_domain->get_min() << std::endl;
+    of_the_living_dead =  bitset_domain->get_min();
+  } else if(domain_type ==    LIST_VAR)  {
+    //std::cout << "list" << std::endl;
+    of_the_living_dead =  list_domain->get_min();
+  } else if(domain_type ==   RANGE_VAR)  {
+    //std::cout << "range " << range_domain->get_min() << std::endl;
+    of_the_living_dead =  range_domain->get_min();
+    //else if(domain_type == VIRTUAL_VAR) return virtual_domain->get_min();
+  } else if(domain_type ==   CONST_VAR)  {
+    //std::cout << "constant" << std::endl;
+    of_the_living_dead =  constant_value;
+  } else if(domain_type ==   EXPRESSION)  {
+    //std::cout << "expression" << expression->get_self().get_min() << std::endl;
+    of_the_living_dead =  expression->get_self().get_min();
+  } else  of_the_living_dead = !(*bool_domain & 1);
 
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_min_)
+  PROFILING_FOOT(_m_get_min_)
 #endif
 
     return of_the_living_dead;
-  }
+}
 
-  int Mistral::Variable::get_max() const {
+int Mistral::Variable::get_max() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
     int of_the_mummy = 0;
 
-    if     (domain_type ==  BITSET_VAR) of_the_mummy = bitset_domain->get_max();
-    else if(domain_type ==    LIST_VAR) of_the_mummy = list_domain->get_max();
-    else if(domain_type ==   RANGE_VAR) of_the_mummy = range_domain->get_max();
-    //else if(domain_type == VIRTUAL_VAR) of_the_mummy = virtual_domain->get_max();
-    else if(domain_type ==   CONST_VAR) of_the_mummy = constant_value;
-    else if(domain_type ==   EXPRESSION) of_the_mummy = expression->get_self().get_max();
-    else  of_the_mummy = (*bool_domain >> 1);
+  if     (domain_type ==  BITSET_VAR) of_the_mummy = bitset_domain->get_max();
+  else if(domain_type ==    LIST_VAR) of_the_mummy = list_domain->get_max();
+  else if(domain_type ==   RANGE_VAR) of_the_mummy = range_domain->get_max();
+  //else if(domain_type == VIRTUAL_VAR) of_the_mummy = virtual_domain->get_max();
+  else if(domain_type ==   CONST_VAR) of_the_mummy = constant_value;
+  else if(domain_type ==   EXPRESSION) of_the_mummy = expression->get_self().get_max();
+  else  of_the_mummy = (*bool_domain >> 1);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_max_)
+  PROFILING_FOOT(_m_get_max_)
 #endif
 
     return of_the_mummy;
-  }
+}
 
-  int Mistral::Variable::get_initial_min() const {
+int Mistral::Variable::get_initial_min() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      int r_min = 0;
+    int r_min = 0;
 
-    if     (domain_type ==  BITSET_VAR) r_min = bitset_domain->get_initial_min();
-    else if(domain_type ==    LIST_VAR) r_min = list_domain->get_initial_min();
-    else if(domain_type ==   RANGE_VAR) r_min = range_domain->get_initial_min();
-    //else if(domain_type == VIRTUAL_VAR) r_min = virtual_domain->get_initial_min();
-    else if(domain_type ==   CONST_VAR) r_min = constant_value;
-    else if(domain_type ==   EXPRESSION) r_min = expression->get_self().get_initial_min();
-    //else  r_min = 0;
+  if     (domain_type ==  BITSET_VAR) r_min = bitset_domain->get_initial_min();
+  else if(domain_type ==    LIST_VAR) r_min = list_domain->get_initial_min();
+  else if(domain_type ==   RANGE_VAR) r_min = range_domain->get_initial_min();
+  //else if(domain_type == VIRTUAL_VAR) r_min = virtual_domain->get_initial_min();
+  else if(domain_type ==   CONST_VAR) r_min = constant_value;
+  else if(domain_type ==   EXPRESSION) r_min = expression->get_self().get_initial_min();
+  //else  r_min = 0;
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_initial_min_)
+  PROFILING_FOOT(_m_get_initial_min_)
 #endif
 
     return r_min;
-  }
+}
 
-  int Mistral::Variable::get_initial_max() const {
+int Mistral::Variable::get_initial_max() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      int r_max = 1;
+    int r_max = 1;
 
-    if     (domain_type ==  BITSET_VAR) r_max = bitset_domain->get_initial_max();
-    else if(domain_type ==    LIST_VAR) r_max = list_domain->get_initial_max();
-    else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_initial_max();
-    //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_initial_max();
-    else if(domain_type ==   CONST_VAR) r_max = constant_value;
-    else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_initial_max();
-    //else  r_max = 1;
+  if     (domain_type ==  BITSET_VAR) r_max = bitset_domain->get_initial_max();
+  else if(domain_type ==    LIST_VAR) r_max = list_domain->get_initial_max();
+  else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_initial_max();
+  //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_initial_max();
+  else if(domain_type ==   CONST_VAR) r_max = constant_value;
+  else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_initial_max();
+  //else  r_max = 1;
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_initial_max_)
+  PROFILING_FOOT(_m_get_initial_max_)
 #endif
 
     return r_max;
-  }
+}
 
 int Mistral::Variable::get_min_pos() const {
   
@@ -804,104 +804,104 @@ int Mistral::Variable::get_min_pos() const {
   else  r_min = (*bool_domain >> 1); //(!(*bool_domain & 1));
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_min_pos_)
+  PROFILING_FOOT(_m_get_min_pos_)
 #endif
 
     return r_min;
 
 }
 
-  int Mistral::Variable::get_max_neg() const {
+int Mistral::Variable::get_max_neg() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      int r_max = 0;
+    int r_max = 0;
 
-    if     (domain_type ==  BITSET_VAR) r_max = bitset_domain->get_max_neg();
-    else if(domain_type ==    LIST_VAR) r_max = list_domain->get_max_neg();
-    else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_max_neg();
-    //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_max_neg();
-    else if(domain_type ==   CONST_VAR) r_max = constant_value;
-    else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_max_neg();
-    else  r_max = (!(*bool_domain & 1));
+  if     (domain_type ==  BITSET_VAR) r_max = bitset_domain->get_max_neg();
+  else if(domain_type ==    LIST_VAR) r_max = list_domain->get_max_neg();
+  else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_max_neg();
+  //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_max_neg();
+  else if(domain_type ==   CONST_VAR) r_max = constant_value;
+  else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_max_neg();
+  else  r_max = (!(*bool_domain & 1));
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_get_max_neg_)
+  PROFILING_FOOT(_m_get_max_neg_)
 #endif
 
     return r_max;
-  }
+}
 
-  int Mistral::Variable::next(const int v) const {
+int Mistral::Variable::next(const int v) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      int r_val = v;
+    int r_val = v;
 
-    if     (domain_type ==  BITSET_VAR) r_val = bitset_domain->next(v);
-    else if(domain_type ==    LIST_VAR) r_val = list_domain->next(v);
-    else if(domain_type ==   RANGE_VAR) r_val = range_domain->next(v);
-    //else if(domain_type == VIRTUAL_VAR) r_val = virtual_domain->next(v);
-    else if(domain_type ==   CONST_VAR) r_val = constant_value;
-    else if(domain_type ==   EXPRESSION) r_val = expression->get_self().next(v);
-    else  r_val = (*bool_domain >> 1);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_next_)
-#endif
-
-    return r_val;
-  }
-
-  int Mistral::Variable::prev(const int v) const {
+  if     (domain_type ==  BITSET_VAR) r_val = bitset_domain->next(v);
+  else if(domain_type ==    LIST_VAR) r_val = list_domain->next(v);
+  else if(domain_type ==   RANGE_VAR) r_val = range_domain->next(v);
+  //else if(domain_type == VIRTUAL_VAR) r_val = virtual_domain->next(v);
+  else if(domain_type ==   CONST_VAR) r_val = constant_value;
+  else if(domain_type ==   EXPRESSION) r_val = expression->get_self().next(v);
+  else  r_val = (*bool_domain >> 1);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-
-      int r_val = v;
-
-    if     (domain_type ==  BITSET_VAR) r_val = bitset_domain->prev(v);
-    else if(domain_type ==    LIST_VAR) r_val = list_domain->prev(v);
-    else if(domain_type ==   RANGE_VAR) r_val = range_domain->prev(v);
-    //else if(domain_type == VIRTUAL_VAR) r_val = virtual_domain->prev(v);
-    else if(domain_type ==   CONST_VAR) r_val = constant_value;
-    else if(domain_type ==   EXPRESSION) r_val = expression->get_self().prev(v);
-    else  r_val = (!(*bool_domain & 1));
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_prev_)
+  PROFILING_FOOT(_m_next_)
 #endif
 
     return r_val;
-  }
+}
 
-  bool Mistral::Variable::is_range() const {
+int Mistral::Variable::prev(const int v) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      bool answer = true;
+    int r_val = v;
 
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_range();
-    else if(domain_type ==    LIST_VAR) answer = list_domain->is_range();
-    //else if(domain_type ==   RANGE_VAR) answer = range_domain->is_range();
-    //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_range();
-    //else if(domain_type ==   CONST_VAR) answer = true;
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().is_range();
-    //else answer = true;
+  if     (domain_type ==  BITSET_VAR) r_val = bitset_domain->prev(v);
+  else if(domain_type ==    LIST_VAR) r_val = list_domain->prev(v);
+  else if(domain_type ==   RANGE_VAR) r_val = range_domain->prev(v);
+  //else if(domain_type == VIRTUAL_VAR) r_val = virtual_domain->prev(v);
+  else if(domain_type ==   CONST_VAR) r_val = constant_value;
+  else if(domain_type ==   EXPRESSION) r_val = expression->get_self().prev(v);
+  else  r_val = (!(*bool_domain & 1));
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_is_range_)
+  PROFILING_FOOT(_m_prev_)
+#endif
+
+    return r_val;
+}
+
+bool Mistral::Variable::is_range() const {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+
+    bool answer = true;
+
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_range();
+  else if(domain_type ==    LIST_VAR) answer = list_domain->is_range();
+  //else if(domain_type ==   RANGE_VAR) answer = range_domain->is_range();
+  //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_range();
+  //else if(domain_type ==   CONST_VAR) answer = true;
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().is_range();
+  //else answer = true;
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_is_range_)
 #endif
 
     return answer;
-  }
+}
 
 // // bool Mistral::Variable::is_ground(const Expression *x) const {
 // //   return x->self.is_ground();
@@ -941,294 +941,306 @@ int Mistral::Variable::get_min_pos() const {
 //   }
 
 
-  bool Mistral::Variable::is_ground() const {
+bool Mistral::Variable::is_ground() const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      bool answer = true;
+    bool answer = true;
 
-    // std::cout << (int*)(variable)
-    // 	      << std::endl
-    // 	      << domain_type << " == " 
-    // 	      << BITSET_VAR << "? "
-    // 	      << LIST_VAR << "? "
-    // 	      << RANGE_VAR << "? "
-    // 	      << CONST_VAR << "? " << std::endl;
+  // std::cout << (int*)(variable)
+  // 	      << std::endl
+  // 	      << domain_type << " == " 
+  // 	      << BITSET_VAR << "? "
+  // 	      << LIST_VAR << "? "
+  // 	      << RANGE_VAR << "? "
+  // 	      << CONST_VAR << "? " << std::endl;
 
 
-    //std::cout << domain2str(domain_type) << std::endl;
+  //std::cout << domain2str(domain_type) << std::endl;
 
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_ground();
-    else if(domain_type ==    LIST_VAR) answer = list_domain->is_ground();
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->is_ground();
-    //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_ground();
-    else if(domain_type ==   CONST_VAR) answer = true;
-    else if(domain_type ==   EXPRESSION) answer = (id() == -2 || expression->get_self().is_ground());
-    else  answer = (*bool_domain != 3);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_is_ground_)
-#endif
-
-    return answer;
-  }
-
-  bool Mistral::Variable::equal(const int v) const {
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->is_ground();
+  else if(domain_type ==    LIST_VAR) answer = list_domain->is_ground();
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->is_ground();
+  //else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->is_ground();
+  else if(domain_type ==   CONST_VAR) answer = true;
+  else if(domain_type ==   EXPRESSION) answer = (id() == -2 || expression->get_self().is_ground());
+  else  answer = (*bool_domain != 3);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-
-      bool answer = true;
-
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->equal(v);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->equal(v);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->equal(v);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->equal(v);
-    else if(domain_type ==   CONST_VAR) answer = (constant_value == v);
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().equal(v);
-    else  answer = (*bool_domain-1 == v);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_equal_)
+  PROFILING_FOOT(_m_is_ground_)
 #endif
 
     return answer;
-  }
+}
 
-  bool Mistral::Variable::contain(const int v) const {
+bool Mistral::Variable::equal(const int v) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      bool answer = true;
+    bool answer = true;
 
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->contain(v);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->contain(v);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->contain(v);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->contain(v);
-    else if(domain_type ==   CONST_VAR) answer = (constant_value == v);
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().contain(v);
-    else  answer = (!(v >> 1) && (*bool_domain & (v+1)));
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_contain_)
-#endif
-
-    return answer;
-  }
-
-  bool Mistral::Variable::intersect(const int lo, const int up) const {
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->equal(v);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->equal(v);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->equal(v);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->equal(v);
+  else if(domain_type ==   CONST_VAR) answer = (constant_value == v);
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().equal(v);
+  else  answer = (*bool_domain-1 == v);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-
-      bool answer = true;
-
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->intersect(lo, up);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->intersect(lo, up);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->intersect(lo, up);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->intersect(lo, up);
-    else if(domain_type ==   CONST_VAR) answer = (constant_value >= lo && constant_value <= up);
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().intersect(lo, up);
-    else  answer = (((lo<=0) | (2*(up>0))) & *bool_domain);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_intersect_range_)
+  PROFILING_FOOT(_m_equal_)
 #endif
 
     return answer;
-  }
+}
 
-  bool Mistral::Variable::included(const int lo, const int up) const {
+bool Mistral::Variable::contain(const int v) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      bool answer = true;
+    bool answer = true;
 
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->included(lo, up);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->included(lo, up);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->included(lo, up);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->included(lo, up);
-    else if(domain_type ==   CONST_VAR) answer = (constant_value >= lo && constant_value <= up);
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().included(lo, up);
-    else  {
-      int state = *bool_domain;
-      answer = ( up >= (state >> 1) && (lo <= !(state & 1)) );
-    }
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->contain(v);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->contain(v);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->contain(v);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->contain(v);
+  else if(domain_type ==   CONST_VAR) answer = (constant_value == v);
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().contain(v);
+  else  answer = (!(v >> 1) && (*bool_domain & (v+1)));
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_included_range_)
+  PROFILING_FOOT(_m_contain_)
 #endif
 
     return answer;
-  }
+}
 
-  bool Mistral::Variable::includes(const int lo, const int up) const {
+bool Mistral::Variable::intersect(const int lo, const int up) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
 
-      bool answer = true;
+    bool answer = true;
 
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->includes(lo, up);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->includes(lo, up);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->includes(lo, up);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->includes(lo, up);
-    else if(domain_type ==   CONST_VAR) answer = (constant_value == lo && constant_value == up);
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().includes(lo, up);
-    else  {
-      int state = *bool_domain;
-      answer = ( up <= (state >> 1) && (lo >= !(state & 1)) );
-    }
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->intersect(lo, up);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->intersect(lo, up);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->intersect(lo, up);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->intersect(lo, up);
+  else if(domain_type ==   CONST_VAR) answer = (constant_value >= lo && constant_value <= up);
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().intersect(lo, up);
+  else  answer = (((lo<=0) | (2*(up>0))) & *bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_includes_range_)
+  PROFILING_FOOT(_m_intersect_range_)
 #endif
 
     return answer;
+}
+
+bool Mistral::Variable::intersect(const Interval I) const {
+  return intersect(I.min, I.max);
+}
+
+bool Mistral::Variable::included(const int lo, const int up) const {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+
+    bool answer = true;
+
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->included(lo, up);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->included(lo, up);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->included(lo, up);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->included(lo, up);
+  else if(domain_type ==   CONST_VAR) answer = (constant_value >= lo && constant_value <= up);
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().included(lo, up);
+  else  {
+    int state = *bool_domain;
+    answer = ( up >= (state >> 1) && (lo <= !(state & 1)) );
   }
 
-  bool Mistral::Variable::intersect(const BitSet& s) const {
-
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-
-      bool answer = true;
-
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->intersect(s);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->intersect(s);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->intersect(s);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->intersect(s);
-    else if(domain_type ==   CONST_VAR) answer = (s.contain(constant_value));
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().intersect(s);
-    else  answer = s.intersect(*bool_domain);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_intersect_set_)
-#endif
-
-    return answer;
-  }
-
-  bool Mistral::Variable::included(const BitSet& s) const {
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      bool answer = true;
-
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->included(s);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->included(s);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->included(s);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->included(s);
-    else if(domain_type ==   CONST_VAR) answer = (s.contain(constant_value));
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().included(s);
-    else  answer = s.includes(*bool_domain);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_included_set_)
+  PROFILING_FOOT(_m_included_range_)
 #endif
 
     return answer;
+}
+
+bool Mistral::Variable::included(const Interval I) const {
+  return included(I.min, I.max);
+}
+
+bool Mistral::Variable::includes(const int lo, const int up) const {
+  
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+
+    bool answer = true;
+
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->includes(lo, up);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->includes(lo, up);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->includes(lo, up);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->includes(lo, up);
+  else if(domain_type ==   CONST_VAR) answer = (constant_value == lo && constant_value == up);
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().includes(lo, up);
+  else  {
+    int state = *bool_domain;
+    answer = ( up <= (state >> 1) && (lo >= !(state & 1)) );
   }
 
-  bool Mistral::Variable::includes(const BitSet& s) const {
-
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      bool answer = true;
-
-    if     (domain_type ==  BITSET_VAR) answer = bitset_domain->includes(s);
-    else if(domain_type ==    LIST_VAR) answer = list_domain->includes(s);
-    else if(domain_type ==   RANGE_VAR) answer = range_domain->includes(s);
-    else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->includes(s);
-    else if(domain_type ==   CONST_VAR) answer = (s.size() == 1 && s.contain(constant_value));
-    else if(domain_type ==   EXPRESSION) answer = expression->get_self().includes(s);
-    else  answer = s.included(*bool_domain);
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_includes_set_)
+  PROFILING_FOOT(_m_includes_range_)
 #endif
 
     return answer;
-  }
+}
 
-  bool Mistral::Variable::intersect(const Mistral::Variable& x) const {
+bool Mistral::Variable::includes(const Interval I) const {
+  return includes(I.min, I.max);
+}
 
-      bool answer = true;
-
-    if(is_ground()) answer = x.contain(get_first());
-    else if(x.is_ground()) answer = contain(x.get_first());
-    else if(is_range()) answer = x.intersect(get_min(), get_max());
-    else if(x.is_range()) answer = intersect(x.get_min(), x.get_max());
-    else if(domain_type ==  BITSET_VAR)
-      answer = x.intersect(bitset_domain->domain.values);
-    // else if(domain_type ==    LIST_VAR) {
-    //   std::cout << "TODO! (intersect - list)" << std::endl;
-    //   exit(1);
-    // }
-    // // else if(domain_type == VIRTUAL_VAR) {
-
-    // // }
-    else 
-      answer = //x.intersect(expression->get_self()); //
-	expression->get_self().intersect(x);
-
-   return answer;
-  }
-
-  bool Mistral::Variable::included(const Mistral::Variable& x) const {
-
-      bool answer = true;
-
-    if(is_ground()) answer = x.contain(get_first());
-    else if(x.is_ground()) answer = equal(x.get_first());
-    else if(is_range()) answer = x.includes(get_min(), get_max());
-    else if(x.is_range()) answer = included(x.get_min(), x.get_max()); 
-    else if(domain_type ==  BITSET_VAR)
-      answer = x.includes(bitset_domain->domain.values);
-    //std::cout << "TODO! (included)" << std::endl;
-    //answer = true;
-    else 
-      answer = //x.includes(expression->get_self());//.included(x);
-	expression->get_self().included(x);
-
-   return answer;
-  }
-
-  bool Mistral::Variable::includes(const Mistral::Variable& x) const {
-
-      bool answer = true;
-
-    if(is_ground()) answer = x.equal(get_first());
-    else if(x.is_ground()) answer = contain(x.get_first());
-    else if(is_range()) answer = x.included(get_min(), get_max());
-    else if(x.is_range()) answer = includes(x.get_min(), x.get_max()); 
-    else if(domain_type ==  BITSET_VAR)
-      answer = x.included(bitset_domain->domain.values);
-    // std::cout << "TODO!" << std::endl;
-    // answer = true;
-    else 
-      answer = 
-	expression->get_self().includes(x);
-
-   return answer;
-  }
-
-  void Mistral::Variable::intersect_to( BitSet& s ) const {
+bool Mistral::Variable::intersect(const BitSet& s) const {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
+#endif
+
+    bool answer = true;
+
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->intersect(s);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->intersect(s);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->intersect(s);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->intersect(s);
+  else if(domain_type ==   CONST_VAR) answer = (s.contain(constant_value));
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().intersect(s);
+  else  answer = s.intersect(*bool_domain);
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_intersect_set_)
+#endif
+
+    return answer;
+}
+
+bool Mistral::Variable::included(const BitSet& s) const {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    bool answer = true;
+
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->included(s);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->included(s);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->included(s);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->included(s);
+  else if(domain_type ==   CONST_VAR) answer = (s.contain(constant_value));
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().included(s);
+  else  answer = s.includes(*bool_domain);
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_included_set_)
+#endif
+
+    return answer;
+}
+
+bool Mistral::Variable::includes(const BitSet& s) const {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    bool answer = true;
+
+  if     (domain_type ==  BITSET_VAR) answer = bitset_domain->includes(s);
+  else if(domain_type ==    LIST_VAR) answer = list_domain->includes(s);
+  else if(domain_type ==   RANGE_VAR) answer = range_domain->includes(s);
+  else if(domain_type == VIRTUAL_VAR) answer = virtual_domain->includes(s);
+  else if(domain_type ==   CONST_VAR) answer = (s.size() == 1 && s.contain(constant_value));
+  else if(domain_type ==   EXPRESSION) answer = expression->get_self().includes(s);
+  else  answer = s.included(*bool_domain);
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_includes_set_)
+#endif
+
+    return answer;
+}
+
+bool Mistral::Variable::intersect(const Mistral::Variable& x) const {
+
+  bool answer = true;
+
+  if(is_ground()) answer = x.contain(get_first());
+  else if(x.is_ground()) answer = contain(x.get_first());
+  else if(is_range()) answer = x.intersect(get_min(), get_max());
+  else if(x.is_range()) answer = intersect(x.get_min(), x.get_max());
+  else if(domain_type ==  BITSET_VAR)
+    answer = x.intersect(bitset_domain->domain.values);
+  // else if(domain_type ==    LIST_VAR) {
+  //   std::cout << "TODO! (intersect - list)" << std::endl;
+  //   exit(1);
+  // }
+  // // else if(domain_type == VIRTUAL_VAR) {
+
+  // // }
+  else 
+    answer = //x.intersect(expression->get_self()); //
+      expression->get_self().intersect(x);
+
+  return answer;
+}
+
+bool Mistral::Variable::included(const Mistral::Variable& x) const {
+
+  bool answer = true;
+
+  if(is_ground()) answer = x.contain(get_first());
+  else if(x.is_ground()) answer = equal(x.get_first());
+  else if(is_range()) answer = x.includes(get_min(), get_max());
+  else if(x.is_range()) answer = included(x.get_min(), x.get_max()); 
+  else if(domain_type ==  BITSET_VAR)
+    answer = x.includes(bitset_domain->domain.values);
+  //std::cout << "TODO! (included)" << std::endl;
+  //answer = true;
+  else 
+    answer = //x.includes(expression->get_self());//.included(x);
+      expression->get_self().included(x);
+
+  return answer;
+}
+
+bool Mistral::Variable::includes(const Mistral::Variable& x) const {
+
+  bool answer = true;
+
+  if(is_ground()) answer = x.equal(get_first());
+  else if(x.is_ground()) answer = contain(x.get_first());
+  else if(is_range()) answer = x.included(get_min(), get_max());
+  else if(x.is_range()) answer = includes(x.get_min(), x.get_max()); 
+  else if(domain_type ==  BITSET_VAR)
+    answer = x.included(bitset_domain->domain.values);
+  // std::cout << "TODO!" << std::endl;
+  // answer = true;
+  else 
+    answer = 
+      expression->get_self().includes(x);
+
+  return answer;
+}
+
+void Mistral::Variable::intersect_to( BitSet& s ) const {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
 #endif
 
     if     (domain_type ==  BITSET_VAR) bitset_domain->intersect_to(s);
@@ -1245,10 +1257,10 @@ int Mistral::Variable::get_min_pos() const {
     else  s.intersect_with(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_intersect_to_)
+  PROFILING_FOOT(_m_intersect_to_)
 #endif
 
-  }
+    }
 
 void Mistral::Variable::union_to( BitSet& s ) const {
 
@@ -1272,10 +1284,10 @@ void Mistral::Variable::union_to( BitSet& s ) const {
     else s.union_with(*bool_domain);
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_union_to_)
+  PROFILING_FOOT(_m_union_to_)
 #endif
 
-  }
+    }
 
 
 void Mistral::Variable::put_negation_in( BitSet& s ) const {
@@ -1305,209 +1317,209 @@ void Mistral::Variable::put_negation_in( BitSet& s ) const {
       }
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_put_negation_in_)
+  PROFILING_FOOT(_m_put_negation_in_)
 #endif
 
-  }
-
-  Mistral::Event Mistral::Variable::remove(const int v) {
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      Event evt = NO_EVENT;
-
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove(v);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->remove(v);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->remove(v);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove(v);
-    else if(domain_type ==   CONST_VAR) evt = (constant_value == v ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove(v);
-    else {
-      evt = (v<0||v>1 ? NO_EVENT : setValue(2-v));
     }
 
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_remove_)
-#endif
-
-    return evt;
-  }
-
-  Mistral::Event Mistral::Variable::set_domain(const int v) {
+Mistral::Event Mistral::Variable::remove(const int v) {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
-      Event evt = NO_EVENT;
-
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_domain(v);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->set_domain(v);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->set_domain(v);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_domain(v);
-    else if(domain_type ==   CONST_VAR) evt = (constant_value != v ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_domain(v);
-    else {
-
-      evt = (v<0||v>1 ? FAIL_EVENT : setValue(1+v));
-      //int dom = *bool_domain;
-      //evt = ((dom==1+v) ? NO_EVENT : setValue(1+v));
-    }
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_set_domain_value_)
-#endif
-
-    return evt;
-  }
-
-  Mistral::Event Mistral::Variable::set_min(const int lo) {
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      Event evt = NO_EVENT;
-
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_min(lo);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->set_min(lo);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->set_min(lo);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_min(lo);
-    else if(domain_type ==   CONST_VAR) evt = (constant_value < lo ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_min(lo);
-    else {
-
-      // 1 [1, inf[
-      // 2 [2, inf[
-      // 3 [2, inf[
-      evt = (lo==1 ? setValue(2) : (lo>1 ? FAIL_EVENT : NO_EVENT));
-
-//       int dom = *bool_domain;
-//       evt = (lo<=(!(dom&1)) ? NO_EVENT : (lo>(dom>>1) ? FAIL_EVENT : setValue(2)));
-//       //evt = (lo<1 ? NO_EVENT : (lo>1 ? FAIL_EVENT : setValue(2)));
-    }
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_set_min_)
-#endif
-
-    return evt;
-  }
-
-  Mistral::Event Mistral::Variable::set_max(const int up) {
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      Event evt = NO_EVENT;
-
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_max(up);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->set_max(up);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->set_max(up);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_max(up);
-    else if(domain_type ==   CONST_VAR) evt = (constant_value > up ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_max(up);
-    else {
-
-      evt =(up==0 ? setValue(1) : (up<0 ? FAIL_EVENT : NO_EVENT));
-
-//       int dom = *bool_domain;
-//       evt = (up>=(dom>>1) ? NO_EVENT : (up<(dom&1) ? FAIL_EVENT : setValue(1)));
-      //evt = (up>0 ? NO_EVENT : (up<0 ? FAIL_EVENT : setValue(1)));
-    }
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_set_max_)
-#endif
-
-    return evt;
-  }
-
-  Mistral::Event Mistral::Variable::set_domain(const BitSet& s) {
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      Event evt = NO_EVENT;
-
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_domain(s);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->set_domain(s);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->set_domain(s);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_domain(s);
-    else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_domain(s);
-    else {
-      //evt = ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
-      evt = ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : setState(s.table[0]&*bool_domain));
-    }
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_set_domain_set_)
-#endif
-
-    return evt;
-  }
-
-  // Mistral::Event Mistral::Variable::set_domain2(Mistral::Variable& x) {
-
-  //   Event evt = NO_EVENT;
-    
-  //   if(x.is_ground()) {
-  //     evt =  set_domain(x.get_min());
-  //   }
-  //   else if(x.is_range()) {
-  //     //evt = (set_min(x.get_min()) | set_max(x.get_max()));
-  //     Event evt_min = set_min(x.get_min());
-  //     Event evt_max = set_max(x.get_max());
-      
-  //     evt = (evt_min | evt_max);
-
-  //     std::cout << event2str(evt_min) << " | " << event2str(evt_max) << " = " << event2str(evt);
-  //   }
-  //   else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
-  //   else if(x.domain_type ==  EXPRESSION) {
-  //     Variable y = x.expression->get_self();
-  //     evt = set_domain(y);
-  //   } else {
-  //     std::cout << "TODO! (set_domain(var))" << std::endl;
-  //     exit(1);
-  //   }
-
-  //   return evt;
-
-  //   //evt = NO_EVENT;
-  // }
-
-  Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
-
     Event evt = NO_EVENT;
-    
-    if(x.is_ground()) {
-      evt =  set_domain(x.get_first());
-    }
-    else if(x.is_range()) {
-      // //evt = (set_min(x.get_min()) | set_max(x.get_max()));
-      // Event evt_min = set_min(x.get_min());
-      // Event evt_max = set_max(x.get_max());
-      
-      // evt = (evt_min | evt_max);
 
-      evt = set_domain(x.get_min(), x.get_max());
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove(v);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->remove(v);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->remove(v);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove(v);
+  else if(domain_type ==   CONST_VAR) evt = (constant_value == v ? FAIL_EVENT : NO_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove(v);
+  else {
+    evt = (v<0||v>1 ? NO_EVENT : setValue(2-v));
+  }
 
-      //std::cout << event2str(evt_min) << " | " << event2str(evt_max) << " = " << event2str(evt);
-    }
-    else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
-    else if(x.domain_type ==  EXPRESSION) {
-      Variable y = x.expression->get_self();
-      evt = set_domain(y);
-    } else {
-      std::cout << "TODO! (set_domain(var))" << std::endl;
-      exit(1);
-    }
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_remove_)
+#endif
 
     return evt;
+}
 
-    //evt = NO_EVENT;
+Mistral::Event Mistral::Variable::set_domain(const int v) {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    Event evt = NO_EVENT;
+
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_domain(v);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->set_domain(v);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->set_domain(v);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_domain(v);
+  else if(domain_type ==   CONST_VAR) evt = (constant_value != v ? FAIL_EVENT : NO_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_domain(v);
+  else {
+
+    evt = (v<0||v>1 ? FAIL_EVENT : setValue(1+v));
+    //int dom = *bool_domain;
+    //evt = ((dom==1+v) ? NO_EVENT : setValue(1+v));
   }
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_set_domain_value_)
+#endif
+
+    return evt;
+}
+
+Mistral::Event Mistral::Variable::set_min(const int lo) {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    Event evt = NO_EVENT;
+
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_min(lo);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->set_min(lo);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->set_min(lo);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_min(lo);
+  else if(domain_type ==   CONST_VAR) evt = (constant_value < lo ? FAIL_EVENT : NO_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_min(lo);
+  else {
+
+    // 1 [1, inf[
+    // 2 [2, inf[
+    // 3 [2, inf[
+    evt = (lo==1 ? setValue(2) : (lo>1 ? FAIL_EVENT : NO_EVENT));
+
+    //       int dom = *bool_domain;
+    //       evt = (lo<=(!(dom&1)) ? NO_EVENT : (lo>(dom>>1) ? FAIL_EVENT : setValue(2)));
+    //       //evt = (lo<1 ? NO_EVENT : (lo>1 ? FAIL_EVENT : setValue(2)));
+  }
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_set_min_)
+#endif
+
+    return evt;
+}
+
+Mistral::Event Mistral::Variable::set_max(const int up) {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    Event evt = NO_EVENT;
+
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_max(up);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->set_max(up);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->set_max(up);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_max(up);
+  else if(domain_type ==   CONST_VAR) evt = (constant_value > up ? FAIL_EVENT : NO_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_max(up);
+  else {
+
+    evt =(up==0 ? setValue(1) : (up<0 ? FAIL_EVENT : NO_EVENT));
+
+    //       int dom = *bool_domain;
+    //       evt = (up>=(dom>>1) ? NO_EVENT : (up<(dom&1) ? FAIL_EVENT : setValue(1)));
+    //evt = (up>0 ? NO_EVENT : (up<0 ? FAIL_EVENT : setValue(1)));
+  }
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_set_max_)
+#endif
+
+    return evt;
+}
+
+Mistral::Event Mistral::Variable::set_domain(const BitSet& s) {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    Event evt = NO_EVENT;
+
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->set_domain(s);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->set_domain(s);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->set_domain(s);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->set_domain(s);
+  else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? NO_EVENT : FAIL_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().set_domain(s);
+  else {
+    //evt = ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : ((s.table[0]&3)==3 ? NO_EVENT : setValue(s.table[0])));
+    evt = ((s.pos_words<1 || s.neg_words>0) ? FAIL_EVENT : setState(s.table[0]&*bool_domain));
+  }
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_set_domain_set_)
+#endif
+
+    return evt;
+}
+
+// Mistral::Event Mistral::Variable::set_domain2(Mistral::Variable& x) {
+
+//   Event evt = NO_EVENT;
+    
+//   if(x.is_ground()) {
+//     evt =  set_domain(x.get_min());
+//   }
+//   else if(x.is_range()) {
+//     //evt = (set_min(x.get_min()) | set_max(x.get_max()));
+//     Event evt_min = set_min(x.get_min());
+//     Event evt_max = set_max(x.get_max());
+      
+//     evt = (evt_min | evt_max);
+
+//     std::cout << event2str(evt_min) << " | " << event2str(evt_max) << " = " << event2str(evt);
+//   }
+//   else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
+//   else if(x.domain_type ==  EXPRESSION) {
+//     Variable y = x.expression->get_self();
+//     evt = set_domain(y);
+//   } else {
+//     std::cout << "TODO! (set_domain(var))" << std::endl;
+//     exit(1);
+//   }
+
+//   return evt;
+
+//   //evt = NO_EVENT;
+// }
+
+Mistral::Event Mistral::Variable::set_domain(Mistral::Variable& x) {
+
+  Event evt = NO_EVENT;
+    
+  if(x.is_ground()) {
+    evt =  set_domain(x.get_first());
+  }
+  else if(x.is_range()) {
+    // //evt = (set_min(x.get_min()) | set_max(x.get_max()));
+    // Event evt_min = set_min(x.get_min());
+    // Event evt_max = set_max(x.get_max());
+      
+    // evt = (evt_min | evt_max);
+
+    evt = set_domain(x.get_min(), x.get_max());
+
+    //std::cout << event2str(evt_min) << " | " << event2str(evt_max) << " = " << event2str(evt);
+  }
+  else if(x.domain_type ==  BITSET_VAR) evt = set_domain(x.bitset_domain->domain.values);
+  else if(x.domain_type ==  EXPRESSION) {
+    Variable y = x.expression->get_self();
+    evt = set_domain(y);
+  } else {
+    std::cout << "TODO! (set_domain(var))" << std::endl;
+    exit(1);
+  }
+
+  return evt;
+
+  //evt = NO_EVENT;
+}
 
 
 Mistral::Event Mistral::Variable::set_domain(const int lo, const int up) {
@@ -1614,96 +1626,96 @@ Mistral::Event Mistral::Variable::set_domain(const BiInterval& I) {
 }
 
 
-  Mistral::Event Mistral::Variable::remove_set(const BitSet& s) {
+Mistral::Event Mistral::Variable::remove_set(const BitSet& s) {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
-      Event evt = NO_EVENT;
+    Event evt = NO_EVENT;
 
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove_set(s);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->remove_set(s);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->remove_set(s);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove_set(s);
-    else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove_set(s);
-    else {
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove_set(s);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->remove_set(s);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->remove_set(s);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove_set(s);
+  else if(domain_type ==   CONST_VAR) evt = (s.contain(constant_value) ? FAIL_EVENT : NO_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove_set(s);
+  else {
 
-      evt = ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
-    }
+    evt = ((s.pos_words<1 || s.neg_words>0 || (s.table[0]^3)==3) ? NO_EVENT : setValue(s.table[0]^3));
+  }
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_remove_set_)
+  PROFILING_FOOT(_m_remove_set_)
 #endif
 
     return evt;
+}
+
+Mistral::Event Mistral::Variable::remove_interval(const int lo, const int up) {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+    Event evt = NO_EVENT;
+
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove_interval(lo, up);
+  else if(domain_type ==    LIST_VAR) evt = list_domain->remove_interval(lo, up);
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->remove_interval(lo, up);
+  else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove_interval(lo, up);
+  else if(domain_type ==   CONST_VAR) evt = ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
+  else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove_interval(lo, up);
+  else {
+
+    evt = (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
   }
 
-  Mistral::Event Mistral::Variable::remove_interval(const int lo, const int up) {
-
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
-#endif
-      Event evt = NO_EVENT;
-
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->remove_interval(lo, up);
-    else if(domain_type ==    LIST_VAR) evt = list_domain->remove_interval(lo, up);
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->remove_interval(lo, up);
-    else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->remove_interval(lo, up);
-    else if(domain_type ==   CONST_VAR) evt = ((constant_value < lo || constant_value > up) ? NO_EVENT : FAIL_EVENT);
-    else if(domain_type ==   EXPRESSION) evt = expression->get_self().remove_interval(lo, up);
-    else {
-
-      evt = (lo==1 ? setValue(1) : (up==0 ? setValue(2) : ((lo>1 || up<0) ? NO_EVENT : FAIL_EVENT)));
-    }
-
-#ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_remove_interval_)
+  PROFILING_FOOT(_m_remove_interval_)
 #endif
 
     return evt;
-  }
+}
 
 
 
 
-  Mistral::Event Mistral::Variable::restore() {
+Mistral::Event Mistral::Variable::restore() {
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_HEAD
+  PROFILING_HEAD
 #endif
-      Event evt = NO_EVENT;
+    Event evt = NO_EVENT;
 
-    // if(id() == 17) {
-    //   for(int i=0; i<((VariableImplementation*)(variable))->solver->level; ++i)
-    // 	std::cout << " ";
-    //   std::cout << "restore " ;
-    //   display(std::cout);
-    //   std::cout << " in " << get_domain() << " " 
-    // 		<< ((VariableBitmap*)(variable))->trail_ << std::endl;
-    // }
+  // if(id() == 17) {
+  //   for(int i=0; i<((VariableImplementation*)(variable))->solver->level; ++i)
+  // 	std::cout << " ";
+  //   std::cout << "restore " ;
+  //   display(std::cout);
+  //   std::cout << " in " << get_domain() << " " 
+  // 		<< ((VariableBitmap*)(variable))->trail_ << std::endl;
+  // }
 
-    if     (domain_type ==  BITSET_VAR) evt = bitset_domain->restore();
-    //else if(domain_type ==    LIST_VAR) evt = list_domain->restore();
-    else if(domain_type ==   RANGE_VAR) evt = range_domain->restore();
-    //else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->restore();
-    else if(domain_type ==   CONST_VAR) evt = NO_EVENT;
-    else if(domain_type ==   EXPRESSION) {
-      //std::cout << "RESTORE EXPRESSION" << std::endl;
-      //exit(1);
-      evt = expression->get_self().restore();
-    }
-    else {
-      *bool_domain = 3;
-      //evt = NO_EVENT;
-    } 
+  if     (domain_type ==  BITSET_VAR) evt = bitset_domain->restore();
+  //else if(domain_type ==    LIST_VAR) evt = list_domain->restore();
+  else if(domain_type ==   RANGE_VAR) evt = range_domain->restore();
+  //else if(domain_type == VIRTUAL_VAR) evt = virtual_domain->restore();
+  else if(domain_type ==   CONST_VAR) evt = NO_EVENT;
+  else if(domain_type ==   EXPRESSION) {
+    //std::cout << "RESTORE EXPRESSION" << std::endl;
+    //exit(1);
+    evt = expression->get_self().restore();
+  }
+  else {
+    *bool_domain = 3;
+    //evt = NO_EVENT;
+  } 
 
 #ifdef _PROFILING_PRIMITIVE
-    PROFILING_FOOT(_m_restore_)
+  PROFILING_FOOT(_m_restore_)
 #endif
 
     return evt;
-  }
+}
 
 
 Mistral::Event Mistral::VariableRange::remove_interval(const int lo, const int up) {
@@ -1760,42 +1772,42 @@ Mistral::Event Mistral::VariableRange::remove(const int v) {
 }
 
 
-   /// Remove all values that do not appear in the set "s"
+/// Remove all values that do not appear in the set "s"
 Mistral::Event Mistral::VariableRange::set_domain(const BitSet& s) {
-      Event setdomain = NO_EVENT;
+  Event setdomain = NO_EVENT;
 
-      // std::cout << "include " << s.includes(min, max) << std::endl;
-      // std::cout << "intersect " << s.intersect(min, max) << std::endl;
-      // std::cout << "[" << s.next(min-1) << ".." << s.prev(max+1) << "]" << std::endl;
-      //std::cout << s << std::endl;
+  // std::cout << "include " << s.includes(min, max) << std::endl;
+  // std::cout << "intersect " << s.intersect(min, max) << std::endl;
+  // std::cout << "[" << s.next(min-1) << ".." << s.prev(max+1) << "]" << std::endl;
+  //std::cout << s << std::endl;
 
-      if(s.includes(min, max)) return NO_EVENT;
-      if(!s.intersect(min, max)) return FAIL_EVENT;
-      int lb = s.next(min-1);
-      int ub = s.prev(max+1);
-      if(s.includes(lb, ub)) {
-	if(lb>min) {
-	  setdomain |= set_min(lb);
-	} 
-	if(ub<max) {
-	  setdomain |= set_max(ub);
-	}
-      } else {
-
-	// std::cout << "the intersection is not convex" << std::endl;
-
-	((Solver*)solver)->make_non_convex(id);
-
-
-	// std::cout << solver->variables[id] << " in " 
-	// 	  << solver->variables[id].get_domain() << std::endl;
-
-	return ((Solver*)solver)->variables[id].set_domain(s);
-      }
-
-      //return set_domain(s.next(min-1), s.prev(max+1));
-      return setdomain;
+  if(s.includes(min, max)) return NO_EVENT;
+  if(!s.intersect(min, max)) return FAIL_EVENT;
+  int lb = s.next(min-1);
+  int ub = s.prev(max+1);
+  if(s.includes(lb, ub)) {
+    if(lb>min) {
+      setdomain |= set_min(lb);
+    } 
+    if(ub<max) {
+      setdomain |= set_max(ub);
     }
+  } else {
+
+    // std::cout << "the intersection is not convex" << std::endl;
+
+    ((Solver*)solver)->make_non_convex(id);
+
+
+    // std::cout << solver->variables[id] << " in " 
+    // 	  << solver->variables[id].get_domain() << std::endl;
+
+    return ((Solver*)solver)->variables[id].set_domain(s);
+  }
+
+  //return set_domain(s.next(min-1), s.prev(max+1));
+  return setdomain;
+}
 
 
 // bool Mistral::VariableImplementation::is_new(Solver *s) {
@@ -2043,13 +2055,13 @@ Mistral::Expression::Expression(const std::vector< Variable >& args, const int l
 }
 Mistral::Expression::Expression(const Variable X, const Variable Y) 
   : VariableImplementation() {
-     children.add(X);
-     children.add(Y);
-  }
+  children.add(X);
+  children.add(Y);
+}
 Mistral::Expression::Expression(Variable X) 
   : VariableImplementation() {
-     children.add(X);
-  }
+  children.add(X);
+}
 Mistral::Expression::~Expression() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete expression" << std::endl;
@@ -2139,20 +2151,20 @@ void Mistral::AddExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::AddExpression::extract_variable(Solver *s) {
-//void Mistral::AddExpression::reify(Solver *s, Variable X) {
-    //int lb = children[0].get_var().get_min()+children[1].get_var().get_min();
-    //int ub = children[0].get_var().get_max()+children[1].get_var().get_max();
+  //void Mistral::AddExpression::reify(Solver *s, Variable X) {
+  //int lb = children[0].get_var().get_min()+children[1].get_var().get_min();
+  //int ub = children[0].get_var().get_max()+children[1].get_var().get_max();
 
-    int lb = children[0].get_min()+children[1].get_min();
-    int ub = children[0].get_max()+children[1].get_max();
+  int lb = children[0].get_min()+children[1].get_min();
+  int ub = children[0].get_max()+children[1].get_max();
 
-    Variable aux(lb, ub, DYN_VAR);
-    _self = aux;
+  Variable aux(lb, ub, DYN_VAR);
+  _self = aux;
 
-    _self.initialise(s, 1);
-    _self = _self.get_var();
-    children.add(_self);
-  }
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
 
 const char* Mistral::AddExpression::get_name() const {
   return "add";
@@ -2178,14 +2190,14 @@ Mistral::IdExpression::~IdExpression() {
 // }
 
 void Mistral::IdExpression::extract_variable(Solver *s) {
-// //void Mistral::IdExpression::reify(Solver *s, Variable X) {
-//   int lb = children[0].get_min()+id;
-//   int ub = children[0].get_max()+id;
+  // //void Mistral::IdExpression::reify(Solver *s, Variable X) {
+  //   int lb = children[0].get_min()+id;
+  //   int ub = children[0].get_max()+id;
 
-//     Variable aux(lb, ub, DYN_VAR);
-//     _self = aux;
+  //     Variable aux(lb, ub, DYN_VAR);
+  //     _self = aux;
 
-//   _self.initialise(s, 1);
+  //   _self.initialise(s, 1);
   _self = children[0]; //_self.get_var();
   //   children.add(_self);
 }
@@ -2215,12 +2227,12 @@ void Mistral::OffsetExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::OffsetExpression::extract_variable(Solver *s) {
-//void Mistral::OffsetExpression::reify(Solver *s, Variable X) {
+  //void Mistral::OffsetExpression::reify(Solver *s, Variable X) {
   int lb = children[0].get_min()+offset;
   int ub = children[0].get_max()+offset;
 
-    Variable aux(lb, ub, DYN_VAR);
-    _self = aux;
+  Variable aux(lb, ub, DYN_VAR);
+  _self = aux;
 
   _self.initialise(s, 1);
   _self = _self.get_var();
@@ -2470,7 +2482,7 @@ Mistral::DivExpression::DivExpression(Variable X, Variable Y)
 }
 Mistral::DivExpression::~DivExpression() {
 #ifdef _DEBUG_MEMORY
- std::cout << "c delete div expression" << std::endl;
+  std::cout << "c delete div expression" << std::endl;
 #endif
 }
 
@@ -2500,7 +2512,7 @@ const char* Mistral::DivExpression::get_name() const {
 }
 
 void Mistral::DivExpression::extract_predicate(Solver *s) {
-  s->add(new PredicateDiv(children));
+  s->add(Constraint(new PredicateDiv(children)));
 }
 
 
@@ -2614,19 +2626,19 @@ Mistral::Variable Mistral::Variable::operator*(int k) {
 // }
 
 
-  Mistral::SubExpression::SubExpression(Variable X, Variable Y) 
+Mistral::SubExpression::SubExpression(Variable X, Variable Y) 
   : Expression(X,Y) {
 }
-  Mistral::SubExpression::~SubExpression() {
+Mistral::SubExpression::~SubExpression() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete sub expression" << std::endl;
 #endif
 }
   
 void Mistral::SubExpression::extract_constraint(Solver *s) {
-      std::cerr << "Error: Sub predicate can't be used as a constraint" << std::endl;
+  std::cerr << "Error: Sub predicate can't be used as a constraint" << std::endl;
   exit(0);
-  }
+}
 
 void Mistral::SubExpression::extract_variable(Solver *s) {
   //void Mistral::SubExpression::reify(Solver *s, Variable X) {
@@ -2637,7 +2649,7 @@ void Mistral::SubExpression::extract_variable(Solver *s) {
   int ub = children[0].get_max()-children[1].get_min();
   
   Variable aux(lb, ub, EXPRESSION);
-    _self = aux;
+  _self = aux;
 
   _self.initialise(s, 1);
   //_self = _self.get_var();
@@ -2645,19 +2657,19 @@ void Mistral::SubExpression::extract_variable(Solver *s) {
  
 }
 
-  void Mistral::SubExpression::extract_predicate(Solver *s) {
-    VarArray tmp;
-    for(int i=3; i;) tmp.add(children[--i]);
+void Mistral::SubExpression::extract_predicate(Solver *s) {
+  VarArray tmp;
+  for(int i=3; i;) tmp.add(children[--i]);
 
 
-    //std::cout << "children: " << tmp << std::endl;
+  //std::cout << "children: " << tmp << std::endl;
 
-    Constraint sub(new PredicateAdd(tmp));
+  Constraint sub(new PredicateAdd(tmp));
     
-    //sub->initialise();
-    //return sub;
-    s->add(sub);
-  }
+  //sub->initialise();
+  //return sub;
+  s->add(sub);
+}
 
 const char* Mistral::SubExpression::get_name() const {
   return "sub";
@@ -2773,7 +2785,7 @@ void Mistral::AndExpression::extract_constraint(Solver *s) {
 #ifdef _DEBUG_AC
       std::cout << "fail!\n";
 #endif
-    s->fail();
+      s->fail();
     }
 #ifdef _DEBUG_AC
     else
@@ -3014,7 +3026,7 @@ void Mistral::EqualExpression::extract_predicate(Solver *s) {
   
   if(children.size==3) {
 
-      s->add(Constraint(new PredicateEqual(children, spin)));
+    s->add(Constraint(new PredicateEqual(children, spin)));
 
   } else s->add(Constraint(new PredicateConstantEqual(children, value, spin)));
 }
@@ -3585,7 +3597,7 @@ void Mistral::EqualSetExpression::extract_constraint(Solver *s) {
       if(disjunction_neg.size) {
 	if(disjunction_pos.size) {
 	  s->add((BoolSum(disjunction_neg) < disjunction_neg.size) || 
-	       (BoolSum(disjunction_pos) > 0));
+		 (BoolSum(disjunction_pos) > 0));
 	} else {
 	  s->add(BoolSum(disjunction_neg) < disjunction_neg.size);
 	}
@@ -3663,7 +3675,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	if(xl == y) {
 	  // common value in the lower bound of x and the var part of y
 	  //if(spin) {
-	    disjunction_pos.add(Y->get_index_var(j));
+	  disjunction_pos.add(Y->get_index_var(j));
 	  // } else {
 	  //   disjunction_neg.add(Y->get_index_var(j));
 	  // }
@@ -3679,7 +3691,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	} else {
 	  // y is in the var part of y, but cannot be in x
 	  //if(spin) {
-	    disjunction_neg.add(Y->get_index_var(j));
+	  disjunction_neg.add(Y->get_index_var(j));
 	  // } else {
 	  //   disjunction_pos.add(Y->get_index_var(j));
 	  // }
@@ -3689,7 +3701,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	if(yl == x) {
 	  // common value in the lower bound of y and the var part of x
 	  //if(spin) {
-	    disjunction_pos.add(X->get_index_var(i));
+	  disjunction_pos.add(X->get_index_var(i));
 	  // } else {
 	  //   disjunction_neg.add(X->get_index_var(i));
 	  // }
@@ -3705,7 +3717,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	} else {
 	  // x is in the var part of x, but cannot be in y
 	  //if(spin) {
-	    disjunction_neg.add(X->get_index_var(i));
+	  disjunction_neg.add(X->get_index_var(i));
 	  // } else {
 	  //   disjunction_pos.add(X->get_index_var(i));
 	  // }
@@ -3715,7 +3727,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	if(x == y) {
 	  // common value in the var part
 	  //if(spin) {
-	    disjunction_pos.add((X->get_index_var(i) == Y->get_index_var(j)));
+	  disjunction_pos.add((X->get_index_var(i) == Y->get_index_var(j)));
 	  // } else {
 	  //   disjunction_neg.add((X->get_index_var(i) == Y->get_index_var(j)));
 	  // }
@@ -3723,7 +3735,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	} else if(x<y) {
 	  // x is in the var part of x, but cannot be in y
 	  //if(spin) {
-	    disjunction_neg.add(X->get_index_var(i));
+	  disjunction_neg.add(X->get_index_var(i));
 	  // } else {
 	  //   disjunction_pos.add(X->get_index_var(i));
 	  // }
@@ -3732,7 +3744,7 @@ void Mistral::EqualSetExpression::extract_predicate(Solver *s) {
 	else {
 	  // y is in the var part of y, but cannot be in x
 	  //if(spin) {
-	    disjunction_neg.add(Y->get_index_var(j));
+	  disjunction_neg.add(Y->get_index_var(j));
 	  // } else {
 	  //   disjunction_pos.add(Y->get_index_var(j));
 	  // }
@@ -3812,8 +3824,8 @@ Mistral::Variable Mistral::Variable::operator==(Variable x) {
   Variable exp;
   if(is_set_var() && x.is_set_var()) {
     exp = Variable(new EqualSetExpression(*this,x,1));
-  // } else if(x.is_set_var()) {
-  //   exp = Variable(new EqualSetExpression(x,*this,1));
+    // } else if(x.is_set_var()) {
+    //   exp = Variable(new EqualSetExpression(x,*this,1));
   } else {
     exp = Variable(new EqualExpression(*this,x,1));
   }
@@ -3824,8 +3836,8 @@ Mistral::Variable Mistral::Variable::operator!=(Variable x) {
   Variable exp;
   if(is_set_var() && x.is_set_var()) {
     exp = Variable(new EqualSetExpression(*this,x,0));
-  // } else if(x.is_set_var()) {
-  //   exp = Variable(new EqualSetExpression(x,*this,0));
+    // } else if(x.is_set_var()) {
+    //   exp = Variable(new EqualSetExpression(x,*this,0));
   } else {
     exp = Variable(new EqualExpression(*this,x,0));
   }
@@ -3889,8 +3901,8 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
 	  s->fail(); 
 	}
 #ifdef _DEBUG_AC
-    else
-      std::cout << "ok\n";
+      else
+	std::cout << "ok\n";
 #endif
 
     } else {    
@@ -3907,8 +3919,8 @@ void Mistral::PrecedenceExpression::extract_constraint(Solver *s) {
 	  s->fail(); 
 	}
 #ifdef _DEBUG_AC
-    else
-      std::cout << "ok\n";
+      else
+	std::cout << "ok\n";
 #endif
     }
   }
@@ -4097,29 +4109,29 @@ Mistral::AllDiffExpression::~AllDiffExpression() {
 }
 
 void Mistral::AllDiffExpression::extract_constraint(Solver *s) { 
-//   Constraint *con = new ConstraintAllDiff(children); 
-//   con->initialise();
-//   return con;
+  //   Constraint *con = new ConstraintAllDiff(children); 
+  //   con->initialise();
+  //   return con;
   if(consistency_level == BOUND_CONSISTENCY)
     s->add(Constraint(new ConstraintAllDiff(children))); 
   s->add(Constraint(new ConstraintCliqueNotEqual(children))); 
-//   Vector< Variable > pair;
-//   for(unsigned int i=0; i<children.size-1; ++i)
-//     for(unsigned int j=i+1; j<children.size; ++j) {
-//       pair.clear();
-//       pair.add(children[i]);
-//       pair.add(children[j]);
-//       s->add(new ConstraintNotEqual(pair));
-//     }
+  //   Vector< Variable > pair;
+  //   for(unsigned int i=0; i<children.size-1; ++i)
+  //     for(unsigned int j=i+1; j<children.size; ++j) {
+  //       pair.clear();
+  //       pair.add(children[i]);
+  //       pair.add(children[j]);
+  //       s->add(new ConstraintNotEqual(pair));
+  //     }
 }
 
 void Mistral::AllDiffExpression::extract_variable(Solver *s) {
-      std::cerr << "Error: AllDiff constraint can't yet be used as a predicate" << std::endl;
+  std::cerr << "Error: AllDiff constraint can't yet be used as a predicate" << std::endl;
   exit(0);
 }
 
 void Mistral::AllDiffExpression::extract_predicate(Solver *s) { 
-      std::cerr << "Error: AllDiff constraint can't yet be used as a predicate" << std::endl;
+  std::cerr << "Error: AllDiff constraint can't yet be used as a predicate" << std::endl;
   exit(0);
 }
 
@@ -4134,9 +4146,57 @@ Mistral::Variable Mistral::AllDiff(Vector< Variable >& args, const int ct) {
 
 
 
+Mistral::OccurrencesExpression::OccurrencesExpression(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct) 
+  : Expression(args) { 
+  firstval = first;
+  lastval = last;
+  lower_bounds = lb;
+  upper_bounds = ub;
+  consistency_level = ct; 
+}
+
+Mistral::OccurrencesExpression::~OccurrencesExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete gcc expression" << std::endl;
+#endif
+}
+
+void Mistral::OccurrencesExpression::extract_constraint(Solver *s) { 
+  if(consistency_level == BOUND_CONSISTENCY)
+    s->add(Constraint(new ConstraintOccurrences(children, firstval, lastval, lower_bounds, upper_bounds)));
+
+  int lb, ub;
+  for(int v=firstval; v<=lastval; ++v) {
+    lb = lower_bounds[v-firstval];
+    ub = upper_bounds[v-firstval];
+    s->add(Occurrence(children, v, lb, ub));
+  }
+}
+
+void Mistral::OccurrencesExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: Occurrences constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+void Mistral::OccurrencesExpression::extract_predicate(Solver *s) { 
+  std::cerr << "Error: Occurrences constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::OccurrencesExpression::get_name() const {
+  return "gcc";
+}
+
+Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct) {
+  Variable exp(new OccurrencesExpression(args, first, last, lb, ub, ct));
+  return exp;
+}
+
+
+
 
 Mistral::AtMostSeqCardExpression::AtMostSeqCardExpression(Vector< Variable >& args, const int d, const int p, const int q)
-: Expression(args), _k(1), _d(d) {  
+  : Expression(args), _k(1), _d(d) {  
   _p = new int[1];
   _q = new int[1];
   _p[0] = p;
@@ -4144,7 +4204,7 @@ Mistral::AtMostSeqCardExpression::AtMostSeqCardExpression(Vector< Variable >& ar
 }
 
 Mistral::AtMostSeqCardExpression::AtMostSeqCardExpression(Vector< Variable >& args, const int d, const Vector< Tuple<2, int> >& c)
-: Expression(args), _k(c.size), _d(d) {  
+  : Expression(args), _k(c.size), _d(d) {  
 
   _p = new int[_k];
   _q = new int[_k];
@@ -4290,7 +4350,7 @@ void Mistral::LexExpression::extract_constraint(Solver *s) {
     scp.add(children[i+2*arity]);
     scp.add(children[i+2*arity+1]);
 
-    s->add( new ConstraintLex(scp) );
+    s->add(Constraint(new ConstraintLex(scp)));
   }
 
   if(FAILED(children[2*arity].set_domain(0)))
@@ -4301,12 +4361,12 @@ void Mistral::LexExpression::extract_constraint(Solver *s) {
 }
 
 void Mistral::LexExpression::extract_variable(Solver *s) {
-      std::cerr << "Error: Lex constraint can't yet be used as a predicate" << std::endl;
+  std::cerr << "Error: Lex constraint can't yet be used as a predicate" << std::endl;
   exit(0);
 }
 
 void Mistral::LexExpression::extract_predicate(Solver *s) { 
-      std::cerr << "Error: Lex constraint can't yet be used as a predicate" << std::endl;
+  std::cerr << "Error: Lex constraint can't yet be used as a predicate" << std::endl;
   exit(0);
 }
 
@@ -4400,26 +4460,25 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
     //   s->add(new ConstraintBoolSumEqual(children,lower_bound)); 
     // } else {
     if(lower_bound == (int)(children.size)) {
-
+      
 #ifdef _DEBUG_AC
       std::cout << "pre-propagte sum(" << children[0] ;
       for(unsigned int i=0; i<children.size; ++i)
 	std::cout << ", " << children[i];
       std::cout << ") = " << children.size;
 #endif
-
+      
       for(unsigned int i=0; i<children.size; ++i) {
 	if(FAILED(children[i].set_domain(1))) {
 #ifdef _DEBUG_AC
 	  std::cout << " FAIL!" << std::endl;
-	  //exit(1);
 #endif
 	  s->fail();
 	  break;
 	}
 #ifdef _DEBUG_AC
-    else
-      std::cout << "ok\n";
+	else
+	  std::cout << "ok\n";
 #endif
       }
     } else if(upper_bound == 0) {
@@ -4433,12 +4492,12 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
 	  break;
 	}
 #ifdef _DEBUG_AC
-    else
-      std::cout << "ok\n";
+	else
+	  std::cout << "ok\n";
 #endif
       }
     } else {
-      s->add(new ConstraintBoolSumInterval(children,lower_bound,upper_bound)); 
+      s->add(Constraint(new ConstraintBoolSumInterval(children,lower_bound,upper_bound))); 
     }
   } else {
    
@@ -4507,11 +4566,11 @@ void Mistral::BoolSumExpression::extract_predicate(Solver *s) {
   //s->add(new PredicateBoolSum(children, self)); 
 
   if(weight.empty()) 
-    s->add(new PredicateBoolSum(children, s->variables[id])); 
+    s->add(Constraint(new PredicateBoolSum(children, s->variables[id]))); 
   else {
     s->add(Constraint(new PredicateWeightedBoolSum(children, weight)));
   }
-    //s->add(new PredicateWeightedSum(children, weight, 0, 0));
+  //s->add(new PredicateWeightedSum(children, weight, 0, 0));
 }
 
 const char* Mistral::BoolSumExpression::get_name() const {
@@ -4577,7 +4636,7 @@ void Mistral::ParityExpression::extract_constraint(Solver *s) {
       scope.add(children[i]);
 
   if(scope.size)
-    s->add(new ConstraintParity(scope,target_parity)); 
+    s->add(Constraint(new ConstraintParity(scope,target_parity))); 
   else
     if(target_parity) s->fail();
 }
@@ -4592,7 +4651,7 @@ void Mistral::ParityExpression::extract_variable(Solver *s) {
 }
 
 void Mistral::ParityExpression::extract_predicate(Solver *s) { 
-  s->add(new ConstraintParity(children,target_parity)); 
+  s->add(Constraint(new ConstraintParity(children,target_parity))); 
 }
 
 const char* Mistral::ParityExpression::get_name() const {
@@ -4852,7 +4911,7 @@ const char* Mistral::MinExpression::get_name() const {
 }
 
 void Mistral::MinExpression::extract_predicate(Solver *s) {
-  s->add(new PredicateMin(children));
+  s->add(Constraint(new PredicateMin(children)));
 }
 
 Mistral::Variable Mistral::Min(Vector<Variable>& X) {
@@ -4944,7 +5003,7 @@ const char* Mistral::MaxExpression::get_name() const {
 }
 
 void Mistral::MaxExpression::extract_predicate(Solver *s) {
-  s->add(new PredicateMax(children));
+  s->add(Constraint(new PredicateMax(children)));
 }
 
 
@@ -5055,8 +5114,8 @@ void Mistral::ElementExpression::extract_predicate(Solver *s) {
       s->fail(); 
     }
 #ifdef _DEBUG_AC
-    else
-      std::cout << "ok\n";
+  else
+    std::cout << "ok\n";
 #endif
   s->add(Constraint(new PredicateElement(children, offset)));
 }
@@ -6455,7 +6514,7 @@ void Mistral::SetExpression::extract_predicate(Solver *s) {
   //std::cout << lb << " " << ub << std::endl;
 
   if(elts_var.size) {
-    s->add(new PredicateBoolSum(scp, s->variables[id])); 
+    s->add(Constraint(new PredicateBoolSum(scp, s->variables[id]))); 
   } else {
     if(lower_bound) s->fail();
   }
@@ -6514,13 +6573,13 @@ Mistral::Variable Mistral::SetExpression::get_elt_var(const int vali) {
   return x;
 
   /*
-  else target = get_element_lb_index(vali);
-  if(target>=0) {
+    else target = get_element_lb_index(vali);
+    if(target>=0) {
     Variable c(1);
     return c;
-  }
-  Variable c(0);
-  return c;
+    }
+    Variable c(0);
+    return c;
   */
 }
 
@@ -7433,6 +7492,11 @@ Mistral::Variable Mistral::Member(Variable X, const int lo, const int up) {
   return exp;
 }
 
+Mistral::Variable Mistral::Member(Variable X, const Interval I) {
+  Variable exp(new MemberExpression(X, I.min, I.max));
+  return exp;
+}
+
 Mistral::Variable Mistral::Member(Variable X, const BitSet& s) {
   Variable exp(new MemberExpression(X, s));
   return exp;
@@ -7610,12 +7674,12 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
 
 
 #ifdef _DEBUG_SEARCH
-    if(_DEBUG_SEARCH) {
-      std::cout << "c";
-      for(unsigned int k=0; k<=solver->decisions.size; ++k) std::cout << " ";
-      std::cout << "backtrack to lvl " << solver->level << " and deduce " 
-		<< deduction << " (upper bound)" << std::endl;
-    }
+      if(_DEBUG_SEARCH) {
+	std::cout << "c";
+	for(unsigned int k=0; k<=solver->decisions.size; ++k) std::cout << " ";
+	std::cout << "backtrack to lvl " << solver->level << " and deduce " 
+		  << deduction << " (upper bound)" << std::endl;
+      }
 #endif
 
       deduction.make();
@@ -7642,12 +7706,12 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
       Decision deduction(objective, Decision::LOWERBOUND, lower_bound+1);
 
 #ifdef _DEBUG_SEARCH
-    if(_DEBUG_SEARCH) {
-      std::cout << "c";
-      for(unsigned int k=0; k<=solver->decisions.size; ++k) std::cout << " ";
-      std::cout << "backtrack to lvl " << solver->level << " and deduce " 
-		<< deduction << " (lower bound)" << std::endl;
-    }
+      if(_DEBUG_SEARCH) {
+	std::cout << "c";
+	for(unsigned int k=0; k<=solver->decisions.size; ++k) std::cout << " ";
+	std::cout << "backtrack to lvl " << solver->level << " and deduce " 
+		  << deduction << " (lower bound)" << std::endl;
+      }
 #endif
       
       deduction.make();
@@ -7713,12 +7777,12 @@ void Mistral::Domain::open() {
   }
 }
 
- void Mistral::Domain::close() {
+void Mistral::Domain::close() {
   if(id>0) {
     Solver *s = get_solver();
     s->iterator_space.release(id);
   }
- }
+}
 //   if(domain_type != LIST_VAR && !is_range()) {
 //     s->release(id);
 //     id = -1;
@@ -7776,7 +7840,7 @@ Mistral::DomainDelta::~DomainDelta() {
   cleanup();
 }
 
-    //void open();
+//void open();
 void Mistral::DomainDelta::close() {
   if(domain_type == LIST_VAR)  {
     ((DeltaList*)variable)->close();
@@ -7818,12 +7882,12 @@ Mistral::DomainDelta::iterator Mistral::DomainDelta::end() {
 }
 
 Mistral::Literal Mistral::literal(Variable x, const int val) {
-    return (x.id()*2+val);
-  }
+  return (x.id()*2+val);
+}
 
 Mistral::Literal Mistral::literal(Variable x) {
-    return (x.id()*2+x.get_value());
-  }
+  return (x.id()*2+x.get_value());
+}
 
 
 // bool Mistral::Decision::make() {
@@ -7842,64 +7906,322 @@ Mistral::Literal Mistral::literal(Variable x) {
 //   return true;
 // }
 Mistral::Variable Mistral::AtMostSeqCardNaiveReason(Vector< Variable >& args, const int d, const int p, const int q) {
-	Variable exp(new AtMostSeqCardExpressionNaiveReason(args,d,p,q));
-	return exp;
+  Variable exp(new AtMostSeqCardExpressionNaiveReason(args,d,p,q));
+  return exp;
 }
 
 
 Mistral::Variable Mistral::AtMostSeqCardSimplifiedReason(Vector< Variable >& args, const int d, const int p, const int q) {
-	Variable exp(new AtMostSeqCardExpressionSimplifiedReason(args,d,p,q));
-	return exp;
+  Variable exp(new AtMostSeqCardExpressionSimplifiedReason(args,d,p,q));
+  return exp;
 }
 
 //left
 Mistral::Variable Mistral::AtMostSeqCardLeftExplanationReason(Vector< Variable >& args, const int d, const int p, const int q) {
-	Variable exp(new AtMostSeqCardExpressionLeftExplanationReason(args,d,p,q));
-	return exp;
+  Variable exp(new AtMostSeqCardExpressionLeftExplanationReason(args,d,p,q));
+  return exp;
 }
 
 
 
 Mistral::AtMostSeqCardExpressionNaiveReason::AtMostSeqCardExpressionNaiveReason(
-		Vector<Variable>& args, const int d, const int p, const int q)
-: AtMostSeqCardExpression(args, d, p, q)
+										Vector<Variable>& args, const int d, const int p, const int q)
+  : AtMostSeqCardExpression(args, d, p, q)
 {
 }
 
 void Mistral::AtMostSeqCardExpressionNaiveReason::extract_constraint(Solver* s)
 {
-	s->add(Constraint(new ConstraintNaiveMultiAtMostSeqCard(children, _k, _d, _p, _q)));
+  s->add(Constraint(new ConstraintNaiveMultiAtMostSeqCard(children, _k, _d, _p, _q)));
 }
 const char* Mistral::AtMostSeqCardExpressionNaiveReason::get_name() const {
-	return "naive amsc";
+  return "naive amsc";
 }
 
 
 Mistral::AtMostSeqCardExpressionSimplifiedReason::AtMostSeqCardExpressionSimplifiedReason(
-		Vector<Variable>& args, const int d, const int p, const int q)
-: AtMostSeqCardExpression(args, d, p, q)
+											  Vector<Variable>& args, const int d, const int p, const int q)
+  : AtMostSeqCardExpression(args, d, p, q)
 {
 }
 
 void Mistral::AtMostSeqCardExpressionSimplifiedReason::extract_constraint(Solver* s)
 {
-	s->add(Constraint(new ConstraintSimplifiedExplanationMultiAtMostSeqCard(children, _k, _d, _p, _q)));
+  s->add(Constraint(new ConstraintSimplifiedExplanationMultiAtMostSeqCard(children, _k, _d, _p, _q)));
 }
 const char* Mistral::AtMostSeqCardExpressionSimplifiedReason::get_name() const {
-	return "simplified reason amsc";
+  return "simplified reason amsc";
 }
 
 //left
 Mistral::AtMostSeqCardExpressionLeftExplanationReason::AtMostSeqCardExpressionLeftExplanationReason(
-		Vector<Variable>& args, const int d, const int p, const int q)
-: AtMostSeqCardExpression(args, d, p, q)
+												    Vector<Variable>& args, const int d, const int p, const int q)
+  : AtMostSeqCardExpression(args, d, p, q)
 {
 }
 
 void Mistral::AtMostSeqCardExpressionLeftExplanationReason::extract_constraint(Solver* s)
 {
-	s->add(Constraint(new ConstraintLeftExplanationMultiAtMostSeqCard(children, _k, _d, _p, _q)));
+  s->add(Constraint(new ConstraintLeftExplanationMultiAtMostSeqCard(children, _k, _d, _p, _q)));
 }
 const char* Mistral::AtMostSeqCardExpressionLeftExplanationReason::get_name() const {
-	return "left reason amsc";
+  return "left reason amsc";
 }
+
+
+
+
+
+
+
+Mistral::OccExpression::OccExpression(Vector< Variable >& args, const int lo, const int up)
+  : Expression(args) {
+  current_occ = 0;
+  lower_bound = lo;
+  upper_bound = up;
+  //num_args = args.size;
+}
+
+Mistral::OccExpression::OccExpression(VarArray& args, const int lo, const int up)
+  : Expression(args) {
+  current_occ = 0;
+  lower_bound = lo;
+  upper_bound = up;
+  //num_args = args.size;
+}
+
+Mistral::OccExpression::~OccExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete min expression" << std::endl;
+#endif
+}
+
+void Mistral::OccExpression::extract_constraint(Solver *s) {
+  encode();
+  if(lower_bound > -INFTY || upper_bound < INFTY) {    
+    lower_bound -= current_occ;
+    upper_bound -= current_occ;
+    if(lower_bound > scope.size || upper_bound < 0) {
+      s->fail();
+    } else {
+      s->add(Constraint(new ConstraintBoolSumInterval(scope,lower_bound,upper_bound))); 
+    }
+  } 
+}
+
+void Mistral::OccExpression::extract_variable(Solver *s) {
+  encode();
+  
+  int arity = scope.size;
+  if(lower_bound < current_occ) lower_bound = current_occ;
+  if(upper_bound < arity+current_occ) upper_bound = arity+current_occ;
+
+  Variable aux(lower_bound, upper_bound, DYN_VAR);
+  _self = aux;
+
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+  scope.add(_self);
+}
+
+void Mistral::OccExpression::extract_predicate(Solver* s) {
+  s->add(Constraint(new PredicateBoolSum(scope,current_occ)));
+}
+
+const char* Mistral::OccExpression::get_name() const {
+  return "occ";
+}
+
+
+Mistral::ValOccExpression::ValOccExpression(Vector< Variable >& args, const int val, const int lo, const int up)
+  : OccExpression(args, lo, up) {
+  value = val;
+} 
+
+void Mistral::ValOccExpression::encode() {
+  for(int i=0; i<children.size; ++i) {
+    if(children[i].equal(value))
+      ++current_occ;
+    else if(children[i].contain(value)) {
+      scope.add( children[i] == value );
+    }
+  }
+}
+
+Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, const int v, const int lo, const int up) {
+  Variable exp = Variable( new ValOccExpression(X, v, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(VarArray& X, const int v, const int lo, const int up) {
+  Variable exp = Variable( new ValOccExpression(X, v, lo, up) );
+  return exp;
+}
+
+
+
+Mistral::VarOccExpression::VarOccExpression(Vector< Variable >& args, Variable x, const int lo, const int up)
+  : OccExpression(args, lo, up) {
+  X = x;
+} 
+
+void Mistral::VarOccExpression::encode() {
+  for(int i=0; i<children.size; ++i) {
+    if(X.is_ground() && children[i].equal(X.get_value()))
+      ++current_occ;
+    else if(children[i].intersect(X)) {
+      scope.add( children[i] == X );
+      //children.add( )
+    }
+  }
+}
+
+Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, Variable x, const int lo, const int up) {
+  Variable exp = Variable( new VarOccExpression(X, x, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(VarArray& X, Variable x, const int lo, const int up) {
+  Variable exp = Variable( new VarOccExpression(X, x, lo, up) );
+  return exp;
+}
+
+
+
+Mistral::SetOccExpression::SetOccExpression(Vector< Variable >& args, const BitSet& s, const int lo, const int up)
+  : OccExpression(args, lo, up) {
+  S.initialise(s);
+} 
+
+Mistral::SetOccExpression::SetOccExpression(Vector< Variable >& args, const Vector<int>& s, const int lo, const int up)
+  : OccExpression(args, lo, up) {
+  int lb = +INFTY;
+  int ub = -INFTY;
+  for(unsigned int i=0; i<s.size; ++i) {
+    if(s[i] < lb) lb = s[i];
+    if(s[i] > ub) ub = s[i];
+  }
+  S.initialise(lb, ub, BitSet::empt);
+  for(unsigned int i=0; i<s.size; ++i) {
+    S.add(s[i]);
+  }
+}
+
+Mistral::SetOccExpression::SetOccExpression(Vector< Variable >& args, const std::vector<int>& s, const int lo, const int up)
+  : OccExpression(args, lo, up) {
+  int lb = +INFTY;
+  int ub = -INFTY;
+  for(unsigned int i=0; i<s.size(); ++i) {
+    if(s[i] < lb) lb = s[i];
+    if(s[i] > ub) ub = s[i];
+  }
+  S.initialise(lb, ub, BitSet::empt);
+  for(unsigned int i=0; i<s.size(); ++i) {
+    S.add(s[i]);
+  }
+}
+
+void Mistral::SetOccExpression::encode() {
+  for(int i=0; i<children.size; ++i) {
+    if(children[i].included(S))
+      ++current_occ;
+    else if(children[i].intersect(S)) {
+      scope.add( Member(children[i], S) );
+    }
+  }
+}
+
+Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, const BitSet& s, const int lo, const int up) {
+  Variable exp = Variable( new SetOccExpression(X, s, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(VarArray& X, const BitSet& s, const int lo, const int up) {
+  Variable exp = Variable( new SetOccExpression(X, s, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, const Vector<int>& s, const int lo, const int up) {
+  Variable exp = Variable( new SetOccExpression(X, s, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(VarArray& X, const Vector<int>& s, const int lo, const int up) {
+  Variable exp = Variable( new SetOccExpression(X, s, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, const std::vector<int>& s, const int lo, const int up) {
+  Variable exp = Variable( new SetOccExpression(X, s, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(VarArray& X, const std::vector<int>& s, const int lo, const int up) {
+  Variable exp = Variable( new SetOccExpression(X, s, lo, up) );
+  return exp;
+}
+
+
+
+Mistral::IntOccExpression::IntOccExpression(Vector< Variable >& args, const Interval i, const int lo, const int up)
+  : OccExpression(args, lo, up) {
+  I = i;
+} 
+
+void Mistral::IntOccExpression::encode() {
+  for(int i=0; i<children.size; ++i) {
+    if(children[i].included(I))
+      ++current_occ;
+    else if(children[i].intersect(I)) {
+      scope.add( Member(children[i], I) );
+    }
+  }
+}
+
+Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, const Interval i, const int lo, const int up) {
+  Variable exp = Variable( new IntOccExpression(X, i, lo, up) );
+  return exp;
+}
+
+Mistral::Variable Mistral::Occurrence(VarArray& X, const Interval i, const int lo, const int up) {
+  Variable exp = Variable( new IntOccExpression(X, i, lo, up) );
+  return exp;
+}
+
+// Mistral::Variable Mistral::Occurrence(Vector<Variable>& X, const int l, const int u, const int lo=-INFTY, const int up=INFTY) {
+//   Variable exp = Variable( new IntOccExpression(X, Interval(l,u), lo, up) );
+//   return exp;
+// }
+
+// Mistral::Variable Mistral::Occurrence(VarArray& X, const int l, const int u, const int lo=-INFTY, const int up=INFTY) {
+//   Variable exp = Variable( new IntOccExpression(X, Interval(l, u), lo, up) );
+//   return exp;
+// }
+
+
+/*
+  void Mistral::OccExpression::extract_predicate(Solver *s) {
+  s->add(new PredicateOcc(children));
+  }
+
+  Mistral::Variable Mistral::Occ(Vector<Variable>& X) {
+  bool equality = true;
+  for(unsigned int i=1; i<X.size && equality; ++i) equality = (X[i-1].operator_equal(X[i]));
+  Variable exp;
+  if(equality) exp = X[0];
+  else exp = Variable( new OccExpression(X) );
+  return exp;
+  }
+
+  Mistral::Variable Mistral::Occ(VarArray& X) {
+  bool equality = true;
+  for(unsigned int i=1; i<X.size && equality; ++i) equality = (X[i-1].operator_equal(X[i]));
+  Variable exp;
+  if(equality) exp = X[0];
+  else exp = Variable( new OccExpression(X) );
+  return exp;
+  // Variable exp( new OccExpression(X) );
+  // return exp;
+  }
+*/

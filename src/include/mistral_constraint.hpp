@@ -4150,6 +4150,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     // coefficients should be in decreasing order
     Vector< int > weight;
+
+    // offset (constant term)
+    int offset;
  
 
     // utils for the propagation
@@ -4170,14 +4173,14 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@{
     PredicateWeightedBoolSum() : GlobalConstraint() { priority = 1; }
 
-    PredicateWeightedBoolSum(Vector< Variable >& scp);
+    PredicateWeightedBoolSum(Vector< Variable >& scp, const int o=0);
     PredicateWeightedBoolSum(Vector< Variable >& scp,
-				      Vector< int >& coefs);
+			     Vector< int >& coefs, const int o=0);
     PredicateWeightedBoolSum(std::vector< Variable >& scp,
-				      std::vector< int >& coefs);
+			     std::vector< int >& coefs, const int o=0);
     //PredicateWeightedBoolSum(Vector< Variable >& scp, const int l, const int u);
     //PredicateWeightedBoolSum(std::vector< Variable >& scp, const int l, const int u);
-    virtual Constraint clone() { return Constraint(new PredicateWeightedBoolSum(scope)); }
+    virtual Constraint clone() { return Constraint(new PredicateWeightedBoolSum(scope, weight, offset)); }
     virtual void initialise();
     virtual void mark_domain();
     virtual bool explained() { return true; }
@@ -4215,6 +4218,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   public:
     /**@name Parameters*/
     //@{
+
+    // offset (constant term)
+    int offset;
+ 
     int lb;
     int ub;
     ReversibleNum<int> min_;
@@ -4227,11 +4234,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     /**@name Constructors*/
     //@{
     PredicateBoolSum() : GlobalConstraint() { priority = 1; }
-    PredicateBoolSum(Vector< Variable >& scp);
-    PredicateBoolSum(std::vector< Variable >& scp);
-    PredicateBoolSum(Vector< Variable >& scp, Variable tot);
-    PredicateBoolSum(std::vector< Variable >& scp, Variable tot);
-    virtual Constraint clone() { return Constraint(new PredicateBoolSum(scope)); }
+    PredicateBoolSum(Vector< Variable >& scp, const int o=0);
+    PredicateBoolSum(std::vector< Variable >& scp, const int o=0);
+    PredicateBoolSum(Vector< Variable >& scp, Variable tot, const int o=0);
+    PredicateBoolSum(std::vector< Variable >& scp, Variable tot, const int o=0);
+    virtual Constraint clone() { return Constraint(new PredicateBoolSum(scope,offset)); }
     virtual void initialise();
     virtual void mark_domain();
     virtual bool explained() { return true; }
@@ -4779,6 +4786,123 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual std::string getString() const ;
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "alldiff"; }
+    //@}
+  };
+
+
+
+  /***********************************************
+   * Global Cardinality Constraint (bounds consistency).
+   ***********************************************/
+  typedef struct {
+    int firstValue;
+    int lastValue;
+    int* sum;
+    int* ds;
+  } partialSum;
+   
+
+  /*! \class ConstraintOccurrences
+    \brief  Global Cardinality Constraint.
+
+    User defined propagator for enforcing bounds consistency
+    on the restricted gcc constraint when bounds on
+    occurrences are [a_i,b_i].
+    A value "v" must be assigned to at least
+    minOccurrences[v - firstDomainValue] variables and at most
+    maxOccurrences[v - firstDomainValue] variables
+    The code is from Lopez-Ortiz, Quimper, Tromp and van Beek
+  */   
+  class ConstraintOccurrences : public GlobalConstraint {
+    
+  private:
+    /**@name Parameters*/
+    //@{  
+    int lastLevel;
+    int *t;			// tree links
+    int *d;			// diffs between critical capacities
+    int *h;			// hall interval links
+    int *stableInterval;	// stable sets
+    int *potentialStableSets;	// links elements that potentialy belong to same stable set
+    int *newMin;
+    AD_Interval *iv;
+    AD_Interval **minsorted;
+    AD_Interval **maxsorted;
+    int *bounds;  // bounds[1..nb] hold set of min & max of the n intervals
+    // while bounds[0] and bounds[nb+1] allow sentinels
+    int nb;
+  
+    partialSum* l; 
+    partialSum* u;
+    partialSum* initializePartialSum(const int firstValue, 
+				     int count, const int* elements);
+    void destroyPartialSum(partialSum *p);
+    int  sum(partialSum *p, int from, int to);
+    int  searchValue(partialSum *p, int value);
+    int  minValue(partialSum *p);
+    int  maxValue(partialSum *p);
+    int  skipNonNullElementsRight(partialSum *p, int value);
+    int  skipNonNullElementsLeft(partialSum *p, int value);
+  
+    void sortit();
+    int  filterLowerMax();
+    int  filterUpperMax();
+    int  filterLowerMin(int *tl, int *c,
+			int* stableAndUnstableSets,
+			int* stableInterval,
+			int* potentialStableSets,
+			int* newMin);
+    int  filterUpperMin(int *tl, int *c,
+			int* stableAndUnstableSets,
+			int* stableInterval,
+			int* newMax);
+    int getlb(const int val) const;
+    int getub(const int val) const;
+    //@}  
+
+  public:
+    /**@name Constructors*/
+    //@{
+    ConstraintOccurrences() : GlobalConstraint() { priority = 0; }
+    ConstraintOccurrences(Vector< Variable >& scp,
+			  const int firstDomainValue,
+			  const int lastDomainValue,
+			  const int* minOccurrences,
+			  const int* maxOccurrences);
+    ConstraintOccurrences(std::vector< Variable >& scp,
+			  const int firstDomainValue,
+			  const int lastDomainValue,
+			  const int* minOccurrences,
+			  const int* maxOccurrences);
+    // ConstraintOccurrences(Variable* scp, const int n,
+    // 			  const int firstDomainValue,
+    // 			  const int lastDomainValue,
+    // 			  const int* minOccurrences,
+    // 			  const int* maxOccurrences);
+    virtual void mark_domain();
+    virtual Constraint clone() { return Constraint(new ConstraintOccurrences(scope, l->firstValue+3, l->lastValue-2, l->sum+3, u->sum+3)// , type
+						   ); }
+    virtual void initialise();
+    virtual ~ConstraintOccurrences();
+    //void init();
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+    //virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+    //virtual std::string getString() const ;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "occurrences"; }
     //@}
   };
 

@@ -2591,7 +2591,7 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed
 }
 
 std::ostream& Mistral::PredicateEqual::display(std::ostream& os) const {
-  os << scope[2]/*.get_var()*/ << " <=2> (";
+  os << scope[2]/*.get_var()*/ << " <=> (";
   if(spin) os << scope[0]/*.get_var()*/ << " == " << scope[1]/*.get_var()*/;
   else os << scope[0]/*.get_var()*/ << " =/= " << scope[1]/*.get_var()*/;
   os << ")";
@@ -2696,7 +2696,7 @@ Mistral::PropagationOutcome Mistral::PredicateConstantEqual::rewrite() {
 
 
 std::ostream& Mistral::PredicateConstantEqual::display(std::ostream& os) const {
-  os << scope[1]/*.get_var()*/ << " <=1> (";
+  os << scope[1]/*.get_var()*/ << " <=> (";
   if(spin) os << scope[0]/*.get_var()*/ << " == " << value;
   else os << scope[0]/*.get_var()*/ << " =/= " << value;
   os << ")";
@@ -9346,32 +9346,36 @@ std::ostream& Mistral::ConstraintBoolSumInterval::display(std::ostream& os) cons
 
 
 
-Mistral::PredicateBoolSum::PredicateBoolSum(Vector< Variable >& scp, Variable tot)
+Mistral::PredicateBoolSum::PredicateBoolSum(Vector< Variable >& scp, Variable tot, const int o)
   : GlobalConstraint(scp) { 
   scope.add(tot);
   priority = 1;
+  offset = o;
 }
 
-Mistral::PredicateBoolSum::PredicateBoolSum(std::vector< Variable >& scp, Variable tot)
+Mistral::PredicateBoolSum::PredicateBoolSum(std::vector< Variable >& scp, Variable tot, const int o)
   : GlobalConstraint(scp) {
   scope.add(tot);
   priority = 1;
+  offset = o;
 }
 
-Mistral::PredicateBoolSum::PredicateBoolSum(Vector< Variable >& scp)
+Mistral::PredicateBoolSum::PredicateBoolSum(Vector< Variable >& scp, const int o)
   : GlobalConstraint(scp) { 
   priority = 1;
+  offset = o;
 }
 
-Mistral::PredicateBoolSum::PredicateBoolSum(std::vector< Variable >& scp)
+Mistral::PredicateBoolSum::PredicateBoolSum(std::vector< Variable >& scp, const int o)
   : GlobalConstraint(scp) { 
   priority = 1;
+  offset = o;
 }
 
 void Mistral::PredicateBoolSum::initialise() {
   ConstraintImplementation::initialise();
-  int _min_ = 0;
-  int _max_ = scope.size;
+  int _min_ = offset;
+  int _max_ = scope.size+offset;
   for(unsigned int i=0; i<scope.size-1; ++i) {
     trigger_on(_RANGE_, scope[i]);
     if(scope[i].is_ground()) {
@@ -9442,8 +9446,8 @@ Mistral::Explanation::iterator Mistral::PredicateBoolSum::get_reason_for(const A
 
 Mistral::PropagationOutcome Mistral::PredicateBoolSum::propagate() 
 {
-  int _min_ = 0;
-  int _max_ = 0;
+  int _min_ = offset;
+  int _max_ = offset;
   unsigned int // _min_=0, _max_=0,
     i, n=scope.size-1;
   int lb, ub;
@@ -9472,7 +9476,7 @@ Mistral::PropagationOutcome Mistral::PredicateBoolSum::propagate()
 
 int Mistral::PredicateBoolSum::check( const int* s ) const 
 {
-  int i=scope.size-1, t=0;
+  int i=scope.size-1, t=offset;
   while(i--) t+=s[i];
   return (t != s[scope.size-1]); 
 }
@@ -9485,6 +9489,7 @@ std::ostream& Mistral::PredicateBoolSum::display(std::ostream& os) const {
   os << "(" << scope[0]/*.get_var()*/ ;
   for(unsigned int i=1; i<scope.size-1; ++i) 
     os << " + " << scope[i]/*.get_var()*/;
+  if(offset) os << " + " << offset ;
   os << ") = " << scope[scope.size-1];
   return os;
 }
@@ -11768,30 +11773,35 @@ std::ostream& Mistral::ConstraintIncrementalWeightedBoolSumInterval::display(std
 
 
 
-Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& scp)
+Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& scp, const int o)
   : GlobalConstraint(scp) { 
   priority = 1;
-    init_prop = true;
+  offset = o;
+  init_prop = true;
   for(unsigned int i=1; i<scope.size; ++i) {
     weight.add(1);
   }
 }
 
 Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(Vector< Variable >& scp, 
-							    Vector< int >& wgt)
+							    Vector< int >& wgt, 
+							    const int o)
   : GlobalConstraint(scp) { 
   priority = 1;
-    init_prop = true;
+  offset = o;
+  init_prop = true;
   for(unsigned int i=0; i<wgt.size; ++i) {
     weight.add(wgt[i]);
   }
 }
 
 Mistral::PredicateWeightedBoolSum::PredicateWeightedBoolSum(std::vector< Variable >& scp, 
-							    std::vector< int >& wgt)
+							    std::vector< int >& wgt, 
+							    const int o)
   : GlobalConstraint(scp) { 
   priority = 1;
-    init_prop = true;
+  offset = o;
+  init_prop = true;
   for(unsigned int i=0; i<wgt.size(); ++i) {
     weight.add(wgt[i]);
   }
@@ -11816,8 +11826,8 @@ void Mistral::PredicateWeightedBoolSum::initialise() {
      w.add(weight[ordering[i]]);
   }
 
-  int _min_ = 0;
-  int _max_ = 0;
+  int _min_ = offset;
+  int _max_ = offset;
   for(unsigned int i=0; i<weight.size; ++i) {
     scope[i] = X[i];
     weight[i] = w[i];
@@ -12263,8 +12273,8 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
     }
 #endif
     
-    int _min_ = 0;
-    int _max_ = 0;
+    int _min_ = offset;
+    int _max_ = offset;
     for(unsigned int i=0; i<weight.size; ++i) {
       if(scope[i].is_ground()) {
 	if(scope[i].get_value()) {
@@ -12337,8 +12347,8 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
   if(_DEBUG_PWEIGHTEDBOOLSUM) {
-    int real_min = 0;
-    int real_max = 0;
+    int real_min = offset;
+    int real_max = offset;
     for(i=0; i<weight.size; ++i) {
       if(scope[i].is_ground()) {
 	if(scope[i].get_value()) {
@@ -12542,8 +12552,8 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 
 #ifdef _DEBUG_PWEIGHTEDBOOLSUM
   if(_DEBUG_PWEIGHTEDBOOLSUM) {
-    int real_min = 0;
-    int real_max = 0;
+    int real_min = offset;
+    int real_max = offset;
     for(i=0; i<weight.size; ++i) {
       if(scope[i].is_ground()) {
 	if(scope[i].get_value()) {
@@ -12574,7 +12584,7 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedBoolSum::propagate()
 
 int Mistral::PredicateWeightedBoolSum::check( const int* s ) const 
 {
-  int i=weight.size, t=0;
+  int i=weight.size, t=offset;
   while(i--) {
     t+=(weight[i]*s[i]);
   }
@@ -12593,6 +12603,7 @@ std::ostream& Mistral::PredicateWeightedBoolSum::display(std::ostream& os) const
   for(unsigned int i=1; i<weight.size; ++i) 
     os << " + " << weight[i] << "*" << scope[i]/*.get_var()*/;
   
+  if(offset) os << " + " << offset;
   os << " = " << scope[weight.size];
   
   return os;
@@ -17233,3 +17244,654 @@ Mistral::Explanation::iterator Mistral::ConstraintSimplifiedExplanationMultiAtMo
 
 
 }
+
+
+
+
+/******************************************************************************
+  Implementation of the algorithm for bounds consistency of the
+ generalized cardinality constraint described in:
+
+	C.-G. Quimper, P. van Beek, A. Lopez-Ortiz, A. Golynski, and
+	S.B. Sadjad. An efficient bounds consistency algorithm for the
+	global cardinality constraint. CP-2003.
+
+ By: Claude-Guy Quimper
+ ******************************************************************************/
+
+  
+
+
+
+
+void Mistral::ConstraintOccurrences::mark_domain() {
+  for(unsigned int i=0; i<scope.size; ++i) {
+    get_solver()->forbid(scope[i].id(), RANGE_VAR|LIST_VAR);
+  }
+}
+
+ConstraintOccurrences::ConstraintOccurrences(Vector< Variable >& scp,
+					     const int firstDomainValue, 
+					     const int lastDomainValue,
+					     const int* minOccurrences,
+					     const int* maxOccurrences )
+  : GlobalConstraint(scp) { 
+  priority = 0; 
+  
+  int range = lastDomainValue - firstDomainValue + 1;
+  l = initializePartialSum(firstDomainValue, range, minOccurrences);
+  u = initializePartialSum(firstDomainValue, range, maxOccurrences);
+  
+}
+
+
+void Mistral::ConstraintOccurrences::initialise() {
+
+  ConstraintImplementation::initialise();
+
+  for(unsigned int i=0; i<scope.size; ++i) {
+    trigger_on(_RANGE_, scope[i]);
+  }
+
+  GlobalConstraint::initialise();
+
+  // int i, range;
+  // range = lastDomainValue - firstDomainValue + 1;
+
+  int arity = scope.size;
+  lastLevel = -1;
+
+  iv        = (AD_Interval  *)calloc(arity, sizeof(AD_Interval  ));
+  minsorted = (AD_Interval **)calloc(arity, sizeof(AD_Interval *));
+  maxsorted = (AD_Interval **)calloc(arity, sizeof(AD_Interval *));
+  bounds    = (int *)calloc(2*arity+2, sizeof(int));
+
+  for( int i = 0; i < arity; i++ ) {
+    minsorted[i] = maxsorted[i] = &iv[i];
+  }
+
+  t = (int *)calloc(2*arity+2, sizeof(int));
+  d = (int *)calloc(2*arity+2, sizeof(int));
+  h = (int *)calloc(2*arity+2, sizeof(int));
+
+  stableInterval      = (int *)calloc(2*arity+2, sizeof(int));
+  potentialStableSets = (int *)calloc(2*arity+2, sizeof(int));
+  newMin              = (int *)calloc(  arity,   sizeof(int));
+
+  // l = initializePartialSum(firstDomainValue, range, minOccurrences);
+  // u = initializePartialSum(firstDomainValue, range, maxOccurrences);
+}
+
+
+ConstraintOccurrences::~ConstraintOccurrences()
+{
+  free(bounds);
+  free(maxsorted);
+  free(minsorted);
+  free(iv);
+  free(h);
+  free(d);
+  free(t);
+  free(newMin);
+  free(potentialStableSets);
+  free(stableInterval);
+  destroyPartialSum(u);
+  destroyPartialSum(l);
+}
+
+void
+ConstraintOccurrences::sortit()
+{
+  int i,j,nb,min,max,last,arity=scope.size;
+
+  sortmin(minsorted, arity);
+  sortmax(maxsorted, arity);
+
+  min = minsorted[0]->min;
+  max = maxsorted[0]->max + 1;
+  //MODIFIED: bounds[0] = last = min-2;
+  bounds[0] = last = l->firstValue + 1;
+
+  for (i=j=nb=0;;) { // merge minsorted[] and maxsorted[] into bounds[]
+    if (i<arity && min<=max) {	// make sure minsorted exhausted first
+      if (min != last)
+        bounds[++nb] = last = min;
+      minsorted[i]->minrank = nb;
+      if (++i < arity)
+        min = minsorted[i]->min;
+    } else {
+      if (max != last)
+         bounds[++nb] = last = max;
+      maxsorted[j]->maxrank = nb;
+      if (++j == arity) break;
+      max = maxsorted[j]->max + 1;
+    }
+  }
+  ConstraintOccurrences::nb = nb;
+  //MODIFIED: bounds[nb+1] = bounds[nb] + 2;
+  bounds[nb+1] = u->lastValue + 1;
+}
+
+
+/* 
+ * Shrink the lower bounds for the max occurrences problem.
+ */
+int
+ConstraintOccurrences::filterLowerMax()
+{
+  int i,j,w,x,y,z;
+  int changes = 0, arity = scope.size;
+
+  for (i=1; i<=nb+1; i++) {
+    t[i] = h[i] = i-1;
+    d[i] = sum(u, bounds[i-1], bounds[i]-1);
+  }
+  for (i=0; i<arity; i++) { // visit intervals in increasing max order
+    // get interval bounds
+    x = maxsorted[i]->minrank; y = maxsorted[i]->maxrank;
+    j = t[z = pathmax(t, x+1)];
+    if (--d[z] == 0) {
+      t[z = pathmax(t, t[z]=z+1)] = j;
+    }
+    pathset(t, x+1, z, z);
+    if (d[z] < sum(u, bounds[y], bounds[z] - 1)) {
+      return INCONSISTENT; // no solution
+    }
+    if (h[x] > x) {
+      maxsorted[i]->min = bounds[w = pathmax(h, h[x])];
+      pathset(h, x, w, w);
+      changes = 1;
+    }
+    if (d[z] == sum(u, bounds[y], bounds[z] - 1)) {
+      pathset(h, h[y], j-1, y); // mark hall interval
+      h[y] = j-1; //("hall interval [%d,%d)\n",bounds[j],bounds[y]);
+    }
+  }
+  if( changes )
+    return CHANGES;
+  else
+    return NO_CHANGES;
+}
+
+/*
+ * Shrink the upper bounds for the max occurrences problem.
+ */
+int
+ConstraintOccurrences::filterUpperMax()
+{
+  // Assertion: filterLowerMax returns true
+  int i,j,w,x,y,z;
+  int changes = 0, arity = scope.size;
+
+  for (i=0; i<=nb; i++) {
+    d[i] = sum(u, bounds[i], bounds[t[i]=h[i]=i+1]-1);
+  }
+  for (i=arity; --i>=0; ) { // visit intervals in decreasing min order
+    // get interval bounds
+    x = minsorted[i]->maxrank; y = minsorted[i]->minrank;
+    j = t[z = pathmin(t, x-1)];
+    if (--d[z] == 0) {
+      t[z = pathmin(t, t[z]=z-1)] = j;
+    }
+    pathset(t, x-1, z, z);
+    if (d[z] < sum(u, bounds[z], bounds[y]-1)) {
+      return INCONSISTENT; // no solution
+    }
+    if (h[x] < x) {
+      minsorted[i]->max = bounds[w = pathmin(h, h[x])] - 1;
+      pathset(h, x, w, w);
+      changes = 1;
+    }
+    if (d[z] == sum(u, bounds[z], bounds[y]-1)) {
+      pathset(h, h[y], j+1, y);
+      h[y] = j+1;
+    }
+  }
+  if( changes )
+    return CHANGES;
+  else
+    return NO_CHANGES;
+}
+
+
+/*
+ * Shrink the lower bounds for the min occurrences problem.
+ * called as: filterLowerMin(t, d, h, stableInterval, potentialStableSets, newMin);
+ */
+int
+ConstraintOccurrences::filterLowerMin(int *tl, int *c,
+				      int* stableAndUnstableSets,
+				      int* stableInterval,
+				      int* potentialStableSets,
+				      int* newMin)
+{
+  int i,j,w,x,y,z,v;
+  int changes = 0, arity = scope.size;
+
+  for (w=i=nb+1; i>0; i--) {
+    //c[i] = sum(l, bounds[potentialStableSets[i]=stableInterval[i]=i-1], bounds[i]-1);
+    potentialStableSets[i]=stableInterval[i]=i-1;
+    c[i] = sum(l, bounds[i-1], bounds[i]-1);
+    // If the capacity between both bounds is zero, we have
+    // an unstable set between these two bounds.
+    if (c[i] == 0) {
+      stableAndUnstableSets[i-1] = w;
+    }
+    else {
+      w = stableAndUnstableSets[w] = i - 1;
+    }
+  }
+
+  for (i = w = nb + 1; i >= 0; i--) {
+    if (c[i] == 0)
+      tl[i] = w;
+    else
+      w = tl[w] = i;
+  }
+
+  for (i = 0; i < arity; i++) { // visit intervals in increasing max order
+    // Get interval bounds
+    x = maxsorted[i]->minrank; y = maxsorted[i]->maxrank;
+    j = tl[z = pathmax(tl, x+1)];
+    if (z != x+1) {
+      // if bounds[z] - 1 belongs to a stable set,
+      // [bounds[x], bounds[z]) is a sub set of this stable set
+      v = potentialStableSets[w = pathmax(potentialStableSets, x + 1)];
+      pathset(potentialStableSets, x+1, w, w); // path compression
+      w = y < z ? y : z;
+      pathset(potentialStableSets, potentialStableSets[w], v , w);
+      potentialStableSets[w] = v;
+    }
+
+    if (c[z] <= sum(l, bounds[y], bounds[z] - 1)) {
+      // (potentialStableSets[y], y] is a stable set
+      w = pathmax(stableInterval, potentialStableSets[y]);
+      pathset(stableInterval, potentialStableSets[y], w, w); // Path compression
+      pathset(stableInterval, stableInterval[y], v=stableInterval[w], y);
+      stableInterval[y] = v;
+    }
+    else {
+      // Decrease the capacity between the two bounds
+      if (--c[z] == 0) {
+	tl[z = pathmax(tl, tl[z]=z+1)] = j;
+      }
+
+      // If the lower bound belongs to an unstable or a stable set,
+      // remind the new value we might assigned to the lower bound
+      // in case the variable doesn't belong to a stable set.
+      if (stableAndUnstableSets[x] > x) {
+	w = newMin[i] = pathmax(stableAndUnstableSets, x);
+	pathset(stableAndUnstableSets, x, w, w); // path compression
+      }
+      else {
+	newMin[i] = x; // Do not shrink the variable
+      }
+
+      // If an unstable set is discovered
+      if (c[z] == sum(l, bounds[y], bounds[z] - 1)) {
+ 	if (stableAndUnstableSets[y] > y) // Consider stable and unstable sets beyong y
+ 	  y = stableAndUnstableSets[y]; // Equivalent to pathmax since the path is fully compressed
+	pathset(stableAndUnstableSets, stableAndUnstableSets[y], j-1, y); // mark the new unstable set
+	stableAndUnstableSets[y] = j-1;
+      }
+    }
+    pathset(tl, x+1, z, z); // path compression
+  }
+
+  // If there is a failure set
+  if (stableAndUnstableSets[nb] != 0) {
+    return INCONSISTENT; // no solution
+  }
+
+  // Perform path compression over all elements in
+  // the stable interval data structure. This data
+  // structure will no longer be modified and will be
+  // accessed n or 2n times. Therefore, we can afford
+  // a linear time compression.
+  for (i = nb+1; i > 0; i--) {
+    if (stableInterval[i] > i)
+      stableInterval[i] = w;
+    else
+      w = i;
+  }
+
+  // For all variables that are not a subset of a stable set, shrink the lower bound
+  for (i=arity-1; i>=0; i--) {
+    x = maxsorted[i]->minrank; y = maxsorted[i]->maxrank;
+    if ((stableInterval[x] <= x) || (y > stableInterval[x])) {
+      maxsorted[i]->min = skipNonNullElementsRight(l, bounds[newMin[i]]);
+      changes = 1;
+    }
+  }
+
+  if( changes )
+    return CHANGES;
+  else
+    return NO_CHANGES;
+}
+
+
+/*
+ * Shrink the upper bounds for the min occurrences problem.
+ * called as: filterUpperMin(t, d, h, stableInterval, newMin);
+ */
+int 
+ConstraintOccurrences::filterUpperMin(int *tl, int *c,
+					    int* stableAndUnstableSets,
+					    int* stableInterval,
+					    int* newMax)
+{
+  // ASSERTION: filterLowerMin returns true
+  int i,j,w,x,y,z;
+  int changes = 0, arity = scope.size;
+
+  for (w=i=0; i<=nb; i++) {
+    //    d[i] = bounds[t[i]=h[i]=i+1] - bounds[i];
+    c[i] = sum(l, bounds[i], bounds[i+1]-1);
+    if (c[i] == 0)
+      tl[i]=w;
+    else
+      w=tl[w]=i;
+  }
+  tl[w]=i;
+  for (i = 1, w = 0; i<=nb; i++) {
+    if (c[i-1] == 0)
+      stableAndUnstableSets[i] = w;
+    else
+      w = stableAndUnstableSets[w] = i;
+  }
+  stableAndUnstableSets[w] = i;
+
+  for (i=arity; --i>=0; ) { // visit intervals in decreasing min order
+    // Get interval bounds
+    x = minsorted[i]->maxrank; y = minsorted[i]->minrank;
+
+    // Solve the lower bound problem
+    j = tl[z = pathmin(tl, x-1)];
+
+    // If the variable is not in a discovered stable set
+    // Possible optimization: Use the array stableInterval to perform this test
+    if (c[z] > sum(l, bounds[z], bounds[y]-1)) {
+      if (--c[z] == 0) {
+	tl[z = pathmin(tl, tl[z]=z-1)] = j;
+      }
+      if (stableAndUnstableSets[x] < x) {
+	newMax[i] = w = pathmin(stableAndUnstableSets, stableAndUnstableSets[x]);
+	pathset(stableAndUnstableSets, x, w, w); // path compression
+      }
+      else {
+	newMax[i] = x;
+      }
+      if (c[z] == sum(l, bounds[z], bounds[y]-1)) {
+	if (stableAndUnstableSets[y] < y) {
+	  y = stableAndUnstableSets[y];
+        }
+	pathset(stableAndUnstableSets, stableAndUnstableSets[y], j+1, y);
+	stableAndUnstableSets[y] = j+1;
+      }
+    }
+    pathset(tl, x-1, z, z);
+  }
+
+  // For all variables that are not subsets of a stable set, shrink the lower bound
+  for (i=arity-1; i>=0; i--) {
+    x = minsorted[i]->minrank; y = minsorted[i]->maxrank;
+    if ((stableInterval[x] <= x) || (y > stableInterval[x]))
+      minsorted[i]->max = skipNonNullElementsLeft(l, bounds[newMax[i]]-1);
+      changes = 1;
+  }
+
+  if( changes )
+    return CHANGES;
+  else
+    return NO_CHANGES;
+}
+
+
+// bool ConstraintOccurrences::propagate(const int changedIdx, const int e)
+// {
+//   return propagate();
+// }
+
+Mistral::PropagationOutcome ConstraintOccurrences::propagate()
+{
+  PropagationOutcome wiped = CONSISTENT;
+
+  int statusLower, statusUpper;
+  int statusLowerMin=NOVAL, statusUpperMin;
+  int statusLowerMax=-NOVAL, statusUpperMax;
+  int i, a, b;
+  int dl, du;
+
+  a = 0;
+  b = scope.size;
+  //  a = _vars.getRangeIndexMin();
+  //  b = _vars.getRangeIndexMax();
+
+/*
+  if( _prop == WithValueRemoval && (a == (b-1)) && _vars[a].isBound() ) {
+    return;
+  }
+*/
+
+
+  //if( lastLevel != scope[0]->solver->level ) {
+  //if( lastLevel != solver->level ) {
+  if( lastLevel != solver->level ) {
+    // not incremental
+    statusLower = CHANGES;
+    statusUpper = CHANGES;
+
+    i = scope.size;
+    while( i-- ) {
+      iv[i].min = scope[i].get_min();
+      iv[i].max = scope[i].get_max();
+    }
+
+  }
+  else {
+    // incremental
+    statusLower = NO_CHANGES;
+    statusUpper = NO_CHANGES;
+    for( i = a; i < b; i++ ) {
+      dl = iv[i].min;
+      du = iv[i].max;
+      iv[i].min = scope[i].get_min();
+      iv[i].max = scope[i].get_max();
+      if( dl != iv[i].min ) statusLower = CHANGES;
+      if( du != iv[i].max ) statusUpper = CHANGES;
+    }
+  }
+
+  //lastLevel = scope[0]->solver->level;
+  //lastLevel = solver->level;
+  lastLevel = solver->level;
+
+  if( statusLower == NO_CHANGES && statusUpper == NO_CHANGES ) {
+    return wiped;
+  }
+
+  sortit();
+
+  // The variable domains must be inside the domain defined by
+  // the lower bounds (l) and the upper bounds (u).
+  //assert(minValue(l) == minValue(u));
+  //assert(maxValue(l) == maxValue(u));
+  //assert(minValue(l) <= minsorted[0]->min);
+  //assert(maxsorted[n-1]->max <= maxValue(u));
+
+  // Checks if there are values that must be assigned before the
+  // smallest interval or after the last interval. If this is
+  // the case, there is no solution to the problem
+  // This is not an optimization since
+  // filterLower{Min,Max} and
+  // filterUpper{Min,Max} do not check for this case.
+  if ((sum(l, minValue(l), minsorted[0]->min - 1) > 0) ||
+      (sum(l, maxsorted[scope.size-1]->max + 1, maxValue(l)) > 0)) {
+    //_vars.getManager().fail();
+
+    wiped = FAILURE(0);
+    return wiped;
+  }
+
+  statusLowerMax = filterLowerMax();
+  if( statusLowerMax != INCONSISTENT ) {
+    statusLowerMin = filterLowerMin(t, d, h,
+			stableInterval, potentialStableSets, newMin);
+  }
+
+  if( (statusLowerMax == INCONSISTENT) || (statusLowerMin == INCONSISTENT) ) {
+    //_vars.getManager().fail();
+
+    wiped = FAILURE(0);
+    return wiped;
+  }
+  else {
+
+    statusUpperMax = filterUpperMax();
+    statusUpperMin = filterUpperMin(t, d, h, stableInterval, newMin);
+
+    if( (statusLowerMax == CHANGES) || (statusLowerMin == CHANGES) ||
+        (statusUpperMax == CHANGES) || (statusUpperMin == CHANGES) ) {
+      i = scope.size;
+      while( i-- )
+	if( FAILED(scope[i].set_min( iv[i].min ) | scope[i].set_max( iv[i].max )) ) {
+	  wiped = FAILURE(i);
+	  return wiped;
+	}
+    } // if
+  } // else
+
+  return wiped;
+}
+
+// Create a partial sum data structure adapted to the
+// filterLower{Min,Max} and filterUpper{Min,Max} functions.
+// Two elements before and after the element list will be added
+// with a weight of 1. 
+partialSum*
+ConstraintOccurrences::initializePartialSum(const int firstValue, int count, 
+						  const int* elements)
+{
+  int i,j;
+  partialSum* res = new partialSum;
+  res->sum = new int[count+1+2+2];
+  res->firstValue = firstValue - 3; // We add three elements at the beginning
+  res->lastValue = firstValue + count + 1;
+  res->sum[0] = 0;
+  res->sum[1] = 1;
+  res->sum[2] = 2;
+  for (i = 2; i < count+2; i++) {
+    res->sum[i+1] = res->sum[i] + elements[i-2];
+  }
+  res->sum[i+1] = res->sum[i] + 1;
+  res->sum[i+2] = res->sum[i+1] + 1;
+
+  res->ds = new int[count+1+2+2];
+
+  for (j=(i=count+3)+1; i > 0;) {
+    while (res->sum[i] == res->sum[i-1])
+      res->ds[i--]=j;
+    j=res->ds[j]=i--;
+  }
+  res->ds[j]=0;
+  return res;
+}
+
+void
+ConstraintOccurrences::destroyPartialSum(partialSum *p)
+{
+  delete p->ds;
+  delete p->sum;
+  delete p;
+}
+
+int
+ConstraintOccurrences::sum(partialSum *p, int from, int to)
+{
+  if (from <= to) {
+    //assert((p->firstValue <= from) && (to <= p->lastValue));
+    return p->sum[to - p->firstValue] - p->sum[from - p->firstValue - 1];
+  }
+  else {
+    //assert((p->firstValue <= to) && (from <= p->lastValue));
+    return p->sum[to - p->firstValue - 1] - p->sum[from - p->firstValue];
+  }
+}
+
+int
+ConstraintOccurrences::minValue(partialSum *p) {
+  return p->firstValue + 3;
+}
+
+int
+ConstraintOccurrences::maxValue(partialSum *p) {
+  return p->lastValue - 2;
+}
+
+int
+ConstraintOccurrences::skipNonNullElementsRight(partialSum *p, int value) {
+  value -= p->firstValue;
+  return (p->ds[value] < value ? value : p->ds[value]) + p->firstValue;
+}
+
+int
+ConstraintOccurrences::skipNonNullElementsLeft(partialSum *p, int value) {
+  value -= p->firstValue;
+  return (p->ds[value] > value ? p->ds[p->ds[value]] : value) + p->firstValue;
+}
+
+
+int ConstraintOccurrences::check( const int* s ) const 
+{
+  int nval = l->lastValue - l->firstValue - 4;
+  int occ[nval];
+  int i=scope.size;
+  std::fill(occ, occ+nval, 0);
+
+  while(i--) {
+    ++occ[s[i]-l->firstValue-3];
+  }
+  i=nval;
+  while(i--) {
+    if(occ[i]<(getlb(i+l->firstValue+3)) || occ[i]>(getub(i+l->firstValue+3))) return 1;
+  }
+  
+  return 0; 
+}
+
+int ConstraintOccurrences::getlb(const int val) const {
+  return l->sum[val-l->firstValue]-l->sum[val-l->firstValue-1];
+}
+
+int ConstraintOccurrences::getub(const int val) const {
+  return u->sum[val-l->firstValue]-u->sum[val-l->firstValue-1];
+}
+
+std::ostream& ConstraintOccurrences::display(std::ostream& o) const 
+{    
+    o << "Gcc(";
+    for(int i=0; i<scope.size-1; ++i) {
+      o << scope[i] << " " ;
+    }
+    o << scope[scope.size-1] << ",";
+    // [" << (l->firstValue+3) << ".." 
+    //  << (l->lastValue-2) << "] >={";
+    for(int i=l->firstValue+3; i<=l->lastValue-2; ++i) {
+      o << " " << i << ":[" << getlb(i) << "," << getub(i) << "]";
+
+      // if(getlb(i) > 0 && getub(i) < scope.size)
+      // 	o << " " << i << " in [" << getlb(i) << "," << getub(i) << "]";
+      // else if(getlb(i) > 0) 
+      // 	o << " " << i << " >= " << getlb(i);
+      // else if(getub(i) < scope.size)
+      // 	o << " " << i << " <= " << getub(i);
+    }
+    //o << " }, <={";
+    o << ")";
+    return o;
+}
+
+/*
+ *  End of user defined propagator for enforcing bounds consistency
+ *=================================================================*/
