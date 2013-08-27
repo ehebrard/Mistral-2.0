@@ -36,6 +36,8 @@ int main(int argc, char *argv[])
 
   s.add( AllDiff(X) );
 
+
+
   VarArray scope;
   for(i=1; i<N-1; ++i) {
     scope.clear();
@@ -47,17 +49,27 @@ int main(int argc, char *argv[])
   }
 
 
-  cout << s << endl;
+  //cout << s << endl;
 
   s.rewrite();
 
-  cout << s << endl;
+  //cout << s << endl;
 
   s.consolidate();
   
-  cout << s << endl;
+  //cout << s << endl;
 
   s.parameters.verbosity = 2;
+
+#ifdef _MONITOR
+  s.monitor_list << X << "\n";
+  for(i=0; i<N-2; ++i) {
+    s.monitor_list << differences[i] << "\n";
+  }
+#endif
+
+  ImpactManager *im = new ImpactManager(&s);
+
 
   if(s.depth_first_search(X, 
 			  new GenericHeuristic< 

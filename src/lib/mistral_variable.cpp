@@ -506,6 +506,29 @@ unsigned int Mistral::Variable::get_size() const {
     return r_size;
 }
 
+unsigned int Mistral::Variable::get_reduction() const {
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_HEAD
+#endif
+      
+    unsigned int r_red = 0;
+
+  if     (domain_type ==  BITSET_VAR) r_red = bitset_domain->get_reduction();
+  else if(domain_type ==    LIST_VAR) r_red = list_domain->get_reduction();
+  else if(domain_type ==   RANGE_VAR) r_red = range_domain->get_reduction();
+  //else if(domain_type == VIRTUAL_VAR) r_size = virtual_domain->get_size();
+  else if(domain_type ==   CONST_VAR) r_red = 0;
+  else if(domain_type ==   EXPRESSION) r_red = expression->get_self().get_reduction();
+  else  r_red = (variable->assigned_at_last_level());
+
+#ifdef _PROFILING_PRIMITIVE
+  PROFILING_FOOT(_m_get_red_)
+#endif
+
+    return r_red;
+}
+
 /// Returns the degree (number of constraints)
 unsigned int Mistral::Variable::get_degree() const {
 
@@ -1818,6 +1841,10 @@ Mistral::Event Mistral::VariableRange::set_domain(const BitSet& s) {
 //   solver = s;
 //   id = s->declare(*this);
 // }
+
+int Mistral::VariableImplementation::assigned_at_last_level() const {
+  return ((Solver*)solver)->assignment_level[id] == solver->level;
+}
 
 void Mistral::VariableList::initialise(Solver *s) {
   VariableImplementation::initialise(s);

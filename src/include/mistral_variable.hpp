@@ -77,6 +77,8 @@ namespace Mistral {
     //@}
 
 
+    int assigned_at_last_level() const;
+
     /*!@name Accessors*/
     //@{
     // get value in solution (as an integer)
@@ -435,6 +437,9 @@ namespace Mistral {
     inline int get_value() const { return domain.min; }
     /// Returns the domain size
     inline unsigned int get_size() const { return domain.size; }
+    /// Returns the magnitude of the pruning since last level 
+    //inline unsigned int get_reduction() const { return (trail_.back() == solver->level ? trail_.back(2) - domain.size : 0); }
+    inline unsigned int get_reduction() const { return trail_.back(2) - domain.size; }
     /// Returns the first value in the domain
     inline int get_first() const { return domain.min; }
     /// Returns the last value in the domain
@@ -1103,6 +1108,8 @@ namespace Mistral {
     inline int get_value() const { return domain.head(); }
     /// Returns the domain size
     inline unsigned int get_size() const { return domain.size; }
+    /// Returns the magnitude of the pruning since last level 
+    inline unsigned int get_reduction() const { return domain.get_reduction(); }
     /// Returns the first value in the domain
     inline int get_first() const { return domain.head(); }
     /// Returns the last value in the domain
@@ -1338,6 +1345,9 @@ namespace Mistral {
     inline int get_value() const { return min; }
     /// Returns the domain size
     inline unsigned int get_size() const { return max-min+1; }
+    /// Returns the magnitude of the pruning since last level 
+    //inline unsigned int get_reduction() const { return (trail_.back() == solver->level ? trail_.back(2) - trail_.back(3) - max + min : 0); }
+    inline unsigned int get_reduction() const { return trail_.back(2) - trail_.back(3) - max + min; }
     /// Returns the first value in the domain
     inline int get_first() const { return min; }
     /// Returns the last value in the domain
@@ -1691,7 +1701,9 @@ namespace Mistral {
     std::string get_history() const ; 
     //DomainIterator get_domain_iterator();
     /// Returns the domain size
-    unsigned int get_size() const ; 
+    unsigned int get_size() const ;
+    /// Returns the magnitude of the pruning since last level 
+    unsigned int get_reduction() const ;
     /// Returns the degree (number of constraints)
     unsigned int get_degree() const ; 
     /// Returns the first value in the domain

@@ -32,7 +32,7 @@
 #include <mistral_solver.hpp>
 //#include <mistral_sat.hpp>
 
-
+//#define _DEBUG_IMPACT true
 
 namespace Mistral {
 
@@ -541,7 +541,7 @@ namespace Mistral {
 
     virtual void notify_success() {
       int id;
-      int i = solver->trail_.back(), n=solver->saved_vars.size;
+      int i = solver->trail_.back(5), n=solver->saved_vars.size;
 
       //std::cout << "increment weight of ";
       while(++i<n) {	
@@ -622,6 +622,560 @@ namespace Mistral {
     // }
 
     virtual std::ostream& display(std::ostream& os, const bool all) const ;
+  };
+
+
+
+
+//   /*! \class ImpactManager
+//     \brief ImpactManager Class
+
+//     * Listener interface for Impact *
+//     * NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
+//   */
+//   class ImpactManager : public FailureListener, public SuccessListener, public DecisionListener, public VariableListener {
+
+//   public:
+
+//     Solver *solver;
+//     double weight_unit;
+//     int left;
+
+//     /*\ TODO: make it a variable listener \*/
+//     Vector<double> variable_weight;
+//     Vector<double> left_weight;
+//     Vector<double> right_weight;
+//     Vector<double> avg_right_branches;
+//     Vector<int> num_right_branches;
+//     Vector<int> num_probes;
+//     Vector<int> num_left_probes;
+//     Vector<int> num_right_probes;
+
+//     //ImpactManager(Solver *s, void *a=NULL) : solver(s) {// }
+//     ImpactManager(Solver *s) : solver(s) {// }
+
+//       left = -1;
+//       weight_unit = solver->parameters.activity_increment;
+      
+//       variable_weight.initialise(solver->variables.size, solver->variables.size);
+//       left_weight.initialise(solver->variables.size, solver->variables.size);
+//       right_weight.initialise(solver->variables.size, solver->variables.size);
+//       num_probes.initialise(solver->variables.size, solver->variables.size);
+//       num_left_probes.initialise(solver->variables.size, solver->variables.size);
+//       num_right_probes.initialise(solver->variables.size, solver->variables.size);
+//       num_right_branches.initialise(solver->variables.size, solver->variables.size);
+//       avg_right_branches.initialise(solver->variables.size, solver->variables.size);
+
+
+//       std::cout << solver->variables << std::endl;
+
+//       for(unsigned int i=0; i<solver->variables.size; ++i) {
+// 	variable_weight[i] = 0;
+// 	left_weight[i] = 0;
+// 	right_weight[i] = 0;
+// 	num_probes[i] = 0;
+// 	num_left_probes[i] = 0;
+// 	num_right_probes[i] = 0;
+// 	num_right_branches[i] = 0;
+// 	avg_right_branches[i] = solver->variables[i].get_size();
+//       }
+
+//       solver->add((FailureListener*)this);
+//       solver->add((SuccessListener*)this);
+//       solver->add((DecisionListener*)this);
+//       solver->add((VariableListener*)this);
+//     }
+
+//     virtual ~ImpactManager() {// }
+
+//       solver->remove((VariableListener*)this);
+//       solver->remove((SuccessListener*)this);
+//       solver->remove((DecisionListener*)this);
+//       solver->remove((FailureListener*)this);
+//     }
+
+//     double *get_variable_weight() { return variable_weight.stack_; }   
+//     double **get_value_weight() { return NULL; }
+//     double *get_bound_weight() { return NULL; }
+
+//     virtual void check_consistency() {
+//     }
+
+//     virtual void notify_add_var() {
+// #ifdef _DEBUG_IMPACT
+//       std::cout << "NEW VAR!!\n";
+// #endif
+//     }
+
+//     virtual void notify_change(const int id) {
+// #ifdef _DEBUG_IMPACT
+//       std::cout << solver->variables[id] << "'s domain implementation has changed!!\n";
+// #endif
+//     }
+
+//     virtual void notify_decision() {
+//       left = 1;
+//     }
+  
+//     virtual void notify_success() {
+//       // propagation went without wipe-out
+//       // - check if it was after a left or a right branch
+//       // - find out what was the decision/refutation
+//       int dec=-1, nxt=-1;
+//       int id;
+//       int i, n;
+//       Variable x;
+//       double residual_space;
+//       int size;
+//       if(left>=0) {
+// 	i = solver->trail_.back(5), n=solver->saved_vars.size;
+// 	if(left) {
+// 	  // left branch
+// 	  dec = solver->decisions.back().var.id();
+
+// 	  // if(num_right_branches[dec]>=0) {
+// 	  //   avg_right_branches[dec] = avg_right_branches[dec]
+// 	  // }
+// 	  //num_right_branches[dec] = 0;
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " notified of success after a left branch on " << solver->variables[dec] << "\n";
+// #endif
+
+// 	} else {
+// 	  // right branch
+// 	  if(!solver->decisions.empty()) dec = solver->decisions.back().var.id();
+// 	  nxt = solver->decisions.back(0).var.id();
+// 	  ++num_right_branches[nxt];
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " notified of success after the " << num_right_branches[nxt] 
+// 		    << "th right branch on " << solver->variables[nxt] << "\n";
+// #endif
+
+// 	}
+
+// 	residual_space = 1.0;
+// 	//std::cout << "increment weight of ";
+// 	while(i<n) {	
+// 	  id = solver->saved_vars[i];
+// 	  x = solver->variables[id];
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " -> " << x << x.get_domain() << " lost " << x.get_reduction() << " values (";
+// #endif
+
+// 	  size = x.get_size();
+// 	  residual_space *= (((double)size))/((double)(size+x.get_reduction()));
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << residual_space << ")\n";
+// #endif
+
+// 	  ++i;
+// 	} 
+
+// 	if(left) {
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << left_weight[dec] ;
+// #endif
+
+// 	  left_weight[dec] = (((double)(num_left_probes[dec]) * left_weight[dec]) + residual_space)/(double)(++num_left_probes[dec]);
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " now " << left_weight[dec] << std::endl;
+// #endif
+
+// 	  variable_weight[dec] = avg_right_branches[dec] * (left_weight[dec] + right_weight[dec]);
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_right_branches[dec] << " * (" << left_weight[dec] << " + " << right_weight[dec] << ") = " << variable_weight[dec] << " \n";
+// #endif
+
+// 	} else {
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " ==> right-weight[" << solver->variables[nxt] << "] was " << right_weight[nxt] ;
+// 	  //std::cout << " [" << dec << "]";
+// 	  std::cout << " (tot=" << residual_space << ")";
+// #endif
+
+// 	  if(dec>=0) 
+// 	    residual_space /= left_weight[dec];
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " (/" << "lw[x" << dec << "/" << left_weight[dec] << "]=" << residual_space << ")";
+// #endif
+
+// 	  for(int i=0; i<num_right_branches[nxt]-1; ++i)
+// 	    residual_space /= right_weight[nxt];
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " (slf=" << residual_space << ")";
+// #endif
+
+// 	  right_weight[nxt] = (((double)(num_right_probes[nxt]) * right_weight[nxt]) + residual_space)/(double)(++num_right_probes[nxt]);
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " now " << right_weight[nxt] << std::endl;
+// #endif
+
+// 	  variable_weight[nxt] = avg_right_branches[nxt] * (left_weight[nxt] + right_weight[nxt]);
+	  
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " ===> total weight of " << solver->variables[nxt] << " = " << avg_right_branches[nxt] << " * (" << left_weight[nxt] << " + " << right_weight[nxt] << ") = " << variable_weight[nxt] << " \n";
+// #endif
+
+// 	}
+//       }
+
+// #ifdef _DEBUG_IMPACT
+//       else {
+// 	std::cout << "initial propagate!!\n";
+//       }
+// #endif
+
+//       left = 0;
+//     }
+
+//     virtual void notify_failure() {
+//       // propagation produced a wipe-out
+//       // - check if it was after a left or a right branch
+//       // - find out what was the decision/refutation
+
+//       int dec;
+//       //if(!solver->decisions.empty()) {
+//       if(left==1) {
+// 	// left branch
+// 	dec = solver->decisions.back().var.id();
+
+// #ifdef _DEBUG_IMPACT
+// 	std::cout << " notified of failure after a left branch on " << solver->variables[dec] << "\n";
+// 	std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << left_weight[dec] ;
+// #endif
+
+
+// 	left_weight[dec] = (((double)(num_left_probes[dec]) * left_weight[dec]))/(double)(++num_left_probes[dec]);
+
+// #ifdef _DEBUG_IMPACT
+// 	std::cout << " now " << left_weight[dec] << std::endl;
+// #endif
+
+// 	variable_weight[dec] = avg_right_branches[dec] * (left_weight[dec] + right_weight[dec]);
+	  
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_right_branches[dec] << " * (" << left_weight[dec] << " + " << right_weight[dec] << ") = " << variable_weight[dec] << " \n";
+// #endif
+
+//       } else if(left==0) {
+// 	// right branch
+// 	dec = solver->decisions.back(0).var.id();
+
+// #ifdef _DEBUG_IMPACT
+// 	double rwb = right_weight[dec];
+// 	double nbr = avg_right_branches[dec];
+// #endif
+
+// 	right_weight[dec] = (((double)(num_right_probes[dec]) * right_weight[dec]))/(double)(++num_right_probes[dec]);
+
+// 	++num_right_branches[dec];
+// 	avg_right_branches[dec] = (avg_right_branches[dec]*(double)(num_probes[dec]) + (double)(num_right_branches[dec]))/((double)(++num_probes[dec]));
+
+// #ifdef _DEBUG_IMPACT
+// 	std::cout << " notified of failure after the " << (num_right_branches[dec]) 
+// 		  << "th right branch on " << solver->variables[dec] << "\n";
+// 	std::cout << " ==> right-weight[" << solver->variables[dec] << "] was " << rwb
+// 		  << " now " << right_weight[dec] << std::endl;
+// 	std::cout << " ==> num branches on " << solver->variables[dec] << " was " << nbr
+// 		  << " now " << avg_right_branches[dec] << std::endl;
+// #endif
+
+// 	num_right_branches[dec] = 0;
+
+// 	variable_weight[dec] = avg_right_branches[dec] * (left_weight[dec] + right_weight[dec]);
+
+// #ifdef _DEBUG_IMPACT
+// 	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_right_branches[dec] << " * (" << left_weight[dec] << " + " << right_weight[dec] << ") = " << variable_weight[dec] << " \n";
+// #endif
+
+// 	//}
+//       } 
+
+// #ifdef _DEBUG_IMPACT
+//       else {
+// 	std::cout << "initial propagate!!\n";
+//       }
+// #endif
+
+//       left = 0;
+//     }
+
+ 
+
+
+
+
+//     virtual std::ostream& display(std::ostream& os, const bool all) const ;
+// // {
+      
+// //       int *all_variables = new int[variable_weight.size];
+// //       int *all_constraints = new int[constraint_weight.size];
+
+// //       for(unsigned int i=0; i<variable_weight.size; ++i) {
+// // 	all_variables[i] = i;
+// //       }
+
+// //       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+// // 	all_constraints[i] = i;
+// //       }
+
+// //       weight_sorting_array = variable_weight.stack_;
+// //       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+
+// //       weight_sorting_array = constraint_weight.stack_;
+// //       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
+
+// //       for(unsigned int i=0; i<variable_weight.size; ++i) {
+// // 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
+// //       }
+// //       os << std::endl;
+// //       for(unsigned int i=0; i<variable_weight.size; ++i) {
+// // 	os << std::setw(5) << variable_weight[i] << " ";
+// //       }
+// //       os << std::endl;
+
+// //      for(unsigned int i=0; i<constraint_weight.size; ++i) {
+// // 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
+// //       }
+// //       os << std::endl;
+// //       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+// // 	os << std::setw(5) << constraint_weight[i] << " ";
+// //       }
+// //       os << std::endl;
+
+// //     }    
+
+//   };
+
+
+
+
+
+  /*! \class ImpactManager
+    \brief ImpactManager Class
+
+    * Listener interface for Impact *
+    * NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
+  */
+#define INIT_IMPACT .001
+  class ImpactManager : public FailureListener, public SuccessListener, public DecisionListener, public VariableListener {
+
+  public:
+
+    Solver *solver;
+    double weight_unit;
+    int left;
+
+    Vector<double> variable_weight;
+    Vector<double> impact;
+    Vector<double> avg_branches;
+    Vector<int> num_probes;
+    Vector<int> tot_probes;
+    Vector<int> tot_fails;
+
+
+    ImpactManager(Solver *s) : solver(s) {// }
+
+      left = -1;
+      weight_unit = solver->parameters.activity_increment;
+      
+      // actual weight put on the variable (for xi)
+      variable_weight.initialise(solver->variables.size, solver->variables.size);
+
+      // average impact (stored as the ratio size_after/size_before) (for xi)
+      impact.initialise(solver->variables.size, solver->variables.size);
+
+      // total number of probes (on xi)
+      tot_probes.initialise(solver->variables.size, solver->variables.size); 
+
+      // number of probes since the last failure (on xi)
+      num_probes.initialise(solver->variables.size, solver->variables.size);
+
+      // total number of failures (on xi)
+      tot_fails.initialise(solver->variables.size, solver->variables.size); 
+      
+      // average number of branches explored (for xi)
+      avg_branches.initialise(solver->variables.size, solver->variables.size);
+
+
+      for(unsigned int i=0; i<solver->variables.size; ++i) {
+	avg_branches[i] = solver->variables[i].get_size();
+	impact[i] = INIT_IMPACT/(double)(solver->variables[i].get_degree());
+	num_probes[i] = 1;
+	tot_probes[i] = 0;
+	tot_fails[i] = 0;
+	variable_weight[i] = avg_branches[i] * impact[i] ;
+      }
+
+      solver->add((FailureListener*)this);
+      solver->add((SuccessListener*)this);
+      solver->add((DecisionListener*)this);
+      solver->add((VariableListener*)this);
+    }
+
+    virtual ~ImpactManager() {// }
+
+      solver->remove((VariableListener*)this);
+      solver->remove((SuccessListener*)this);
+      solver->remove((DecisionListener*)this);
+      solver->remove((FailureListener*)this);
+    }
+
+    double *get_variable_weight() { return variable_weight.stack_; }   
+    double **get_value_weight() { return NULL; }
+    double *get_bound_weight() { return NULL; }
+
+    virtual void check_consistency() {
+    }
+
+    virtual void notify_add_var() {
+#ifdef _DEBUG_IMPACT
+      std::cout << "NEW VAR!!\n";
+#endif
+    }
+
+    virtual void notify_change(const int id) {
+#ifdef _DEBUG_IMPACT
+      std::cout << solver->variables[id] << "'s domain implementation has changed!!\n";
+#endif
+    }
+
+    virtual void notify_decision() {
+      left = 1;
+    }
+  
+    virtual void notify_success() {
+      // propagation went without wipe-out
+      // - check if it was after a left or a right branch
+      // - find out what was the decision/refutation
+      int dec;
+      int id;
+      int i, n;
+      Variable x;
+      double residual_space;
+      int size;
+      if(left==1) {
+	i = solver->trail_.back(5), n=solver->saved_vars.size;
+	if(left) {
+	  // left branch
+	  dec = solver->decisions.back().var.id();
+
+#ifdef _DEBUG_IMPACT
+	  std::cout << " notified of success after the " << num_probes[dec] << "th left branch on " << solver->variables[dec] << "\n";
+#endif
+
+	  residual_space = 1.0;
+	  while(i<n) {	
+	    id = solver->saved_vars[i];
+	    x = solver->variables[id];
+	    
+#ifdef _DEBUG_IMPACT
+	    std::cout << " -> " << x << x.get_domain() << " lost " << x.get_reduction() << " values (";
+#endif
+	    
+	    size = x.get_size();
+	    residual_space *= (((double)size))/((double)(size+x.get_reduction()));
+	    
+#ifdef _DEBUG_IMPACT
+	    std::cout << residual_space << ")\n";
+#endif
+	    
+	    ++i;
+	  } 
+
+#ifdef _DEBUG_IMPACT
+	  std::cout << " ==> impact[" << solver->variables[dec] << "] was " << impact[dec] ;
+#endif
+	  
+	  impact[dec] = (((double)(tot_probes[dec]) * impact[dec]) + residual_space)/(double)(++tot_probes[dec]);
+	  
+#ifdef _DEBUG_IMPACT
+	  std::cout << " now " << impact[dec] << std::endl;
+#endif
+	  
+	  ++num_probes[dec];
+	  variable_weight[dec] = avg_branches[dec] * impact[dec];
+	  
+#ifdef _DEBUG_IMPACT
+	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
+#endif
+	  
+	}
+      }
+      
+      left = 0;
+    }
+      
+    virtual void notify_failure() {
+      // propagation produced a wipe-out
+      // - check if it was after a left or a right branch
+      // - find out what was the decision/refutation
+
+      int dec;
+      //if(!solver->decisions.empty()) {
+      if(left==1) {
+	// left branch
+	dec = solver->decisions.back().var.id();
+
+#ifdef _DEBUG_IMPACT
+	std::cout << " notified of failure after the " << num_probes[dec] << " left branch on " << solver->variables[dec] << "\n";
+	std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << impact[dec] ;
+#endif
+
+	impact[dec] = (((double)(tot_probes[dec]) * impact[dec]))/(double)(++tot_probes[dec]);
+
+#ifdef _DEBUG_IMPACT
+	std::cout << " now " << impact[dec] << std::endl;
+#endif
+
+	variable_weight[dec] = avg_branches[dec] * impact[dec] ;
+	++num_probes[dec];
+
+#ifdef _DEBUG_IMPACT
+	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
+#endif
+
+      } else if(left==0) {
+	// right branch
+	dec = solver->decisions.back(0).var.id();
+
+#ifdef _DEBUG_IMPACT
+	double nbr = avg_branches[dec];
+#endif
+
+	avg_branches[dec] = (avg_branches[dec]*(double)(tot_fails[dec]) + (double)(num_probes[dec]))/((double)(++tot_fails[dec]));
+
+#ifdef _DEBUG_IMPACT
+	std::cout << " notified of failure after a right branch on " << solver->variables[dec] << "\n";
+	std::cout << " ==> num branches on " << solver->variables[dec] << " was " << nbr
+		  << " now " << avg_branches[dec] << std::endl;
+#endif
+
+	variable_weight[dec] = avg_branches[dec] * impact[dec];
+
+#ifdef _DEBUG_IMPACT
+	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
+#endif
+
+	num_probes[dec] = 0;
+      } 
+
+      left = 0;
+    }
+    
+    virtual std::ostream& display(std::ostream& os, const bool all) const ;
+    
   };
 
 
@@ -913,6 +1467,15 @@ namespace Mistral {
       if(criterion < x.criterion) return true; 
       else if(x.criterion < criterion) return false;
       return (id > x.id);
+    }
+
+    inline bool operator>( const Identifiable<VarComparator>& x ) const { 
+      if(criterion < x.criterion) return false; 
+      else if(x.criterion < criterion) return true;
+      return (id < x.id);
+    }
+    inline bool operator==( const Identifiable<VarComparator>& x ) const { 
+      return(criterion == x.criterion && id == x.id);
     }
     inline void operator=( const Identifiable<VarComparator>& x ) { criterion = x.criterion; id = x.id; }
     inline void operator=( const Variable x ) { criterion = x; id = x.id(); }
@@ -1307,6 +1870,8 @@ namespace Mistral {
     //@{
     inline double value() { return (double)dom_; } 
     inline bool operator<( const MinDomain& x ) const { return dom_ < x.dom_; }
+    inline bool operator>( const MinDomain& x ) const { return dom_ > x.dom_; }
+    inline bool operator==( const MinDomain& x ) const { return dom_ == x.dom_; }
 
     // inline MinDomain& operator*( const int x ) const { MinDomain d; d.dom_=(dom_ * x); return d; }
     // inline MinDomain& operator+( const int x ) const { MinDomain d; d.dom_=(dom_ + x); return d; }
@@ -1372,6 +1937,8 @@ namespace Mistral {
     //@{
     inline double value() { return (double)min_; } 
     inline bool operator<( const MinMin& x ) const { return min_ < x.min_; }
+    inline bool operator>( const MinMin& x ) const { return min_ > x.min_; }
+    inline bool operator==( const MinMin& x ) const { return min_ == x.min_; }
 
     inline MinMin& operator*=( const int x ) { min_ *= x; return *this; }
     inline MinMin& operator+=( const int x ) { min_ += x; return *this; }
@@ -1412,7 +1979,7 @@ namespace Mistral {
 
       /**@name Constructors*/
       //@{
- 	  MaxMax() {max_ = SMALL_VALUE;}
+      MaxMax() {max_ = SMALL_VALUE;}
       void initialise(const double* _w) {max_ = SMALL_VALUE;}
       //@}
 
@@ -1425,6 +1992,8 @@ namespace Mistral {
       //@{
       inline double value() { return (double)max_; }
       inline bool operator<( const MaxMax& x ) const { return max_ > x.max_; }
+      inline bool operator>( const MaxMax& x ) const { return max_ < x.max_; }
+      inline bool operator==( const MaxMax& x ) const { return max_ == x.max_; }
 
       inline MaxMax& operator*=( const int x ) { max_ *= x; return *this; }
       inline MaxMax& operator+=( const int x ) { max_ += x; return *this; }
@@ -1479,6 +2048,8 @@ namespace Mistral {
     //@{
     inline double value() { return (double)reg_; } 
     inline bool operator<( const MaxRegret& x ) const { return reg_ > x.reg_; }
+    inline bool operator>( const MaxRegret& x ) const { return reg_ < x.reg_; }
+    inline bool operator==( const MaxRegret& x ) const { return reg_ == x.reg_; }
 
     inline MaxRegret& operator*=( const int x ) { reg_ *= x; return *this; }
     inline MaxRegret& operator+=( const int x ) { reg_ += x; return *this; }
@@ -1516,7 +2087,7 @@ namespace Mistral {
   /*! \class Anti
     \brief  Class Anti
 
-    Order two variables by their domain sizes
+    Make the opposite decision of the parameter comparator
   */
   template<class VarComparator>
   class Anti 
@@ -1537,7 +2108,9 @@ namespace Mistral {
     /**@name Utils*/
     //@{
     inline double value() { return 1.0/(double)(crit.value()); } 
-    inline bool operator<( const Anti<VarComparator>& x ) const { return !(crit < x.crit); }
+    inline bool operator<( const Anti<VarComparator>& x ) const { return crit > x.crit; }
+    inline bool operator>( const Anti<VarComparator>& x ) const { return crit < x.crit; }
+    inline bool operator==( const Anti<VarComparator>& x ) const { return crit == x.crit; }
 
     inline Anti<VarComparator>& operator*=( const int x ) { crit *= x; return *this; }
     inline Anti<VarComparator>& operator+=( const int x ) { crit += x; return *this; }
@@ -1579,6 +2152,152 @@ namespace Mistral {
 
 
 
+  /*! \class LexCombination
+    \brief  Class LexCombination
+
+    Combines two comparators lexicographically
+  */
+  template<class ComparatorA, class ComparatorB>
+  class LexCombination 
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    LexCombination() : critA(), critB() {}
+    void initialise(const double* _w) {critA.initialise(_w); critB.initialise(_w);}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    ComparatorA critA;
+    ComparatorB critB;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return critA.value() + critB.value()*0.00001; } 
+    inline bool operator<( const LexCombination<ComparatorA, ComparatorB>& x ) const { return (critA < x.critA || (critA == x.critA && critB < x.critB)); }
+    inline bool operator>( const LexCombination<ComparatorA, ComparatorB>& x ) const { return (critA > x.critA || (critA == x.critA && critB > x.critB)); }
+    inline bool operator==( const LexCombination<ComparatorA, ComparatorB>& x ) const { return (critA == x.critA && critB == x.critB); }
+
+    inline LexCombination<ComparatorA, ComparatorB>& operator*=( const int x ) { critA *= x; return *this; }
+    inline LexCombination<ComparatorA, ComparatorB>& operator+=( const int x ) { critA += x; return *this; }
+    inline LexCombination<ComparatorA, ComparatorB>& operator-=( const int x ) { critA -= x; return *this; }
+    inline LexCombination<ComparatorA, ComparatorB>& operator/=( const int x ) { critA /= x; return *this; }
+
+    inline LexCombination<ComparatorA, ComparatorB>& operator*=( const LexCombination<ComparatorA, ComparatorB>& x ) { critA *= x.critA; critB *= x.critB; return *this; }
+    inline LexCombination<ComparatorA, ComparatorB>& operator+=( const LexCombination<ComparatorA, ComparatorB>& x ) { critA += x.critA; critB += x.critB; return *this; }
+    inline LexCombination<ComparatorA, ComparatorB>& operator-=( const LexCombination<ComparatorA, ComparatorB>& x ) { critA -= x.critA; critB -= x.critB; return *this; }
+    inline LexCombination<ComparatorA, ComparatorB>& operator/=( const LexCombination<ComparatorA, ComparatorB>& x ) { critA /= x.critA; critB /= x.critB; return *this; }
+
+    inline void operator=( const LexCombination<ComparatorA, ComparatorB>& x ) { critA = x.critA; critB = x.critB; }
+    inline void operator=( const Variable x ) { critA = x; critB = x; }
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "<";
+      critA.display_criterion(os);
+      os << "->";
+      critB.display_criterion(os);
+      os << ">";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      //os <<  ; //<< crit ;
+      critA.display(os);
+      os << "->";
+      critB.display(os);
+      return os;
+    }
+  };
+
+  template<class ComparatorA, class ComparatorB>
+  std::ostream& operator<<(std::ostream& os, LexCombination<ComparatorA, ComparatorB>& x) {
+    return x.display(os);
+  }
+
+  template<class ComparatorA, class ComparatorB>
+  std::ostream& operator<<(std::ostream& os, LexCombination<ComparatorA, ComparatorB>* x) {
+    return x.display(os);
+  }
+
+
+
+  // /*! \class DivCombination
+  //   \brief  Class DivCombination
+
+  //   Combines two comparators by dividing the former by the later
+  // */
+  // template<class ComparatorA, class ComparatorB>
+  // class DivCombination 
+  // {
+  // public: 
+
+  //   /**@name Constructors*/
+  //   //@{
+  //   DivCombination() : crit() {}
+  //   void initialise(const double* _w) {critA.initialise(_w); critB.initialise(_w);}
+  //   //@}
+
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   ComparatorA critA;
+  //   ComparatorB critB;
+  //   //@}  
+
+  //   /**@name Utils*/
+  //   //@{
+  //   inline double value() { return critA.value() / critB.value(); } 
+  //   inline bool operator<( const LexCombination<ComparatorA, ComparatorB>& x ) const { return critA * x
+  //   inline bool operator>( const LexCombination<ComparatorA, ComparatorB>& x ) const { return (critA > x.critA || (critA == x.critA && critB > x.critB)); }
+  //   inline bool operator==( const LexCombination<ComparatorA, ComparatorB>& x ) const { return (critA == x.critA && critB == x.critB); }
+
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator*=( const int x ) { crit *= x; return *this; }
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator+=( const int x ) { crit += x; return *this; }
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator-=( const int x ) { crit -= x; return *this; }
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator/=( const int x ) { crit /= x; return *this; }
+
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator*=( const LexCombination<ComparatorA, ComparatorB>& x ) { crit *= x.crit; return *this; }
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator+=( const LexCombination<ComparatorA, ComparatorB>& x ) { crit += x.crit; return *this; }
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator-=( const LexCombination<ComparatorA, ComparatorB>& x ) { crit -= x.crit; return *this; }
+  //   inline LexCombination<ComparatorA, ComparatorB>& operator/=( const LexCombination<ComparatorA, ComparatorB>& x ) { crit /= x.crit; return *this; }
+
+  //   inline void operator=( const LexCombination<ComparatorA, ComparatorB>& x ) { crit = x.crit; }
+  //   inline void operator=( const Variable x ) { crit = x; }
+  //   //@}  
+
+  //   std::ostream& display_criterion(std::ostream& os) const {
+  //     os << "<";
+  //     critA.display_criterion(os);
+  //     os << "->"
+  //     critB.display_criterion(os);
+  //     os << ">";
+  //     return os;
+  //   }
+
+  //   std::ostream& display(std::ostream& os) const {
+  //     //os <<  ; //<< crit ;
+  //     critA.display(os);
+  //     os << "->"
+  //     critB.display(os);
+  //     return os;
+  //   }
+  // };
+
+  // template<class ComparatorA, ComparatorB>
+  // std::ostream& operator<<(std::ostream& os, LexCombination<ComparatorA, ComparatorB>& x) {
+  //   return x.display(os);
+  // }
+
+  // template<class ComparatorA, ComparatorB>
+  // std::ostream& operator<<(std::ostream& os, LexCombination<ComparatorA, ComparatorB>* x) {
+  //   return x.display(os);
+  // }
+
+
+
   /*! \class MaxDegree
     \brief  Class MaxDegree
 
@@ -1603,6 +2322,8 @@ namespace Mistral {
     //@{
     inline double value() { return (double)deg_; } 
     inline bool operator<( const MaxDegree& x ) const { return deg_ > x.deg_; }
+    inline bool operator>( const MaxDegree& x ) const { return deg_ < x.deg_; }
+    inline bool operator==( const MaxDegree& x ) const { return deg_ == x.deg_; }
 
     // inline MaxDegree& operator*( const int x ) const { MaxDegree d; d.deg_=(deg_ * x); return d; }
     // inline MaxDegree& operator+( const int x ) const { MaxDegree d; d.deg_=(deg_ + x); return d; }
@@ -1645,63 +2366,65 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, MaxDegree* x);
 
 
-  /*! \class MinDomainMaxDegree
-    \brief  Class MinDomainMaxDegree
+  // /*! \class MinDomainMaxDegree
+  //   \brief  Class MinDomainMaxDegree
 
-    Order two variables by their domain sizes, with ties broken by maximum degree
-  */
-  class MinDomainMaxDegree 
-  {
-  public: 
+  //   Order two variables by their domain sizes, with ties broken by maximum degree
+  // */
+  // class MinDomainMaxDegree 
+  // {
+  // public: 
 
-    /**@name Constructors*/
-    //@{
-    MinDomainMaxDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
-    void initialise(const double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
-    //@}
+  //   /**@name Constructors*/
+  //   //@{
+  //   MinDomainMaxDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
+  //   void initialise(const double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
+  //   //@}
 
-    /**@name Parameters*/
-    //@{ 
-    int dom_;
-    int deg_;
-    //@}  
+  //   /**@name Parameters*/
+  //   //@{ 
+  //   int dom_;
+  //   int deg_;
+  //   //@}  
 
-    /**@name Utils*/
-    //@{
-    inline double value() { return (deg_ ? (double)dom_ : (double)dom_ + 1.0/(double)deg_); } 
-    inline bool operator<( const MinDomainMaxDegree& x ) const { return dom_ < x.dom_ || (dom_ == x.dom_ && x.deg_ < deg_); }
-
-
-    inline MinDomainMaxDegree& operator*=( const int x ) { dom_ *= x; return *this; }
-    inline MinDomainMaxDegree& operator+=( const int x ) { dom_ += x * deg_; return *this; }
-    inline MinDomainMaxDegree& operator-=( const int x ) { dom_ -= x * deg_; return *this; }
-    inline MinDomainMaxDegree& operator/=( const int x ) { deg_ *= x; return *this; }
+  //   /**@name Utils*/
+  //   //@{
+  //   inline double value() { return (deg_ ? (double)dom_ : (double)dom_ + 1.0/(double)deg_); } 
+  //   inline bool operator<( const MinDomainMaxDegree& x ) const { return dom_ < x.dom_ || (dom_ == x.dom_ && x.deg_ < deg_); }
+  //   inline bool operator<( const MinDomainMaxDegree& x ) const { return dom_ < x.dom_ || (dom_ == x.dom_ && x.deg_ < deg_); }
+  //   inline bool operator<( const MinDomainMaxDegree& x ) const { return dom_ < x.dom_ || (dom_ == x.dom_ && x.deg_ < deg_); }
 
 
-    inline MinDomainMaxDegree& operator*=( const MinDomainMaxDegree& x ) { dom_ *= x.dom_; deg_ /= x.deg_; return *this; }
-    inline MinDomainMaxDegree& operator+=( const MinDomainMaxDegree& x ) { dom_ += x.dom_; deg_ -= x.deg_; return *this; }
-    inline MinDomainMaxDegree& operator-=( const MinDomainMaxDegree& x ) { dom_ -= x.dom_; deg_ += x.deg_; return *this; }
-    inline MinDomainMaxDegree& operator/=( const MinDomainMaxDegree& x ) { dom_ *= x.dom_; deg_ /= x.deg_; return *this; }
-
-    inline void operator=( const MinDomainMaxDegree& x ) { dom_ = x.dom_; deg_ = x.deg_; }
-    inline void operator=( const Variable x ) { dom_ = x.get_size(); deg_ = x.get_degree(); }
-    //@}  
+  //   inline MinDomainMaxDegree& operator*=( const int x ) { dom_ *= x; return *this; }
+  //   inline MinDomainMaxDegree& operator+=( const int x ) { dom_ += x * deg_; return *this; }
+  //   inline MinDomainMaxDegree& operator-=( const int x ) { dom_ -= x * deg_; return *this; }
+  //   inline MinDomainMaxDegree& operator/=( const int x ) { deg_ *= x; return *this; }
 
 
-    std::ostream& display_criterion(std::ostream& os) const {
-      os << "with minimum domain size (ties broken with max degree)";
-      return os;
-    }
+  //   inline MinDomainMaxDegree& operator*=( const MinDomainMaxDegree& x ) { dom_ *= x.dom_; deg_ /= x.deg_; return *this; }
+  //   inline MinDomainMaxDegree& operator+=( const MinDomainMaxDegree& x ) { dom_ += x.dom_; deg_ -= x.deg_; return *this; }
+  //   inline MinDomainMaxDegree& operator-=( const MinDomainMaxDegree& x ) { dom_ -= x.dom_; deg_ += x.deg_; return *this; }
+  //   inline MinDomainMaxDegree& operator/=( const MinDomainMaxDegree& x ) { dom_ *= x.dom_; deg_ /= x.deg_; return *this; }
 
-    std::ostream& display(std::ostream& os) const {
-      os << dom_ << "+1/" << deg_;
-      return os;
-    }
-  };
+  //   inline void operator=( const MinDomainMaxDegree& x ) { dom_ = x.dom_; deg_ = x.deg_; }
+  //   inline void operator=( const Variable x ) { dom_ = x.get_size(); deg_ = x.get_degree(); }
+  //   //@}  
 
-  std::ostream& operator<<(std::ostream& os, MinDomainMaxDegree& x);
 
-  std::ostream& operator<<(std::ostream& os, MinDomainMaxDegree* x);
+  //   std::ostream& display_criterion(std::ostream& os) const {
+  //     os << "with minimum domain size (ties broken with max degree)";
+  //     return os;
+  //   }
+
+  //   std::ostream& display(std::ostream& os) const {
+  //     os << dom_ << "+1/" << deg_;
+  //     return os;
+  //   }
+  // };
+
+  // std::ostream& operator<<(std::ostream& os, MinDomainMaxDegree& x);
+
+  // std::ostream& operator<<(std::ostream& os, MinDomainMaxDegree* x);
 
 
   /*! \class MinDomainOverDegree
@@ -1729,6 +2452,8 @@ namespace Mistral {
     //@{
     inline double value() { return (deg_ ? (double)dom_/(double)deg_ : (double)INFTY); } 
     inline bool operator<( const MinDomainOverDegree& x ) const { return dom_*x.deg_ < x.dom_*deg_; }
+    inline bool operator>( const MinDomainOverDegree& x ) const { return dom_*x.deg_ > x.dom_*deg_; }
+    inline bool operator==( const MinDomainOverDegree& x ) const { return dom_*x.deg_ == x.dom_*deg_; }
 
     // inline MinDomainOverDegree& operator*( const MinDomainOverDegree& x ) const { MinDomainOverDegree d; d.dom_=(dom_ * x.dom_); d.deg_=(deg_ * x.deg_); return d; }
     // inline MinDomainOverDegree& operator+( const MinDomainOverDegree& x ) const { MinDomainOverDegree d; d.dom_=(dom_ + x.dom_); d.deg_=(deg_ + x.deg_); return d; }
@@ -1810,9 +2535,9 @@ namespace Mistral {
     /**@name Utils*/
     //@{
     inline double value() { return (wei_ ? (double)dom_/wei_ : (double)INFTY); } 
-    inline bool operator<( const MinDomainOverWeight& x ) const { 
-      return dom_*x.wei_ < x.dom_*wei_; 
-    }
+    inline bool operator<( const MinDomainOverWeight& x ) const { return dom_*x.wei_ < x.dom_*wei_; }
+    inline bool operator>( const MinDomainOverWeight& x ) const { return dom_*x.wei_ > x.dom_*wei_; }
+    inline bool operator==( const MinDomainOverWeight& x ) const { return dom_*x.wei_ == x.dom_*wei_; }
 
 
     // inline MinDomainOverWeight& operator*( const MinDomainOverWeight& x ) const { MinDomainOverWeight d; d.dom_=(dom_ * x.dom_); d.wei_=(wei_ * x.wei_); return d; }
@@ -1870,6 +2595,68 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, MinDomainOverWeight* x);
 
 
+  /*! \class MinDomainTimesWeight
+    \brief  Class MinDomainTimesWeight
+
+    Order two variables by the ratio of their domain sizes and weight
+  */
+  class MinDomainTimesWeight
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinDomainTimesWeight() {sco_ = LARGE_VALUE; }
+    void initialise(double* _w=NULL) {sco_ = LARGE_VALUE; weight = _w;}
+    //MinDomainTimesWeight(void *w) : weight((double*)w) {dom_ = LARGE_VALUE; wei_ = 0;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    double *weight;
+    double sco_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return sco_; } 
+    inline bool operator<( const MinDomainTimesWeight& x ) const { return sco_ < x.sco_; }
+    inline bool operator>( const MinDomainTimesWeight& x ) const { return sco_ > x.sco_; }
+    inline bool operator==( const MinDomainTimesWeight& x ) const { return sco_ == x.sco_; }
+
+
+    inline MinDomainTimesWeight& operator*=( const int x ) { sco_ *= x; return *this; }
+    inline MinDomainTimesWeight& operator+=( const int x ) { sco_ += x; return *this; }
+    inline MinDomainTimesWeight& operator-=( const int x ) { sco_ -= x; return *this; }
+    inline MinDomainTimesWeight& operator/=( const int x ) { sco_ /= x; return *this; }
+
+
+    inline MinDomainTimesWeight& operator*=( const MinDomainTimesWeight& x ) { sco_ *= x.sco_; return *this; }
+    inline MinDomainTimesWeight& operator+=( const MinDomainTimesWeight& x ) { sco_ += x.sco_; return *this; }
+    inline MinDomainTimesWeight& operator-=( const MinDomainTimesWeight& x ) { sco_ -= x.sco_; return *this; }
+    inline MinDomainTimesWeight& operator/=( const MinDomainTimesWeight& x ) { sco_ /= x.sco_; return *this; }
+
+
+    inline void operator=( const MinDomainTimesWeight& x ) { sco_ = x.sco_; }
+    inline void operator=( const Variable x ) { sco_ = (double)(x.get_size()) * weight[x.id()]; }
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "with minimum (domain size * weight)";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << sco_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MinDomainTimesWeight& x);
+
+  std::ostream& operator<<(std::ostream& os, MinDomainTimesWeight* x);
+
+
   /*! \class MinNeighborDomainOverNeighborWeight
     \brief  Class MinNeighborDomainOverNeighborWeight
 
@@ -1898,6 +2685,8 @@ namespace Mistral {
     //@{
     inline double value() { return (wei_ ? (double)dom_/wei_ : (double)INFTY); } 
     inline bool operator<( const MinNeighborDomainOverNeighborWeight& x ) const { return dom_*x.wei_ < x.dom_*wei_; }
+    inline bool operator>( const MinNeighborDomainOverNeighborWeight& x ) const { return dom_*x.wei_ > x.dom_*wei_; }
+    inline bool operator==( const MinNeighborDomainOverNeighborWeight& x ) const { return dom_*x.wei_ == x.dom_*wei_; }
     inline void operator=( const MinNeighborDomainOverNeighborWeight& x ) { dom_ = x.dom_; wei_ = x.wei_; }
     inline void operator=( const Variable x ) { 
       int idx = x.id();
@@ -1960,6 +2749,8 @@ namespace Mistral {
     //@{
     inline double value() { return 1; } 
     inline bool operator<( const SelfPlusAverage<VarComparator> & x ) const { return crit < x.crit; }
+    inline bool operator>( const SelfPlusAverage<VarComparator> & x ) const { return crit > x.crit; }
+    inline bool operator==( const SelfPlusAverage<VarComparator> & x ) const { return crit == x.crit; }
     inline void operator=( const SelfPlusAverage<VarComparator>& x ) { crit = x.crit; }
     inline void operator=( const Variable x ) { 
 
@@ -2069,6 +2860,8 @@ namespace Mistral {
     //@{
     inline double value() { return (wei_ ? (double)dom_/wei_ : (double)INFTY); } 
     inline bool operator<( const MinNeighborDomainOverWeight& x ) const { return dom_*x.wei_ < x.dom_*wei_; }
+    inline bool operator>( const MinNeighborDomainOverWeight& x ) const { return dom_*x.wei_ > x.dom_*wei_; }
+    inline bool operator==( const MinNeighborDomainOverWeight& x ) const { return dom_*x.wei_ == x.dom_*wei_; }
     inline void operator=( const MinNeighborDomainOverWeight& x ) { dom_ = x.dom_; wei_ = x.wei_; }
     inline void operator=( const Variable x ) { 
       int idx = x.id();
@@ -2123,6 +2916,8 @@ namespace Mistral {
     //@{
     inline double value() { return wei_ ; } 
     inline bool operator<( const MaxWeight& x ) const { return x.wei_ < wei_; }
+    inline bool operator>( const MaxWeight& x ) const { return x.wei_ > wei_; }
+    inline bool operator==( const MaxWeight& x ) const { return x.wei_ == wei_; }
     inline void operator=( const MaxWeight& x ) { wei_ = x.wei_; }
     inline void operator=( const Variable x ) { wei_ = weight[x.id()]; }
     //@}  
@@ -2142,6 +2937,56 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, MaxWeight& x);
 
   std::ostream& operator<<(std::ostream& os, MaxWeight* x);
+
+
+
+  /*! \class MinWeight
+    \brief  Class MinWeight
+
+    Order two variables by their weights
+  */
+  class MinWeight
+  {
+  public: 
+
+    /**@name Constructors*/
+    //@{
+    MinWeight() {wei_ = 0;}
+    void initialise(double* _w=NULL) {wei_ = 0; weight = _w;}
+    //MinWeight(int *w) : weight(w) {wei_ = 0;}
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+    double *weight;
+    double wei_;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return wei_ ; } 
+    inline bool operator<( const MinWeight& x ) const { return x.wei_ > wei_; }
+    inline bool operator>( const MinWeight& x ) const { return x.wei_ < wei_; }
+    inline bool operator==( const MinWeight& x ) const { return x.wei_ == wei_; }
+    inline void operator=( const MinWeight& x ) { wei_ = x.wei_; }
+    inline void operator=( const Variable x ) { wei_ = weight[x.id()]; }
+    //@}  
+
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << " with maximum weight";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << wei_;
+      return os;
+    }
+  };
+
+  std::ostream& operator<<(std::ostream& os, MinWeight& x);
+
+  std::ostream& operator<<(std::ostream& os, MinWeight* x);
 
 
   /**********************************************
@@ -2944,10 +3789,31 @@ namespace Mistral {
   };
 
   template < int R = 1 >
-  class ABS : public GenericDVO< MaxWeight, R, PruningCountManager > {
+  class DWDEG : public GenericDVO< MinDomainOverWeight, R, FailureCountManager > {
   public:
-    ABS() : GenericDVO< MaxWeight, R, PruningCountManager >() {}
-    ABS(Solver *s) : GenericDVO< MaxWeight, R, PruningCountManager >(s) {}
+    DWDEG() : GenericDVO< MinDomainOverWeight, R, FailureCountManager >() {}
+    DWDEG(Solver *s) : GenericDVO< MinDomainOverWeight, R, FailureCountManager >(s) {}
+  };
+
+  template < int R = 1 >
+  class ABS : public GenericDVO< MinDomainOverWeight, R, PruningCountManager > {
+  public:
+    ABS() : GenericDVO< MinDomainOverWeight, R, PruningCountManager >() {}
+    ABS(Solver *s) : GenericDVO< MinDomainOverWeight, R, PruningCountManager >(s) {}
+  };
+
+  template < int R = 1 >
+  class Impact : public GenericDVO< MinWeight, R, ImpactManager > {
+  public:
+    Impact() : GenericDVO< MinWeight, R, ImpactManager >() {}
+    Impact(Solver *s) : GenericDVO< MinWeight, R, ImpactManager >(s) {}
+  };
+
+  template < int R = 1 >
+  class IBS : public GenericDVO< MinDomainTimesWeight, R, ImpactManager > {
+  public:
+    IBS() : GenericDVO< MinDomainTimesWeight, R, ImpactManager >() {}
+    IBS(Solver *s) : GenericDVO< MinDomainTimesWeight, R, ImpactManager >(s) {}
   };
 
 

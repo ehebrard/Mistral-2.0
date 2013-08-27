@@ -743,6 +743,7 @@ namespace Mistral {
 
     /*!@name Backtrack method*/
     //@{    
+    int get_reduction() const;
     void restore();
     void save();
     //@}

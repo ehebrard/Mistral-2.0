@@ -1570,20 +1570,22 @@ Mistral::Outcome Mistral::Solver::search_maximize(Variable X) {
 
 Mistral::Outcome Mistral::Solver::depth_first_search(BranchingHeuristic *heu, 
 						     RestartPolicy *pol,
-						     Goal *goal) {
-  return depth_first_search(variables, heu, pol, goal);
+						     Goal *goal,
+						     bool _restore_) {
+  return depth_first_search(variables, heu, pol, goal, _restore_);
 }
 
 Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq, 
 						     BranchingHeuristic *heu, 
 						     RestartPolicy *pol,
-						     Goal *goal) 
+						     Goal *goal,
+						     bool _restore_) 
 {
   //std::cout << "\nINIT LEVEL = " << level << std::endl;
   initialise_search(seq, heu, pol, goal);
 
   statistics.start_time = get_run_time();
-  return restart_search();
+  return restart_search(0, _restore_);
 }
  
 
@@ -1861,7 +1863,7 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
       }
     }
 
-    if(_restore_) restore(root);
+    if(_restore_ || satisfiability == UNKNOWN) restore(root);
 
     forget();
 
@@ -4863,7 +4865,7 @@ Mistral::Outcome Mistral::Solver::branch_right() {
     if(_DEBUG_SEARCH) {
       std::cout << parameters.prefix_comment;
       for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-      std::cout << "limit fine: " << statistics.num_failures << " < " << parameters.restart_limit << std::endl;
+      //std::cout << "limit fine: " << statistics.num_failures << " < " << parameters.restart_limit << std::endl;
     }
 #endif
 
@@ -6029,15 +6031,133 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const i
 Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching, const int randomness) {
 
   BranchingHeuristic *heu = NULL;
-  if(var_ordering == "dom/wdeg") {
+  if(var_ordering == "wdeg" || var_ordering == "WDEG" || var_ordering == "Weighted Degree" || var_ordering == "Weighted Degree") {
     if(randomness < 2) {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, AnyValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else if(randomness == 2) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else if(randomness == 3) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< RandomMinMax > > (this); 
+      } 
+    }
+  } else if(var_ordering == "dom/wdeg" || var_ordering == "dwdeg" || var_ordering == "DWDEG" || var_ordering == "domain over weighted degree" || var_ordering == "Domain Over Weighted Degree" || var_ordering == "DomainOverWDegree") {
+    if(randomness < 2) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this); 
@@ -6055,13 +6175,17 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, Guided< RandomMinMax > > (this); 
       } 
     } else if(randomness == 2) {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinWeightValue > (this); 
@@ -6079,13 +6203,17 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, Guided< RandomMinMax > > (this); 
       } 
     } else if(randomness == 3) {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinWeightValue > (this); 
@@ -6103,13 +6231,17 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, Guided< RandomMinMax > > (this); 
       } 
     } else {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinWeightValue > (this); 
@@ -6127,15 +6259,245 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided< RandomMinMax > > (this); 
       } 
     }
-  } else if(var_ordering == "dom/activity" || var_ordering == "dom/pruning") {
+  } else if(var_ordering == "Impact" || var_ordering == "impact") {
     if(randomness < 2) {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else if(randomness == 2) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else if(randomness == 3) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    }
+  } else if(var_ordering == "IBS" || var_ordering == "impact based search" || var_ordering == "Impact Based Search") {
+    if(randomness < 2) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else if(randomness == 2) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else if(randomness == 3) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    } else {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, MinValue > (this); 
+      } else if(branching == "maxval") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, MaxValue > (this); 
+      } else if(branching == "halfsplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, HalfSplit > (this); 
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, RandomMinMax > (this); 
+      } else if(branching == "minweight") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, MinWeightValue > (this); 
+      } else if(branching == "guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "minval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
+      } else if(branching == "maxval+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MaxValue > > (this); 
+      } else if(branching == "minweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MinWeightValue > > (this); 
+      } else if(branching == "maxweight+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MaxWeightValue > > (this); 
+      } else if(branching == "random+guided") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< RandomMinMax > > (this); 
+      } 
+    }
+  } else if(var_ordering == "dom/activity" || var_ordering == "dom/pruning" || var_ordering == "ABS"  || var_ordering == "activity based search" || var_ordering == "Activity Based Search") {
+    if(randomness < 2) {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinWeightValue > (this); 
@@ -6153,13 +6515,17 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< RandomMinMax > > (this); 
       } 
     } else if(randomness == 2) {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinWeightValue > (this); 
@@ -6177,13 +6543,17 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< RandomMinMax > > (this); 
       } 
     } else if(randomness == 3) {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinWeightValue > (this); 
@@ -6201,13 +6571,17 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< RandomMinMax > > (this); 
       } 
     } else {
-      if(branching == "minval") {
+      if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinValue > (this); 
+      } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinValue > (this); 
       } else if(branching == "maxval") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MaxValue > (this); 
       } else if(branching == "halfsplit") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, HalfSplit > (this); 
-      } else if(branching == "randminmax") {
+      } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, RandomSplit > (this); 
+      } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinWeightValue > (this); 
@@ -6225,14 +6599,18 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< RandomMinMax > > (this); 
       } 
     }
-  } else if(var_ordering == "neighbor") {
-    if(branching == "minval") {
+  } else if(var_ordering == "neighbor" || var_ordering == "Neighbor" || var_ordering == "neighbour" || var_ordering == "Neighbour") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinValue > (this);
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinValue > (this);
     } else if(branching == "maxval") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MaxValue > (this);
     } else if(branching == "halfsplit") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, HalfSplit > (this);
-    } else if(branching == "randminmax") {
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, RandomSplit > (this);
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, RandomMinMax > (this);
     } else if(branching == "minweight") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this);
@@ -6249,14 +6627,18 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "random+guided") {
       heu = new GenericHeuristic < GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, Guided< RandomMinMax > > (this); 
     } 
-  } else if(var_ordering == "mindomain") {
-    if(branching == "minval") {
+  } else if(var_ordering == "mindomain" || var_ordering == "MinDomain") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, MinValue > (this);
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, MinValue > (this);
     } else if(branching == "maxval") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, MaxValue > (this);
     } else if(branching == "halfsplit") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, HalfSplit > (this);
-    } else if(branching == "randminmax") {
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomSplit > (this);
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
     } else if(branching == "guided") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided< MinValue > > (this);
@@ -6271,14 +6653,70 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "random+guided") {
       heu = new GenericHeuristic < GenericDVO< MinDomain >, Guided< RandomMinMax > > (this); 
     } 
-  } else if(var_ordering == "maxdegree") {
-    if(branching == "minval") {
+  } else if(var_ordering == "mindom->maxdeg" || var_ordering == "MinDomainMaxDegree" || var_ordering == "MinDomnMaxDeg") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, MinValue > (this);
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, MinValue > (this);
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, MaxValue > (this);
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, HalfSplit > (this);
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, RandomSplit > (this);
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, RandomMinMax > (this);
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MinValue > > (this);
+    } else if(branching == "minval+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MinValue > > (this); 
+    } else if(branching == "maxval+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MaxValue > > (this); 
+    } else if(branching == "minweight+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MinWeightValue > > (this); 
+    } else if(branching == "maxweight+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MaxWeightValue > > (this); 
+    } else if(branching == "random+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< RandomMinMax > > (this); 
+    } 
+  } else if(var_ordering == "mindom->minmin" || var_ordering == "MinDomainMinMin" || var_ordering == "MinDomMinMin" || var_ordering == "MinDomainMinVal" || var_ordering == "MinDomnMinVal") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, MinValue > (this);
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, MinValue > (this);
+    } else if(branching == "maxval") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, MaxValue > (this);
+    } else if(branching == "halfsplit") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, HalfSplit > (this);
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, RandomSplit > (this);
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, RandomMinMax > (this);
+    } else if(branching == "guided") {
+      heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MinValue > > (this);
+    } else if(branching == "minval+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MinValue > > (this); 
+    } else if(branching == "maxval+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MaxValue > > (this); 
+    } else if(branching == "minweight+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MinWeightValue > > (this); 
+    } else if(branching == "maxweight+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MaxWeightValue > > (this); 
+    } else if(branching == "random+guided") {
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< RandomMinMax > > (this); 
+    } 
+  } else if(var_ordering == "maxdegree" || var_ordering == "MaxDegree") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, MinValue > (this);
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, MinValue > (this);
     } else if(branching == "maxval") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, MaxValue > (this);
     } else if(branching == "halfsplit") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, HalfSplit > (this);
-    } else if(branching == "randminmax") {
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic< GenericDVO< MaxDegree >, RandomSplit > (this);
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, RandomMinMax > (this);
     } else if(branching == "guided") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, Guided< MinValue > > (this);
@@ -6293,14 +6731,18 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "random+guided") {
       heu = new GenericHeuristic < GenericDVO< MaxDegree >, Guided< RandomMinMax > > (this); 
     } 
-  } else if(var_ordering == "dom/deg") {
-    if(branching == "minval") {
+  } else if(var_ordering == "dom/deg" || var_ordering == "MinDomainOverDegree") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, MinValue > (this);
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, MinValue > (this);
     } else if(branching == "maxval") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, MaxValue > (this);
     } else if(branching == "halfsplit") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, HalfSplit > (this);
-    } else if(branching == "randminmax") {
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, RandomSplit > (this);
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, RandomMinMax > (this);
     } else if(branching == "guided") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, Guided< MinValue > > (this);
@@ -6315,14 +6757,18 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     } else if(branching == "random+guided") {
       heu = new GenericHeuristic < GenericDVO< MinDomainOverDegree >, Guided< RandomMinMax > > (this); 
     } 
-  } else if(var_ordering == "lexicographic") {
-    if(branching == "minval") {
+  } else if(var_ordering == "lexicographic" || var_ordering == "Lex") {
+    if(branching == "No" || branching == "no" || branching == "Any" || branching == "any") {
+      heu = new GenericHeuristic < Lexicographic, MinValue > (this); 
+    } else if(branching == "minval" || branching == "MinVal" || branching == "minvalue" || branching == "MinValue" || branching == "lex" || branching == "Lex" || branching == "lexicographic" || branching == "Lexicographic") {
       heu = new GenericHeuristic < Lexicographic, MinValue > (this); 
     } else if(branching == "maxval") {
       heu = new GenericHeuristic < Lexicographic, MaxValue > (this); 
     } else if(branching == "halfsplit") {
       heu = new GenericHeuristic < Lexicographic, HalfSplit > (this); 
-    } else if(branching == "randminmax") {
+    } else if(branching == "randsplit" || branching == "randomsplit" || branching == "RandSplit" || branching == "RandomSplit") {
+      heu = new GenericHeuristic < Lexicographic, RandomSplit > (this); 
+    } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic < Lexicographic, RandomMinMax > (this); 
     } else if(branching == "guided") {
       heu = new GenericHeuristic < Lexicographic, Guided< MinValue > > (this); 
@@ -6466,24 +6912,24 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     }
   } else if(var_ordering == "most_constrained") {
     if(branching == "indomain_min") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MinValue > (this); 
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, MinValue > (this); 
     } else if(branching == "indomain_max") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MaxValue > (this); 
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, MaxValue > (this); 
     } else if(branching == "indomain_middle") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MiddleValue > (this); 
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, MiddleValue > (this); 
     } else if(branching == "indomain_median") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, MedianValue > (this); 
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, MedianValue > (this); 
     }//  else if(branching == "indomain") {
-    //   heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, Any? > (this); 
+    //   heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Any? > (this); 
     // } 
     else if(branching == "indomain_random") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, RandomValue > (this); 
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, RandomValue > (this); 
     } else if(branching == "indomain_split") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, HalfSplit > (this);
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, HalfSplit > (this);
     } else if(branching == "indomain_reverse_split") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, ReverseSplit > (this);
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, ReverseSplit > (this);
     } else if(branching == "indomain_interval") {
-      heu = new GenericHeuristic < GenericDVO< MinDomainMaxDegree >, HalfSplit > (this);
+      heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, HalfSplit > (this);
     }
   } else if(var_ordering == "max_regret") {
     if(branching == "indomain_min") {

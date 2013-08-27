@@ -731,7 +731,8 @@ namespace Mistral {
     Outcome depth_first_search(Vector< Variable >& seq, 
 			       BranchingHeuristic *heu=NULL, 
 			       RestartPolicy *pol=NULL,
-			       Goal *goal=NULL);
+			       Goal *goal=NULL,
+			       bool _restore_=true);
     /*!
       Launches a depth first search on all variables
       with variable ordering 'heu' and restart policy 'pol'.
@@ -739,7 +740,8 @@ namespace Mistral {
     */
     Outcome depth_first_search(BranchingHeuristic *heu=NULL, 
 			       RestartPolicy *pol=NULL,
-			       Goal *goal=NULL);
+			       Goal *goal=NULL,
+			       bool _restore_=true);
 
     Outcome restart_search(const int root=0, const bool _restore_=true);
 

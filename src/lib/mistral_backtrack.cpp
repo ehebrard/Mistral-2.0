@@ -467,20 +467,28 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::VarEvent* x)
 
     /*!@name Backtrack method*/
     //@{    
+// int Mistral::ReversibleSet::get_reduction() const {
+//   return (trail_.back() == env->level ? trail_.back(2) - size : 0);
+// }
+int Mistral::ReversibleSet::get_reduction() const {
+  return trail_.back(2) - size;
+}
+
 void Mistral::ReversibleSet::restore() { 
-      trail_.pop(); size = trail_.pop(); 
-    } 
-     void Mistral::ReversibleSet::save() { 
+  trail_.pop(); size = trail_.pop(); 
+} 
 
-      //std::cout << trail_.size << " " << env << std::endl;
-
-      if(trail_.back() != env->level) {
-	trail_.add(size);
-	trail_.add(env->level);
-	env->save(this);
-      }
-    }
-    //@}
+void Mistral::ReversibleSet::save() { 
+  
+  //std::cout << trail_.size << " " << env << std::endl;
+  
+  if(trail_.back() != env->level) {
+    trail_.add(size);
+    trail_.add(env->level);
+    env->save(this);
+  }
+}
+//@}
 
     /*!@name Manipulation*/
     //@{  

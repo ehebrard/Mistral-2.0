@@ -418,6 +418,13 @@ int log10(const double x){
   return log;
 }
 
+std::ostream& Mistral::ImpactManager::display(std::ostream& os, const bool all) const {
+  
+
+
+  return os;
+}
+
 std::ostream& Mistral::FailureCountManager::display(std::ostream& os, const bool all) const {
       
       int *all_variables = new int[variable_weight.size];
@@ -586,8 +593,8 @@ void Mistral::LearningActivityManager::notify_decision() {
 
 std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const bool all) const {
 
-
-     int *all_variables = new int[var_activity.size];
+  
+  int *all_variables = new int[var_activity.size];
 
 
       int w, 
@@ -703,15 +710,19 @@ std::ostream& operator<<(std::ostream& os, Mistral::MaxRegret& x) {
   return x.display(os);
 }
 
-std::ostream& operator<<(std::ostream& os, Mistral::MinDomainMaxDegree& x) {
-  return x.display(os);
-}
+// std::ostream& operator<<(std::ostream& os, Mistral::MinDomainMaxDegree& x) {
+//   return x.display(os);
+// }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverDegree& x) {
   return x.display(os);
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverWeight& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainTimesWeight& x) {
   return x.display(os);
 }
 
@@ -724,6 +735,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverNeighbo
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight& x) {
+  return x.display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinWeight& x) {
   return x.display(os);
 }
 
@@ -805,15 +820,19 @@ std::ostream& operator<<(std::ostream& os, Mistral::MaxRegret* x) {
   return x->display(os);
 }
 
-std::ostream& operator<<(std::ostream& os, Mistral::MinDomainMaxDegree* x) {
-  return x->display(os);
-}
+// std::ostream& operator<<(std::ostream& os, Mistral::MinDomainMaxDegree* x) {
+//   return x->display(os);
+// }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverDegree* x) {
   return x->display(os);
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomainOverWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinDomainTimesWeight* x) {
   return x->display(os);
 }
 
@@ -826,6 +845,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::MinNeighborDomainOverNeighbo
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::MaxWeight* x) {
+  return x->display(os);
+}
+
+std::ostream& operator<<(std::ostream& os, Mistral::MinWeight* x) {
   return x->display(os);
 }
 
