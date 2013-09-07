@@ -11314,7 +11314,7 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   //Explanation **reason = get_solver()->reason_for.stack_;
 
   // direction is 1 iff the constraint pushed toward ub and 0 otherwise
-  bool direction; 
+  bool direction = (bound_[1] < lower_bound); 
 
   if(a != NULL_ATOM) {
     a_rank = rank[a];
@@ -11328,9 +11328,9 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
 	break;
       }
     }
-  } else {
-    direction = (bound_[1] < lower_bound);
-  }
+  } // else {
+  //   direction = (bound_[1] < lower_bound);
+  // }
 
 #ifdef _DEBUG_REASONIWBS
   if(_DEBUG_REASONIWBS) {    
@@ -14030,7 +14030,7 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 	sequence_image.clear();
 	int *rank = get_solver()->assignment_order.stack_;
 	int tmp_idx;
-	int sizeOfX = X.size;
+	//int sizeOfX = X.size;
 #ifdef _DEBUG_AMSC_NOGOOD
 	std::cout << "__size" << __size ;
 	std::cout << "__rank" << __rank ;
@@ -14162,10 +14162,11 @@ void Mistral::ConstraintMultiAtMostSeqCard::set_max_equal_to_p_at_rank(int __ran
 void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector<Variable>& X, int __size, int __rank)
 {
 
-	int arity = __size;
+  unsigned int arity = __size;
 	if (arity>X.size) arity= X.size;
 
-	int i, k;
+	unsigned int i;
+	int k;
 	bool is_ground_before_rank;
 	int max_cardinality[_k];
 	int count = 0;
@@ -14175,7 +14176,7 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector
 	int n_c[_k];
 	max_equal_to_p.clear();
 #ifdef _DEBUG_AMSC
-	int j;
+	unsigned int j;
 	int _max_card[_k*arity];
 	int _count[_k*arity];
 
@@ -14193,8 +14194,8 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector
 #endif
 
 // bool maybe_inconsistent = true;
-	for(int i=0; i<arity; ++i)
-	{
+	for(i=0; i<arity; ++i)
+	  {
 		//check ground & rank
 		if (X[i].is_ground())
 		{
@@ -14217,11 +14218,11 @@ void Mistral::ConstraintMultiAtMostSeqCard::greedy_assign_for_explanation(Vector
 
 	for(k=0; k<_k; ++k) {
 		max_cardinality[k] = 0;
-		for(i=0; i<=_p[k] && i<arity; ++i) {
+		for(i=0; (int)i<=_p[k] && i<arity; ++i) {
 			occurrences[k][i] = 0;
 		}
 
-		for(i=0; i<_q[k] && i<arity; ++i) {
+		for(i=0; (int)i<_q[k] && i<arity; ++i) {
 			cardinality[k][i] = cardinality[k][i-1]+wl[i];
 			++(occurrences[k][cardinality[k][i]]);
 			if(cardinality[k][i] > max_cardinality[k]) max_cardinality[k] = cardinality[k][i];
@@ -16508,7 +16509,7 @@ Mistral::ConstraintNaiveMultiAtMostSeqCard::ConstraintNaiveMultiAtMostSeqCard(Ve
 Mistral::Explanation::iterator Mistral::ConstraintNaiveMultiAtMostSeqCard::get_reason_for(const Atom a, const int lvl, iterator& end)
 {
 	//	std::cout<< "d\n" ;
-	int arity=scope.size, idx;
+  unsigned int arity=scope.size, idx;
 	int literal__;
 	int *rank = get_solver()->assignment_order.stack_;
 	int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
@@ -16556,7 +16557,7 @@ Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqC
 	//	std::cout << "LeftExplanation  " << std::endl;
 
 		//Note : nogoods for Multi_AMSC are not supported yet
-		int arity=scope.size, idx;
+		unsigned int arity=scope.size, idx;
 		int literal__;
 		int *rank = get_solver()->assignment_order.stack_;
 		int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
@@ -16567,7 +16568,7 @@ Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqC
 			arity=scope.size;
 			while(arity--)
 			{
-				if (scope[arity].id() == a)
+			  if (scope[arity].id() == (int)a)
 					break;
 			}
 
@@ -16601,7 +16602,7 @@ Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqC
 	#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
 			set_max_equal_to_p_at_rank(a_rank, arity, scope);
 			Vector< bool> TMP ;
-			for (int i=0; i< arity; i++)
+			for (unsigned int i=0; i< arity; i++)
 				TMP.push_back(max_equal_to_p[i]) ;
 
 	#endif
@@ -16609,18 +16610,18 @@ Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqC
 			greedy_assign_for_explanation(scope, arity,a_rank);
 
 	#ifdef _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION
-			for (int i=0; i< arity; i++)
+			for (unsigned int i=0; i< arity; i++)
 				if (TMP[i]!=max_equal_to_p[i])
 				{
 					std::cout <<  "\n \n \n \n Difference at index " << i <<  " ;  set_max_equal_to_p_at_rank max_equal_to_p ? \n" ;
 					arity=scope.size;
-					for (int i=0; i< arity; i++)
-						std::cout<< ' ' << TMP[i] ;
+					for (unsigned int j=0; j< arity; j++)
+						std::cout<< ' ' << TMP[j] ;
 
 					std::cout << "\n greedy_assign_for_explanation max_equal_to_p ? \n" ;
 					arity=scope.size;
-					for (int i=0; i< arity; i++)
-						std::cout<< ' ' << max_equal_to_p[i] ;
+					for (unsigned int j=0; j< arity; j++)
+						std::cout<< ' ' << max_equal_to_p[j] ;
 					break;
 				}
 	#endif
@@ -16636,7 +16637,7 @@ Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqC
 
 			std::cout << "\n max_equal_to_p ? \n" ;
 			arity=scope.size;
-			for (int i=0; i< arity; i++)
+			for (unsigned int i=0; i< arity; i++)
 				std::cout<< ' ' << max_equal_to_p[i] ;
 			std::cout<< std::endl;
 
@@ -16679,9 +16680,9 @@ Mistral::Explanation::iterator Mistral::ConstraintLeftExplanationMultiAtMostSeqC
 		}
 
 		std::cout<< "\n The naive explanation: \n" << naive_explanation << std::endl;
-		for (int i=0; i< explanation.size; i++)
+		for (unsigned int i=0; i< explanation.size; i++)
 		{
-			int j= naive_explanation.size;
+			unsigned int j= naive_explanation.size;
 			while(j && naive_explanation[--j] != explanation[i]);
 			if (j==0)
 				if (naive_explanation[0] != explanation[i])
@@ -16927,7 +16928,7 @@ Mistral::Explanation::iterator Mistral::ConstraintSimplifiedExplanationMultiAtMo
 		arity=scope.size;
 		while(arity--)
 		{
-			if (scope[arity].id() == a)
+		  if (scope[arity].id() == (int)a)
 				break;
 		}
 
@@ -17184,7 +17185,7 @@ Mistral::Explanation::iterator Mistral::ConstraintSimplifiedExplanationMultiAtMo
 		{
 			if(scope[arity].is_ground()) {
 				idx = scope[arity].id();
-				if (idx != a && rank[idx] < a_rank)
+				if (idx != (int)a && rank[idx] < a_rank)
 				{
 					if (max_equal_to_p[arity] == scope[arity].get_value())
 					{
@@ -17871,7 +17872,7 @@ int ConstraintOccurrences::getub(const int val) const {
 std::ostream& ConstraintOccurrences::display(std::ostream& o) const 
 {    
     o << "Gcc(";
-    for(int i=0; i<scope.size-1; ++i) {
+    for(unsigned int i=0; i<scope.size-1; ++i) {
       o << scope[i] << " " ;
     }
     o << scope[scope.size-1] << ",";

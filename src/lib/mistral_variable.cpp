@@ -8028,7 +8028,7 @@ void Mistral::OccExpression::extract_constraint(Solver *s) {
   if(lower_bound > -INFTY || upper_bound < INFTY) {    
     lower_bound -= current_occ;
     upper_bound -= current_occ;
-    if(lower_bound > scope.size || upper_bound < 0) {
+    if(lower_bound > (int)(scope.size) || upper_bound < 0) {
       s->fail();
     } else {
       s->add(Constraint(new ConstraintBoolSumInterval(scope,lower_bound,upper_bound))); 
@@ -8067,7 +8067,7 @@ Mistral::ValOccExpression::ValOccExpression(Vector< Variable >& args, const int 
 } 
 
 void Mistral::ValOccExpression::encode() {
-  for(int i=0; i<children.size; ++i) {
+  for(unsigned int i=0; i<children.size; ++i) {
     if(children[i].equal(value))
       ++current_occ;
     else if(children[i].contain(value)) {
@@ -8094,7 +8094,7 @@ Mistral::VarOccExpression::VarOccExpression(Vector< Variable >& args, Variable x
 } 
 
 void Mistral::VarOccExpression::encode() {
-  for(int i=0; i<children.size; ++i) {
+  for(unsigned int i=0; i<children.size; ++i) {
     if(X.is_ground() && children[i].equal(X.get_value()))
       ++current_occ;
     else if(children[i].intersect(X)) {
@@ -8150,7 +8150,7 @@ Mistral::SetOccExpression::SetOccExpression(Vector< Variable >& args, const std:
 }
 
 void Mistral::SetOccExpression::encode() {
-  for(int i=0; i<children.size; ++i) {
+  for(unsigned int i=0; i<children.size; ++i) {
     if(children[i].included(S))
       ++current_occ;
     else if(children[i].intersect(S)) {
@@ -8197,7 +8197,7 @@ Mistral::IntOccExpression::IntOccExpression(Vector< Variable >& args, const Inte
 } 
 
 void Mistral::IntOccExpression::encode() {
-  for(int i=0; i<children.size; ++i) {
+  for(unsigned int i=0; i<children.size; ++i) {
     if(children[i].included(I))
       ++current_occ;
     else if(children[i].intersect(I)) {

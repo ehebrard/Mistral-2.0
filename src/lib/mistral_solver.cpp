@@ -1797,7 +1797,7 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
   double target_i;
   double progress_i=0;
 
-  double total_progress = 0;
+  //double total_progress = 0;
   //unsigned int tprog = 0;
 
   // std::cout << "[" << std::right << std::setw(33) << "]";
@@ -1982,7 +1982,7 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   
   if(base) statistics.num_clauses = base->clauses.size;
 
-  int arity;
+  unsigned int arity;
   for(unsigned int i=0; i<posted_constraints.size; ++i) {
     arity = constraints[posted_constraints[i]].arity();
     if(arity > statistics.max_arity) statistics.max_arity = arity;
@@ -2057,7 +2057,7 @@ void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> 
   
   if(base) statistics.num_clauses = base->clauses.size;
 
-  int arity;
+  unsigned int arity;
   for(unsigned int i=0; i<posted_constraints.size; ++i) {
     arity = constraints[posted_constraints[i]].arity();
     if(arity > statistics.max_arity) statistics.max_arity = arity;
@@ -2392,7 +2392,7 @@ void Mistral::Solver::notify_success() { //Variable* changes, const int n) {
   for(unsigned int i=0; i<success_triggers.size; ++i) {
     success_triggers[i]->notify_success();
   }
-  if(statistics.max_depth < assignment_rank) {
+  if((int)(statistics.max_depth) < assignment_rank) {
     // for(unsigned int i=0; i<variables.size; ++i)
     //   {
     // 	if(last_solution_lb[i] != -INFTY)
@@ -6047,7 +6047,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6075,7 +6075,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6103,7 +6103,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6131,7 +6131,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MaxWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6161,7 +6161,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6189,7 +6189,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6217,7 +6217,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6245,7 +6245,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6275,7 +6275,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
@@ -6303,7 +6303,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
@@ -6331,7 +6331,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
@@ -6359,7 +6359,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
@@ -6389,7 +6389,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, Guided< MinValue > > (this); 
@@ -6417,7 +6417,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 2, ImpactManager >, Guided< MinValue > > (this); 
@@ -6445,7 +6445,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 3, ImpactManager >, Guided< MinValue > > (this); 
@@ -6473,7 +6473,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, Guided< MinValue > > (this); 
@@ -6501,7 +6501,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< MinValue > > (this); 
@@ -6529,7 +6529,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 2, PruningCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< MinValue > > (this); 
@@ -6557,7 +6557,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 3, PruningCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< MinValue > > (this); 
@@ -6585,7 +6585,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, RandomMinMax > (this); 
       } else if(branching == "minweight") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, MinWeightValue > (this); 
-      } else if(branching == "guided") {
+      } else if(branching == "guided" || branching == "Guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 5, PruningCountManager >, Guided< MinValue > > (this); 
       } else if(branching == "minval+guided") {
 	heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, PruningCountManager >, Guided< MinValue > > (this); 
@@ -6614,7 +6614,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, RandomMinMax > (this);
     } else if(branching == "minweight") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, MinWeightValue > (this);
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic< GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, Guided< MinValue > > (this);
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < GenericNeighborDVO< SelfPlusAverage, MinDomainOverWeight, 1, FailureCountManager >, Guided< MinValue > > (this); 
@@ -6640,7 +6640,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomSplit > (this);
     } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, RandomMinMax > (this);
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic< GenericDVO< MinDomain >, Guided< MinValue > > (this);
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < GenericDVO< MinDomain >, Guided< MinValue > > (this); 
@@ -6666,7 +6666,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, RandomSplit > (this);
     } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, RandomMinMax > (this);
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MinValue > > (this);
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MaxDegree > >, Guided< MinValue > > (this); 
@@ -6692,7 +6692,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, RandomSplit > (this);
     } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, RandomMinMax > (this);
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic< GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MinValue > > (this);
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < GenericDVO< LexCombination< MinDomain, MinMin > >, Guided< MinValue > > (this); 
@@ -6718,7 +6718,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, RandomSplit > (this);
     } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, RandomMinMax > (this);
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic< GenericDVO< MaxDegree >, Guided< MinValue > > (this);
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < GenericDVO< MaxDegree >, Guided< MinValue > > (this); 
@@ -6744,7 +6744,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, RandomSplit > (this);
     } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, RandomMinMax > (this);
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic< GenericDVO< MinDomainOverDegree >, Guided< MinValue > > (this);
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < GenericDVO< MinDomainOverDegree >, Guided< MinValue > > (this); 
@@ -6770,7 +6770,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       heu = new GenericHeuristic < Lexicographic, RandomSplit > (this); 
     } else if(branching == "random" || branching == "Random" || branching == "randminmax" || branching == "randomminmax" || branching == "RandomMinMax" || branching == "RandMinMax") {
       heu = new GenericHeuristic < Lexicographic, RandomMinMax > (this); 
-    } else if(branching == "guided") {
+    } else if(branching == "guided" || branching == "Guided") {
       heu = new GenericHeuristic < Lexicographic, Guided< MinValue > > (this); 
     } else if(branching == "minval+guided") {
       heu = new GenericHeuristic < Lexicographic, Guided< MinValue > > (this); 
