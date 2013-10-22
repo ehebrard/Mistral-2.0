@@ -484,15 +484,18 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
 }
 std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
   os << " " << solver->parameters.prefix_comment << " |";
-  os << std::right << std::setw(7) << num_variables << " ";
-  os << std::right << std::setw(5) << num_values/num_variables << " ";
-  os << std::right << std::setw(8) << num_constraints+num_clauses << " |";
-  os << std::right << std::setw(9) << num_learned << " " ;
-  os << std::right << std::setw(4) << (int)avg_learned_size << " " ;
-  if(num_learned)
-    os << std::right << std::setw(4) << (num_learned ? size_learned/num_learned : 0) << " |";
-  else
-    os << " n/a |";
+
+  if(solver->parameters.verbosity>2) {
+    os << std::right << std::setw(7) << num_variables << " ";
+    os << std::right << std::setw(5) << num_values/num_variables << " ";
+    os << std::right << std::setw(8) << num_constraints+num_clauses << " |";
+    os << std::right << std::setw(9) << num_learned << " " ;
+    os << std::right << std::setw(4) << (int)avg_learned_size << " " ;
+    if(num_learned)
+      os << std::right << std::setw(4) << (num_learned ? size_learned/num_learned : 0) << " |";
+    else
+      os << " n/a |";
+  }
   os << std::right << std::setw(9) << num_nodes << " " ;
   os << std::right << std::setw(11) << num_propagations << " " ;
   os << std::right << std::setw(8) << std::setprecision(5) ;
@@ -516,8 +519,15 @@ std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
   return os;
 }
 std::ostream& Mistral::SolverStatistics::display(std::ostream& os) const {
-  if(end_time >= 0.0) print_full(os);
-  else print_short(os);
+  if(end_time >= 0.0) {
+    if(solver->parameters.verbosity>2)
+      print_full(os);
+    else {
+      std::cout << " c +===========================================+\n";
+      print_short(os);
+      std::cout << "\n c +===========================================+\n";
+    }
+  } else print_short(os);
   return os;
 }
 Mistral::SolverStatistics::SolverStatistics(const SolverStatistics& sp) {
@@ -1467,6 +1477,7 @@ void Mistral::Solver::add(Constraint c) {
 
   } else {
 
+
     //std::cout << "awaken" << std::endl;
     c.awaken();
     
@@ -1788,6 +1799,36 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
 
   //int initial_level = level; 
 
+  if(parameters.verbosity>2)  {
+    std::cout << " " << parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=')
+	      << "+" << std::endl << std::setfill(' ') 
+	      << " " << parameters.prefix_comment << " |      INSTANCE STATS   |      LEARNING      |         SEARCH STATS          |";
+    if(objective) {
+      if(objective->is_optimization())
+	std::cout << " OBJECTIVE |" ;
+      else if(objective->is_satisfaction())
+	std::cout << " MAX DEPTH |" ;
+      else if(objective->is_enumeration())
+	std::cout << " #SOLUTION |" ;
+    }
+    std::cout << std::endl 
+	      << " " << parameters.prefix_comment << " |   vars  vals     cons |  #learnt size kept |    nodes     propags     time |           |" << std::endl;
+  } else if(parameters.verbosity>1)  {
+   std::cout << " " << parameters.prefix_comment << " +" << std::setw(44) << std::setfill('=')
+	      << "+" << std::endl << std::setfill(' ') 
+	      << " " << parameters.prefix_comment << " |         SEARCH STATS          |";
+    if(objective) {
+      if(objective->is_optimization())
+	std::cout << " OBJECTIVE |" ;
+      else if(objective->is_satisfaction())
+	std::cout << " MAX DEPTH |" ;
+      else if(objective->is_enumeration())
+	std::cout << " #SOLUTION |" ;
+    }
+    std::cout << std::endl 
+	      << " " << parameters.prefix_comment << " |    nodes     propags     time |           |" << std::endl;
+  }
+
   Outcome satisfiability = UNKNOWN;
 
   statistics.objective_value = objective->value();
@@ -1873,7 +1914,8 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
 
   }
 
-  statistics.outcome = satisfiability;
+  if(satisfiability == LIMITOUT) statistics.outcome = interrupted();
+  else statistics.outcome = satisfiability;
 
   statistics.end_time = get_run_time();
 
@@ -1988,23 +2030,6 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
     if(arity > statistics.max_arity) statistics.max_arity = arity;
   }
   
-
-  
-  if(parameters.verbosity)  {
-    std::cout << " " << parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=')
-	      << "+" << std::endl << std::setfill(' ') 
-	      << " " << parameters.prefix_comment << " |      INSTANCE STATS   |      LEARNING      |         SEARCH STATS          |";
-    if(objective) {
-      if(objective->is_optimization())
-	std::cout << " OBJECTIVE |" ;
-      else if(objective->is_satisfaction())
-	std::cout << " MAX DEPTH |" ;
-      else if(objective->is_enumeration())
-	std::cout << " #SOLUTION |" ;
-    }
-    std::cout << std::endl 
-	      << " " << parameters.prefix_comment << " |   vars  vals     cons |  #learnt size kept |    nodes     propags     time |           |" << std::endl;
-  }
 }
 
 
@@ -2062,11 +2087,14 @@ void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> 
     arity = constraints[posted_constraints[i]].arity();
     if(arity > statistics.max_arity) statistics.max_arity = arity;
   }
+
+
+
   
-  if(parameters.verbosity)  std::cout << " " << parameters.prefix_comment << " +" << std::setw(90) << std::setfill('=')
-  				      << "+" << std::endl << std::setfill(' ') 
-  				      << " " << parameters.prefix_comment << " |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl 
-  				      << " " << parameters.prefix_comment << " |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
+  // if(parameters.verbosity)  std::cout << " " << parameters.prefix_comment << " +" << std::setw(90) << std::setfill('=')
+  // 				      << "+" << std::endl << std::setfill(' ') 
+  // 				      << " " << parameters.prefix_comment << " |      INSTANCE STATS       |                    SEARCH STATS                 | OBJECTIVE |" << std::endl 
+  // 				      << " " << parameters.prefix_comment << " |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
 }
 
   
@@ -3546,6 +3574,7 @@ bool Mistral::Solver::propagate()
   }
 #endif
 
+
   bool fix_point;
   int trig, cons, vidx;
   Triplet < int, Event, ConstraintImplementation* > var_evt;
@@ -3559,6 +3588,7 @@ bool Mistral::Solver::propagate()
   if(IS_OK(wiped_idx) && objective && objective->enforce()) {
     wiped_idx = objective->objective.id();
   }
+
 
   fix_point =  (active_variables.empty() && active_constraints.empty());
 
@@ -5297,14 +5327,14 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
 #ifdef _OLD_
       if( parameters.backjump ) learn_nogood();
       if( limits_expired() ) {
-      	status = LIMITOUT;
+      	status = //interrupted();
+	  LIMITOUT;
       } else status = branch_right();
 #else
       status = branch_right();
 #endif	
 
     }
-
 
 
   }
@@ -5328,6 +5358,19 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
 #endif
 
   return status;
+}
+
+
+Mistral::Outcome Mistral::Solver::interrupted() {
+  #ifdef _DEBUG_SEARCH
+  if(_DEBUG_SEARCH) {
+    std::cout << "c UNSAT!" << std::endl; 
+  }
+#endif
+  
+  Outcome value = LIMITOUT;
+  //if(objective && statistics.num_solutions) value = SAT;
+  return value;
 }
 
 

@@ -17,9 +17,10 @@ int main( int argc, char** argv )
 
   Instance jsp(params);
   
-  jsp.print(std::cout);
+  std::cout << std::endl;
+  //jsp.print(std::cout);
   jsp.printStats(std::cout);
-
+  params.print(std::cout);
 
 
   SchedulingSolver *solver;
@@ -83,12 +84,12 @@ int main( int argc, char** argv )
 
   // stats.print(std::cout, "DS");
 
-  // if(!stats.solved()) {
-  //   if(params.Algorithm == "bnb")
-  //     solver.branch_and_bound();
-  //   else if(params.Algorithm == "lns")
-  //     solver.large_neighborhood_search();
-  // }
+  if(!stats.solved()) {
+    if(params.Algorithm == "bnb")
+      solver->branch_and_bound();
+    //else if(params.Algorithm == "lns")
+    //solver.large_neighborhood_search();
+  }
 
   stats.print(std::cout, "");  
   std::cout << "s " << (stats.num_solutions ? "SATISFIABLE" : "UNSATISFIABLE") 
