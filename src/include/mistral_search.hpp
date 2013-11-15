@@ -1528,7 +1528,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     GenericDVO() { solver = NULL; manager = NULL; }
-    GenericDVO(Solver* s) : Solver(s) { manager = NULL; }
+    GenericDVO(Solver* s) : solver(s) { manager = NULL; }
    
     virtual void initialise(Solver *s) { 
       solver = s; 
@@ -2171,7 +2171,7 @@ namespace Mistral {
 
   template<class VarComparator>
   std::ostream& operator<<(std::ostream& os, Anti<VarComparator>* x) {
-    return x.display(os);
+    return x->display(os);
   }
 
 
@@ -2244,7 +2244,7 @@ namespace Mistral {
 
   template<class ComparatorA, class ComparatorB>
   std::ostream& operator<<(std::ostream& os, LexCombination<ComparatorA, ComparatorB>* x) {
-    return x.display(os);
+    return x->display(os);
   }
 
 
