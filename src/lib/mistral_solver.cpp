@@ -1616,7 +1616,7 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
   Vector< int > phase_level;
 
   
-  VarStack < Variable, ReversibleNum<int> >  copy_sequences[sequences.size];
+  VarStack < Variable, ReversibleNum<int> >  *copy_sequences = new VarStack < Variable, ReversibleNum<int> >[sequences.size];
 
   for(unsigned int i=0; i<sequences.size; ++i) {
     copy_sequences[i].initialise(this);
@@ -1772,6 +1772,9 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
   }
 
   //std::cout << outcome2str(satisfiability) << std::endl;
+
+
+  delete [] copy_sequences;
 
   return satisfiability;
 }
@@ -3829,6 +3832,7 @@ bool Mistral::Solver::propagate()
   active_constraints.clear();
   if(!parameters.backjump) {
     active_variables.clear();
+
   }
 
 #ifdef _DEBUG_AC
