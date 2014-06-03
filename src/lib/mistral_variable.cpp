@@ -60,20 +60,17 @@ Mistral::Variable::Variable() {
 
 // Constant variable
 Mistral::Variable::Variable(const int value) {
-  domain_type = NULL;
   domain_type = CONST_VAR;
   variable = NULL;
   constant_value = value;
 }
 
 Mistral::Variable::Variable(VariableImplementation* impl, const int type) {
-  domain_type = NULL;
   domain_type = type;
   variable = impl;
 }
 
 Mistral::Variable::Variable(Expression* exp) {
-  domain_type = NULL;
   domain_type = EXPRESSION;
   expression = exp;
 }

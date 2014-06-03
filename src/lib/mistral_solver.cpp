@@ -1411,7 +1411,7 @@ int Mistral::Solver::declare(Variable x) {
   bool extend_struct = (constraint_graph.capacity == constraint_graph.size);
   constraint_graph.add(array);
   if(extend_struct) {
-    constraint_graph.add(array);
+    //constraint_graph.add(array);
     for(int i = constraint_graph.size-1; i>=0; --i) {
       for(int j = 0; j<3; ++j) {
 	for(int k = constraint_graph[i].on[j].size-1; k>=0; --k) {
@@ -3748,14 +3748,15 @@ bool Mistral::Solver::propagate()
     }
   
 
-    
-    while(!assigned.empty()) {
-      vidx = assigned.pop();
-      for(trig = 0; trig<3; ++trig) {
-	for(cons = constraint_graph[vidx].on[trig].size; --cons>=0;) {
-	  culprit = constraint_graph[vidx].on[trig][cons];
-	  if(culprit.postponed()) {
-	    culprit.notify_assignment();
+    if(IS_OK(wiped_idx)) {
+      while(!assigned.empty()) {
+	vidx = assigned.pop();
+	for(trig = 0; trig<3; ++trig) {
+	  for(cons = constraint_graph[vidx].on[trig].size; --cons>=0;) {
+	    culprit = constraint_graph[vidx].on[trig][cons];
+	    if(culprit.postponed()) {
+	      culprit.notify_assignment();
+	    }
 	  }
 	}
       }
