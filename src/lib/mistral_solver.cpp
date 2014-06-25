@@ -2330,7 +2330,8 @@ void Mistral::Solver::restore() {
 }
 
 void Mistral::Solver::restore(const int lvl) {
-  decisions.size = lvl;
+  //decisions.size = lvl;
+  decisions.size = lvl -search_root;
   while(lvl < level) restore();
 }
 
