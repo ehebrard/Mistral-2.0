@@ -69,6 +69,11 @@ void outputHelpMessage()
 int main(int argc, char **argv)
 {
 
+  //BitSet test(0,53,true);
+  //std::cout << test << std::endl;
+  //std::cout << test.pos_words << std::endl;
+
+
   str_param[0] = "";
   get_command_line(int_ident, int_param, nia,
 		 str_ident, str_param, nsa,
@@ -110,6 +115,9 @@ int main(int argc, char **argv)
      
       if(method) {
 
+	std::cout << "CP" << std::endl;
+	
+
 	SatSolver solver;
 	solver.params.copy(params);
 	solver.parse_dimacs(argv[1]);
@@ -120,6 +128,9 @@ int main(int argc, char **argv)
 
       } else {
 
+
+	std::cout << "SAT" << std::endl;
+
 	Solver solver;
 
 	solver.parameters.copy(params);
@@ -127,7 +138,7 @@ int main(int argc, char **argv)
 	solver.parse_dimacs(argv[1]);
 
 	VarArray scope;
-	int n = (argc > 2 ? atoi(argv[2]) : 6);
+	int n = 6;//(argc > 2 ? atoi(argv[2]) : 6);
 
 	scope.clear();
 	for(unsigned int i=0; i<10; ++i) {
@@ -169,7 +180,7 @@ int main(int argc, char **argv)
 
 	//
 
-	// std::cout << solver << std::endl;
+	std::cout << solver << std::endl;
 
 	// std::cout << solver.base << std::endl;
 
@@ -190,11 +201,13 @@ int main(int argc, char **argv)
 
 
 
-	Outcome result = solver.depth_first_search(solver.variables, 
-				  new VSIDS(&solver),
-				  new Geometric(params.restart_base,params.restart_factor)
-				  );
-
+	Outcome result = 
+	  solver.depth_first_search(solver.variables, 
+				    new GenericHeuristic< VSIDS<1>, Guided<MinValue> >(&solver),
+				    new Geometric(params.restart_base,
+						  params.restart_factor)
+				    );
+	
 	if(result == SAT) {
 	  Solution sol(solver.variables);
 

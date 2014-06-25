@@ -510,7 +510,8 @@ FlatZincModel* parse(std::istream& is,
     // }
 
     SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s);
-    
+    virtual ~SolutionPrinter();    
+
     virtual void notify_solution() ;
     //{
     //   fm_->print(std::cout, *p_);

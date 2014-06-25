@@ -1276,6 +1276,8 @@ namespace Mistral {
     unsigned int base;
     
     RestartPolicy(const unsigned int b=256);
+    virtual ~RestartPolicy();
+
     virtual void reset(unsigned int& limit) = 0;
     virtual void initialise(unsigned int& limit) = 0;
     
@@ -1747,7 +1749,7 @@ namespace Mistral {
     //   }
     // }
 
-    virtual std::ostream& display(std::ostream& os) {
+    virtual std::ostream& display(std::ostream& os) const {
       //GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::manager->display(os, false);
       return GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::display(os); //, RAND, GenericDVO< Aggregator< VarComparator >, RAND, WeightManager >::manager->get_variable_weight());
     }

@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
   s.consolidate();
   
-  //cout << s << endl;
+  cout << s << endl;
 
   s.parameters.verbosity = 0;
 

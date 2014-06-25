@@ -231,6 +231,9 @@ Mistral::RestartPolicy::RestartPolicy(const unsigned int b) {
   base = b;
 }
 
+Mistral::RestartPolicy::~RestartPolicy() {
+}
+
 Mistral::NoRestart::NoRestart() 
   : RestartPolicy(-1)
 {

@@ -1387,7 +1387,7 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 	Variable  alone;
 	int sign_alone;
 	Vector< Literal > clause;
-	Literal  lit;
+	//Literal  lit;
 	clause.clear();
 
 	if(! pos.empty())
@@ -1469,6 +1469,8 @@ FlatZinc::SolutionPrinter::SolutionPrinter(Printer *p, FlatZincModel *fm, Mistra
   : p_(p), fm_(fm), solver_(s) {
   //solver_->add((SolutionListener*)this);
 }
+
+FlatZinc::SolutionPrinter::~SolutionPrinter() {}
 
 void FlatZinc::SolutionPrinter::notify_solution() {
   fm_->print_solution(std::cout, *p_);

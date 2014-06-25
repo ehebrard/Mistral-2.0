@@ -7789,8 +7789,8 @@ void Mistral::Domain::open() {
     _end_ptr = list_domain->domain.end();
   } else if(is_range()) {
     id = -1;
-    _begin_ptr = (int*)(get_min()*4);
-    _end_ptr = (int*)((get_max()+1)*4);
+    _begin_ptr = (int*)(uintptr_t)(get_min()*4);
+    _end_ptr = (int*)(uintptr_t)((get_max()+1)*4);
   } else {
     Solver *s = get_solver();
     int n = bitset_domain->domain.size;

@@ -50,7 +50,7 @@ namespace Mistral {
     std::vector<double>            time;
     std::vector<double>            soltime;
     std::vector<int>               outcome;
-    std::vector<bool>              types;
+    std::vector<int>               types;
 
     StatisticList();
     virtual ~StatisticList();

@@ -79,7 +79,7 @@ std::ostream& Mistral::IntStack::display(std::ostream& os) const {
   os << elts;
 
   if(elts.size() != size) {
-    std::cout << "ERROR" << std::endl;
+    std::cout << "ERROR " << elts.size() << " / " << size << std::endl;
     exit(1);
   }
 
@@ -243,7 +243,7 @@ void Mistral::IntStack::extend(const int new_elt)
     }
      int Mistral::IntStack::prev(const int elt) const
     {
-      unsigned int idx = index_[elt]-1;
+      int idx = index_[elt]-1;
       return (idx >= 0 ? list_[idx] : elt);
     }
     

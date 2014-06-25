@@ -100,7 +100,7 @@ void StatisticList::add_info(const int objective, int tp) {
       best_solution_index = outcome.size()-1;
       upper_bound = objective;
       if(outcome.back() == OPT) lower_bound = objective;
-    } else if(types.back() != LNS && outcome.back() == UNSAT) {
+    } else if((types.back() != LNS) && (outcome.back() == UNSAT)) {
       lower_bound = objective+1;
     }
   }
@@ -3107,8 +3107,8 @@ void SchedulingSolver::dichotomic_search()
 
 void SchedulingSolver::branch_and_bound()
 {
-  int ngd_stamp = 0;
-  int lit_stamp = 0;
+  //int ngd_stamp = 0;
+  //int lit_stamp = 0;
   //resetNodeLimit();
   //resetPropagsLimit();
   parameters.propagation_limit = 0;

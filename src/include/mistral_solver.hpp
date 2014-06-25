@@ -860,7 +860,7 @@ namespace Mistral {
     TCLAP::SwitchArg             *printmodArg;
     TCLAP::SwitchArg             *printinsArg;
     TCLAP::SwitchArg             *printstaArg;
-    TCLAP::ValueArg<std::string> *commentArg;
+    //TCLAP::ValueArg<std::string> *commentArg;
     TCLAP::ValueArg<std::string> *pcommentArg;
     TCLAP::ValueArg<std::string> *pstatArg;
     TCLAP::ValueArg<std::string> *pobjectiveArg;
