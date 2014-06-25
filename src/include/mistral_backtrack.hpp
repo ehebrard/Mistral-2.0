@@ -666,6 +666,7 @@ namespace Mistral {
     {
     }
 
+    using IntStack::initialise;
     virtual void initialise(Environment *s)
     {
       Reversible::initialise(s);

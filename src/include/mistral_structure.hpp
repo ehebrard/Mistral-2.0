@@ -4947,7 +4947,9 @@ template < int N, class T >
 	WORD_TYPE masked_ub = (full >> (CACHE - (ub & CACHE)));
 	
 	if( i == j ) {
-	  if( table[i] |= (masked_lb & masked_ub) );
+
+	  table[i] |= (masked_lb & masked_ub);
+	  
 	} else {
 	  
 	  if( i >= pos_words ) {

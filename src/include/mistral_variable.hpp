@@ -1287,6 +1287,7 @@ namespace Mistral {
       initialise(lb, ub);
     };
 
+    using VariableImplementation::initialise;
     virtual void initialise(const int lb, const int ub) {
       min = lb;
       max = ub;

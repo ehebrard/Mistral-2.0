@@ -536,9 +536,9 @@ namespace Mistral {
 
       void release(const int id) {
 	if((unsigned int)id == allocation.size) {
-	  do {
-	    size = allocation.pop();
-	  } while(size < 0);
+	  //do {
+	  size = allocation.pop();
+	  //} while(size < 0);
 	} else {
 	  allocation[id-1] = -1;
 	}

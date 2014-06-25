@@ -1929,14 +1929,13 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
 Mistral::Outcome Mistral::Solver::get_next_solution()  
 {
   Outcome satisfiability = UNSAT;
-
-  //   std::cout << "get next solution " << (decisions.size) << " "
-  // 	    << search_started << std::endl;
   
   if(search_started) {
     if(decisions.size) 
       branch_right();
-    else return satisfiability;
+    else {
+      return satisfiability;
+    }
   }
    
   search_started = true;

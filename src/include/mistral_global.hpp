@@ -402,7 +402,7 @@ namespace Mistral {
 
   public:
 
-    virtual void store_reason_for_change(const Event evt, const Explanation *expl) = 0;
+    virtual void store_reason_for_change(const Event evt, Explanation *expl) = 0;
     virtual Explanation* get_explanation(const Event evt) = 0;
 
   };
