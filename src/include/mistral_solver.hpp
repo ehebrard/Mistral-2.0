@@ -474,14 +474,15 @@ namespace Mistral {
     // Vector< int > reason_index;
     //Vector< DomainExplanation* > reason_for;
     Vector< Literal > learnt_clause;
+    Vector< Literal > visited_literals;
     BitSet visited;
     int num_search_variables;
 
     ConstraintClauseBase *base;
     // Vector< double > lit_activity;
     // Vector< double > var_activity;
-    double * lit_activity;
-    double * var_activity;
+    //double * lit_activity;
+    //double * var_activity;
 
     /// Variable selection and branching
     BranchingHeuristic *heuristic;

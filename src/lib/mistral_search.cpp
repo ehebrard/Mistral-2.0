@@ -19,6 +19,7 @@
   The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 */
 
+#include <limits>
 
 #include <mistral_search.hpp>
 
@@ -557,6 +558,7 @@ std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool
 Mistral::LearningActivityManager::LearningActivityManager(Solver *s) : solver(s) {
   weight_unit = solver->parameters.activity_increment;
   decay = solver->parameters.activity_decay;
+  max_weight = std::numeric_limits<int>::max();
   
   var_activity.initialise(solver->variables.size, solver->variables.size, 0);
   lit_activity.initialise(2*solver->variables.size, 2*solver->variables.size, 0);
@@ -566,30 +568,128 @@ Mistral::LearningActivityManager::LearningActivityManager(Solver *s) : solver(s)
   while(i--) {
     cons[i].initialise_activity(lit_activity.stack_, var_activity.stack_, weight_unit);
   }
+
+  max_activity = 0;
+  i = var_activity.size;
+  while(i--) {
+    if(var_activity[i]>max_activity)
+      max_activity = var_activity[i];
+  }
+
+#ifdef _DEBUG_ACTIVITY
+  for(int a=0; a<solver->variables.size; ++a) {
+    std::cout << "init x" << a << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+	       << std::endl; 
+  }
+#endif
   
-  solver->lit_activity = lit_activity.stack_;
-  solver->var_activity = var_activity.stack_;
+  //solver->lit_activity = lit_activity.stack_;
+  //solver->var_activity = var_activity.stack_;
   
-  solver->add((DecisionListener*)this);
+  solver->add((FailureListener*)this);
 }
 
 Mistral::LearningActivityManager::~LearningActivityManager() {
-  solver->remove((DecisionListener*)this);
+  solver->remove((FailureListener*)this);
 }
 
 
-void Mistral::LearningActivityManager::notify_decision() {
+void Mistral::LearningActivityManager::notify_failure() {
 
       // //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
 
-      if(decay > 0 && decay < 1) {
-      	int i=var_activity.size;
-      	while(i--) var_activity[i] *= decay;
-      	// i=lit_activity.size;
-      	// while(i--) lit_activity[i] *= decay;
-      }
 
-  //solver->parameters.activity_increment *= (2.0-decay);
+#ifdef _DEBUG_ACTIVITY
+  std::cout << "NOTIFY FAILURE!" << std::endl;
+  std::cout << std::endl;
+#endif
+
+  int i;
+  Literal q;
+  Atom a;
+
+  weight_unit /= decay;
+  if(max_weight - weight_unit <= max_activity) {
+    // risk of double overflow
+
+#ifdef _DEBUG_ACTIVITY
+    std::cout << "\n RISK OF OVERFLOW (" << max_activity << " + " << weight_unit << " >= " << max_weight << ")\n";
+#endif
+
+    i=lit_activity.size;
+    while(i--) lit_activity[i] /= max_activity;
+
+    i=var_activity.size;
+    while(i--) {
+#ifdef _DEBUG_ACTIVITY
+      std::cout << "x" << i << " (" << lit_activity[NEG(i)] << "/" << lit_activity[POS(i)] << ")/" << var_activity[i] << " -> " 
+		<< (lit_activity[POS(i)]+lit_activity[NEG(i)]) << std::endl;
+#endif
+      var_activity[i] = lit_activity[POS(i)]+lit_activity[NEG(i)];
+    }
+   
+
+
+    weight_unit = 1.0/decay;
+    max_activity = 1.0;
+  }
+  i = solver->visited_literals.size;
+  while(i--) {
+
+#ifdef _DEBUG_ACTIVITY
+    std::cout << "\n UPDATE ACTIVITY BECAUSE OF LITERAL " << q << ":\n";
+#endif
+
+    q = solver->visited_literals[i];
+    Atom a = UNSIGNED(q);
+
+#ifdef _DEBUG_ACTIVITY
+    std::cout << "x" << a << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+     	      << " -> " ;     
+#endif
+
+    lit_activity[q] += weight_unit;
+    var_activity[a] += weight_unit;
+    if(var_activity[a] > max_activity)
+      max_activity = var_activity[a];
+
+    
+#ifdef _DEBUG_ACTIVITY
+    std::cout << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+     	      << std::endl ; 
+#endif
+
+  }
+//   //std::cout << std::endl ; 
+
+
+// #else
+
+//       if(decay > 0 && decay < 1) {
+//       	int i=var_activity.size;
+//       	while(i--) {
+
+// // #ifdef _DEBUG_ACTIVITY
+// // 	  int a = i;
+// // 	  std::cout << "decay x" << a << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+// // 		 << " -> ";
+// // #endif
+
+// 	  var_activity[i] *= decay;
+
+// // #ifdef _DEBUG_ACTIVITY
+// // 	  std::cout << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+// // 		    << std::endl;
+// // #endif
+
+// 	}
+//       	// i=lit_activity.size;
+//       	// while(i--) lit_activity[i] *= decay;
+//       }
+
+//   //solver->parameters.activity_increment *= (2.0-decay);
+
+// #endif
 
 }
 

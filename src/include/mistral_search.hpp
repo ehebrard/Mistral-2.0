@@ -325,6 +325,7 @@ namespace Mistral {
     Solver *solver;
     double weight_unit;
 
+
     /*\ TODO: make it a variable listener \*/
     Vector<double> constraint_weight;
     Vector<double> variable_weight;
@@ -577,12 +578,14 @@ namespace Mistral {
     * Listener interface for ABS *
     * Activitys the number of times each variable was visited when computing a nogood *
     */
-  class LearningActivityManager : public DecisionListener {
+  class LearningActivityManager : public FailureListener {
 
   public:
 
     Solver *solver;
     double weight_unit;
+    double max_activity;
+    double max_weight;
 
     Vector<double> var_activity;
     Vector<double> lit_activity;
@@ -618,7 +621,7 @@ namespace Mistral {
     double *get_bound_weight() { return lit_activity.stack_; }
     double **get_value_weight() { return NULL; }
 
-    virtual void notify_decision() ;//{
+    virtual void notify_failure() ;//{
 
     //   //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
 

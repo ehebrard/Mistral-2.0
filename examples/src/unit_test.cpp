@@ -3185,7 +3185,7 @@ void CostasAllDiffAllSolutions::run() {
   s.add( AllDiff(X) );
 
 
-  Vector< Variable > distance[size-2];
+  Vector< Variable > *distance = new Vector< Variable >[size-2];
   for(i=1; i<size-1; ++i) {
     for(j=0; j<size-i; ++j) {
       distance[i-1].add(X[j] - X[j+i]);
@@ -3233,6 +3233,8 @@ void CostasAllDiffAllSolutions::run() {
     cout << "Error: wrong number of solutions! (should be " << num_sol[size] << ")" << endl;
     //exit(1);
   }
+
+  delete [] distance;
 }
 
   
@@ -3252,7 +3254,7 @@ void CostasNotEqualAllSolutions::run() {
     for(j=i+1; j<size; ++j)
       s.add( X[i] != X[j] );
 
-  Vector< Variable > distance[size-2];
+  Vector< Variable > *distance =  new Vector< Variable >[size-2];
   for(i=1; i<size-1; ++i) {
     for(j=0; j<size-i; ++j) {
       distance[i-1].add(X[j] - X[j+i]);
@@ -3299,6 +3301,7 @@ void CostasNotEqualAllSolutions::run() {
     //exit(1);
   }
 
+  delete [] distance;
 }
 
 

@@ -25,6 +25,7 @@
 #include <signal.h>
 #include <assert.h>
 
+
 #include <mistral_sat.hpp>
 //#include <mistral_search.hpp>
 #include <mistral_solver.hpp>
@@ -41,6 +42,8 @@
 //#define _DEBUG_RESTORE true
 //#define _DEBUG_REWRITE true
 //#define _OUTPUT_TIKZ false
+
+
 
 
 Mistral::Solver* active_solver;
@@ -947,8 +950,8 @@ Mistral::Solver::Solver()
 
   // lit_activity.initialise(0,8192);
   //  var_activity.initialise(0,4096);
-  lit_activity = NULL;
-  var_activity = NULL;
+  // lit_activity = NULL;
+  // var_activity = NULL;
 
   active_variables.initialise(4096);
 
@@ -3881,7 +3884,7 @@ bool Mistral::Solver::propagate()
     if(parameters.backjump)
       close_propagation();
 
-    notify_failure();
+    //notify_failure();
     wiped_idx = CONSISTENT;
     return false;
   }
@@ -4362,8 +4365,8 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
 	       << "]";
 	  }
 	}
-      if(lit_activity)
-	os << lit_activity[2*i] << "/" << lit_activity[2*i+1] << ": " << var_activity[i] ;
+      // if(lit_activity)
+      // 	os << lit_activity[2*i] << "/" << lit_activity[2*i+1] << ": " << var_activity[i] ;
       os << "\n";
     
     } else {
@@ -4402,6 +4405,7 @@ std::ostream& Mistral::Solver::display(std::ostream& os, const int current) {
 //Mistral::Decision 
 void Mistral::Solver::learn_nogood() {
 
+  visited_literals.clear();
 
   //unsigned int vidx;
 
@@ -4626,12 +4630,25 @@ void Mistral::Solver::learn_nogood() {
 #endif
 	
 	if( !visited.fast_contain(a) ) {
-	  if(lit_activity) {
-	    //lit_activity[q] += 0.5 * parameters.activity_increment;
-	    lit_activity[NOT(q)] += // 0.5 *
-	      parameters.activity_increment;
-	    var_activity[a] += parameters.activity_increment;
-	  }
+	  //if(lit_activity) {
+
+// #ifdef _DEBUG_ACTIVITY
+// 	    std::cout << "x" << a << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+// 		   << " -> " ; 
+// #endif
+
+	    // //lit_activity[q] += 0.5 * parameters.activity_increment;
+	    // lit_activity[NOT(q)] += // 0.5 *
+	    //   parameters.activity_increment;
+	    // var_activity[a] += parameters.activity_increment;
+	    visited_literals.add(NOT(q));
+
+// #ifdef _DEBUG_ACTIVITY
+// 	    std::cout << " (" << lit_activity[NEG(a)] << "/" << lit_activity[POS(a)] << ")/" << var_activity[a]
+// 		   << std::endl ; 
+// #endif
+
+	      //}
 	  visited.fast_add(a);
 	  
 	  if(lvl >= level) {
@@ -4792,6 +4809,7 @@ void Mistral::Solver::learn_nogood() {
   }
   visited.clear();
 
+  //std::cout << visited_literals << std::endl;
 
   // int real_size = 0;
   // for(int i=0; i<base->learnt.size; ++i) {
@@ -4826,7 +4844,8 @@ void Mistral::Solver::forget() {
 
   //std::cout << lit_activity << " "  << lit_activity[0] << " "  << lit_activity[1] << std::endl;
 
-  if(base) statistics.size_learned -= base->forget(parameters.forgetfulness, var_activity, lit_activity);
+  if(base) statistics.size_learned -= base->forget(parameters.forgetfulness, NULL, NULL);
+  //(var_activity, lit_activity);
 
   //exit(1);
 
@@ -4912,6 +4931,7 @@ Mistral::Outcome Mistral::Solver::branch_right() {
 #else
 
       learn_nogood();
+      notify_failure();
 
 #endif
 
@@ -5129,6 +5149,7 @@ Mistral::Outcome Mistral::Solver::satisfied() {
 	  if( decisions.empty() ) return UNSAT;
 	  else if( limits_expired() ) return LIMITOUT;
 	  else {
+	    //notify_failure();
 	    branch_right();
 	    return UNKNOWN;
 	  }
@@ -5328,6 +5349,8 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
       
 #ifdef _OLD_
       if( parameters.backjump ) learn_nogood();
+      notify_failure();
+
       if( limits_expired() ) {
       	status = //interrupted();
 	  LIMITOUT;

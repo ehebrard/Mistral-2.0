@@ -102,6 +102,7 @@ namespace Mistral {
   // };
 
 
+  //#define _DEBUG_ACTIVITY true
   //#define _DEBUG_LESS (id == 84)
   //#define _DEBUG_PARITY ((id == 2))
   //#define _DEBUG_BUILD true
