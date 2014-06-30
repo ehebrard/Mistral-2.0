@@ -117,19 +117,19 @@ namespace Mistral {
     std::ostream& display(std::ostream& os) { os << "success-L"; return os; }    
   };
 
-  /*! \class FailureListener
-    \brief FailureListener Class
+  /*! \class BacktrackListener
+    \brief BacktrackListener Class
 
     * Called whenever the solver restarts *
     
     This is used to implement procedures triggered on failed propagation steps
   */
-  class FailureListener {
+  class BacktrackListener {
   public:
     int fid;
-    virtual void notify_failure() = 0;
+    virtual void notify_backtrack() = 0;
 
-    std::ostream& display(std::ostream& os) { os << "failure-L"; return os; }    
+    std::ostream& display(std::ostream& os) { os << "backtrack-L"; return os; }    
   };
 
   /*! \class ConstraintListener
@@ -170,14 +170,14 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, DecisionListener& x);
   std::ostream& operator<<(std::ostream& os, RestartListener& x);
   std::ostream& operator<<(std::ostream& os, SuccessListener& x);
-  std::ostream& operator<<(std::ostream& os, FailureListener& x);
+  std::ostream& operator<<(std::ostream& os, BacktrackListener& x);
   std::ostream& operator<<(std::ostream& os, ConstraintListener& x);
   std::ostream& operator<<(std::ostream& os, VariableListener& x);
 
   // std::ostream& operator<<(std::ostream& os, DecisionListener* x);
   // std::ostream& operator<<(std::ostream& os, RestartListener* x);
   // std::ostream& operator<<(std::ostream& os, SuccessListener* x);
-  // std::ostream& operator<<(std::ostream& os, FailureListener* x);
+  // std::ostream& operator<<(std::ostream& os, BacktrackListener* x);
   // std::ostream& operator<<(std::ostream& os, ConstraintListener* x);
   // std::ostream& operator<<(std::ostream& os, VariableListener* x);
 
@@ -318,7 +318,7 @@ namespace Mistral {
     * Counts the number of failures for each constraint *
   */
   //template< float DECAY > 
-  class FailureCountManager : public FailureListener, public ConstraintListener {
+  class FailureCountManager : public BacktrackListener, public ConstraintListener {
 
   public:
 
@@ -360,14 +360,14 @@ namespace Mistral {
       // std::cout << std::endl;
 
 
-      solver->add((FailureListener*)this);
+      solver->add((BacktrackListener*)this);
       solver->add((ConstraintListener*)this);
     }
 
     virtual ~FailureCountManager() {// }
 
       solver->remove((ConstraintListener*)this);
-      solver->remove((FailureListener*)this);
+      solver->remove((BacktrackListener*)this);
     }
 
     double *get_variable_weight() { return variable_weight.stack_; }   
@@ -406,7 +406,7 @@ namespace Mistral {
     }
   
 
-    virtual void notify_failure() {
+    virtual void notify_backtrack() {
       int i;
       Constraint con = solver->culprit;
 
@@ -578,7 +578,7 @@ namespace Mistral {
     * Listener interface for ABS *
     * Activitys the number of times each variable was visited when computing a nogood *
     */
-  class LearningActivityManager : public FailureListener {
+  class LearningActivityManager : public BacktrackListener {
 
   public:
 
@@ -621,7 +621,7 @@ namespace Mistral {
     double *get_bound_weight() { return lit_activity.stack_; }
     double **get_value_weight() { return NULL; }
 
-    virtual void notify_failure() ;//{
+    virtual void notify_backtrack() ;//{
 
     //   //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
 
@@ -646,7 +646,7 @@ namespace Mistral {
 //     * Listener interface for Impact *
 //     * NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
 //   */
-//   class ImpactManager : public FailureListener, public SuccessListener, public DecisionListener, public VariableListener {
+//   class ImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener {
 
 //   public:
 
@@ -693,7 +693,7 @@ namespace Mistral {
 // 	avg_right_branches[i] = solver->variables[i].get_size();
 //       }
 
-//       solver->add((FailureListener*)this);
+//       solver->add((BacktrackListener*)this);
 //       solver->add((SuccessListener*)this);
 //       solver->add((DecisionListener*)this);
 //       solver->add((VariableListener*)this);
@@ -704,7 +704,7 @@ namespace Mistral {
 //       solver->remove((VariableListener*)this);
 //       solver->remove((SuccessListener*)this);
 //       solver->remove((DecisionListener*)this);
-//       solver->remove((FailureListener*)this);
+//       solver->remove((BacktrackListener*)this);
 //     }
 
 //     double *get_variable_weight() { return variable_weight.stack_; }   
@@ -852,7 +852,7 @@ namespace Mistral {
 //       left = 0;
 //     }
 
-//     virtual void notify_failure() {
+//     virtual void notify_backtrack() {
 //       // propagation produced a wipe-out
 //       // - check if it was after a left or a right branch
 //       // - find out what was the decision/refutation
@@ -864,7 +864,7 @@ namespace Mistral {
 // 	dec = solver->decisions.back().var.id();
 
 // #ifdef _DEBUG_IMPACT
-// 	std::cout << " notified of failure after a left branch on " << solver->variables[dec] << "\n";
+// 	std::cout << " notified of backtrack after a left branch on " << solver->variables[dec] << "\n";
 // 	std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << left_weight[dec] ;
 // #endif
 
@@ -896,7 +896,7 @@ namespace Mistral {
 // 	avg_right_branches[dec] = (avg_right_branches[dec]*(double)(num_probes[dec]) + (double)(num_right_branches[dec]))/((double)(++num_probes[dec]));
 
 // #ifdef _DEBUG_IMPACT
-// 	std::cout << " notified of failure after the " << (num_right_branches[dec]) 
+// 	std::cout << " notified of backtrack after the " << (num_right_branches[dec]) 
 // 		  << "th right branch on " << solver->variables[dec] << "\n";
 // 	std::cout << " ==> right-weight[" << solver->variables[dec] << "] was " << rwb
 // 		  << " now " << right_weight[dec] << std::endl;
@@ -982,7 +982,7 @@ namespace Mistral {
     * NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
   */
 #define INIT_IMPACT .001
-  class ImpactManager : public FailureListener, public SuccessListener, public DecisionListener, public VariableListener {
+  class ImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener {
 
   public:
 
@@ -1031,7 +1031,7 @@ namespace Mistral {
 	variable_weight[i] = avg_branches[i] * impact[i] ;
       }
 
-      solver->add((FailureListener*)this);
+      solver->add((BacktrackListener*)this);
       solver->add((SuccessListener*)this);
       solver->add((DecisionListener*)this);
       solver->add((VariableListener*)this);
@@ -1042,7 +1042,7 @@ namespace Mistral {
       solver->remove((VariableListener*)this);
       solver->remove((SuccessListener*)this);
       solver->remove((DecisionListener*)this);
-      solver->remove((FailureListener*)this);
+      solver->remove((BacktrackListener*)this);
     }
 
     double *get_variable_weight() { return variable_weight.stack_; }   
@@ -1130,7 +1130,7 @@ namespace Mistral {
       left = 0;
     }
       
-    virtual void notify_failure() {
+    virtual void notify_backtrack() {
       // propagation produced a wipe-out
       // - check if it was after a left or a right branch
       // - find out what was the decision/refutation
@@ -1142,7 +1142,7 @@ namespace Mistral {
 	dec = solver->decisions.back().var.id();
 
 #ifdef _DEBUG_IMPACT
-	std::cout << " notified of failure after the " << num_probes[dec] << " left branch on " << solver->variables[dec] << "\n";
+	std::cout << " notified of backtrack after the " << num_probes[dec] << " left branch on " << solver->variables[dec] << "\n";
 	std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << impact[dec] ;
 #endif
 
@@ -1170,7 +1170,7 @@ namespace Mistral {
 	avg_branches[dec] = (avg_branches[dec]*(double)(tot_fails[dec]) + (double)(num_probes[dec]))/((double)(++tot_fails[dec]));
 
 #ifdef _DEBUG_IMPACT
-	std::cout << " notified of failure after a right branch on " << solver->variables[dec] << "\n";
+	std::cout << " notified of backtrack after a right branch on " << solver->variables[dec] << "\n";
 	std::cout << " ==> num branches on " << solver->variables[dec] << " was " << nbr
 		  << " now " << avg_branches[dec] << std::endl;
 #endif
@@ -1199,7 +1199,7 @@ namespace Mistral {
 
   //   * Listener interface for progress saving *
   // */
-  // class ProgressSavingManager : public FailureListener {
+  // class ProgressSavingManager : public BacktrackListener {
 
   // public:
 
@@ -1218,14 +1218,14 @@ namespace Mistral {
   //     for(unsigned int i=0; i<solver->variables.size; ++i) {
   // 	progress.add(solver->variables[i].get_min());
   //     }
-  //     solver->add((FailureListener*)this);
+  //     solver->add((BacktrackListener*)this);
   //   }
 
   //   virtual ~ProgressSavingManager() {
-  //     solver->remove((FailureListener*)this);
+  //     solver->remove((BacktrackListener*)this);
   //   }
 
-  //    virtual void notify_failure() {
+  //    virtual void notify_backtrack() {
 
   //   }
   // };
@@ -1236,7 +1236,7 @@ namespace Mistral {
 
   //   * Listener interface for progress saving *
   // */
-  // class GuidedSearchManager : public FailureListener {
+  // class GuidedSearchManager : public BacktrackListener {
 
   // public:
 
@@ -1254,14 +1254,14 @@ namespace Mistral {
   //     for(unsigned int i=0; i<solver->variables.size; ++i) {
   // 	progress.add(solver->variables[i].get_min());
   //     }
-  //     solver->add((FailureListener*)this);
+  //     solver->add((BacktrackListener*)this);
   //   }
 
   //   virtual ~GuidedSearchManager() {
-  //     solver->remove((FailureListener*)this);
+  //     solver->remove((BacktrackListener*)this);
   //   }
 
-  //    virtual void notify_failure() {
+  //    virtual void notify_backtrack() {
 
   //   }
   // };

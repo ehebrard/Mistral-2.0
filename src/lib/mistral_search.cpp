@@ -360,7 +360,7 @@ std::ostream& operator<<(std::ostream& os, Mistral::SuccessListener& x) {
   return x.display(os);
 }
 
-std::ostream& operator<<(std::ostream& os, Mistral::FailureListener& x) {
+std::ostream& operator<<(std::ostream& os, Mistral::BacktrackListener& x) {
   return x.display(os);
 }
 
@@ -384,7 +384,7 @@ std::ostream& operator<<(std::ostream& os, Mistral::VariableListener& x) {
 //   return x->display(os);
 // }
 
-// std::ostream& operator<<(std::ostream& os, Mistral::FailureListener* x) {
+// std::ostream& operator<<(std::ostream& os, Mistral::BacktrackListener* x) {
 //   return x->display(os);
 // }
 
@@ -586,21 +586,21 @@ Mistral::LearningActivityManager::LearningActivityManager(Solver *s) : solver(s)
   //solver->lit_activity = lit_activity.stack_;
   //solver->var_activity = var_activity.stack_;
   
-  solver->add((FailureListener*)this);
+  solver->add((BacktrackListener*)this);
 }
 
 Mistral::LearningActivityManager::~LearningActivityManager() {
-  solver->remove((FailureListener*)this);
+  solver->remove((BacktrackListener*)this);
 }
 
 
-void Mistral::LearningActivityManager::notify_failure() {
+void Mistral::LearningActivityManager::notify_backtrack() {
 
       // //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
 
 
 #ifdef _DEBUG_ACTIVITY
-  std::cout << "NOTIFY FAILURE!" << std::endl;
+  std::cout << "NOTIFY BACKTRACK!" << std::endl;
   std::cout << std::endl;
 #endif
 

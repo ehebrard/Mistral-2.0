@@ -2351,9 +2351,9 @@ void Mistral::Solver::add(Mistral::SuccessListener* l) {
   l->sid = success_triggers.size;
   success_triggers.add(l);
 }
-void Mistral::Solver::add(Mistral::FailureListener* l) {
-  l->fid = failure_triggers.size;
-  failure_triggers.add(l);
+void Mistral::Solver::add(Mistral::BacktrackListener* l) {
+  l->fid = backtrack_triggers.size;
+  backtrack_triggers.add(l);
 }
 void Mistral::Solver::add(Mistral::DecisionListener* l) {
   l->did = decision_triggers.size;
@@ -2387,11 +2387,11 @@ void Mistral::Solver::remove(Mistral::SuccessListener* l) {
   if(success_triggers.size>idx) 
     success_triggers[idx]->sid = idx;
 }
-void Mistral::Solver::remove(Mistral::FailureListener* l) {
+void Mistral::Solver::remove(Mistral::BacktrackListener* l) {
   unsigned int idx = l->fid;
-  failure_triggers.remove(idx);
-  if(failure_triggers.size>idx) 
-    failure_triggers[idx]->fid = idx;
+  backtrack_triggers.remove(idx);
+  if(backtrack_triggers.size>idx) 
+    backtrack_triggers[idx]->fid = idx;
 }
 void Mistral::Solver::remove(Mistral::DecisionListener* l) {
   unsigned int idx = l->did;
@@ -2413,9 +2413,9 @@ void Mistral::Solver::remove(Mistral::ConstraintListener* l) {
 }
 
 
-void Mistral::Solver::notify_failure() { //Constraint *con, const int idx) {
-  for(unsigned int i=0; i<failure_triggers.size; ++i) {
-    failure_triggers[i]->notify_failure();
+void Mistral::Solver::notify_backtrack() { //Constraint *con, const int idx) {
+  for(unsigned int i=0; i<backtrack_triggers.size; ++i) {
+    backtrack_triggers[i]->notify_backtrack();
   }
 } 
 
@@ -4121,7 +4121,7 @@ void Mistral::Solver::fail() {
 
 //     //std::cout << "solver: notify failure" << std::endl;
 
-//     notify_failure();
+//     notify_backtrack();
 //     return false;
 //   }
 // }
@@ -4931,7 +4931,6 @@ Mistral::Outcome Mistral::Solver::branch_right() {
 #else
 
       learn_nogood();
-      notify_failure();
 
 #endif
 
@@ -4943,6 +4942,7 @@ Mistral::Outcome Mistral::Solver::branch_right() {
       deduction.invert();
     }
     
+    notify_backtrack();
     restore(backtrack_level);  
     
 #ifdef _DEBUG_SEARCH
@@ -5149,7 +5149,6 @@ Mistral::Outcome Mistral::Solver::satisfied() {
 	  if( decisions.empty() ) return UNSAT;
 	  else if( limits_expired() ) return LIMITOUT;
 	  else {
-	    //notify_failure();
 	    branch_right();
 	    return UNKNOWN;
 	  }
@@ -5349,7 +5348,6 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
       
 #ifdef _OLD_
       if( parameters.backjump ) learn_nogood();
-      notify_failure();
 
       if( limits_expired() ) {
       	status = //interrupted();

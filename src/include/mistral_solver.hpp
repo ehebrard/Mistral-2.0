@@ -366,7 +366,7 @@ namespace Mistral {
   class SolutionListener;
   class RestartListener;
   class SuccessListener;
-  class FailureListener;
+  class BacktrackListener;
   class DecisionListener;
   class VariableListener;
   class ConstraintListener;
@@ -494,7 +494,7 @@ namespace Mistral {
     Vector<SolutionListener*>     solution_triggers;
     Vector<RestartListener*>       restart_triggers;
     Vector<SuccessListener*>       success_triggers;
-    Vector<FailureListener*>       failure_triggers;
+    Vector<BacktrackListener*>   backtrack_triggers;
     Vector<DecisionListener*>     decision_triggers;
     Vector<VariableListener*>     variable_triggers;
     Vector<ConstraintListener*> constraint_triggers;
@@ -617,7 +617,7 @@ namespace Mistral {
     void add(SolutionListener* l);
     void add(RestartListener* l);
     void add(SuccessListener* l);
-    void add(FailureListener* l);
+    void add(BacktrackListener* l);
     void add(DecisionListener* l);
     void add(VariableListener* l);
     void add(ConstraintListener* l);
@@ -625,7 +625,7 @@ namespace Mistral {
     void remove(SolutionListener* l);
     void remove(RestartListener* l);
     void remove(SuccessListener* l);
-    void remove(FailureListener* l);
+    void remove(BacktrackListener* l);
     void remove(DecisionListener* l);
     void remove(VariableListener* l);
     void remove(ConstraintListener* l);
@@ -662,7 +662,7 @@ namespace Mistral {
 
     /*!@name Propagation accessors*/
     //@{
-    void notify_failure();
+    void notify_backtrack();
     void notify_success();
     void notify_decision();
     void notify_restart(const double prog);
