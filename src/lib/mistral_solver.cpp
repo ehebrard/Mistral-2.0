@@ -451,7 +451,9 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
     } 
   }
 
-  os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  RUNTIME"
+  os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  SUCCESS"
+     << std::right << std::setw(46) << (outcome != LIMITOUT && outcome != UNKNOWN)  << std::endl
+     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  RUNTIME"
      << std::right << std::setw(46) << (end_time - start_time)  << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  PREPROCTIME"
      << std::right << std::setw(46) << (start_time - creation_time)  << std::endl
@@ -473,12 +475,12 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
      << std::right << std::setw(46) << num_constraints + (solver->base ? solver->base->clauses.size : 0) << std::endl
      << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  ARITY"
      << std::right << std::setw(46) << max_arity << std::endl
-     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NOGOODSIZE"
-     << std::right << std::setw(46) << avg_learned_size << std::endl
-     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  LEARNEDSIZE"
-     << std::right << std::setw(46) << (num_learned ? size_learned/num_learned : 0) << std::endl
-     << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  AMSCEXPLSIZE"
-     << std::right << std::setw(46) << (num_amsc_explanations ? avg_amsc_expl_size/num_amsc_explanations : 0) << std::endl
+    //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NOGOODSIZE"
+    //<< std::right << std::setw(46) << avg_learned_size << std::endl
+    //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  LEARNEDSIZE"
+    //<< std::right << std::setw(46) << (num_learned ? size_learned/num_learned : 0) << std::endl
+    //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  AMSCEXPLSIZE"
+    //<< std::right << std::setw(46) << (num_amsc_explanations ? avg_amsc_expl_size/num_amsc_explanations : 0) << std::endl
     //<< std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  NEGWEIGHT"
     //<< std::right << std::setw(46) << negative_weight << std::endl
      << " " << solver->parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=') << "+" << std::endl << std::setfill(' ');

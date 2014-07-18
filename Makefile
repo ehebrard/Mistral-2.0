@@ -20,7 +20,7 @@ archive:
 	mkdir Mistral-2.0.$(DATE)
 	git archive master --format=tar | tar -x -C ./Mistral-2.0.$(DATE)
 	mkdir ./Mistral-2.0.$(DATE)/globals
-	cp -rf ./fz/mznlib/*.mzn ./Mistral-2.0.$(DATE)/globals 
+	#cp -rf ./fz/mznlib/*.mzn ./Mistral-2.0.$(DATE)/globals 
 	tar -cvzf Mistral-2.0.$(DATE).tar.gz Mistral-2.0.$(DATE)
 
 test: bin/unit_test
