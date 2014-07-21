@@ -2371,7 +2371,7 @@ namespace FlatZinc {
         registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
 
-        //Ad here Mistral redefinitions of global constraints
+        //Add here Mistral redefinitions of global constraints
         registry().add("all_different_int", &p_all_different);
         registry().add("all_equal_int", &p_all_equal_int);
         registry().add("at_most_int", &p_at_most_int);
