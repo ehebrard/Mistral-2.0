@@ -1470,7 +1470,7 @@ namespace FlatZinc {
     	if (size){
     		for (int i=1; i < size; ++i)
     		{
-    			s.add(iv[i]==iv[1]);
+    			s.add(iv[i]==iv[0]);
     		}
     	}
     }
