@@ -1396,6 +1396,86 @@ namespace FlatZinc {
         s.add( AllDiff(iv) );
     }
 
+    /*
+    %-----------------------------------------------------------------------------%
+    % Requires at least 'n' variables in 'x' to take the value 'v'.
+    %-----------------------------------------------------------------------------%
+
+    predicate at_least_int(int: n, array[int] of var int: x, int: v) =
+        sum(i in index_set(x)) ( bool2int(x[i] == v) ) >= n;
+     */
+    void p_at_least_int(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	int n= ce[0]->getInt(), v = ce[2]->getInt();
+    	Vector< Variable > iv = arg2intvarargs(s, m, ce[1]);
+
+    	int size = iv.size;
+
+    	if (size){
+
+    		VarArray subsequence;
+    		for (int i=0; i < size; ++i)
+    		{
+    			subsequence.add(iv[i]==v);
+    		}
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		s.add( BoolSum(subsequence) >= n);
+    	}
+    }
+
+
+    /*    	%-----------------------------------------------------------------------------%
+        	% Requires at most 'n' variables in 'x' to take the value 'v'.
+        	%-----------------------------------------------------------------------------%
+
+        	predicate at_most_int(int: n, array[int] of var int: x, int: v) %=
+        	%    sum(i in index_set(x)) ( bool2int(x[i] == v) ) <= n;
+     */
+
+    void p_at_most_int(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	int n= ce[0]->getInt(), v = ce[2]->getInt();
+    	Vector< Variable > iv = arg2intvarargs(s, m, ce[1]);
+
+    	int size = iv.size;
+
+    	if (size){
+
+    		VarArray subsequence;
+    		for (int i=0; i < size; ++i)
+    		{
+    			subsequence.add(iv[i]==v);
+    		}
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		s.add( BoolSum(subsequence) <= n);
+    	}
+    }
+
+    /* All variablmes should be equal!
+     * predicate all_equal_int(array[int] of var int: x) =
+    	forall(i, j in index_set(x) where i < j) ( x[i] = x[j] );
+     */
+
+    void p_all_equal_int(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	Vector< Variable > iv = arg2intvarargs(s, m, ce[0]);
+
+    	int size = iv.size;
+
+    	if (size){
+    		for (int i=1; i < size; ++i)
+    		{
+    			s.add(iv[i]==iv[1]);
+    		}
+    	}
+    }
+
+
     /* cumulative */
     void p_cumulative(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
@@ -2291,7 +2371,13 @@ namespace FlatZinc {
         registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
 
+        //Ad here Mistral redefinitions of global constraints
         registry().add("all_different_int", &p_all_different);
+        registry().add("all_equal_int", &p_all_equal_int);
+        registry().add("at_most_int", &p_at_most_int);
+        registry().add("at_least_int", &p_at_least_int);
+
+
         //registry().add("cumulative", &p_cumulative);
 
         registry().add("bool2int", &p_bool2int);
