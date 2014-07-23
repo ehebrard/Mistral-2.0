@@ -1455,6 +1455,284 @@ namespace FlatZinc {
     	}
     }
 
+
+    /*
+     *
+     %-----------------------------------------------------------------------------%
+    % Constrains 'c' to be the number of occurrences of 'y' in 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate count_eq(array[int] of var int: x, var int: y, var int: c) =
+        c = sum(i in index_set(x)) ( bool2int(x[i] == y) );
+
+    %-----------------------------------------------------------------------------%
+    %-----------------------------------------------------------------------------%
+     */
+    void p_count_eq(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+    		else
+    		{
+    			Variable y = ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		if (ce[2]->isInt() )
+    			//s.add( BoolSum(subsequence, ce[2]->getInt(), ce[2]->getInt()));
+    			//This is better than the above line on the instance 60_09 !! WHY??
+    			s.add( BoolSum(subsequence) ==  ce[2]->getInt());
+    		else
+    			s.add( BoolSum(subsequence) == ce[2]->getIntVar());
+    	}
+    }
+
+    /*
+    %-----------------------------------------------------------------------------%
+    % Constrains 'c' to be greater than or equal to the number of occurrences of
+    % 'y' in 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate count_geq(array[int] of var int: x, var int: y, var int: c) =
+        c >= sum(i in index_set(x)) ( bool2int(x[i] == y) );
+
+    %-----------------------------------------------------------------------------%
+    %-----------------------------------------------------------------------------%
+     */
+    void p_count_geq(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+    		else
+    		{
+    			Variable y = ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		if (ce[2]->isInt() )
+    			s.add( BoolSum(subsequence) <= ce[2]->getInt());
+    		else
+    			s.add( BoolSum(subsequence) <= ce[2]->getIntVar());
+    	}
+    }
+
+    /*
+    %-----------------------------------------------------------------------------%
+    % Constrains 'c' to be strictly greater than the number of occurrences of 'y'
+    % in 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate count_gt(array[int] of var int: x, var int: y, var int: c) =
+        c > sum(i in index_set(x)) ( bool2int(x[i] == y) );
+
+    %-----------------------------------------------------------------------------%
+    %-----------------------------------------------------------------------------%
+     */
+    void p_count_gt(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+    		else
+    		{
+    			Variable y = ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		if (ce[2]->isInt() )
+    			s.add( BoolSum(subsequence) < ce[2]->getInt());
+    		else
+    			s.add( BoolSum(subsequence) < ce[2]->getIntVar());
+    	}
+    }
+
+    /*
+    %-----------------------------------------------------------------------------%
+    % Constrains 'c' to be less than or equal to the number of occurrences of
+    % 'y' in 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate count_leq(array[int] of var int: x, var int: y, var int: c) =
+        c <= sum(i in index_set(x)) ( bool2int(x[i] == y) );
+
+    %-----------------------------------------------------------------------------%
+    %-----------------------------------------------------------------------------%
+     */
+
+    void p_count_leq(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+    		else
+    		{
+    			Variable y = ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		if (ce[2]->isInt() )
+    			s.add( BoolSum(subsequence) >= ce[2]->getInt());
+    		else
+    			s.add( BoolSum(subsequence) >= ce[2]->getIntVar());
+    	}
+    }
+
+    /*
+    %-----------------------------------------------------------------------------%
+    % Constrains 'c' to be strictly less than the number of occurrences of 'y'
+    % in 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate count_lt(array[int] of var int: x, var int: y, var int: c) ;% =
+    %    c < sum(i in index_set(x)) ( bool2int(x[i] == y) );
+
+    %-----------------------------------------------------------------------------%
+    %-----------------------------------------------------------------------------%
+     */
+
+    void p_count_lt(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+    		else
+    		{
+    			Variable y = ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		if (ce[2]->isInt() )
+    			s.add( BoolSum(subsequence) > ce[2]->getInt());
+    		else
+    			s.add( BoolSum(subsequence) > ce[2]->getIntVar());
+    	}
+    }
+
+    /*
+    %-----------------------------------------------------------------------------%
+    % Constrains 'c' to not be the number of occurrences of 'y' in 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate count_neq(array[int] of var int: x, var int: y, var int: c) ;%=
+    %    c != sum(i in index_set(x)) ( bool2int(x[i] == y) );
+
+    %-----------------------------------------------------------------------------%
+    %-----------------------------------------------------------------------------%
+     */
+
+    void p_count_neq(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+    		else
+    		{
+    			Variable y = ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    			}
+    		}
+
+    		//Do we need that??
+    		//s.add(Free(subsequence.back() ));
+    		if (ce[2]->isInt() )
+    			s.add( BoolSum(subsequence) != ce[2]->getInt());
+    		else
+    			s.add( BoolSum(subsequence) != ce[2]->getIntVar());
+    	}
+    }
+
+
+
+
     /* All variablmes should be equal!
      * predicate all_equal_int(array[int] of var int: x) =
     	forall(i, j in index_set(x) where i < j) ( x[i] = x[j] );
@@ -2376,7 +2654,12 @@ namespace FlatZinc {
         registry().add("all_equal_int", &p_all_equal_int);
         registry().add("at_most_int", &p_at_most_int);
         registry().add("at_least_int", &p_at_least_int);
-
+        registry().add("count_eq", &p_count_eq);
+        registry().add("count_geq", &p_count_geq);
+        registry().add("count_gt", &p_count_gt);
+        registry().add("count_leq", &p_count_leq);
+        registry().add("count_lt", &p_count_lt);
+        registry().add("count_neq", &p_count_neq);
 
         //registry().add("cumulative", &p_cumulative);
 
