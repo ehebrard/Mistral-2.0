@@ -954,7 +954,9 @@ solver.add(solver.variables[66] == 0);
 
       //std::cout <<  solver << std::endl;
       // there is no annotation, we use the default strategy
-      if(fz_search_sequences.empty()) {
+    	result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+
+      /*if(fz_search_sequences.empty()) {
         //std::cout << solver.variables << std::endl;
         result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
       } else {
@@ -964,6 +966,7 @@ solver.add(solver.variables[66] == 0);
         //solver.heuristic->display(std::cout);
         result = solver.depth_first_search();
       }
+      */
     } else {
       // follows flatzinc model's annotations
 

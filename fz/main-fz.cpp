@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
   if(cmd.print_solution())
     fm->print_final(cout , p);
 
-  //if(cmd.print_statistics())
+  if(cmd.print_statistics())
     s.statistics.print_full(std::cout);
 
 #ifdef _VERIFICATION
