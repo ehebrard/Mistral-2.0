@@ -4435,12 +4435,14 @@ Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const in
   : Expression(args) {
   lower_bound = l;
   upper_bound = u;
+  //remove_duplicates_and_zeros();
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, const int l, const int u) 
   : Expression(args) {
   lower_bound = l;
   upper_bound = u;
+  //remove_duplicates_and_zeros();
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Vector< int >& wgts) 
@@ -4450,6 +4452,7 @@ Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Ve
   for(unsigned int i=0; i<wgts.size; ++i) {
     weight.add(wgts[i]);
   }
+  //remove_duplicates_and_zeros();
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Vector< int >& wgts, const int l, const int u) 
@@ -4459,6 +4462,7 @@ Mistral::BoolSumExpression::BoolSumExpression(Vector< Variable >& args, const Ve
   for(unsigned int i=0; i<wgts.size; ++i) {
     weight.add(wgts[i]);
   }
+  //remove_duplicates_and_zeros();
 }
 
 Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, const std::vector< int >& wgts, const int l, const int u) 
@@ -4468,7 +4472,33 @@ Mistral::BoolSumExpression::BoolSumExpression(std::vector< Variable >& args, con
   for(unsigned int i=0; i<wgts.size(); ++i) {
     weight.add(wgts[i]);
   }
+  //remove_duplicates_and_zeros();
 }
+
+void Mistral::BoolSumExpression::remove_duplicates_and_zeros() {
+  int i,n=children.size;
+  while(n--) {
+    if(weight.size && weight[n]==0) {
+      children.pop();
+      weight.pop();
+    } else {
+      i = n;
+      while(i--) {
+	if(children[i].same_as(children[n])) {
+	  if(weight.size==0) {
+	    for(int j=0; j<children.size; ++j)
+	      weight.add(1);
+	  }
+	  weight[i] += weight[n];
+	  children.pop();
+	  weight.pop();
+	  break;
+	}
+      }
+    }
+  }
+}
+
 
 Mistral::BoolSumExpression::~BoolSumExpression() {
 #ifdef _DEBUG_MEMORY
@@ -4524,7 +4554,7 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
       s->add(Constraint(new ConstraintBoolSumInterval(children,lower_bound,upper_bound))); 
     }
   } else {
-   
+
 #ifdef _INCREMENTAL_WBOOLSUM
     s->add(Constraint(new ConstraintIncrementalWeightedBoolSumInterval(children,weight,lower_bound,upper_bound)));  
 #else
@@ -4572,6 +4602,7 @@ void Mistral::BoolSumExpression::initialise_bounds() {
 }
 
 void Mistral::BoolSumExpression::extract_variable(Solver *s) {
+  remove_duplicates_and_zeros();
   initialise_bounds();
 
   Variable aux(lower_bound, upper_bound, DYN_VAR);
@@ -7661,9 +7692,9 @@ Mistral::Outcome Mistral::Goal::notify_exhausted() {
 std::ostream& Mistral::Goal::display(std::ostream& os) const {
   if(type == OPTIMIZATION) {
     if(sub_type == MINIMIZATION) {
-      os << "minimize " << objective ;
+      os << "minimize " << objective << objective.get_domain();
     } else   if(sub_type == MAXIMIZATION) {
-      os << "maximize " << objective ;
+      os << "maximize " << objective << objective.get_domain();
     }
   } else if(type == ENUMERATION) {
     os << "find all solutions" ;
@@ -7678,9 +7709,14 @@ std::ostream& Mistral::Goal::display(std::ostream& os) const {
 }
 
 Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
+
+  //std::cout << "notify solution to objective\n";
+
   if(type == OPTIMIZATION) {
     if(sub_type == MINIMIZATION) {
       upper_bound = objective.get_min();
+
+      //std::cout << "minimization -> lb = " << upper_bound << " " << objective.get_domain() << " (ub = " << lower_bound << ")" << std::endl;
     
       //std::cout << "LEVEL: " << solver->level << std::endl;
       // search the deepest level 
@@ -7688,10 +7724,19 @@ Mistral::Outcome Mistral::Goal::notify_solution(Solver *solver) {
       do {
 	level = solver->level;
 	if(level == search_root) {
+
+	  //std::cout << " search tree root reached" << std::endl;
+
 	  lower_bound = upper_bound;
 	  return OPT;
 	}
+
+	//std::cout << " backtrack one level " ;
+
 	solver->restore(level-1);
+
+	//std::cout << objective.get_domain() << std::endl;
+
       } while(upper_bound <= objective.get_min());
 	
       Decision deduction(objective, Decision::UPPERBOUND, upper_bound-1);

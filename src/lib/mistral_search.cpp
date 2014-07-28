@@ -70,6 +70,11 @@ Mistral::ConsolidateListener::ConsolidateListener(Mistral::Solver *s)
     }
   }
 
+  id_obj = -1;
+  if(solver->objective) {
+    id_obj = solver->objective->objective.id();
+  }
+
   //std::cout << constraints[66] << std::endl;
 
   solver->add((VariableListener*)this);
@@ -126,6 +131,12 @@ void Mistral::ConsolidateListener::notify_change(const int idx) {
     //std::cout << constraints[idx][i] << std::endl;
     constraints[idx][i].consolidate_var();
     //std::cout << constraints[idx][i] << std::endl;
+  }
+
+  //std::cout << "IDX=" << idx << " IDO=" << id_obj << std::endl;
+
+  if(idx==id_obj) {
+    solver->objective->objective = X;
   }
 
   //std::cout << "END REACT TO CHANGE ON " << solver->variables[idx] << std::endl;

@@ -1783,10 +1783,6 @@ void SchedulingSolver::setup() {
   }
 
 
-#ifdef _MONITOR
-  monitor_list << tasks[15] << " "
-
-#endif
 
 
 //   if(data->hasJobDueDate()) {

@@ -1855,7 +1855,7 @@ namespace Mistral {
     Solver                                      *solver;
     VarStack < Variable, ReversibleNum<int> > *sequence;
     Vector< Vector< Constraint > >          constraints;
-
+    int                                          id_obj;
 
     ConsolidateListener(Solver *s);
     virtual ~ConsolidateListener();

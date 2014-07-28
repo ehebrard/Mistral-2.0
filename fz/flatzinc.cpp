@@ -909,6 +909,7 @@ solver.add(solver.variables[66] == 0);
     //std::cout << "after goal: " << solver.active_constraints.empty() << std::endl;
 
     solver.objective = goal;
+    solver.consolidate_manager->id_obj = goal->objective.id();
 
 
 //    if(solver.is_pseudo_boolean())

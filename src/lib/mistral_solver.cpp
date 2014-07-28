@@ -1546,11 +1546,13 @@ Mistral::Outcome Mistral::Solver::solve() {
 void Mistral::Solver::minimize(Variable X) {
   X.initialise(this,1);
   objective = new Goal(Goal::MINIMIZATION, X.get_var());
+  consolidate_manager->id_obj = X.id();
 }
 
 void Mistral::Solver::maximize(Variable X) {
   X.initialise(this,1);
   objective = new Goal(Goal::MAXIMIZATION, X.get_var());
+  consolidate_manager->id_obj = X.id();
 }
 
 Mistral::Outcome Mistral::Solver::search_minimize(Variable X) {
@@ -1804,6 +1806,7 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
 
   //int initial_level = level; 
 
+  
   if(parameters.verbosity>2)  {
     std::cout << " " << parameters.prefix_comment << " +" << std::setw(89) << std::setfill('=')
 	      << "+" << std::endl << std::setfill(' ') 
@@ -2033,6 +2036,24 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
     arity = constraints[posted_constraints[i]].arity();
     if(arity > statistics.max_arity) statistics.max_arity = arity;
   }
+
+  /*
+  std::cout << sequence << std::endl;
+  monitor_list << variables[29];
+  monitor_list << " ";
+  monitor_list << variables[30];
+  monitor_list << " ";
+  monitor_list << variables[31];
+  monitor_list << " ";
+  monitor_list << variables[32];
+  monitor_list << " ";
+  monitor_list << variables[33];
+  monitor_list << " ";
+  monitor_list << variables[34];
+  monitor_list << " ";
+  monitor_list << variables[35];
+  monitor_list << "\n";
+  */
   
 }
 
@@ -3170,6 +3191,7 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
       var_evt = active_variables.pop_front();
 
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+
 	sequence.remove(variables[var_evt.first]);
 	last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
 	assignment_level[var_evt.first] = level;
@@ -3655,6 +3677,9 @@ bool Mistral::Solver::propagate()
       if(ASSIGNED(var_evt.second)) {
       
 	assigned.add(vidx);
+
+
+	//std::cout << " -remove " << variables[var_evt.first] << " in " << variables[var_evt.first].get_domain() << std::endl;
       
 	if(sequence.contain(variables[vidx]))
 	  sequence.remove(variables[vidx]);
@@ -3860,7 +3885,7 @@ bool Mistral::Solver::propagate()
     if(_DEBUG_SEARCH) {
       std::cout << parameters.prefix_comment;
       for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-      std::cout << "success!" << std::endl;
+      std::cout << "success! " << sequence << std::endl;
     }
 #endif
     culprit.clear();
@@ -5050,18 +5075,13 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   if(_DEBUG_SEARCH) {
     std::cout << parameters.prefix_comment;
     for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-    std::cout << " SAT!" << std::endl; 
+    std::cout << " SAT! "  << std::endl; 
   }
 #endif
 
-  //std::cout << this << std::endl;
-
   unsigned int i, j, k;
 
-
   if(parameters.checked) {
-
-    //std::cout << posted_constraints << std::endl;
 
     /// check the current solution
     Vector< int > tmp_sol;
@@ -5070,10 +5090,7 @@ Mistral::Outcome Mistral::Solver::satisfied() {
     bool all_assigned;
     int real_arity;
 
-
     for(i=0; i<posted_constraints.size; ++i) {
-      //std::cout << posted_constraints[i] << " / " << constraints.size << std::endl;
-
       all_assigned = true;
       C = constraints[posted_constraints[i]];
       //C.consolidate();
@@ -5093,10 +5110,6 @@ Mistral::Outcome Mistral::Solver::satisfied() {
       }
 
       bool consistent = true;
-
-      // if(C.id() == 48996) {
-      // 	std::cout << "check " << C << "(variables are" << (all_assigned ? " " : " not ") << "all assigned)" << std::endl;
-      // }
 
       if(!all_assigned) {
 
@@ -5164,17 +5177,32 @@ Mistral::Outcome Mistral::Solver::satisfied() {
     last_solution_lb[i] = variables[i].get_min();
     last_solution_ub[i] = variables[i].get_max();
 
-    //std::cout << variables[i] << " := " << last_solution_lb[i] << " ";
+    //std::cout << variables[i] << " := " << last_solution_lb[i] << " " << variables[i].get_domain() << std::endl;
 
   }
   //std::cout << std::endl;
   ++statistics.num_solutions;
 
+#ifdef _DEBUG_SEARCH
+  if(_DEBUG_SEARCH) {
+    std::cout << parameters.prefix_comment;
+    for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+    std::cout << "notify solution to goal " << objective << " " << objective->objective << " " << objective->objective.get_domain() << std::endl;
+  }
+#endif
+
+
+
+
   /// notify the objective and return the outcome
   Outcome result = //(_exit_on_solution_ ? SAT : objective->notify_solution(this));
     objective->notify_solution(this);
 
+  
   statistics.objective_value = objective->value();
+  //std::cout << statistics.objective_value << std::endl;
+
+
 
   for(i=0; i<solution_triggers.size; ++i) {
     solution_triggers[i]->notify_solution();
@@ -5266,6 +5294,8 @@ bool Mistral::Solver::limits_expired() {
 Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root) 
 {
   search_root = _root;
+
+
 
   //std::cout << sequence << std::endl;
 

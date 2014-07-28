@@ -1625,7 +1625,7 @@ namespace Mistral {
     bool is_expression() { return domain_type == EXPRESSION; }
     bool is_initialised() const { return domain_type != CONST_VAR && variable->is_initialised(); }
     bool is_set_var(); //{ return domain_type == EXPRESSION && expression->is_set(); }
- 
+    bool same_as(Variable& x) const { return domain_type==x.domain_type && variable==x.variable; }
 
     Variable operator+(Variable);
     Variable operator+(const int);
@@ -2963,6 +2963,7 @@ namespace Mistral {
     BoolSumExpression(std::vector< Variable >& args, const std::vector< int >& w, const int l, const int u);
     virtual ~BoolSumExpression();
     void initialise_bounds();
+    void remove_duplicates_and_zeros();
 
     virtual void extract_constraint(Solver*);
     virtual void extract_variable(Solver*);

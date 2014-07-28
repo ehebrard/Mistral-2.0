@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
   double cpu_time = get_run_time() ;
 
 #ifdef _VERBOSE_PARSER
-  std::cout << " c Parse: ";
+  std::cout << " " << s.parameters.prefix_statistics << " Parse: ";
 #endif
 
   FlatZinc::Printer p;
