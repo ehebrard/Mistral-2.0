@@ -4737,9 +4737,27 @@ Mistral::LinearExpression::LinearExpression(Vector< Variable >& args,
       if(weighted<0 || weighted>1) weighted = 2;
       else weighted = 1;
     } else if(wgts[i]==-1) {
-      if(weighted>0 || weighted<-1) weighted = 2;
+      if(weighted>0) weighted = 2;
       else weighted = -1;
     } else weighted = 2;
+    if(!children[i].is_boolean()) {
+      if(bool_domains==0) bool_domains = i+1;
+      else if(bool_domains>0) bool_domains = -1;
+    } 
+  }
+}
+
+Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 
+					    const int l, const int u, const int o) 
+  : Expression(args) {
+  weighted = 1;
+  bool_domains = 0;
+
+  lower_bound = l;
+  upper_bound = u;
+  offset = o;
+  for(unsigned int i=0; i<args.size; ++i) {
+    weight.add(1);
     if(!children[i].is_boolean()) {
       if(bool_domains==0) bool_domains = i+1;
       else if(bool_domains>0) bool_domains = -1;
@@ -4763,9 +4781,27 @@ Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args,
       if(weighted<0 || weighted>1) weighted = 2;
       else weighted = 1;
     } else if(wgts[i]==-1) {
-      if(weighted>0 || weighted<-1) weighted = 2;
+      if(weighted>0) weighted = 2;
       else weighted = -1;
     } else weighted = 2;
+    if(!children[i].is_boolean()) {
+      if(bool_domains==0) bool_domains = i+1;
+      else if(bool_domains>0) bool_domains = -1;
+    } 
+  }
+}
+
+Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args, 
+					    const int l, const int u, const int o) 
+  : Expression(args) {
+  weighted = 1;
+  bool_domains = 0;
+
+  lower_bound = l;
+  upper_bound = u;
+  offset = o;
+  for(unsigned int i=0; i<args.size(); ++i) {
+    weight.add(1);
     if(!children[i].is_boolean()) {
       if(bool_domains==0) bool_domains = i+1;
       else if(bool_domains>0) bool_domains = -1;
@@ -4904,6 +4940,38 @@ const char* Mistral::LinearExpression::get_name() const {
 void Mistral::LinearExpression::extract_predicate(Solver *s) {
   s->add(Constraint(new PredicateWeightedSum(children, weight, -offset, -offset)));
 }
+
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, Variable T, const int offset) {
+  LinearExpression *lexpr = new LinearExpression(args,0,0,offset);
+  lexpr->children.add(T);
+  lexpr->weight.add(-1);
+  if(lexpr->weighted==0)
+    lexpr->weighted=-1;
+  else if(lexpr->weighted==1)
+    lexpr->weighted=2;
+  Variable exp(lexpr);
+  return exp;
+}
+Mistral::Variable Mistral::Sum(std::vector< Variable >& args, Variable T, const int offset) {
+  LinearExpression *lexpr = new LinearExpression(args,0,0,offset);
+  lexpr->children.add(T);
+  lexpr->weight.add(-1);
+  if(lexpr->weighted==0)
+    lexpr->weighted=-1;
+  else if(lexpr->weighted==1)
+    lexpr->weighted=2;
+  Variable exp(lexpr);
+  return exp;
+}
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, const int l, const int u, const int offset) {
+  Variable exp( new LinearExpression(args, l, u,offset) );
+  return exp;
+}
+Mistral::Variable Mistral::Sum(std::vector< Variable >& args, const int l, const int u, const int offset) {
+  Variable exp( new LinearExpression(args, l, u,offset) );
+  return exp;
+}
+
 
 Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T, const int offset) {
   LinearExpression *lexpr = new LinearExpression(args,wgts,0,0,offset);

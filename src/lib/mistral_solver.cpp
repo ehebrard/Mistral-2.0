@@ -1989,6 +1989,8 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   std::cout << "INIT SEARCH!" << std::endl;
 #endif
 
+  
+
   //consolidate();
 
   if(level < 0) save();

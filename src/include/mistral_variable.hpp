@@ -2997,6 +2997,8 @@ namespace Mistral {
     Vector< int > weight;
 
 
+    LinearExpression(Vector< Variable >& args, const int l, const int u, const int o);
+    LinearExpression(std::vector< Variable >& args, const int l, const int u, const int o);
     LinearExpression(Vector< Variable >& args, Vector< int >& wgt, const int l, const int u, const int o);
     LinearExpression(std::vector< Variable >& args, std::vector< int >& wgt, const int l, const int u, const int o);
     virtual ~LinearExpression();
@@ -3010,6 +3012,12 @@ namespace Mistral {
   };
 
   //Variable Sum(Vector< Variable >& args);
+  Variable Sum(Vector< Variable >& args, Variable T, const int o=0);
+  Variable Sum(std::vector< Variable >& args, Variable T, const int o=0);
+  Variable Sum(Vector< Variable >& args, const int l=-INFTY, const int u=INFTY, const int o=0);
+  Variable Sum(std::vector< Variable >& args, const int l=-INFTY, const int u=INFTY, const int o=0);
+
+
   Variable Sum(Vector< Variable >& args, Vector< int >& wgts, Variable T, const int o=0);
   Variable Sum(std::vector< Variable >& args, std::vector< int >& wgts, Variable T, const int o=0);
   Variable Sum(Vector< Variable >& args, Vector< int >& wgts, const int l=-INFTY, const int u=INFTY, const int o=0);
