@@ -12980,6 +12980,7 @@ void Mistral::ConstraintCliqueNotEqual::initialise() {
     trigger_on(_VALUE_, scope[i]);
   }
   GlobalConstraint::initialise();
+  culprit = -1;
   //GlobalConstraint::set_idempotent(true);
 }
 
@@ -13014,8 +13015,9 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
   std::cout << std::endl << active << std::endl;
 #endif
   for(i=0; i<changes.size; ++i) {
-    value = scope[changes[i]].get_min();
-
+    culprit = changes[i];
+    value = scope[culprit].get_min();
+    
 #ifdef _DEBUG_CLIQUENOTEQUAL
     std::cout << "react to " << scope[changes[i]] << "=" << value << std::endl; 
     std::cout << "  check pairs of recently assigned vars: " << std::endl;
@@ -13028,6 +13030,8 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	std::cout << "FAIL!" << std::endl;
 #endif
+
+	//std::cout << "a " << culprit << std::endl;
 	return FAILURE(changes[j]);
       } 
 #ifdef _DEBUG_CLIQUENOTEQUAL
@@ -13042,6 +13046,7 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
     // processing this loop, we do it backward
     for(j=n; j; --j) {
       active_var = active[j-1];
+
       if(active_var != changes[i]) {
 
 #ifdef _DEBUG_CLIQUENOTEQUAL
@@ -13054,6 +13059,7 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 	  std::cout << "FAIL!" << std::endl;
 #endif
 	  //assigned.clear();
+	  //std::cout << "b " << culprit << std::endl;
 	  return FAILURE(active_var);
 	} else if(ASSIGNED(evt)) {
 	  //assigned.add(active_var);
@@ -13073,7 +13079,9 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 
   while(m < n) {
     for(i=m; i<n; ++i) {
-      value = scope[active[i]].get_min();
+      culprit = active[i];
+      value = scope[culprit].get_min();
+
 #ifdef _DEBUG_CLIQUENOTEQUAL
       std::cout << "rreact to " << scope[active[i]] << "=" << value << std::endl; 
       std::cout << "  check pairs of recently assigned vars: " << std::endl;
@@ -13086,6 +13094,7 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	  std::cout << "FAIL!" << std::endl;
 #endif
+	  //std::cout << "c " << culprit << std::endl;
 	  return FAILURE(active[j]);
 	}
 #ifdef _DEBUG_CLIQUENOTEQUAL
@@ -13099,13 +13108,15 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 
       for(j=m; j; --j) {
 	active_var = active[j-1];
+	
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	std::cout << "    " << scope[active_var] << "-" << value << " ";
 #endif
 	if(scope[active_var].remove(value) == FAIL_EVENT) {
 #ifdef _DEBUG_CLIQUENOTEQUAL
-	std::cout << "FAIL!" << std::endl;
+	  std::cout << "FAIL!" << std::endl;
 #endif
+	  //std::cout << "d " << culprit << std::endl;
 	  return FAILURE(active_var);
 	}
 #ifdef _DEBUG_CLIQUENOTEQUAL
@@ -13137,6 +13148,20 @@ std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const
     os << ", " << scope[i]/*.get_var()*/;
   os << ")" ; //<< events << " " << event_type;
   return os;
+}
+
+void Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit, Vector<double>& weights)  {
+  // std::cout << std::endl << "WEIGHT AFTER FAILURE ON CLIQUENOTEQUAL " << get_solver()->prev_wiped_idx << " <> " << culprit << "\n";
+  // std::cout << scope[get_solver()->prev_wiped_idx] << " in " << scope[get_solver()->prev_wiped_idx].get_domain() 
+  // 	    << " == " << scope[culprit] << " in " << scope[culprit].get_domain() << std::endl;
+
+  // for(int i=0; i<scope.size; ++i) {
+  //   weights[scope[i].id()] += unit;
+  // }
+
+  weights[scope[get_solver()->prev_wiped_idx].id()] += unit;
+  weights[scope[culprit].id()] += unit;
+  
 }
 
 
@@ -14557,7 +14582,15 @@ int Mistral::ConstraintAllDiff::filterlower()
     if (--d[z] == 0)
       t[z = pathmax(t, t[z]=z+1)] = j;
     pathset(t, x+1, z, z); // path compression
-    if (d[z] < bounds[z]-bounds[y]) return INCONSISTENT; // no solution
+    if (d[z] < bounds[z]-bounds[y]) {
+
+      expl_note = 2*i;      
+      // print_structs();
+      // std::cout << "MAXSORTED " << i << " " << expl_note << std::endl;
+
+
+      return INCONSISTENT; // no solution
+    }
     if (h[x] > x) {
       maxsorted[i]->min = bounds[w = pathmax(h, h[x])];
       pathset(h, x, w, w); // path compression
@@ -14588,7 +14621,14 @@ int Mistral::ConstraintAllDiff::filterupper()
     if (--d[z] == 0)
       t[z = pathmin(t, t[z]=z-1)] = j;
     pathset(t, x-1, z, z);
-    if (d[z] < bounds[y]-bounds[z]) return INCONSISTENT; // no solution
+    if (d[z] < bounds[y]-bounds[z]) {
+
+      expl_note = 1+(2*i);
+      // print_structs();
+      // std::cout << "MINSORTED " << i << " " << expl_note << std::endl;
+
+      return INCONSISTENT; // no solution
+    } 
     if (h[x] < x) {
       minsorted[i]->max = bounds[w = pathmin(h, h[x])] - 1;
       pathset(h, x, w, w);
@@ -14705,8 +14745,8 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
     if( (status_lower == CHANGES) || (status_upper == CHANGES) ) {
       i = 0;
       while (i < scope.size) {
-	if( scope[i].set_min( iv[i].min ) == FAIL_EVENT )  { return FAILURE(i); }
-	if( scope[i].set_max( iv[i].max ) == FAIL_EVENT )  { return FAILURE(i); }
+	if( scope[i].set_min( iv[i].min ) == FAIL_EVENT )  { std::cout << "**" << std::endl; return FAILURE(i); }
+	if( scope[i].set_max( iv[i].max ) == FAIL_EVENT )  { std::cout << "**" << std::endl; return FAILURE(i); }
 	i++;
       }
     }  
@@ -14732,6 +14772,87 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
   return os;
 }
 
+void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& weights)  {
+  //std::cout << "WEIGHT AFTER FAILURE ON ALLDIFF " << expl_note << "\n";
+
+
+  
+  int rank = expl_note/2;
+  int l; // = minsorted[0]->min;     
+  int u; // = maxsorted[scope.size-1]->max;
+  other_bounds.clear();
+
+  if(expl_note&1) {
+
+    //std::cout << "MINSORTED!\n";
+
+
+    l = minsorted[rank]->min;
+    for(int i=rank; i<scope.size; ++i) {
+      other_bounds.push_back(minsorted[i]->max);
+    }
+    sort(other_bounds.begin(), other_bounds.end());
+
+    for(int i=0; i<=rank; ++i) {
+      u = other_bounds[i];
+      if(u-l < i)
+	break;
+    }
+  } else {
+
+    //std::cout << "MAXSORTED!\n";
+
+    u = maxsorted[rank]->max;
+    for(int i=0; i<=rank; ++i) {
+      other_bounds.push_back(maxsorted[i]->min);
+      //std::cout << " " << maxsorted[i]->min ;
+    }
+    //std::cout << std::endl;
+
+    sort(other_bounds.begin(), other_bounds.end());
+    // for(int i=0; i<=rank; ++i) {
+    //   std::cout << " " << other_bounds[rank-i] ;
+    // }
+    // std::cout << std::endl;
+
+    for(int i=0; i<=rank; ++i) {
+      l = other_bounds[rank-i];
+      if(u-l < i)
+	break;
+      //std::cout << "[" << l << ".." << u << "] is ok\n";
+    }
+  }
+  
+
+  //std::cout << "the Hall interval is  [" << l << ".." << u << "]\n";
+
+
+  for(int i=0; i<scope.size; ++i) {
+    //std::cout << scope[i].get_domain() << std::endl;
+    if(iv[i].min>=l && iv[i].max<=u) {
+      //std::cout << " " << scope[i].id();
+      weights[scope[i].id()] += unit;
+    }
+  }
+  //std::cout << std::endl;
+
+}
+
+void Mistral::ConstraintAllDiff::print_structs() {
+  
+
+
+  std::cout << std::endl;
+  for(int i=0; i<scope.size; ++i) {
+    std::cout << i << " [" 
+	      << minsorted[i]->min << ".." << minsorted[i]->max << "] ["
+	      << maxsorted[i]->min << ".." << maxsorted[i]->max << "] \n";
+  }
+  // for(int i=0; i<2*scope.size+2; ++i) {
+  //   std::cout << i << " bounds=" << bounds[i] << " t=" << t[i] << " d=" << d[i] << " h=" << h[i] << std::endl; 
+  // }
+
+}
 
 
 Mistral::PredicateMin::PredicateMin(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }

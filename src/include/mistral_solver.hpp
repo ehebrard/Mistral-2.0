@@ -503,6 +503,8 @@ namespace Mistral {
     Constraint culprit;
     /// the constraint-index of the last wiped_out variable in the culprit constraint (-1 otherwise)
     int wiped_idx;
+    /// keep the index of the variable that produced the last conflict
+    int prev_wiped_idx;
     /// the overall-index of the variable responsible for the last trigger before a failure
     int wiper_idx;
 

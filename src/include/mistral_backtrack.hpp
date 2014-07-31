@@ -236,6 +236,10 @@ namespace Mistral {
     void check_active();
     int rank();
 
+
+    // weight the variables according to how much they are responsible for the last conflict
+    void weight_conflict(double unit, Vector<double>& weights);
+
     // call the rewriting procedure of the constraint
     RewritingOutcome rewrite();
 

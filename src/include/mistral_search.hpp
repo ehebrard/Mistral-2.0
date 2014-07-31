@@ -311,7 +311,7 @@ namespace Mistral {
 
 
 
-  /*! \class FailureCountManager
+  /*! \class FailureCountanager
     \brief FailureCountManager Class
 
     * Listener interface for weighted degree *
@@ -332,6 +332,8 @@ namespace Mistral {
 
     //FailureCountManager(Solver *s, void *a=NULL) : solver(s) {// }
     FailureCountManager(Solver *s) : solver(s) {// }
+
+      //std::cout << "OLD" << std::endl;
 
       weight_unit = solver->parameters.activity_increment;
       
@@ -417,7 +419,8 @@ namespace Mistral {
 	Variable *scope = con.get_scope();
 	int idx;
 	i = con.arity();
-	++constraint_weight[con.id()];
+	//++constraint_weight[con.id()];
+	constraint_weight[con.id()] += weight_unit;
 	while(i--) {
 	  idx = scope[i].id();
 	  if(idx>=0) {
@@ -458,6 +461,113 @@ namespace Mistral {
       while(variable_weight.size < solver->variables.size) {
 	variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
       }
+    }
+
+    virtual std::ostream& display(std::ostream& os, const bool all) const ;
+// {
+      
+//       int *all_variables = new int[variable_weight.size];
+//       int *all_constraints = new int[constraint_weight.size];
+
+//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+// 	all_variables[i] = i;
+//       }
+
+//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+// 	all_constraints[i] = i;
+//       }
+
+//       weight_sorting_array = variable_weight.stack_;
+//       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+
+//       weight_sorting_array = constraint_weight.stack_;
+//       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
+
+//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+// 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
+//       }
+//       os << std::endl;
+//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+// 	os << std::setw(5) << variable_weight[i] << " ";
+//       }
+//       os << std::endl;
+
+//      for(unsigned int i=0; i<constraint_weight.size; ++i) {
+// 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
+//       }
+//       os << std::endl;
+//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+// 	os << std::setw(5) << constraint_weight[i] << " ";
+//       }
+//       os << std::endl;
+
+//     }    
+
+  };
+
+
+
+  /*! \class ConflictCountManager
+    \brief ConflictCountManager Class
+
+    * Listener interface for a kind of weighted degree *
+    * Failed constraints weight variables with an aribtrary policy *
+  */
+  //template< float DECAY > 
+  class ConflictCountManager : public BacktrackListener {
+
+  public:
+
+    Solver *solver;
+    double weight_unit;
+
+
+    /*\ TODO: make it a variable listener \*/
+    //Vector<double> constraint_weight;
+    Vector<double> variable_weight;
+
+    //ConflictCountManager(Solver *s, void *a=NULL) : solver(s) {// }
+    ConflictCountManager(Solver *s) : solver(s) {// }
+
+      //std::cout << "NEW" << std::endl;
+
+      weight_unit = solver->parameters.activity_increment;
+      
+      variable_weight.initialise(solver->variables.size, solver->variables.size);
+
+      for(unsigned int i=0; i<solver->variables.size; ++i) {
+	variable_weight[i] = 0;
+      // 	variable_weight.add(weight_unit * solver->variables[i].get_degree());
+      }
+      Variable *scope;
+      int arity, j;
+      for(unsigned int i=0; i<solver->constraints.size; ++i) {
+	arity = solver->constraints[i].arity();
+	scope = solver->constraints[i].get_scope();
+	for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
+	    variable_weight[scope[j].id()] += weight_unit/(double)arity;
+	  }
+      }
+
+      solver->add((BacktrackListener*)this);
+      solver->add((ConstraintListener*)this);
+    }
+
+    virtual ~ConflictCountManager() {
+      solver->remove((ConstraintListener*)this);
+      solver->remove((BacktrackListener*)this);
+    }
+
+    double *get_variable_weight() { return variable_weight.stack_; }   
+    double **get_value_weight() { return NULL; }
+    double *get_bound_weight() { return NULL; }
+  
+
+    virtual void notify_backtrack() {
+      int i;
+      Constraint con = solver->culprit;
+
+      con.weight_conflict(weight_unit, variable_weight);
     }
 
     virtual std::ostream& display(std::ostream& os, const bool all) const ;

@@ -423,6 +423,22 @@ int Mistral::Constraint::rank() {
   return propagator->index[rank];
 }
 
+void Mistral::Constraint::weight_conflict(double unit, Vector<double>& weights) {
+  if(global()) {
+    ((GlobalConstraint*)propagator)->weight_conflict(unit, weights);
+  } else {
+    Variable *scope = get_scope();
+    int idx;
+    int i = arity();
+    while(i--) {
+      idx = scope[i].id();
+      if(idx>=0) {
+	weights[idx] += unit;
+      }
+    }   
+  }
+}
+
 
 void Mistral::Environment::_restore_() {
   

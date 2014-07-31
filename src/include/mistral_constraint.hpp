@@ -1793,6 +1793,14 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     }
 
 
+
+    virtual void weight_conflict(double unit, Vector<double>& weights) {
+      for(int i=0; i<scope.size; ++i) {
+	weights[scope[i].id()] += unit;
+      }
+    }
+
+
     std::ostream& display(std::ostream& os) const;  
   };
 
@@ -4730,6 +4738,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   public:
 
     //Vector<int> assigned;
+    int culprit;
     
     /**@name Constructors*/
     //@{
@@ -4760,6 +4769,14 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "{=/=}"; }
     //@}
+
+    void weight_conflict(double unit, Vector<double>& weights);//  {
+    //   std::cout << std::endl;
+    //   for(int i=0; i<scope.size; ++i) {
+    // 	std::cout << scope[i].get_domain() << std::endl;
+    // 	weights[scope[i].id()] += unit;
+    //   }
+    // }
     
   };
 
@@ -4797,6 +4814,25 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     int *bounds;  // bounds[1..nb] hold set of min & max in the niv intervals
                   // while bounds[0] and bounds[nb+1] allow sentinels
     int nb;
+
+    
+    int expl_note;
+    // used to store 
+    //  -- which interval order was used to find the Hall interval (least significant bit)
+    //  -- at which rank was is discovered (rest)
+    // When computing an explanation, suppose that it was when exploring the maxsorted intervals an at rank r
+    //  -> then maxsorted[r]->max is the max of the Hall interval AND it is a HI of the subset of variables whose rank is <= r
+    //     we then use the following array:
+    //Vector<int> count_bound;
+    std::vector<int> other_bounds;
+    // let m = maxsorted[r]->max
+    // for each pos s in the interval [0, m] we store how many times an interval finishing before or at m starts at s
+    // then, going from m toward 0, we compute how many of these intervals start at a pos s or before (call this b[s])
+    // IF s+b[s]>m+1 THEN [s, m] is a Hall interval
+    // if the Hall interval was found on minsorted intervals, then we do the same thing in reverse order
+    // i.e., in the interval [m, n-1]
+
+
     void sortit();
     int filterlower();
     int filterupper();
@@ -4835,6 +4871,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "alldiff"; }
     //@}
+
+    void print_structs();
+
+    void weight_conflict(double unit, Vector<double>& weights);
   };
 
 
