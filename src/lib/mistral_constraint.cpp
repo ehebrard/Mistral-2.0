@@ -14745,8 +14745,8 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
     if( (status_lower == CHANGES) || (status_upper == CHANGES) ) {
       i = 0;
       while (i < scope.size) {
-	if( scope[i].set_min( iv[i].min ) == FAIL_EVENT )  { std::cout << "**" << std::endl; return FAILURE(i); }
-	if( scope[i].set_max( iv[i].max ) == FAIL_EVENT )  { std::cout << "**" << std::endl; return FAILURE(i); }
+	if( scope[i].set_min( iv[i].min ) == FAIL_EVENT )  { expl_note = -(i+1); return FAILURE(i); }
+	if( scope[i].set_max( iv[i].max ) == FAIL_EVENT )  { expl_note = -(i+1); return FAILURE(i); }
 	i++;
       }
     }  
@@ -14777,63 +14777,85 @@ void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& we
 
 
   
-  int rank = expl_note/2;
+  int rank; // = expl_note/2;
   int l; // = minsorted[0]->min;     
   int u; // = maxsorted[scope.size-1]->max;
   other_bounds.clear();
 
-  if(expl_note&1) {
+  if(expl_note>=0) {
+    rank = expl_note/2;
 
-    //std::cout << "MINSORTED!\n";
+    if(expl_note&1) {
+
+      //std::cout << "MINSORTED!\n";
 
 
-    l = minsorted[rank]->min;
-    for(int i=rank; i<scope.size; ++i) {
-      other_bounds.push_back(minsorted[i]->max);
+      l = minsorted[rank]->min;
+      for(int i=rank; i<scope.size; ++i) {
+	other_bounds.push_back(minsorted[i]->max);
+      }
+      sort(other_bounds.begin(), other_bounds.end());
+
+      for(int i=0; i<=rank; ++i) {
+	u = other_bounds[i];
+	if(u-l < i)
+	  break;
+      }
+    } else {
+
+      //std::cout << "MAXSORTED!\n";
+
+      u = maxsorted[rank]->max;
+      for(int i=0; i<=rank; ++i) {
+	other_bounds.push_back(maxsorted[i]->min);
+	//std::cout << " " << maxsorted[i]->min ;
+      }
+      //std::cout << std::endl;
+
+      sort(other_bounds.begin(), other_bounds.end());
+      // for(int i=0; i<=rank; ++i) {
+      //   std::cout << " " << other_bounds[rank-i] ;
+      // }
+      // std::cout << std::endl;
+
+      for(int i=0; i<=rank; ++i) {
+	l = other_bounds[rank-i];
+	if(u-l < i)
+	  break;
+	//std::cout << "[" << l << ".." << u << "] is ok\n";
+      }
     }
-    sort(other_bounds.begin(), other_bounds.end());
 
-    for(int i=0; i<=rank; ++i) {
-      u = other_bounds[i];
-      if(u-l < i)
-	break;
+    for(int i=0; i<scope.size; ++i) {
+      //std::cout << scope[i].get_domain() << std::endl;
+      if(iv[i].min>=l && iv[i].max<=u) {
+	//std::cout << " " << scope[i].id();
+	weights[scope[i].id()] += unit;
+      }
     }
+    
   } else {
+    
+    // TODO: this thing is not "correct" (we don't care it's a heuristic, but still)
 
-    //std::cout << "MAXSORTED!\n";
-
-    u = maxsorted[rank]->max;
-    for(int i=0; i<=rank; ++i) {
-      other_bounds.push_back(maxsorted[i]->min);
-      //std::cout << " " << maxsorted[i]->min ;
+    rank = -1-expl_note;
+    l = scope[rank].get_min();
+    u = scope[rank].get_max();
+    
+    
+    for(int i=0; i<scope.size; ++i) {
+      if(iv[i].min<=u && iv[i].max>=l) {
+	weights[scope[i].id()] += unit;
+      }
     }
-    //std::cout << std::endl;
-
-    sort(other_bounds.begin(), other_bounds.end());
-    // for(int i=0; i<=rank; ++i) {
-    //   std::cout << " " << other_bounds[rank-i] ;
-    // }
-    // std::cout << std::endl;
-
-    for(int i=0; i<=rank; ++i) {
-      l = other_bounds[rank-i];
-      if(u-l < i)
-	break;
-      //std::cout << "[" << l << ".." << u << "] is ok\n";
-    }
+    
   }
   
 
   //std::cout << "the Hall interval is  [" << l << ".." << u << "]\n";
 
 
-  for(int i=0; i<scope.size; ++i) {
-    //std::cout << scope[i].get_domain() << std::endl;
-    if(iv[i].min>=l && iv[i].max<=u) {
-      //std::cout << " " << scope[i].id();
-      weights[scope[i].id()] += unit;
-    }
-  }
+
   //std::cout << std::endl;
 
 }

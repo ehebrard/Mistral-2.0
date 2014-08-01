@@ -2029,7 +2029,7 @@ namespace FlatZinc {
       qsort(order, start.size, sizeof(int), largest_demand);
       demand.neutralise();
 
-      if(start.size>1 && req[order[start.size-1]].get_min()+req[order[start.size-2]].get_min()>cap.get_max()) {
+      if(start.size>1 && req[order[0]].get_min()+req[order[1]].get_min()>cap.get_max()) {
         disjunctive = true;
       }
 
