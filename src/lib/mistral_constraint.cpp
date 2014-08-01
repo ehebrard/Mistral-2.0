@@ -13159,8 +13159,13 @@ void Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit, Vector<doub
   //   weights[scope[i].id()] += unit;
   // }
 
-  weights[scope[get_solver()->prev_wiped_idx].id()] += unit;
-  weights[scope[culprit].id()] += unit;
+  int idx1 = scope[get_solver()->prev_wiped_idx].id();
+  int idx2 = scope[culprit].id();
+
+  if(idx1>=0)
+    weights[idx1] += unit;
+  if(idx2>=0)
+    weights[idx2] += unit;
   
 }
 
@@ -14780,6 +14785,7 @@ void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& we
   int rank; // = expl_note/2;
   int l; // = minsorted[0]->min;     
   int u; // = maxsorted[scope.size-1]->max;
+  int idx;
   other_bounds.clear();
 
   if(expl_note>=0) {
@@ -14830,7 +14836,8 @@ void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& we
       //std::cout << scope[i].get_domain() << std::endl;
       if(iv[i].min>=l && iv[i].max<=u) {
 	//std::cout << " " << scope[i].id();
-	weights[scope[i].id()] += unit;
+	idx = scope[i].id();
+	if(idx>=0) weights[idx] += unit;
       }
     }
     
@@ -14845,7 +14852,9 @@ void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& we
     
     for(int i=0; i<scope.size; ++i) {
       if(iv[i].min<=u && iv[i].max>=l) {
-	weights[scope[i].id()] += unit;
+	idx = scope[i].id();
+	if(idx>=0) weights[idx] += unit;
+	//weights[scope[i].id()] += unit;
       }
     }
     

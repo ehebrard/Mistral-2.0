@@ -1795,8 +1795,22 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
     virtual void weight_conflict(double unit, Vector<double>& weights) {
+      int idx;
       for(int i=0; i<scope.size; ++i) {
-	weights[scope[i].id()] += unit;
+	idx = scope[i].id();
+
+	// std::cout << i << " " << idx << "/" << weights.size << std::endl;
+	// if(idx<0 || idx>weights.size) {
+	//   std::cout << this << std::endl;
+	//   std::cout << scope << std::endl;
+	//   std::cout << scope[i] << std::endl;
+	//   exit(1);
+	// }
+
+
+
+	if(idx>=0) // constants have negative ids
+	  weights[idx] += unit;
       }
     }
 

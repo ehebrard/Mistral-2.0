@@ -432,7 +432,7 @@ void Mistral::Constraint::weight_conflict(double unit, Vector<double>& weights) 
     int i = arity();
     while(i--) {
       idx = scope[i].id();
-      if(idx>=0) {
+      if(idx>=0) { // this is for constants (which hade id -1)
 	weights[idx] += unit;
       }
     }   
