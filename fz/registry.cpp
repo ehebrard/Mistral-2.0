@@ -1418,9 +1418,9 @@ namespace FlatZinc {
     		for (int i=0; i < size; ++i)
     		{
     			subsequence.add(iv[i]==v);
+    			s.add( Free(subsequence.back()));
     		}
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
     		s.add( BoolSum(subsequence) >= n);
     	}
     }
@@ -1448,9 +1448,9 @@ namespace FlatZinc {
     		for (int i=0; i < size; ++i)
     		{
     			subsequence.add(iv[i]==v);
+    			s.add( Free(subsequence.back()));
     		}
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
     		s.add( BoolSum(subsequence) <= n);
     	}
     }
@@ -1481,6 +1481,7 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
     		else
@@ -1489,11 +1490,12 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
 
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
+
     		if (ce[2]->isInt() )
     			//s.add( BoolSum(subsequence, ce[2]->getInt(), ce[2]->getInt()));
     			//This is better than the above line on the instance 60_09 !! WHY??
@@ -1528,6 +1530,7 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
     		else
@@ -1536,11 +1539,10 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
 
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
     		if (ce[2]->isInt() )
     			s.add( BoolSum(subsequence) <= ce[2]->getInt());
     		else
@@ -1573,6 +1575,7 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
     		else
@@ -1581,11 +1584,12 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
 
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
+
     		if (ce[2]->isInt() )
     			s.add( BoolSum(subsequence) < ce[2]->getInt());
     		else
@@ -1619,6 +1623,7 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add(subsequence.back());
     			}
     		}
     		else
@@ -1627,11 +1632,12 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
 
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
+
     		if (ce[2]->isInt() )
     			s.add( BoolSum(subsequence) >= ce[2]->getInt());
     		else
@@ -1665,6 +1671,7 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add(Free(subsequence.back()));
     			}
     		}
     		else
@@ -1673,11 +1680,12 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add(Free(subsequence.back()));
     			}
     		}
 
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
+
     		if (ce[2]->isInt() )
     			s.add( BoolSum(subsequence) > ce[2]->getInt());
     		else
@@ -1710,6 +1718,7 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
     		else
@@ -1718,11 +1727,12 @@ namespace FlatZinc {
     			for (int i=0; i < size; ++i)
     			{
     				subsequence.add(x[i]==y);
+    				s.add( Free(subsequence.back()));
     			}
     		}
 
-    		//Do we need that??
-    		//s.add(Free(subsequence.back() ));
+
+
     		if (ce[2]->isInt() )
     			s.add( BoolSum(subsequence) != ce[2]->getInt());
     		else
