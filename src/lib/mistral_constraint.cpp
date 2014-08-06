@@ -12960,6 +12960,23 @@ int Mistral::PredicateElement::check( const int* s ) const
   return (s[s[scope.size-2]-offset] != s[scope.size-1]);
 }
 
+
+void Mistral::PredicateElement::weight_conflict(double unit, Vector<double>& weights)
+{
+  int n = scope.size-2;
+  weights[scope[n].id()] += unit;
+  weights[scope[n+1].id()] += unit;
+  
+  int vali, vnext = scope[n].get_min();
+  do {
+    vali = vnext;
+    
+    weights[scope[vali].id()] += unit;
+
+    vnext = scope[n].next(vali);
+  } while( vali < vnext );
+}
+
 std::ostream& Mistral::PredicateElement::display(std::ostream& os) const {
   os << "(" << scope[0]/*.get_var()*/;
   for(unsigned int i=1; i<scope.size-2; ++i) {

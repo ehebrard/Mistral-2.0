@@ -4680,6 +4680,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int pushed() { return 1;}
     virtual void initialise();
     virtual void mark_domain();
+    void weight_conflict(double unit, Vector<double>& weights);//  {
     //@}
 
     /**@name Solving*/
@@ -4723,6 +4724,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int pushed() { return 1;}
     virtual void initialise();
     virtual void mark_domain();
+    //void weight_conflict(double unit, Vector<double>& weights);//  {
     //@}
 
     /**@name Solving*/
