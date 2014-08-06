@@ -29,6 +29,7 @@
 //#define _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION true
 
 #define _GET_SUM_NAME true
+//#define _DEBUG_WEIGHT_CONFLICT true
 //#define _DEBUG_IWEIGHTEDBOOLSUM (id == 75)
 //#define _DEBUG_CARD true
 //#define _DEBUG_MIN (id == 1184)
@@ -8802,28 +8803,33 @@ Mistral::ConstraintBoolSumInterval::~ConstraintBoolSumInterval()
 #endif
 }
 
+
+#ifdef _CBSI_WC
 void Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
 {
   int i = scope.size;
-  int explanation_size = 0;
+  //int explanation_size = 0;
   if(min_>upper_bound) {
     // too many ones
-    while(i-- && explanation_size <= upper_bound) {
+    while(i-- // && explanation_size <= upper_bound
+	  ) {
       if(scope[i].get_min()) {
 	weights[scope[i].id()] += unit;
-	++explanation_size;
+	//++explanation_size;
       }
     }
   } else {
     // too many zeros
-    while(i-- && explanation_size <= scope.size-lower_bound) {
+    while(i-- // && explanation_size <= scope.size-lower_bound
+	  ) {
       if(!(scope[i].get_max())) {
 	weights[scope[i].id()] += unit;
-	++explanation_size;
+	//++explanation_size;
       }
     }
   }
 }
+#endif
 
 Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate() 
 {
@@ -9405,34 +9411,83 @@ Mistral::PredicateBoolSum::~PredicateBoolSum()
 #endif
 }
 
+#ifdef _PBS_WC
 void Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& weights)
 {
-  int i = scope.size-1;
-  int explanation_size = 0;
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << "\nWEIGHT " << this << std::endl;
+  std::cout << "( " << scope[0] << " in " << scope[0].get_domain() << std::endl;
+  for(unsigned int i=1; i<scope.size-1; ++i) 
+    std::cout << " + " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+  if(offset) std::cout << " + " << offset ;
+  std::cout << ") = " << scope[scope.size-1] << " in " << scope[scope.size-1].get_domain() << std::endl;
+#endif
+
+  //int i = scope.size-1;
+  //int explanation_size = 0;
   int upper_bound = scope.back().get_max();
   int lower_bound = scope.back().get_min();
-  if(min_>upper_bound) {
+
+  int _min_ = offset;
+  int _max_ = offset;
+  unsigned int i, n=scope.size-1;
+  int lb, ub;
+
+  for( i=0; i<n; ++i ) {
+    _min_ += scope[i].get_min();
+    _max_ += scope[i].get_max();
+  }
+
+
+  i=n;
+  if(_min_>upper_bound) {
     // too many ones
-    if(scope[i].get_max() < scope[i].get_initial_max())
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too many 1s\n";
+#endif
+    if(scope[i].get_max() < scope[i].get_initial_max()) {
       weights[scope[i].id()] += unit;
-    while(i-- && explanation_size <= upper_bound) {
+#ifdef _DEBUG_WEIGHT_CONFLICT
+      std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+    }
+    while(i-- // && explanation_size <= upper_bound
+	  ) {
       if(scope[i].get_min()) {
 	weights[scope[i].id()] += unit;
-	++explanation_size;
-      }
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+	//++explanation_size;
+      }//  else {
+      // 	std::cout << scope[i].get_min() << std::endl;
+      // }
     }
   } else {
     // too many zeros
-    if(scope[i].get_min() > scope[i].get_initial_min())
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too many 0s\n";
+#endif
+    if(scope[i].get_min() > scope[i].get_initial_min()) {
       weights[scope[i].id()] += unit;
-    while(i-- && explanation_size <= scope.size-lower_bound) {
+#ifdef _DEBUG_WEIGHT_CONFLICT
+      std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+    }
+    while(i-- // && explanation_size <= scope.size-lower_bound
+	  ) {
       if(!(scope[i].get_max())) {
 	weights[scope[i].id()] += unit;
-	++explanation_size;
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+	//++explanation_size;
       }
     }
   }
 }
+#endif
 
 
 Mistral::Explanation::iterator Mistral::PredicateBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
@@ -9724,62 +9779,152 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::rewrite() {
 
 
 
-
+#ifdef _PWS_WC
 void Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double>& weights)
 {
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << "\nWEIGHT " << this << " (\n";
+  //std::cout << "( " << weight[0] << " * " << scope[0] << " in " << scope[0].get_domain() << std::endl;
+  //for(unsigned int i=1; i<scope.size; ++i) 
+  //  std::cout << " + " << weight[i] << " * " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+  //std::cout << ") in [" << lower_bound << ".." << upper_bound << "]" << std::endl;
+#endif
+
 
   int i, smin=0, smax=0, arity=scope.size;
   int wmax=1;
 
+
   for(i=0; i<wpos; ++i) {
     smax += scope[i].get_max();
     smin += scope[i].get_min();
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << "  " << weight[i] << " * " << scope[i] << " in " << scope[i].get_domain() 
+	      << " : [" << smin << ".." << smax << "]" << std::endl;
+#endif
   }
   for(i=wpos; i<wneg; ++i) {
     smax += weight[i] * scope[i].get_max();
     smin += weight[i] * scope[i].get_min();
     if(weight[i]>wmax) wmax = weight[i];
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << "  " << weight[i] << " * " << scope[i] << " in " << scope[i].get_domain() 
+	      << " : [" << smin << ".." << smax << "]" << std::endl;
+#endif
   }
   for(i=wneg; i<arity; ++i) {
     smax += weight[i] * scope[i].get_min();
     smin += weight[i] * scope[i].get_max();
     if(-weight[i]>wmax) wmax = -weight[i];
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << "  " << weight[i] << " * " << scope[i] << " in " << scope[i].get_domain() 
+	      << " : [" << smin << ".." << smax << "]" << std::endl;
+#endif
   }
 
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << ") in [" << lower_bound << ".." << upper_bound << "]" << std::endl;
+#endif
 
   if(smin > upper_bound) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too high: " << smin << " > " << upper_bound << "\n";
+#endif
+
     // failure because of "big" variables
     //  - either variables with positive weights and whose lower bound has been pruned
     //  - or variables with negative weights and whose upper bound has been pruned
     for(i=0; i<wneg; ++i) {
-      if(scope[i].get_min() > scope[i].get_initial_min()) weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+      if(scope[i].get_min() > scope[i].get_initial_min()) {
+	weights[scope[i].id()] += unit * (double)(weight[i])/(double)(// wmax*
+								      arity);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+      }
     }
     for(i=wneg; i<arity; ++i) {
-      if(scope[i].get_max() < scope[i].get_initial_max()) weights[scope[i].id()] += unit; // * (double)(-weight[i])/(double)(wmax);
+      if(scope[i].get_max() < scope[i].get_initial_max()) {	
+	weights[scope[i].id()] += unit * (double)(-weight[i])/(double)(// wmax*
+								       arity);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+      }
     }
     
   } else if(smax < lower_bound) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too low: " << smax << " < " << lower_bound << "\n";
+#endif
+
+
     // failure because of "small" variables
     //  - either variables with negative weights and whose lower bound has been pruned
     //  - or variables with positive weights and whose upper bound has been pruned
     for(i=0; i<wneg; ++i) {
-      if(scope[i].get_max() < scope[i].get_initial_max()) weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+      if(scope[i].get_max() < scope[i].get_initial_max()) {
+	weights[scope[i].id()] += unit * (double)(weight[i])/(double)(// wmax*
+								      arity);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+      }    
     }
     for(i=wneg; i<arity; ++i) {
-      if(scope[i].get_min() > scope[i].get_initial_min()) weights[scope[i].id()] += unit; // * (double)(-weight[i])/(double)(wmax);
+      if(scope[i].get_min() > scope[i].get_initial_min()) {
+	weights[scope[i].id()] += unit * (double)(-weight[i])/(double)(// wmax*
+								       arity);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+      }
     }
 
   } else {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " parity?\n";
+#endif
+
     // failure because of parity
-    for(i=0; i<wpos; ++i)
+    for(i=0; i<wpos; ++i) {
       weights[scope[i].id()] += unit;
+#ifdef _DEBUG_WEIGHT_CONFLICT
+      std::cout << " >+ weight " << scope[i] << std::endl;
+#endif
+    }
     for(i=wpos; i<arity; ++i) {
-      if(weight[i]%2) weights[scope[i].id()] += unit;
+      if(weight[i]%2) {
+	weights[scope[i].id()] += unit;
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >+ weight " << scope[i] << std::endl;
+#endif
+      }
     }
   }
-
-
 }
+#endif
+
+
+
+#ifdef _PWS_WC_ALT
+void Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double>& weights)
+{
+  int i, arity=scope.size;
+  for(i=0; i<wpos; ++i) {
+    weights[scope[i].id()] += unit/(double)(scope.size);
+  }
+  for(i=wpos; i<wneg; ++i) {
+    weights[scope[i].id()] += unit*((double)(weight[i]))/((double)(scope.size));
+  }
+  for(i=wneg; i<arity; ++i) {
+    weights[scope[i].id()] += unit*((double)(-weight[i]))/((double)(scope.size));
+  }
+}
+#endif
 
 
 Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate() 
@@ -10494,7 +10639,7 @@ Mistral::ConstraintWeightedBoolSumInterval::~ConstraintWeightedBoolSumInterval()
 
 
 
-
+#ifdef _CWBSI_WC
 void Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
 {
 
@@ -10549,9 +10694,8 @@ void Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, Ve
       if(weight[i]%2) weights[scope[i].id()] += unit;
     }
   }
-
-
 }
+#endif
 
 Mistral::Explanation::iterator Mistral::ConstraintWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
   /*
@@ -11424,16 +11568,40 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
 
 }
 
-
-
+#ifdef _CIWBSI_WC_ALT
 void Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
 {
+  int i, arity=weight.size;
+  for(i=0; i<arity; ++i) {
+    weights[scope[i].id()] += unit * ((double)(weight[i]>0 ? weight[i] : -weight[i])) / ((double)arity);
+  }
+}
+#endif
+
+
+#ifdef _CIWBSI_WC
+void Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
+{
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << "\nWEIGHT " << this << std::endl;
+  std::cout << "( " << weight[0] << " * " << scope[0] << " in " << scope[0].get_domain() << std::endl;
+  for(unsigned int i=1; i<scope.size; ++i) 
+    std::cout << " + " << weight[i] << " * " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+  std::cout << ") in [" << lower_bound << ".." << upper_bound << "] :: " 
+	    << bound_[0] << ".." << bound_[1] << std::endl;
+#endif
 
 
   int i, arity=scope.size;
 
 
   if(bound_[0] > upper_bound) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too many 1s\n";
+#endif
+
     // failure because of "big" variables
     //  - either variables with positive weights and whose lower bound has been pruned
     //  - or variables with negative weights and whose upper bound has been pruned
@@ -11441,9 +11609,17 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(doub
       if( (weight[i]>0 && GET_MIN(domains[i])) ||
 	  (weight[i]<0 && !(GET_MAX(domains[i]))) ) {
 	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
       }
     }
   } else if(bound_[1] < lower_bound) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too many 0s\n";
+#endif
+
     // failure because of "small" variables
     //  - either variables with negative weights and whose lower bound has been pruned
     //  - or variables with positive weights and whose upper bound has been pruned
@@ -11451,16 +11627,23 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(doub
       if( (weight[i]<0 && GET_MIN(domains[i])) ||
 	  (weight[i]>0 && !(GET_MAX(domains[i]))) ) {
 	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
       }
     }
   } else {
     // failure because of parity
-    for(i=0; i<arity; ++i) 
-      if(weight[i]%2) weights[scope[i].id()] += unit;
+    for(i=0; i<arity; ++i)  
+      if(weight[i]%2) {
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >+ weight " << scope[i] << std::endl;
+#endif
+	weights[scope[i].id()] += unit;
+      }
   }
-
-
 }
+#endif
 
 
 Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
@@ -12317,17 +12500,40 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
   */
 }
 
-
-
-
+#ifdef _PWBS_WC_ALT
 void Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<double>& weights)
 {
+  int i, arity=weight.size;
+  for(i=0; i<arity; ++i) {
+    weights[scope[i].id()] += unit * ((double)(weight[i]>0 ? weight[i] : -weight[i])) / ((double)arity);
+  }
+  weights[scope[arity].id()] += unit / ((double)arity);
+}
+#endif
 
+
+#ifdef _PWBS_WC
+void Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<double>& weights)
+{
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << "\nWEIGHT " << this << std::endl;
+  std::cout << "( " << weight[0] << " * " << scope[0] << " in " << scope[0].get_domain() << std::endl;
+  for(unsigned int i=1; i<scope.size-1; ++i) 
+    std::cout << " + " << weight[i] << " * " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+  if(offset) std::cout << " + " << offset ;
+  std::cout << ") = " << scope.back() << " in " << scope.back().get_domain() 
+	    << " -- " << bound_[0] << ".." << bound_[1] << std::endl;
+#endif
 
   int i, arity=weight.size;
 
 
   if(bound_[0] > scope[arity].get_max()) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too high: " << bound_[0] << " > " << scope[arity].get_max() << "\n";
+#endif
+
     // failure because of "big" variables
     //  - either variables with positive weights and whose lower bound has been pruned
     //  - or variables with negative weights and whose upper bound has been pruned
@@ -12337,9 +12543,17 @@ void Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<doub
       if( (weight[i]>0 && GET_MIN(domains[i])) ||
 	  (weight[i]<0 && !(GET_MAX(domains[i]))) ) {
 	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
       }
     }
   } else if(bound_[1] < scope[arity].get_min()) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too low: " << bound_[1] << " < " << scope[arity].get_min() << "\n";
+#endif
+
     // failure because of "small" variables
     //  - either variables with negative weights and whose lower bound has been pruned
     //  - or variables with positive weights and whose upper bound has been pruned
@@ -12349,16 +12563,23 @@ void Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<doub
       if( (weight[i]<0 && GET_MIN(domains[i])) ||
 	  (weight[i]>0 && !(GET_MAX(domains[i]))) ) {
 	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >> weight " << scope[i] << std::endl;
+#endif
       }
     }
   } else {
     // failure because of parity
     for(i=0; i<arity; ++i) 
-      if(weight[i]%2) weights[scope[i].id()] += unit;
+      if(weight[i]%2) {
+	weights[scope[i].id()] += unit;
+#ifdef _DEBUG_WEIGHT_CONFLICT
+	std::cout << " >+ weight " << scope[i] << std::endl;
+#endif
+      }
   }
-
-
 }
+#endif
 
 
 Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
@@ -13216,18 +13437,20 @@ int Mistral::PredicateElement::check( const int* s ) const
 }
 
 
+#ifdef _ELT_WC
 void Mistral::PredicateElement::weight_conflict(double unit, Vector<double>& weights)
 {
 
   int n = scope.size-2;
 
 
-  // std::cout << "\nWEIGHT (\n";
-  // for(int i=0; i<n; ++i) {
-  //   std::cout << " " << scope[i] << " in " << scope[i].get_domain() << (scope[n].contain(i+offset) ? "*" : " ") << std::endl;
-  // }
-  // std::cout << ")[" << scope[n].get_domain() <<"] = " << scope[n+1].get_domain() << "\n";
-
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << "\nWEIGHT (\n";
+  for(int i=0; i<n; ++i) {
+    std::cout << " " << scope[i] << " in " << scope[i].get_domain() << (scope[n].contain(i+offset) ? "*" : " ") << std::endl;
+  }
+  std::cout << ")[" << scope[n].get_domain() <<"] = " << scope[n+1].get_domain() << "\n";
+#endif
 
 
   weights[scope[n].id()] += unit;
@@ -13245,6 +13468,7 @@ void Mistral::PredicateElement::weight_conflict(double unit, Vector<double>& wei
   } while( vali < vnext );
   //std::cout << " )\n";
 }
+#endif
 
 std::ostream& Mistral::PredicateElement::display(std::ostream& os) const {
   os << "(" << scope[0]/*.get_var()*/;
@@ -13436,6 +13660,7 @@ std::ostream& Mistral::ConstraintCliqueNotEqual::display(std::ostream& os) const
   return os;
 }
 
+#ifdef _CNE_WC
 void Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit, Vector<double>& weights)  {
   // std::cout << std::endl << "WEIGHT AFTER FAILURE ON CLIQUENOTEQUAL " << get_solver()->prev_wiped_idx << " <> " << culprit << "\n";
   // std::cout << scope[get_solver()->prev_wiped_idx] << " in " << scope[get_solver()->prev_wiped_idx].get_domain() 
@@ -13454,6 +13679,7 @@ void Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit, Vector<doub
     weights[idx2] += unit;
   
 }
+#endif
 
 
 /**********************************************
@@ -15063,8 +15289,9 @@ std::ostream& Mistral::ConstraintAllDiff::display(std::ostream& os) const {
   return os;
 }
 
+#ifdef _ALLDIFF_WC
 void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& weights)  {
-  //std::cout << "WEIGHT AFTER FAILURE ON ALLDIFF " << expl_note << "\n";
+  //std::cout << "\nWEIGHT AFTER FAILURE ON ALLDIFF " << expl_note << "\n";
 
 
   
@@ -15154,6 +15381,7 @@ void Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& we
   //std::cout << std::endl;
 
 }
+#endif
 
 void Mistral::ConstraintAllDiff::print_structs() {
   
