@@ -4030,6 +4030,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int pushed() { return 1;}
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintBoolSumInterval();
+    void weight_conflict(double unit, Vector<double>& weights);//  {
     //@}
 
     /**@name Solving*/
@@ -4109,6 +4110,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int pushed() { return 1;}
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintWeightedBoolSumInterval();
+    void weight_conflict(double unit, Vector<double>& weights);//  {
     //@}
 
 
@@ -4188,7 +4190,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~ConstraintIncrementalWeightedBoolSumInterval();
     //@}
 
-
+    void weight_conflict(double unit, Vector<double>& weights);//  {
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
     virtual void initialise_activity(double *lact, double *vact, double norm);
 
@@ -4263,6 +4265,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     virtual void initialise_activity(double *lact, double *vact, double norm);
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
+    void weight_conflict(double unit, Vector<double>& weights);//  {
 
     /**@name Solving*/
     //@{
@@ -4319,7 +4322,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~PredicateBoolSum();
     //@}
 
-
+    void weight_conflict(double unit, Vector<double>& weights);//  {
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
     /**@name Solving*/
@@ -4388,6 +4391,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int pushed() { return 1;}
     virtual void initialise();
     virtual void mark_domain();
+    void weight_conflict(double unit, Vector<double>& weights);//  {
     //@}
 
     /**@name Solving*/

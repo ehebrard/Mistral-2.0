@@ -8802,6 +8802,29 @@ Mistral::ConstraintBoolSumInterval::~ConstraintBoolSumInterval()
 #endif
 }
 
+void Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
+{
+  int i = scope.size;
+  int explanation_size = 0;
+  if(min_>upper_bound) {
+    // too many ones
+    while(i-- && explanation_size <= upper_bound) {
+      if(scope[i].get_min()) {
+	weights[scope[i].id()] += unit;
+	++explanation_size;
+      }
+    }
+  } else {
+    // too many zeros
+    while(i-- && explanation_size <= scope.size-lower_bound) {
+      if(!(scope[i].get_max())) {
+	weights[scope[i].id()] += unit;
+	++explanation_size;
+      }
+    }
+  }
+}
+
 Mistral::PropagationOutcome Mistral::ConstraintBoolSumInterval::propagate() 
 {
   PropagationOutcome wiped_idx = CONSISTENT;
@@ -9382,6 +9405,35 @@ Mistral::PredicateBoolSum::~PredicateBoolSum()
 #endif
 }
 
+void Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& weights)
+{
+  int i = scope.size-1;
+  int explanation_size = 0;
+  int upper_bound = scope.back().get_max();
+  int lower_bound = scope.back().get_min();
+  if(min_>upper_bound) {
+    // too many ones
+    if(scope[i].get_max() < scope[i].get_initial_max())
+      weights[scope[i].id()] += unit;
+    while(i-- && explanation_size <= upper_bound) {
+      if(scope[i].get_min()) {
+	weights[scope[i].id()] += unit;
+	++explanation_size;
+      }
+    }
+  } else {
+    // too many zeros
+    if(scope[i].get_min() > scope[i].get_initial_min())
+      weights[scope[i].id()] += unit;
+    while(i-- && explanation_size <= scope.size-lower_bound) {
+      if(!(scope[i].get_max())) {
+	weights[scope[i].id()] += unit;
+	++explanation_size;
+      }
+    }
+  }
+}
+
 
 Mistral::Explanation::iterator Mistral::PredicateBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
 
@@ -9670,6 +9722,64 @@ Mistral::PropagationOutcome Mistral::PredicateWeightedSum::rewrite() {
   return r_evt;
 }
 
+
+
+
+void Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double>& weights)
+{
+
+  int i, smin=0, smax=0, arity=scope.size;
+  int wmax=1;
+
+  for(i=0; i<wpos; ++i) {
+    smax += scope[i].get_max();
+    smin += scope[i].get_min();
+  }
+  for(i=wpos; i<wneg; ++i) {
+    smax += weight[i] * scope[i].get_max();
+    smin += weight[i] * scope[i].get_min();
+    if(weight[i]>wmax) wmax = weight[i];
+  }
+  for(i=wneg; i<arity; ++i) {
+    smax += weight[i] * scope[i].get_min();
+    smin += weight[i] * scope[i].get_max();
+    if(-weight[i]>wmax) wmax = -weight[i];
+  }
+
+
+  if(smin > upper_bound) {
+    // failure because of "big" variables
+    //  - either variables with positive weights and whose lower bound has been pruned
+    //  - or variables with negative weights and whose upper bound has been pruned
+    for(i=0; i<wneg; ++i) {
+      if(scope[i].get_min() > scope[i].get_initial_min()) weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+    }
+    for(i=wneg; i<arity; ++i) {
+      if(scope[i].get_max() < scope[i].get_initial_max()) weights[scope[i].id()] += unit; // * (double)(-weight[i])/(double)(wmax);
+    }
+    
+  } else if(smax < lower_bound) {
+    // failure because of "small" variables
+    //  - either variables with negative weights and whose lower bound has been pruned
+    //  - or variables with positive weights and whose upper bound has been pruned
+    for(i=0; i<wneg; ++i) {
+      if(scope[i].get_max() < scope[i].get_initial_max()) weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+    }
+    for(i=wneg; i<arity; ++i) {
+      if(scope[i].get_min() > scope[i].get_initial_min()) weights[scope[i].id()] += unit; // * (double)(-weight[i])/(double)(wmax);
+    }
+
+  } else {
+    // failure because of parity
+    for(i=0; i<wpos; ++i)
+      weights[scope[i].id()] += unit;
+    for(i=wpos; i<arity; ++i) {
+      if(weight[i]%2) weights[scope[i].id()] += unit;
+    }
+  }
+
+
+}
 
 
 Mistral::PropagationOutcome Mistral::PredicateWeightedSum::propagate() 
@@ -10385,6 +10495,63 @@ Mistral::ConstraintWeightedBoolSumInterval::~ConstraintWeightedBoolSumInterval()
 
 
 
+void Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
+{
+
+
+  int i, j;
+  int smin=0, smax=0, arity=scope.size;
+  //int wmin=INFTY;
+  int wmax=1;
+
+  for(i=0; i<wpos; ++i) {
+    smax += GET_MAX(domains[i]); 
+    smin += GET_MIN(domains[i]); 
+  }
+  for(i=wpos; i<wneg; ++i) {
+    smax += weight[i] * GET_MAX(domains[i]); 
+    smin += weight[i] * GET_MIN(domains[i]); 
+    if(weight[i]>wmax) wmax = weight[i];
+  }
+  for(i=wneg; i<arity; ++i) {
+    smax += weight[i] * GET_MIN(domains[i]); 
+    smin += weight[i] * GET_MAX(domains[i]); 
+    if(-weight[i]>wmax) wmax = -weight[i];
+  }
+
+  if(smin > upper_bound) {
+    // failure because of "big" variables
+    //  - either variables with positive weights and whose lower bound has been pruned
+    //  - or variables with negative weights and whose upper bound has been pruned
+    for(i=0; i<wneg; ++i) {
+      if(GET_MIN(domains[i])) weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+    }
+    for(i=wneg; i<arity; ++i) {
+      if(!(GET_MAX(domains[i]))) weights[scope[i].id()] += unit; // * (double)(-weight[i])/(double)(wmax);
+    }
+    
+  } else if(smax < lower_bound) {
+    // failure because of "small" variables
+    //  - either variables with negative weights and whose lower bound has been pruned
+    //  - or variables with positive weights and whose upper bound has been pruned
+    for(i=0; i<wneg; ++i) {
+      if(!(GET_MAX(domains[i]))) weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+    }
+    for(i=wneg; i<arity; ++i) {
+      if(GET_MIN(domains[i])) weights[scope[i].id()] += unit; // * (double)(-weight[i])/(double)(wmax);
+    }
+
+  } else {
+    // failure because of parity
+    for(i=0; i<wpos; ++i)
+      weights[scope[i].id()] += unit;
+    for(i=wpos; i<arity; ++i) {
+      if(weight[i]%2) weights[scope[i].id()] += unit;
+    }
+  }
+
+
+}
 
 Mistral::Explanation::iterator Mistral::ConstraintWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
   /*
@@ -11259,6 +11426,41 @@ void Mistral::ConstraintIncrementalWeightedBoolSumInterval::initialise_activity(
 
 
 
+void Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(double unit, Vector<double>& weights)
+{
+
+
+  int i, arity=scope.size;
+
+
+  if(bound_[0] > upper_bound) {
+    // failure because of "big" variables
+    //  - either variables with positive weights and whose lower bound has been pruned
+    //  - or variables with negative weights and whose upper bound has been pruned
+    for(i=0; i<arity; ++i) {
+      if( (weight[i]>0 && GET_MIN(domains[i])) ||
+	  (weight[i]<0 && !(GET_MAX(domains[i]))) ) {
+	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+      }
+    }
+  } else if(bound_[1] < lower_bound) {
+    // failure because of "small" variables
+    //  - either variables with negative weights and whose lower bound has been pruned
+    //  - or variables with positive weights and whose upper bound has been pruned
+    for(i=0; i<arity; ++i) {
+      if( (weight[i]<0 && GET_MIN(domains[i])) ||
+	  (weight[i]>0 && !(GET_MAX(domains[i]))) ) {
+	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+      }
+    }
+  } else {
+    // failure because of parity
+    for(i=0; i<arity; ++i) 
+      if(weight[i]%2) weights[scope[i].id()] += unit;
+  }
+
+
+}
 
 
 Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInterval::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
@@ -12117,6 +12319,48 @@ void Mistral::PredicateWeightedBoolSum::initialise_activity(double *lact, double
 
 
 
+
+void Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<double>& weights)
+{
+
+
+  int i, arity=weight.size;
+
+
+  if(bound_[0] > scope[arity].get_max()) {
+    // failure because of "big" variables
+    //  - either variables with positive weights and whose lower bound has been pruned
+    //  - or variables with negative weights and whose upper bound has been pruned
+    if(scope[arity].get_max() < scope[arity].get_initial_max())
+      weights[scope[arity].id()] += unit;
+    for(i=0; i<arity; ++i) {
+      if( (weight[i]>0 && GET_MIN(domains[i])) ||
+	  (weight[i]<0 && !(GET_MAX(domains[i]))) ) {
+	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+      }
+    }
+  } else if(bound_[1] < scope[arity].get_min()) {
+    // failure because of "small" variables
+    //  - either variables with negative weights and whose lower bound has been pruned
+    //  - or variables with positive weights and whose upper bound has been pruned
+    if(scope[arity].get_min() > scope[arity].get_initial_min())
+      weights[scope[arity].id()] += unit;
+    for(i=0; i<arity; ++i) {
+      if( (weight[i]<0 && GET_MIN(domains[i])) ||
+	  (weight[i]>0 && !(GET_MAX(domains[i]))) ) {
+	weights[scope[i].id()] += unit; // * (double)(weight[i])/(double)(wmax);
+      }
+    }
+  } else {
+    // failure because of parity
+    for(i=0; i<arity; ++i) 
+      if(weight[i]%2) weights[scope[i].id()] += unit;
+  }
+
+
+}
+
+
 Mistral::Explanation::iterator Mistral::PredicateWeightedBoolSum::get_reason_for(const Atom a, const int lvl, Explanation::iterator& end) {
  
   explanation.clear();
@@ -12952,6 +13196,17 @@ Mistral::PropagationOutcome Mistral::PredicateElement::propagate()
   //exit(1);
 
 
+  // if(!(IS_OK(wiped))) {
+
+  //   std::cout << "\nFAILURE " << offset << " (\n";
+  //   for(int i=0; i<n; ++i) {
+  //     std::cout << " " << scope[i] << " in " << scope[i].get_domain() << (scope[n].contain(i+offset) ? "*" : " ") << std::endl;
+  //   }
+  //   std::cout << ")[" << scope[n].get_domain() <<"] = " << scope[n+1].get_domain() << "\n";
+
+  // }
+
+
   return wiped;
 }
 
@@ -12963,18 +13218,32 @@ int Mistral::PredicateElement::check( const int* s ) const
 
 void Mistral::PredicateElement::weight_conflict(double unit, Vector<double>& weights)
 {
+
   int n = scope.size-2;
+
+
+  // std::cout << "\nWEIGHT (\n";
+  // for(int i=0; i<n; ++i) {
+  //   std::cout << " " << scope[i] << " in " << scope[i].get_domain() << (scope[n].contain(i+offset) ? "*" : " ") << std::endl;
+  // }
+  // std::cout << ")[" << scope[n].get_domain() <<"] = " << scope[n+1].get_domain() << "\n";
+
+
+
   weights[scope[n].id()] += unit;
   weights[scope[n+1].id()] += unit;
   
   int vali, vnext = scope[n].get_min();
+  //std::cout << "w (";
   do {
     vali = vnext;
     
-    weights[scope[vali].id()] += unit;
+    //std::cout << " " << scope[vali-offset].id() ;
+    weights[scope[vali-offset].id()] += unit;
 
     vnext = scope[n].next(vali);
   } while( vali < vnext );
+  //std::cout << " )\n";
 }
 
 std::ostream& Mistral::PredicateElement::display(std::ostream& os) const {
