@@ -63,6 +63,9 @@ namespace Mistral {
   typedef Array<Literal> Clause;
 
 
+
+#define _DIV_ARITY true
+
   // typedef int ExtLiteral;
   // typedef int LiteralType;
   // typedef int LiteralVar;

@@ -40,16 +40,24 @@
 #define _ALLDIFF_WC
 #define _ELT_WC
 #define _CNE_WC
-//#define _PWBS_WC
-#define _PWBS_WC_ALT
-//#define _CIWBSI_WC
-#define _CIWBSI_WC_ALT
-//#define _CWBSI_WC
-//#define _PWS_WC
-#define _PWS_WC_ALT
-//#define _PBS_WC
-//#define _CBSI_WC
 
+//#define _DIV_ARITY
+
+/*
+#define _PWBS_WC
+#define _CIWBSI_WC
+#define _CWBSI_WC
+#define _PWS_WC
+#define _PBS_WC
+#define _CBSI_WC
+*/
+
+/*
+#define _PWS_WC_ALT
+#define _CWBSI_WC_ALT
+#define _CIWBSI_WC_ALT
+#define _PWBS_WC_ALT
+*/
 
 #define FILTER1( var, method )				    \
   event_type[(var)] = scope[(var)].method ;		     \
@@ -1811,6 +1819,12 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     virtual void weight_conflict(double unit, Vector<double>& weights) {
       int idx;
+      double w = unit
+#ifdef _DIV_ARITY
+	    / (double)(scope.size)
+#endif
+      ;
+
       for(int i=0; i<scope.size; ++i) {
 	idx = scope[i].id();
 
@@ -1825,7 +1839,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
 	if(idx>=0) // constants have negative ids
-	  weights[idx] += unit;
+	  weights[idx] += w;
       }
     }
 
@@ -4128,6 +4142,9 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintWeightedBoolSumInterval();
 #ifdef _CWBSI_WC
+    void weight_conflict(double unit, Vector<double>& weights);//  {
+#endif
+#ifdef _CWBSI_WC_ALT
     void weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 

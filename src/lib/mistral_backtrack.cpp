@@ -433,7 +433,11 @@ void Mistral::Constraint::weight_conflict(double unit, Vector<double>& weights) 
     while(i--) {
       idx = scope[i].id();
       if(idx>=0) { // this is for constants (which hade id -1)
-	weights[idx] += unit;
+	weights[idx] += unit
+#ifdef _DIV_ARITY
+	  / (binary() ? 2.0 : 3.0)
+#endif
+	  ;
       }
     }   
   }
