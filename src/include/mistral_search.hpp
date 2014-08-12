@@ -1541,6 +1541,10 @@ namespace Mistral {
 
     GenericHeuristic(Solver *s) 
       : BranchingHeuristic(s) {
+
+      //std::cout << (int*)(s) << std::endl;
+      //std::cout << s << std::endl;
+
       var.initialise(s);
       choice = ValSelector(s,var.get_value_weight(),var.get_bound_weight());
     }
@@ -3151,7 +3155,7 @@ namespace Mistral {
     
     AnyValue() {}
     AnyValue(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //AnyValue(Solver *s, void *a) {}
     virtual ~AnyValue() {};
     
@@ -3183,12 +3187,18 @@ namespace Mistral {
     
     MinValue() {}
     MinValue(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //MinValue(Solver *s, void *a) {}
     virtual ~MinValue() {};
     
     inline Decision make(Variable x) {
+
+      //std::cout << "(MV) make a decision on " << x << " in " << x.get_domain() << std::endl;
+
       Decision d(x, Decision::ASSIGNMENT, x.get_min());
+
+      //std::cout << d << std::endl;
+
       return d;
     }
 
@@ -3215,7 +3225,7 @@ namespace Mistral {
     
     MaxValue() {}
     MaxValue(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //MaxValue(Solver *s, void *a) {}
     virtual ~MaxValue() {};
     
@@ -3247,7 +3257,7 @@ namespace Mistral {
     
     MiddleValue() {}
     MiddleValue(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //MiddleValue(Solver *s, void *a) {}
     virtual ~MiddleValue() {};
     
@@ -3281,7 +3291,7 @@ namespace Mistral {
     
     MedianValue() {}
     MedianValue(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     virtual ~MedianValue() {};
     
     inline Decision make(Variable x) {
@@ -3325,11 +3335,14 @@ namespace Mistral {
     
     HalfSplit() {}
     HalfSplit(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //HalfSplit(Solver *s, void *a) {}
     virtual ~HalfSplit() {};
     
     inline Decision make(Variable x) {
+
+      //std::cout << "(HS) make a decision on " << x << " in " << x.get_domain() << std::endl;
+
       Decision d(x, Decision::UPPERBOUND, (x.get_min()+x.get_max())/2);
       return d;
     }
@@ -3358,7 +3371,7 @@ namespace Mistral {
     
     ReverseSplit() {}
     ReverseSplit(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //ReverseSplit(Solver *s, void *a) {}
     virtual ~ReverseSplit() {};
     
@@ -3390,7 +3403,7 @@ namespace Mistral {
     
     RandomSplit() {}
     RandomSplit(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //RandomSplit(Solver *s, void *a) {}
     virtual ~RandomSplit() {};
     
@@ -3423,7 +3436,7 @@ namespace Mistral {
     
     RandomMinMax() {}
     RandomMinMax(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     //RandomMinMax(Solver *s, void *a) {}
     virtual ~RandomMinMax() {};
     
@@ -3456,7 +3469,7 @@ namespace Mistral {
     
     RandomValue() {}
     RandomValue(Solver *s, double **vw, double *bw) {}
-    void initialise(double **vw, double *bw) {}
+    void initialise(Solver *s, double **vw, double *bw) {}
     virtual ~RandomValue() {};
     
     inline Decision make(Variable x) {
@@ -3502,9 +3515,9 @@ namespace Mistral {
     
     MinWeightValue() {}
     MinWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(vw, bw);
+      initialise(s, vw, bw);
     }
-    void initialise(double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw) {
       weight = vw;
     }
     //MinWeightValue(Solver *s, void *a) { weight = (double**)a; }
@@ -3557,9 +3570,9 @@ namespace Mistral {
     
     MaxWeightValue() {}
     MaxWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(vw, bw);
+      initialise(s, vw, bw);
     }
-    void initialise(double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw) {
       weight = vw;
     }
     //MaxWeightValue(Solver *s, void *a) { weight = (double**)a; }
@@ -3613,9 +3626,9 @@ namespace Mistral {
     
     MinWeightBound() {}
     MinWeightBound(Solver *s, double **vw, double *bw) {
-      initialise(vw, bw);
+      initialise(s, vw, bw);
     }
-    void initialise(double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw) {
       weight = bw;
     }
     //MinWeightBound(Solver *s, void *a) { weight = (double**)a; }
@@ -3693,11 +3706,14 @@ namespace Mistral {
     int cool;
 
     Guided() {cool=150;}
-    Guided(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); cool=150;}
-    void initialise(double **vw, double *bw) { init_choice.initialise(vw, bw); }
+    Guided(Solver *s, double **vw, double *bw) { initialise(s, vw, bw); cool=150;}
+    void initialise(Solver *s, double **vw, double *bw) { solver=s, init_choice.initialise(s, vw, bw); }
     virtual ~Guided() {};
     
     inline Decision make(Variable x) {
+
+
+      //std::cout << "(G) make a decision on " << x << " in " << x.get_domain() << std::endl;
  
       Decision d;
       
@@ -3707,6 +3723,8 @@ namespace Mistral {
       } else
 	d = init_choice.make(x);
  
+      //std::cout << d << std::endl;
+
       return d;
 
     }
@@ -3746,18 +3764,24 @@ namespace Mistral {
     Default init_choice;
     
     GuidedSplit() {}
-    GuidedSplit(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); }
-    void initialise(double **vw, double *bw) { init_choice.initialise(vw, bw); }
+    GuidedSplit(Solver *s, double **vw, double *bw) { initialise(s, vw, bw); }
+    void initialise(Solver *s, double **vw, double *bw) { solver=s; init_choice.initialise(s, vw, bw); }
     virtual ~GuidedSplit() {};
     
     inline Decision make(Variable x) {
+
+      //std::cout << "(GS) make a decision on " << x << " in " << x.get_domain() << std::endl;
+
       int val = solver->last_solution_lb[x.id()];
       Decision d;
       if(val == -INFTY || !x.contain(val)) 
 	d = init_choice.make(x);
       else {
 	int half = (x.get_min()+x.get_max())/2;
-	d = Decision(x, (half < val ? Decision::LOWERBOUND : Decision::UPPERBOUND), half);
+	if(half < val)
+	  d = Decision(x, Decision::LOWERBOUND, half);
+	else
+	  d = Decision(x, Decision::UPPERBOUND, half);
       }
       return d;
     }
@@ -3801,21 +3825,46 @@ namespace Mistral {
     int threshold;
     
     ConditionalOnSize() {}
-    ConditionalOnSize(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); }
-    void initialise(double **vw, double *bw) {
+    ConditionalOnSize(Solver *s, double **vw, double *bw) { initialise(s, vw, bw); }
+    void initialise(Solver *s, double **vw, double *bw) {
+
+      //std::cout << "initialise COS" << std::endl;
+      //std::cout << (int*)s << std::endl;
+
+      solver=s; 
+
+      //std::cout << (int*)solver << std::endl;
+      //std::cout << solver << std::endl;
+
+
       threshold=3; 
-      range_branching.initialise(vw, bw); 
-      fd_branching.initialise(vw, bw);  
+      range_branching.initialise(solver, vw, bw); 
+      fd_branching.initialise(solver, vw, bw);  
     }
     virtual ~ConditionalOnSize() {};
     
     inline Decision make(Variable x) {
+
+
+      //std::cout << "(COS) make a decision on " << x << " in " << x.get_domain() << std::endl;
+
       Decision d;
       if(x.is_range() && x.get_size()>=threshold) {
+
+	//std::cout << "  -> RANGE!\n";
+
 	d = range_branching.make(x);
       } else {
+
+	//std::cout << "  -> FD!\n";
+	
+
 	d = fd_branching.make(x);
       }
+
+
+      //std::cout << "  ==> " << d << std::endl;
+
       return d;
     }
     
@@ -3861,9 +3910,9 @@ namespace Mistral {
     
     BoolMinWeightValue() {}
     BoolMinWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(vw, bw);
+      initialise(s, vw, bw);
     }
-    void initialise(double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw) {
       weight = bw;
     }
     // BoolMinWeightValue(Solver *s, void *a) {
@@ -3911,9 +3960,9 @@ namespace Mistral {
     
     BoolMaxWeightValue() {}
     BoolMaxWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(vw, bw);
+      initialise(s, vw, bw);
     }
-    void initialise(double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw) {
       weight = bw;
     }
     // BoolMaxWeightValue(Solver *s, void *a) {
