@@ -3346,6 +3346,7 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, HalfSplit* x);
 
 
+
   /*! \class ReverseSplit
     \brief  Class ReverseSplit
 
@@ -3690,7 +3691,6 @@ namespace Mistral {
     Default init_choice;
     
     int cool;
-    //int cool;
 
     Guided() {cool=150;}
     Guided(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); cool=150;}
@@ -3698,24 +3698,7 @@ namespace Mistral {
     virtual ~Guided() {};
     
     inline Decision make(Variable x) {
-      // Decision d;
-      
-      // int val, num_sol = solver->statistics.num_solutions;
-
-      // if(cool < num_sol) {
-      // 	num_sol = num_sol - cool + 1;
-      // 	val = solver->last_solution_lb[x.id()];
-      // 	if(val != -INFTY && x.contain(val) && randint(num_sol))
-      // 	  d = Decision(x, Decision::ASSIGNMENT, val);
-      // }
-      
-      // if(d.is_void()) {
-      // 	d = init_choice.make(x);
-      // }
-      // return d;
-
-
-
+ 
       Decision d;
       
       int val = solver->last_solution_lb[x.id()];
@@ -3726,17 +3709,6 @@ namespace Mistral {
  
       return d;
 
-      // //if(cool < 3+solver->statistics.num_solutions) {
-      // //int cool = 3+solver->statistics.num_solutions;
-      // // 	std::cout << cool <<std::endl;
-      // // }
-
-      // if(val == -INFTY || !x.contain(val) || !randint(cool)
-      // 	 ) 
-      // 	d = init_choice.make(x);
-      // else 
-      // 	d = Decision(x, Decision::ASSIGNMENT, val);
-      // return d;
     }
     
     std::ostream& display(std::ostream& os) const {
@@ -3760,7 +3732,7 @@ namespace Mistral {
 
 
 
-  /*! \class Guided
+  /*! \class GuidedSplit
     \brief  Class GuidedSplit
 
     Restricts the variable to the half that contains the solution value
@@ -3805,6 +3777,67 @@ namespace Mistral {
 
   template< class Default >
   std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>* x) {
+    return x->display(os);
+  }
+
+
+
+
+  /*! \class ConditionalOnSize
+    \brief  Class ConditionalOnSize
+
+    - uses range_branching if the domain size is continuous and larger than threshold 
+    - uses fd_branching otherwise
+  */
+  template< class RangeBranching, class FDBranching >
+  class ConditionalOnSize {
+    
+  public: 
+    
+    Solver *solver;
+    RangeBranching range_branching;
+    FDBranching fd_branching;
+
+    int threshold;
+    
+    ConditionalOnSize() {}
+    ConditionalOnSize(Solver *s, double **vw, double *bw) { solver=s; initialise(vw, bw); }
+    void initialise(double **vw, double *bw) {
+      threshold=3; 
+      range_branching.initialise(vw, bw); 
+      fd_branching.initialise(vw, bw);  
+    }
+    virtual ~ConditionalOnSize() {};
+    
+    inline Decision make(Variable x) {
+      Decision d;
+      if(x.is_range() && x.get_size()>=threshold) {
+	d = range_branching.make(x);
+      } else {
+	d = fd_branching.make(x);
+      }
+      return d;
+    }
+    
+    std::ostream& display(std::ostream& os) const {
+      os << "uses ";
+      range_branching.display(os);
+      os << " on large intervals and ";
+      fd_branching.display(os); 
+      os << " otherwise";
+      return os;
+    }
+    
+  };
+
+
+  template< class RangeBranching, class FDBranching >
+  std::ostream& operator<<(std::ostream& os, ConditionalOnSize< RangeBranching, FDBranching >& x) {
+    return x.display(os);
+  }
+
+  template< class RangeBranching, class FDBranching >
+  std::ostream& operator<<(std::ostream& os, ConditionalOnSize< RangeBranching, FDBranching >* x) {
     return x->display(os);
   }
 

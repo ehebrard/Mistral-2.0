@@ -196,6 +196,8 @@ namespace Mistral {
     /// 
     unsigned long int num_amsc_explanations;
 
+    /// 
+    unsigned long int num_branch_on_large_domains;
     
     /// timestamp
     double creation_time;
