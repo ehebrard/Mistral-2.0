@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
   // set flatzinc model options
 
-  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_restart_policy());
+  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), cmd.get_restart_policy());
   fm->set_display_model(cmd.print_model());
   fm->set_display_solution(cmd.print_solution());
   fm->set_annotations(annotationArg.getValue());

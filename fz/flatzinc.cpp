@@ -645,9 +645,10 @@ FlatZincModel::set_parameters(SolverParameters& p) {
 
 
 void
-FlatZincModel::set_strategy(string var_o, string val_o, string r_pol) {
+FlatZincModel::set_strategy(string var_o, string val_o, const int rand, string r_pol) {
   _variable_ordering = var_o;
   _value_ordering = val_o;
+  _randomization = rand;
 	// _option_heuristic = solver.heuristic_factory(var_o, val_o);
 	 _option_policy = solver.restart_factory(r_pol);
 }
@@ -886,7 +887,7 @@ FlatZincModel::set_annotations(const bool on) {
 
     //std::cout << _variable_ordering << " " << _value_ordering << std::endl;
 
-    _option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering);
+    _option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering, _randomization);
     
 
     //std::cout << fz_search_sequences.size << std::endl;

@@ -6133,7 +6133,7 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const i
 
 Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching, const int randomness) {
 
-  //std::cout << var_ordering << " " << branching << " " << randomness << std::endl;
+  std::cout << var_ordering << " " << branching << " " << randomness << std::endl;
 
   BranchingHeuristic *heu = NULL;
   if(var_ordering == "wdeg" || var_ordering == "WDEG" || var_ordering == "Weighted Degree" || var_ordering == "WeightedDegree") {
