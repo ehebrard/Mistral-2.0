@@ -365,6 +365,7 @@ namespace Mistral {
     virtual std::ostream& display(std::ostream&) const ;
     virtual std::string name() const { return "c"; }
     virtual bool is_clause() {return false;}
+    //virtual bool verify_state() = 0;
     //@}
   };
 

@@ -42,7 +42,7 @@
 //#define _DEBUG_PWEIGHTEDBOOLSUM (id == 7)
 //#define _DEBUG_REASONRIWBS (get_solver()->statistics.num_filterings == 10037)
 //#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
-//#define _DEBUG_CLIQUENOTEQUAL true
+//#define _DEBUG_CLIQUENOTEQUAL (id == 1)
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -13711,6 +13711,12 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 #endif
 	
 	evt = scope[active_var].remove(value);
+
+#ifdef _DEBUG_CLIQUENOTEQUAL
+	std::cout << event2str(evt) << " ";
+#endif
+
+
 	if(evt == FAIL_EVENT) {
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	  std::cout << "FAIL!" << std::endl;
@@ -13723,7 +13729,7 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 	  active.reversible_remove(active_var);
 	}
 #ifdef _DEBUG_CLIQUENOTEQUAL
-	else std::cout << "OK!" << std::endl;
+	else std::cout << "OK! " << scope[active_var].get_domain() << std::endl;
 #endif
       }
     }
@@ -13769,15 +13775,24 @@ Mistral::PropagationOutcome Mistral::ConstraintCliqueNotEqual::propagate()
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	std::cout << "    " << scope[active_var] << "-" << value << " ";
 #endif
-	if(scope[active_var].remove(value) == FAIL_EVENT) {
+	evt = scope[active_var].remove(value);
+
+#ifdef _DEBUG_CLIQUENOTEQUAL
+	std::cout << event2str(evt) << " ";
+#endif
+
+	if(evt == FAIL_EVENT) {
 #ifdef _DEBUG_CLIQUENOTEQUAL
 	  std::cout << "FAIL!" << std::endl;
 #endif
 	  //std::cout << "d " << culprit << std::endl;
 	  return FAILURE(active_var);
+	} else if(ASSIGNED(evt)) {
+	  //assigned.add(active_var);
+	  active.reversible_remove(active_var);
 	}
 #ifdef _DEBUG_CLIQUENOTEQUAL
-	else std::cout << "OK!" << std::endl;
+	else std::cout << "OK! " << scope[active_var].get_domain() << std::endl;
 #endif
       }
     }
