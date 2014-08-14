@@ -7,8 +7,16 @@ if len(sys.argv) > 1:
     cmd = sys.argv[1:-1]
     filename = sys.argv[-1]
 
+#    if '-f' in cmd:
+#        cmd[cmd.index['-f']] = '--follow_annotations'
+
     if '-f' in cmd:
-        cmd[cmd.index['-f']] = '--follow_annotations'
+	cmd.remove('-f')
+
+    if '-p' in cmd:
+	cmd.remove(cmd[cmd.index('-p') +1])
+	cmd.remove('-p')
+
 
     mcmd = ['./mistral-fzn']
     mcmd.extend(cmd)
