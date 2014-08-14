@@ -914,20 +914,26 @@ FlatZincModel::set_annotations(const bool on) {
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
         for(int k=0; k<fz_search_sequences.size; ++k) {
-          for(int i=0; i<fz_search_sequences[0].size; ++i) {
-            search_vars.add(fz_search_sequences[0][i].id());
-            search_sequence.add(fz_search_sequences[0][i]);
+          for(int i=0; i<fz_search_sequences[k].size; ++i) {
+            search_vars.add(fz_search_sequences[k][i].id());
+            search_sequence.add(fz_search_sequences[k][i]);
           }
         }
 
         for(int i=0; i<solver.variables.size; ++i) {
-          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id())))
+          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id()))) {
+            search_vars.add(i);
             search_sequence.add(solver.variables[i]);
+          }
+        }
+        /*
+        if(solver.objective->is_optimization() && !search_vars.contain(solver.objective->objective.id())) {
+          search_sequence.add(solver.objective->objective);
         }
         
-        /*
+        
         cout << " " << solver.parameters.prefix_comment 
-             << " sequence search on " << fz_search_sequences << std::endl
+             << " 1 sequence search on " << fz_search_sequences << std::endl
              << search_sequence << std::endl
              << solver.variables << std::endl;
         */
@@ -953,20 +959,27 @@ FlatZincModel::set_annotations(const bool on) {
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
         for(int k=0; k<fz_search_sequences.size; ++k) {
-          for(int i=0; i<fz_search_sequences[0].size; ++i) {
-            search_vars.add(fz_search_sequences[0][i].id());
-            search_sequence.add(fz_search_sequences[0][i]);
+          for(int i=0; i<fz_search_sequences[k].size; ++i) {
+            search_vars.add(fz_search_sequences[k][i].id());
+            search_sequence.add(fz_search_sequences[k][i]);
           }
         }
 
         for(int i=0; i<solver.variables.size; ++i) {
-          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id())))
+          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id()))) {
+            search_vars.add(i);
             search_sequence.add(solver.variables[i]);
+          }
+        }
+
+        /*
+        if(solver.objective->is_optimization() && !search_vars.contain(solver.objective->objective.id())) {
+          search_sequence.add(solver.objective->objective);
         }
         
-        /*
+        
       cout << " " << solver.parameters.prefix_comment 
-             << " sequence search on " << fz_search_sequences << std::endl
+             << " 2 sequence search on " << fz_search_sequences << std::endl
              << search_sequence << std::endl
              << solver.variables << std::endl;        
         */
