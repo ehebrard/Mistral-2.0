@@ -923,15 +923,17 @@ FlatZincModel::set_annotations(const bool on) {
         int domsize;
         for(int i=0; i<solver.variables.size; ++i) {
           domsize = solver.variables[i].get_size();
-          if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
-            {
-              std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
-            }
-          else if((domsize<=1 || domsize>2) && solver.variables[i].is_boolean()) 
-            {
-              std::cout << "?2 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
-            }
-          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id()))) {
+          // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
+          //   {
+          //     std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
+          //   }
+          // else if((domsize<=1 || domsize>2) && solver.variables[i].is_boolean()) 
+          //   {
+          //     std::cout << "?2 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
+          //   }
+          if(//solver.variables[i].is_boolean() 
+             domsize>1 && domsize<=10
+             && !(search_vars.contain(solver.variables[i].id()))) {
             search_vars.add(i);
             search_sequence.add(solver.variables[i]);
           }
@@ -981,6 +983,7 @@ FlatZincModel::set_annotations(const bool on) {
           domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
 
+          /*
           if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
             {
               std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
@@ -989,8 +992,10 @@ FlatZincModel::set_annotations(const bool on) {
             {
               std::cout << "?2 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
             }
+          */
 
-          if(solver.variables[i].is_boolean() &&
+          if(//solver.variables[i].is_boolean() &&
+             domsize>1 && domsize<=10 && 
              !(search_vars.contain(solver.variables[i].id()))) {
             search_vars.add(i);
             search_sequence.add(solver.variables[i]);

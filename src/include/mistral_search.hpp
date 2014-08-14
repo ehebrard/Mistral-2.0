@@ -3837,7 +3837,7 @@ namespace Mistral {
       //std::cout << solver << std::endl;
 
 
-      threshold=3; 
+      threshold=10; 
       range_branching.initialise(solver, vw, bw); 
       fd_branching.initialise(solver, vw, bw);  
     }
