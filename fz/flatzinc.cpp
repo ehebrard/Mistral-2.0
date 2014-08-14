@@ -723,9 +723,9 @@ FlatZincModel::set_annotations(const bool on) {
                       // cout << " c branching variables : \n "<< __branching_variables  << endl;
 
                       fz_search_sequences.add(__branching_variables);
-                      fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
-                      fz_search_policies.add(NULL);
-                      if(j) fz_search_goals.add(NULL);
+                      //fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
+                      //fz_search_policies.add(NULL);
+                      //if(j) fz_search_goals.add(NULL);
 
                     }
                   // else
@@ -751,8 +751,8 @@ FlatZincModel::set_annotations(const bool on) {
                 // //cout << " c branching variables : \n "<< banching_variables  << endl;
 
                 fz_search_sequences.add(__branching_variables);
-                fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
-                fz_search_policies.add(NULL);
+                //fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
+                //fz_search_policies.add(NULL);
                 
               }
             // else
@@ -911,7 +911,28 @@ FlatZincModel::set_annotations(const bool on) {
         //std::cout << 11 << std::endl;
 
 
-        result = solver.depth_first_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
+        Vector<Variable> search_sequence;
+        BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
+        for(int k=0; k<fz_search_sequences.size; ++k) {
+          for(int i=0; i<fz_search_sequences[0].size; ++i) {
+            search_vars.add(fz_search_sequences[0][i].id());
+            search_sequence.add(fz_search_sequences[0][i]);
+          }
+        }
+
+        for(int i=0; i<solver.variables.size; ++i) {
+          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id())))
+            search_sequence.add(solver.variables[i]);
+        }
+        
+        /*
+        cout << " " << solver.parameters.prefix_comment 
+             << " sequence search on " << fz_search_sequences << std::endl
+             << search_sequence << std::endl
+             << solver.variables << std::endl;
+        */
+
+        result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
 
         /*
         solver.initialise_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
@@ -928,12 +949,34 @@ FlatZincModel::set_annotations(const bool on) {
     } else {
       // follows flatzinc model's annotations
 
+
+        Vector<Variable> search_sequence;
+        BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
+        for(int k=0; k<fz_search_sequences.size; ++k) {
+          for(int i=0; i<fz_search_sequences[0].size; ++i) {
+            search_vars.add(fz_search_sequences[0][i].id());
+            search_sequence.add(fz_search_sequences[0][i]);
+          }
+        }
+
+        for(int i=0; i<solver.variables.size; ++i) {
+          if(solver.variables[i].is_boolean() && !(search_vars.contain(solver.variables[i].id())))
+            search_sequence.add(solver.variables[i]);
+        }
+        
+        /*
       cout << " " << solver.parameters.prefix_comment 
-           << " sequence search on " << fz_search_sequences << std::endl;
+             << " sequence search on " << fz_search_sequences << std::endl
+             << search_sequence << std::endl
+             << solver.variables << std::endl;        
+        */
 
-      Variable obj = iv[_optVar].get_var();
+        
+        result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
 
 
+
+ /*
 #ifdef _MONITOR
       for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
         solver.monitor_list << "[ " ;
@@ -947,14 +990,16 @@ FlatZincModel::set_annotations(const bool on) {
       solver.monitor_list << "\n" ;
 #endif
 
-      /*
+     
       result = solver.sequence_search(fz_search_sequences, 
                                       fz_search_heuristics, 
                                       fz_search_policies, 
                                       fz_search_goals);
-      */
+      
+                                      result = solver.depth_first_search(fz_search_sequences, _option_heuristic, _option_policy, goal);
+ */
 
-      result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+
 
 
       //cout << outcome2str(result) << " " << outcome2str(solver.statistics.outcome) << endl;

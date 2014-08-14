@@ -43,14 +43,16 @@
 
 //#define _DIV_ARITY
 
-/*
+//#define _DIV_WEIGHT
+
 #define _PWBS_WC
+#define _PWS_WC
 #define _CIWBSI_WC
 #define _CWBSI_WC
-#define _PWS_WC
 #define _PBS_WC
 #define _CBSI_WC
-*/
+
+
 
 /*
 #define _PWS_WC_ALT
