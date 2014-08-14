@@ -44,6 +44,7 @@
 //#define _DEBUG_WEIGHTEDBOOLSUM (id == 102)
 //#define _DEBUG_CLIQUENOTEQUAL (id == 1)
 //#define _DEBUG_WEIGHT_CONFLICT
+//#define _DEBUG_MUL (id == 4735)
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -6156,90 +6157,96 @@ Mistral::PropagationOutcome Mistral::PredicateMul::revise_division(const int X, 
     } 
   }
 
-  if(lb_neg != ub_pos && (!zero[X] || !zero[Y])) { // if X and Y can both be 0, we cannot deduce anything
-    if(IS_OK(wiped)) {
-      if(max_pos[Z]>0) {
-	// revise the positive part of Z's domain (if it has one)
-	nlb1 = nlb2 = INFTY; //lb_neg;
-	nub1 = nub2 = 0; //ub_neg;
+  //if(lb_neg != ub_pos) {
+    if(!zero[X] || !zero[Y]) { // if X and Y can both be 0, we cannot deduce anything
+      if(IS_OK(wiped)) {
+	if(max_pos[Z]>0) {
+	  // revise the positive part of Z's domain (if it has one)
+	  nlb1 = nlb2 = INFTY; //lb_neg;
+	  nub1 = nub2 = 0; //ub_neg;
+	  
+	  // it can either be the positive parts of X and Y:
+	  if(max_pos[X]>0 && max_pos[Y]>0) {
+	    // compute the bounds
+	    nlb1 = (int)(ceil((double)(min_pos[X])/(double)(max_pos[Y])));
+	    nub1 = (int)(floor((double)(max_pos[X])/(double)(min_pos[Y])));
+	  }
+	  
+	  // or the negative parts of X and Y:
+	  if(min_neg[X]<0 && min_neg[Y]<0) {
+	    // compute the bounds
+	    nlb2 = (int)(ceil((double)(max_neg[X])/(double)(min_neg[Y])));
+	    nub2 = (int)(floor((double)(min_neg[X])/(double)(max_neg[Y])));
+	  }
+	  if(nlb1>nlb2) nlb1 = nlb2;
+	  if(nub1<nub2) nub1 = nub2;
+	  
+	  if(lb_pos<nlb1) {
+	    lb_pos = nlb1;
+	    pruning_flag = true;
+	  }
+	  if(ub_pos>nub1) {
+	    ub_pos = nub1;
+	    pruning_flag = true;
+	  }
+	  
+	  if(lb_pos > max_pos[Z] || ub_pos < min_pos[Z]) ppos = true;
+	  
+	} else if(pzero || !zero[Z]) // if(lb_pos || ub_pos)
+	  {
+	    lb_pos = min_neg[Z];
+	    ub_pos = max_neg[Z];
+	  } else {
+	  lb_pos = ub_pos = 0; 
+	}
 	
-	// it can either be the positive parts of X and Y:
-	if(max_pos[X]>0 && max_pos[Y]>0) {
-	  // compute the bounds
-	  nlb1 = (int)(ceil((double)(min_pos[X])/(double)(max_pos[Y])));
-	  nub1 = (int)(floor((double)(max_pos[X])/(double)(min_pos[Y])));
+	if(min_neg[Z]<0) {
+	  // revise the negative part of Z's domain (if it has one)
+	  nlb1 = nlb2 = 0; //lb_pos;
+	  nub1 = nub2 = -INFTY; //ub_pos;
+	  
+	  // it can either be the negitive part of X and the positive part of Y:
+	  if(min_neg[X]<0 && max_pos[Y]>0) {
+	    // compute the bounds
+	    
+	    nlb1 = (int)(ceil((double)(min_neg[X])/(double)(min_pos[Y])));
+	    nub1 = (int)(floor((double)(max_neg[X])/(double)(max_pos[Y])));
+	  }
+	  // or the negitive part of Y and the positive part of X:
+	  if(max_pos[X]>0 && min_neg[Y]<0) {
+	    // compute the bounds
+	    nlb2 = (int)(ceil((double)(max_pos[X])/(double)(max_neg[Y])));
+	    nub2 = (int)(floor((double)(min_pos[X])/(double)(min_neg[Y])));
+	  }
+	  
+	  if(nlb1>nlb2) nlb1 = nlb2;
+	  if(nub1<nub2) nub1 = nub2;
+	  
+	  if(lb_neg<nlb1) {
+	    lb_neg = nlb1;
+	    pruning_flag = true;
+	  }
+	  if(ub_neg>nub1) {
+	    ub_neg = nub1;
+	    pruning_flag = true;
+	  }
+	  
+	  if(lb_neg > max_neg[Z] || ub_neg < min_neg[Z]) pneg = true;
+	  
+	} else if(pzero || !zero[Z])// if(lb_neg || ub_neg)
+	  {
+	    lb_neg = min_pos[Z];
+	    ub_neg = max_pos[Z];
+	  } else {
+	  lb_neg = ub_neg = 0;
 	}
-
-	// or the negative parts of X and Y:
-	if(min_neg[X]<0 && min_neg[Y]<0) {
-	  // compute the bounds
-	  nlb2 = (int)(ceil((double)(max_neg[X])/(double)(min_neg[Y])));
-	  nub2 = (int)(floor((double)(min_neg[X])/(double)(max_neg[Y])));
-	}
-	if(nlb1>nlb2) nlb1 = nlb2;
-	if(nub1<nub2) nub1 = nub2;
-
-	if(lb_pos<nlb1) {
-	  lb_pos = nlb1;
-	  pruning_flag = true;
-	}
-	if(ub_pos>nub1) {
-	  ub_pos = nub1;
-	  pruning_flag = true;
-	}
-
-	if(lb_pos > max_pos[Z] || ub_pos < min_pos[Z]) ppos = true;
-
-      } else if(pzero || !zero[Z]) // if(lb_pos || ub_pos)
-	{
-	  lb_pos = min_neg[Z];
-	  ub_pos = max_neg[Z];
-	} else {
-	lb_pos = ub_pos = 0; 
       }
-
-     if(min_neg[Z]<0) {
-       // revise the negative part of Z's domain (if it has one)
-       nlb1 = nlb2 = 0; //lb_pos;
-       nub1 = nub2 = -INFTY; //ub_pos;
-	
-	// it can either be the negitive part of X and the positive part of Y:
-	if(min_neg[X]<0 && max_pos[Y]>0) {
-	  // compute the bounds
-
-	  nlb1 = (int)(ceil((double)(min_neg[X])/(double)(min_pos[Y])));
-	  nub1 = (int)(floor((double)(max_neg[X])/(double)(max_pos[Y])));
-	}
-	// or the negitive part of Y and the positive part of X:
-	if(max_pos[X]>0 && min_neg[Y]<0) {
-	  // compute the bounds
-	  nlb2 = (int)(ceil((double)(max_pos[X])/(double)(max_neg[Y])));
-	  nub2 = (int)(floor((double)(min_pos[X])/(double)(min_neg[Y])));
-	}
-
-	if(nlb1>nlb2) nlb1 = nlb2;
-	if(nub1<nub2) nub1 = nub2;
-
-	if(lb_neg<nlb1) {
-	  lb_neg = nlb1;
-	  pruning_flag = true;
-	}
-	if(ub_neg>nub1) {
-	  ub_neg = nub1;
-	  pruning_flag = true;
-	}
-
-	if(lb_neg > max_neg[Z] || ub_neg < min_neg[Z]) pneg = true;
-
-     } else if(pzero || !zero[Z])// if(lb_neg || ub_neg)
-       {
-	 lb_neg = min_pos[Z];
-	 ub_neg = max_pos[Z];
-       } else {
-       lb_neg = ub_neg = 0;
-     }
     }
-  }
+  // }
+  // else {
+  //   // lb_neg != ub_pos => Z is ground
+  
+  // }
 
   if(pneg && (pzero || !zero[Z]) && ppos) {
     wiped = FAILURE(Z);
