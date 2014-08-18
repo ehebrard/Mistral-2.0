@@ -1506,6 +1506,74 @@ namespace FlatZinc {
     	}
     }
 
+
+    //Reified count_eq
+    //predicate count_eq_reif(array[int] of var int: x, var int: y, var int: c,  var bool: b);
+    void p_count_eq_reif(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "p_count_eq_reif" << std::endl;
+
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    				//s.add( Free(subsequence.back()));
+    			}
+    		}
+    		else
+    		{
+    			//Variable y = ce[1]->getIntVar();
+    			Variable y = getIntVar(s,m,ce[1]);
+
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(y==x[i]);
+    				//s.add( Free(subsequence.back()));
+    			}
+    		}
+
+    		if (ce[3]->isBool() ){
+
+
+    			int is_true = ce[3]->getBool();
+    			if (is_true){
+    				if (ce[2]->isInt() )
+    					//s.add( BoolSum(subsequence, ce[2]->getInt(), ce[2]->getInt()));
+    					s.add( BoolSum(subsequence) ==  ce[2]->getInt());
+    				else
+    					//s.add( BoolSum(subsequence) == ce[2]->getIntVar());
+    					s.add( BoolSum(subsequence) == getIntVar(s,m,ce[2]));
+    			}
+    			else {
+
+    				if (ce[2]->isInt() )
+    					//s.add( BoolSum(subsequence, ce[2]->getInt(), ce[2]->getInt()));
+    					s.add( BoolSum(subsequence) !=  ce[2]->getInt());
+    				else
+    					//s.add( BoolSum(subsequence) == ce[2]->getIntVar());
+    					s.add( BoolSum(subsequence) != getIntVar(s,m,ce[2]));
+    			}
+    		}
+    		else {
+    			if (ce[2]->isInt() )
+    				//s.add( BoolSum(subsequence, ce[2]->getInt(), ce[2]->getInt()));
+    				s.add( (BoolSum(subsequence) ==  ce[2]->getInt() ) == getBoolVar(s,m,ce[3]) );
+    			else
+    				//s.add( BoolSum(subsequence) == ce[2]->getIntVar());
+    				s.add( (BoolSum(subsequence) == getIntVar(s,m,ce[2])) == getBoolVar(s,m,ce[3]));
+    		}
+
+    	}
+    }
+
+
+
     /*
     %-----------------------------------------------------------------------------%
     % Constrains 'c' to be greater than or equal to the number of occurrences of
@@ -3019,6 +3087,7 @@ namespace FlatZinc {
         registry().add("at_most_int", &p_at_most_int);
         registry().add("at_least_int", &p_at_least_int);
         registry().add("count_eq", &p_count_eq);
+        registry().add("count_eq_reif", &p_count_eq_reif);
         registry().add("count_geq", &p_count_geq);
         registry().add("count_gt", &p_count_gt);
         registry().add("count_leq", &p_count_leq);
