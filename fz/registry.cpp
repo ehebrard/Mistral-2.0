@@ -1856,9 +1856,19 @@ namespace FlatZinc {
       
       int n = start.size;
       for(int i=0; i<n-1; ++i) {
-        for(int j=i+1; j<n; ++j) {
-          s.add(Free(ReifiedDisjunctive(start[i], start[j], dur[i].get_min(), dur[j].get_min())));
-        }
+    	  for(int j=i+1; j<n; ++j) {
+    		  //Check if it's already a Precedence!
+    		  if (start[i].get_min()+dur[i].get_min() >start[j].get_min()){
+    			  s.add(Precedence(start[j], dur[j].get_min() , start[i]));
+    		  }
+    		  else
+    			  if (start[j].get_min()+dur[j].get_min() >start[i].get_min()){
+    				  s.add(Precedence(start[i], dur[i].get_min() , start[j]));
+    			  }
+    			  else{
+    				  s.add(Free(ReifiedDisjunctive(start[i], start[j], dur[i].get_min(), dur[j].get_min())));
+    			  }
+    	  }
       }
     }
     
