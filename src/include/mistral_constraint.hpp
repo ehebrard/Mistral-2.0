@@ -4679,6 +4679,44 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     };
 
 
+   /**********************************************
+    * VertexCover Predicate
+    **********************************************/
+   /*! \class PredicateVertexCover
+     \brief  Predicate on the size of the vertex cover {X} of a graph G
+   */
+   class PredicateVertexCover : public GlobalConstraint {
+
+   public:
+     /**@name Parameters*/
+     //@{ 
+	 Graph _G;
+     //@}
+
+     /**@name Constructors*/
+     //@{
+     PredicateVertexCover(Vector< Variable >& scp, Graph& g);
+     virtual ~PredicateVertexCover();
+     virtual Constraint clone() { return Constraint(new PredicateVertexCover(scope,_G)); }
+     virtual int idempotent() { return 1;}
+     virtual int postponed() { return 1;}
+     virtual int pushed() { return 1;}
+     virtual void initialise();
+     //virtual void mark_domain();
+     //@}
+
+     /**@name Solving*/
+     //@{
+     virtual int check( const int* sol ) const ;
+     virtual PropagationOutcome propagate();
+     //@}
+
+     /**@name Miscellaneous*/
+     //@{  
+     virtual std::ostream& display(std::ostream&) const ;
+     virtual std::string name() const { return "|vertex cover|="; }
+     //@}
+ };
 
 
   /**********************************************

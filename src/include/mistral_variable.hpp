@@ -2786,6 +2786,27 @@ namespace Mistral {
   Variable Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct=BOUND_CONSISTENCY);
 
 
+
+  class VertexCoverExpression : public Expression {
+
+  public:
+	  
+	  Graph _G;
+	  
+
+    VertexCoverExpression(Vector< Variable >& args, const Graph& g);
+    virtual ~VertexCoverExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable VertexCover(Vector< Variable >& args, const Graph& g);
+
+
   // class CardinalityExpression : public Expression {
   //   // count the number of occurrences 
 

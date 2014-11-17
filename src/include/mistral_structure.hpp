@@ -2096,6 +2096,106 @@ template < int N, class T >
     // }
     //@}
   };
+  
+  
+  
+  class Graph {
+	
+  public:
+
+  	int       capacity;
+  	IntStack      node;
+  	IntStack *neighbor;
+	
+  	Graph() {}
+	
+  	Graph(const int n) {
+  		initialise(n);
+  	}
+	
+  	Graph(const Graph& g) {
+				
+  		initialise(g.capacity,g.size() == g.capacity);
+		if(g.size() != g.capacity)
+			for(int i=0; i<g.node.size; ++i) { node.add(g.node[i]); }
+		for(int x=0; x<capacity; ++x) {
+			for(int i=0; i<g.neighbor[x].size; ++i) {
+				neighbor[x].add(g.neighbor[x][i]);
+			}
+		}
+		
+  	}
+	
+  	virtual void initialise(const int n, bool full=true) {
+  		capacity = n;
+  		node.initialise(0,capacity-1,capacity,full);
+  		neighbor = new IntStack[n];
+  		for(int i=0; i<n; ++i) {
+  			neighbor[i].initialise(0, capacity-1, capacity, false);
+  		}
+  	}
+	
+  	virtual ~Graph() {
+  		delete [] neighbor;
+  	}
+	
+  	int size() const { return node.size; }
+	
+  	void clear() { 
+  		while(!node.empty()) { 
+  			neighbor[node.pop()].clear(); 
+  		} 
+  	}
+	
+  	void add_node(const int x) {
+  		node.add(x);
+  	}
+	
+  	void add_directed(const int x, const int y) {
+  		neighbor[x].add(y);
+  	}
+	
+  	void add_undirected(const int x, const int y) {
+  		neighbor[x].add(y);
+  		neighbor[y].add(x);
+  	}
+	
+  	bool exist_arc(const int x, const int y) const {
+  		return neighbor[x].contain(y);
+  	}
+	
+  	int degree(const int x) const {
+  		return neighbor[x].size;
+  	}
+	
+  	int get_neighbor(const int x, const int i) const {
+  		return neighbor[x][i];
+  	}
+	
+  	int get_next_neighbor(const int x, const int y) const {
+  		return neighbor[x].next(y);
+  	}
+	
+  	int get_prev_neighbor(const int x, const int y) const {
+  		return neighbor[x].prev(y);
+  	}
+	
+  	std::ostream& display(std::ostream& os) const {
+  		for(int i=0; i<node.size; ++i) {
+  			os << node[i] << ": ";
+  			neighbor[node[i]].display(os);
+  			os << std::endl;
+  		}
+  		return os;
+  	}
+	
+  };
+
+
+  std::ostream& operator<< (std::ostream& os, const Graph& x);
+
+  std::ostream& operator<< (std::ostream& os, const Graph* x);
+  
 
 
 

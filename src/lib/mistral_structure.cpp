@@ -417,6 +417,10 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack& x)
   return x.display(os);
 }
 
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Graph& x) {
+  return x.display(os);
+}
+
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue& x) {
   return x.display(os);
 }
@@ -434,6 +438,10 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Explanation*
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::IntStack* x) {
+  return (x ? x->display(os) : os);
+}
+
+std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Graph* x) {
   return (x ? x->display(os) : os);
 }
 

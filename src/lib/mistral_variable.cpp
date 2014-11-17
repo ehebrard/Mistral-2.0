@@ -23,6 +23,8 @@
 #include <math.h>
 
 
+#include <assert.h>
+
 #include <mistral_constraint.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_solver.hpp>
@@ -2684,7 +2686,12 @@ Mistral::Variable Mistral::Variable::operator*(Variable x) {
   // std::cout << "ADD " ;
   // display(std::cout);
   // std::cout << " * " << x << std::endl;
-  Variable exp(new MulExpression(*this,x));
+	Variable exp;
+	if(this->same_as(x)) {
+		exp = Variable(new SquareExpression(x));
+	} else {
+		exp = Variable(new MulExpression(*this,x));
+	}
   return exp;
 }
 
@@ -4269,6 +4276,44 @@ const char* Mistral::OccurrencesExpression::get_name() const {
 Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct) {
   Variable exp(new OccurrencesExpression(args, first, last, lb, ub, ct));
   return exp;
+}
+
+
+
+Mistral::VertexCoverExpression::VertexCoverExpression(Vector< Variable >& args, const Graph& g) 
+: _G(g), Expression(args) {
+	assert(_G.size() == args.size);
+}
+  
+Mistral::VertexCoverExpression::~VertexCoverExpression() {}
+
+void Mistral::VertexCoverExpression::extract_constraint(Solver*) {
+	std::cerr << "Error: Vertex Cover predicate can't be used as a constraint" << std::endl;
+	exit(0);
+}
+
+void Mistral::VertexCoverExpression::extract_variable(Solver* s) {
+	
+	Variable aux(0, _G.size(), DYN_VAR);
+	_self = aux;
+  
+	_self.initialise(s, 1);
+	_self = _self.get_var();
+	children.add(_self);
+}
+
+void Mistral::VertexCoverExpression::extract_predicate(Solver* s) {
+	s->add(Constraint(new PredicateVertexCover(children, _G)));
+}
+
+const char* Mistral::VertexCoverExpression::get_name() const {
+	return "vertex cover";
+}
+
+
+Mistral::Variable Mistral::VertexCover(Mistral::Vector< Variable >& args, const Graph& g) {
+	Variable exp(new VertexCoverExpression(args, g));
+	return exp;
 }
 
 

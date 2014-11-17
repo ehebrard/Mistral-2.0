@@ -3094,7 +3094,7 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 }
 
 std::ostream& Mistral::PredicateSquare::display(std::ostream& os) const {
-  os << scope[1]/*.get_var()*/ << " == (" << scope[0] << " * " << scope[0] << ")";
+  os << scope[1]/*.get_var()*/ << " == (" << scope[0] << "^2)";
   return os;
 }
 
@@ -15803,6 +15803,104 @@ void Mistral::ConstraintAllDiff::print_structs() {
   // }
 
 }
+
+
+//#define _DEBUG_VERTEXCOVER 0
+
+Mistral::PredicateVertexCover::PredicateVertexCover(Mistral::Vector< Variable >& scp, Graph& g) 
+: _G(g), GlobalConstraint(scp) { 	
+	priority = 1; 
+}
+
+Mistral::PredicateVertexCover::~PredicateVertexCover() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete vertex cover predicate" << std::endl;
+#endif
+}
+
+void Mistral::PredicateVertexCover::initialise() {
+  ConstraintImplementation::initialise();
+  for(unsigned int i=0; i<scope.size-1; ++i) {
+    trigger_on(_RANGE_, scope[i]);
+  }
+  trigger_on(_VALUE_, scope[scope.size-1]);
+  GlobalConstraint::initialise();
+}
+
+int Mistral::PredicateVertexCover::check( const int* sol ) const {
+	
+#ifdef _DEBUG_VERTEXCOVER
+	if(_DEBUG_VERTEXCOVER>1) {
+	std::cout << "check {";
+	for(int i=0; i<scope.size-1; ++i) {
+		if(sol[i]) std::cout << " " << i;
+	}
+	std::cout << " } " ;
+}
+#endif
+	
+	bool covered = true;
+	int i, N = scope.size-1;
+	int count = sol[N];
+	for(int x=0; count>=0 && covered && x<N; ++x) {
+		if(!sol[x]) {
+			i = _G.neighbor[x].size;
+			while(covered && i--) {
+				covered = sol[_G.neighbor[x][i]];
+			}
+		} else --count;
+	}
+	
+#ifdef _DEBUG_VERTEXCOVER
+	if(_DEBUG_VERTEXCOVER>1) {
+	if(covered && count>=0) {
+		std::cout << "ok!" << std::endl;
+	} else {
+		std::cout << "NO!" << std::endl;
+	}
+}
+#endif
+	
+	return !covered || count<0;
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateVertexCover::propagate() {
+
+  PropagationOutcome wiped = CONSISTENT;
+  int var;
+  Event evt;
+
+
+#ifdef _DEBUG_VERTEXCOVER
+  
+  for(int i=0; i<changes.size; ++i) {
+    var = changes[i];
+    evt = event_type[var];
+
+	std::cout << " -change: " << scope[var] <<  " in " << scope[var].get_domain() << " ("<< event2str(evt) << ")" << std::endl;
+    
+  }	
+  
+#endif
+  
+  wiped = GlobalConstraint::propagate();
+
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateVertexCover::display(std::ostream& os) const {
+  os << scope.back() << ":" << scope.back().get_domain() << " == | vertex cover(G) = " << scope[0]/*.get_var()*/ << ":" << scope[0].get_domain();
+  for(unsigned int i=1; i<scope.size-1; ++i) {
+    os << ", " << scope[i]/*.get_var()*/ << ":" << scope[i].get_domain();
+  }
+  os << "|";
+  return os;
+}
+
+
+
+
 
 
 Mistral::PredicateMin::PredicateMin(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }
