@@ -2123,9 +2123,15 @@ namespace FlatZinc {
 
       }
 
+    }
 
 
-
+    /* global cardinality constraint */
+    void p_distribute(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+      
+      std::cout << "GLOBAL CARDINALITY!!\n";
+      exit(1);
 
     }
 
@@ -3013,6 +3019,7 @@ namespace FlatZinc {
         registry().add("array_bool_element", &p_array_bool_element);
 
         //Add here Mistral redefinitions of global constraints
+        registry().add("distribute", &p_distribute);
         registry().add("all_different_int", &p_all_different);
         registry().add("all_equal_int", &p_all_equal_int);
         registry().add("at_most_int", &p_at_most_int);

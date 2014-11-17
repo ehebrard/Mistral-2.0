@@ -2471,6 +2471,19 @@ namespace Mistral {
     virtual const char* get_name() const;
 
   };
+  
+  class SquareExpression : public Expression {
+
+  public:
+    SquareExpression(Variable X);
+    virtual ~SquareExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
 
   class ModConstantExpression : public Expression {
 

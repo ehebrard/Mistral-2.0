@@ -3012,6 +3012,94 @@ std::ostream& Mistral::PredicateFactor::display(std::ostream& os) const {
 
 
 
+void Mistral::PredicateSquare::initialise() {
+  ConstraintImplementation::initialise();
+  trigger_on(_RANGE_, scope[0]);
+  trigger_on(_RANGE_, scope[1]);
+}
+
+void Mistral::PredicateSquare::mark_domain() {
+  get_solver()->forbid(scope[0].id(), LIST_VAR);
+  get_solver()->forbid(scope[1].id(), LIST_VAR);
+}
+
+Mistral::PropagationOutcome Mistral::PredicateSquare::propagate(const int changed_idx, const Event evt) {
+	return propagate();
+}   
+
+Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {      
+	Mistral::PropagationOutcome wiped = CONSISTENT;
+  
+	if( FAILED(scope[1].set_min(0)) ) wiped = FAILURE(1);
+	else {
+
+		int val;
+		int lb_sq; // = scope[0].get_min();
+		int ub_sq; // = scope[0].get_max();
+		int lb_sr; // = scope[0].get_min();
+		int ub_sr; // = scope[0].get_max();
+		do {
+			 lb_sr = scope[0].get_min();
+			 ub_sr = scope[0].get_max();
+				
+			// compute the bounds of the square, given the bounds of x [taking into account a hole centered on 0]
+			if(lb_sr > 0) {
+				// The domain is strictly positive
+				lb_sq = lb_sr*lb_sr;
+				ub_sq = ub_sr*ub_sr;
+			} else if(ub_sq < 0) {
+				// The domain is strictly negative
+				lb_sq = ub_sr*ub_sr;
+				ub_sq = lb_sr*lb_sr;
+			} else {
+				// The domain spans over 0
+				if(-lb_sr > ub_sr) {
+					ub_sq = lb_sr*lb_sr;
+				} else {
+					ub_sq = ub_sr*ub_sr;
+				}
+				lb_sq = scope[0].get_min_pos();
+				val = -scope[0].get_max_neg();
+				if(lb_sq > val) {
+					lb_sq = val;
+				}
+				lb_sq *= lb_sq;
+			}
+			if( FAILED(scope[1].set_max(ub_sq)) ||
+				FAILED(scope[1].set_min(lb_sq))
+					) wiped = FAILURE(1);
+			else {
+				// compute the bounds of x given the bounds of x^2
+				int cur_ub_xsq = scope[1].get_max();
+				if(cur_ub_xsq < ub_sq) {
+					// there's something to prune because of x^2 upper bound
+					ub_sr = (int)(sqrt((double)(cur_ub_xsq)));
+					if( FAILED(scope[0].set_max(ub_sr)) ) wiped = FAILURE(0);
+				}
+				if(IS_OK(wiped)) {
+					int cur_lb_xsq = scope[1].get_min();
+					if(cur_lb_xsq > lb_sq) {
+						// there's something to prune because of x^2 upper bound
+						lb_sr = (int)(ceil(sqrt((double)(cur_ub_xsq))));
+						if( FAILED(scope[0].set_min(lb_sr)) ) wiped = FAILURE(0);
+					}
+				}
+			}
+		} while(lb_sr < scope[0].get_min() || ub_sr > scope[0].get_max());
+	
+	}	
+
+  
+	return wiped;
+}
+
+std::ostream& Mistral::PredicateSquare::display(std::ostream& os) const {
+  os << scope[1]/*.get_var()*/ << " == (" << scope[0] << " * " << scope[0] << ")";
+  return os;
+}
+
+
+
 void Mistral::PredicateAbs::initialise() {
   ConstraintImplementation::initialise();
   trigger_on(_DOMAIN_, scope[0]);

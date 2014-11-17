@@ -2917,6 +2917,56 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   };
 
 
+ /**********************************************
+  * Square Predicate
+  **********************************************/
+ /*! \class PredicateSquare
+   \brief  Truth value of a conjunction (!x0 <-> y)
+ */
+ class PredicateSquare : public BinaryConstraint
+ {
+
+ public:
+
+   /**@name Parameters*/
+   //@{  
+   //@}
+
+   /**@name Constructors*/
+   //@{
+   PredicateSquare() : BinaryConstraint() {}
+   PredicateSquare(Vector< Variable >& scp) 
+     : BinaryConstraint(scp) {  }
+   PredicateSquare(Variable x, Variable y) 
+     : BinaryConstraint(x,y) {  }
+   PredicateSquare(std::vector< Variable >& scp) 
+     : BinaryConstraint(scp) {  }
+   virtual Constraint clone() { return Constraint(new PredicateSquare(scope[0], scope[1])); }
+   virtual void initialise();
+   virtual void mark_domain();
+   virtual int idempotent() { return 1;}
+   virtual ~PredicateSquare() {}
+   //@}
+
+   /**@name Solving*/
+   //@{
+   virtual int check( const int* sol ) const { 
+     return((sol[0]*sol[0]) != sol[1]);
+   }
+   virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
+   virtual PropagationOutcome propagate();
+   //virtual RewritingOutcome rewrite();
+   //@}
+
+   /**@name Miscellaneous*/
+   //@{  
+   virtual std::ostream& display(std::ostream&) const ;
+   virtual std::string name() const { return "^2"; }
+   //@}
+ };
+
+
+
   /**********************************************
    * Abs Predicate
    **********************************************/

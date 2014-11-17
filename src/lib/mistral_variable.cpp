@@ -2420,7 +2420,7 @@ Mistral::ModConstantExpression::ModConstantExpression(Variable X, const int mod)
 }
 Mistral::ModConstantExpression::~ModConstantExpression() {
 #ifdef _DEBUG_MEMORY
-  std::cout << "c delete factor expression" << std::endl;
+  std::cout << "c delete modconstant expression" << std::endl;
 #endif
 }
   
@@ -2587,6 +2587,8 @@ Mistral::Variable Mistral::Variable::operator/(int k) {
 }
 
 
+
+
 Mistral::FactorExpression::FactorExpression(Variable X, const int fct) 
   : Expression(X) { 
   factor=fct; 
@@ -2623,12 +2625,65 @@ void Mistral::FactorExpression::extract_predicate(Solver *s) {
   s->add(Constraint(new PredicateFactor(children, factor)));
 }
 
+
+
+Mistral::SquareExpression::SquareExpression(Variable X) 
+  : Expression(X) { 
+}
+Mistral::SquareExpression::~SquareExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete square expression" << std::endl;
+#endif
+}
+  
+void Mistral::SquareExpression::extract_constraint(Solver *s) {
+  std::cerr << "Error: Square predicate can't be used as a constraint" << std::endl;
+  exit(0);
+}
+
+void Mistral::SquareExpression::extract_variable(Solver *s) {
+
+	int lb = 0;
+	int ub = 0;
+	int minabs = 0;
+	if(children[0].get_max() > -children[0].get_min()) {
+		ub = children[0].get_max()*children[0].get_max();
+		minabs = -children[0].get_min();
+	} else {
+		ub = children[0].get_min()*children[0].get_min();
+		minabs = children[0].get_max();
+	}
+	while(lb<minabs) {
+		if(children[0].contain(lb)) {
+			break;
+		} else ++lb;
+	}
+	lb *= lb;
+
+  Variable aux(lb, ub, DYN_VAR);
+  _self = aux;
+  
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+const char* Mistral::SquareExpression::get_name() const {
+  return "square";
+}
+
+void Mistral::SquareExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(new PredicateSquare(children)));
+}
+
+
+
+
 Mistral::Variable Mistral::Variable::operator*(Variable x) {
 
   // std::cout << "ADD " ;
   // display(std::cout);
   // std::cout << " * " << x << std::endl;
-
   Variable exp(new MulExpression(*this,x));
   return exp;
 }
