@@ -123,19 +123,19 @@ namespace Mistral {
     int size;
     BitSet values;
   
-    virtual std::ostream& display(std::ostream& os) const {
-      if(min == max-1) {
-	os << "[" << min << "," << max << "]";
-      } else if(values.table && (max-min) >= size
-		) {
-	os << values ; //<< " [" << min << ".." << max << "] (" << size << ")";
-      } else if(min==max){
-	os << min;
-      } else {
-	os << "[" << min << ".." << max << "]";
-      }
-      return os;
-    }
+	virtual std::ostream& display(std::ostream& os) const {
+		//os << "[" << min << ".." << max << "] (" << size << ") ";
+		if(min == max-1) {
+			os << "[" << min << "," << max << "]";
+		} else if(values.table && (max-min) >= size) {
+			os << values ; //<< " [" << min << ".." << max << "] (" << size << ")";
+		} else if(min==max){
+			os << min;
+		} else {
+			os << "[" << min << ".." << max << "]";
+		}
+		return os;
+	}
   
   };
 
@@ -1582,8 +1582,9 @@ namespace Mistral {
     //     Variable(Vector< int >& values, const int type=DYN_VAR);
     Variable(const int lo, const int up, const int type=EXPRESSION);
     Variable(const Vector< int >& values, const int type=EXPRESSION);
-    Variable(const int lo, const int up, 
-	     const Vector< int >& values, const int type=EXPRESSION);
+	Variable(const IntStack& values, const int type=EXPRESSION);
+	Variable(const int* values, const int nvalues, const int type=EXPRESSION);
+    Variable(const int lo, const int up, const Vector< int >& values, const int type=EXPRESSION);
     Variable(Variable X, bool h);
     Variable(const Variable& X);
     //Variable(const int lo, const int up, BitSet& values, const int type=EXPRESSION);
@@ -2805,6 +2806,24 @@ namespace Mistral {
   };
 
   Variable VertexCover(Vector< Variable >& args, const Graph& g);
+  
+  
+  
+  class FootruleExpression : public Expression {
+
+  public:
+
+    FootruleExpression(Vector< Variable >& args);
+    virtual ~FootruleExpression();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Footrule(Vector< Variable >& arg1, Vector< Variable >& arg2);
 
 
   // class CardinalityExpression : public Expression {

@@ -83,6 +83,22 @@ Mistral::Variable::Variable(const Vector< int >& values, const int type) {
   initialise_domain(values, type);
 }
 
+Mistral::Variable::Variable(const int* values, const int nvalues, const int type) {
+	Vector<int> vals(nvalues);
+	for(int i=0; i<nvalues; ++i) {
+		vals.add(values[i]);
+	}
+	initialise_domain(vals, type);
+}
+
+Mistral::Variable::Variable(const IntStack& values, const int type) {
+	Vector<int> vals(values.size);
+	for(int i=0; i<values.size; ++i) {
+		vals.add(values[i]);
+	}
+	initialise_domain(vals, type);
+}
+
 Mistral::Variable::Variable(const int lo, const int up, const int type) {
   initialise_domain(lo, up, type);
 }
@@ -185,11 +201,15 @@ void Mistral::Variable::initialise_domain(const int min, const int max, const Ve
 #ifdef _DEBUG_BUILD
   std::cout << "init domain from set [" << min << "," << max << "] " << values << " (type = " << domain2str(type) << " -> " ; //<< ")";
 #endif 
+	  //std::cout << type << " " << BITSET_VAR << " " << LIST_VAR << std::endl;
 
   if(max - min + 1 == (int)(values.size)) {
     initialise_domain(min, max, type);
   } else {
     if(type == EXPRESSION) {
+		
+		//std::cout << "->build expression" << std::endl;
+		
       domain_type = EXPRESSION;
       expression = new Expression(min, max, values);
     } else if(type & BITSET_VAR) {
@@ -208,8 +228,14 @@ void Mistral::Variable::initialise_domain(const int min, const int max, const Ve
       else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(min, max, values);
 #endif
       else {
+		  
+		  
+		  
 	bitset_domain = new VariableBitmap(min, max, values);
       }
+	  
+	  //std::cout << "->build bitsetvar " << bitset_domain->domain << std::endl;
+	  
     } else {
       domain_type = LIST_VAR;
       list_domain = new VariableList(min, max, values);
@@ -4313,6 +4339,44 @@ const char* Mistral::VertexCoverExpression::get_name() const {
 
 Mistral::Variable Mistral::VertexCover(Mistral::Vector< Variable >& args, const Graph& g) {
 	Variable exp(new VertexCoverExpression(args, g));
+	return exp;
+}
+
+
+
+Mistral::FootruleExpression::FootruleExpression(Vector< Variable >& args) 
+: Expression(args) {
+}
+  
+Mistral::FootruleExpression::~FootruleExpression() {}
+
+void Mistral::FootruleExpression::extract_constraint(Solver*) {
+	std::cerr << "Error: Footrule predicate can't be used as a constraint" << std::endl;
+	exit(0);
+}
+
+void Mistral::FootruleExpression::extract_variable(Solver* s) {
+	Variable aux(0, children.size*children.size/2, DYN_VAR);
+	_self = aux;
+  
+	_self.initialise(s, 1);
+	_self = _self.get_var();
+	children.add(_self);
+}
+
+void Mistral::FootruleExpression::extract_predicate(Solver* s) {
+	s->add(Constraint(new PredicateFootrule(children)));
+}
+
+const char* Mistral::FootruleExpression::get_name() const {
+	return "footrule";
+}
+
+
+Mistral::Variable Mistral::Footrule(Vector< Variable >& arg1, Vector< Variable >& arg2) {
+	Vector<Variable> args(arg1);
+	for(int i=0; i<arg2.size; ++i) args.add(arg2[i]);
+	Variable exp(new FootruleExpression(args));
 	return exp;
 }
 

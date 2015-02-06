@@ -33,6 +33,8 @@
 #include <string.h>
 #include <limits.h>
 
+#include <mistral_global.hpp>
+
 
 #ifndef __STRUCTURE_HPP
 #define __STRUCTURE_HPP
@@ -392,16 +394,17 @@ const int NOVAL = (int)((~(unsigned int)0)/2);
 
     Vector(const int n)
     {
-      capacity = n;
-      size = n;
-      if( capacity ) {
-	//stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
-	stack_ = new DATA_TYPE[capacity];
-	//int f = sizeof(DATA_TYPE)/sizeof(int);
-	//std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
-	std::fill(stack_, stack_+capacity, (DATA_TYPE)0);
-      }
-      else stack_ = NULL;
+		initialise(n);
+	//       capacity = n;
+	//       size = n;
+	//       if( capacity ) {
+	// //stack_ = (DATA_TYPE*) malloc(capacity*sizeof(DATA_TYPE));
+	// stack_ = new DATA_TYPE[capacity];
+	// //int f = sizeof(DATA_TYPE)/sizeof(int);
+	// //std::fill((int*)stack_, (int*)stack_+(capacity*f), 0);
+	// std::fill(stack_, stack_+capacity, (DATA_TYPE)0);
+	//       }
+	//       else stack_ = NULL;
     }
     //@}
 
@@ -2012,6 +2015,8 @@ template < int N, class T >
      bool safe_contain(const int elt) const ;
 
      bool contain(const int elt) const ;
+	 
+	 int get_index(const int elt) const ;
   
      bool empty()const ;
 
@@ -2053,6 +2058,8 @@ template < int N, class T >
      void init_add(const int elt) ;
 
      void add(const int elt) ;
+	 
+	 void set(const int elt, const int idx) ;
 
      void safe_add(const int elt) ;
 
@@ -2070,6 +2077,7 @@ template < int N, class T >
     /*!@name Miscellaneous*/
     //@{
     std::ostream& display(std::ostream& os) const;
+	std::string to_str() const;
     // std::ostream& display(std::ostream& os) const {
     //   int min =  INFTY;
     //   int max = -INFTY;
@@ -5227,6 +5235,39 @@ template < int N, class T >
       }
       os << "}";
       return os;
+    }
+	
+    std::string to_str() const {
+			    std::ostringstream oss;
+				oss << "{";
+				//std::string rstr = std::string("{");
+      if( !empty() ) {
+	int last = NOVAL, cur=min(), aft;
+
+	bool flag=false;
+	do{
+	  aft = next(cur);
+
+	  if(aft != cur+1 || cur != last+1) {
+	    if( flag )
+	      //rstr += std::string(",");
+			oss << ",";
+
+  	    oss << (int)cur;
+
+	    flag = true;
+	  } else if(flag) {
+	    //rstr += std::string("..");
+		  oss << "..";
+	    flag = false;
+	  }
+	  last = cur;
+	  cur = aft;
+	} while( cur != NOVAL && cur != last );
+      }
+      //rstr += std::string("}");
+	  oss << "}";
+      return oss.str();
     }
 
     void  print_bits(std::ostream & os) const 

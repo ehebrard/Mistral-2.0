@@ -58,6 +58,27 @@ void Mistral::IntStack::initialise(const int lb, const int ub, const int sz, con
   size = (full ? sz : 0);
 }
 
+std::string Mistral::IntStack::to_str() const {
+    int min =  INFTY;
+    int max = -INFTY;
+  
+    if(size) {
+      for(unsigned int i=0; i<size; ++i) {
+        if(list_[i] < min) min = list_[i];
+        if(list_[i] > max) max = list_[i];
+      } 
+    } else {
+      min = max = 0;
+    }
+  
+    BitSet elts(min, max, BitSet::empt);
+    for(unsigned int i=0; i<size; ++i) {
+      elts.add(list_[i]);
+    }
+  
+    return elts.to_str();
+}
+
 std::ostream& Mistral::IntStack::display(std::ostream& os) const {
   int min =  INFTY;
   int max = -INFTY;
@@ -230,6 +251,11 @@ void Mistral::IntStack::extend(const int new_elt)
     {
       return index_[elt]<size;
     } 
+	
+    int Mistral::IntStack::get_index(const int elt) const 
+   {
+     return index_[elt];
+   } 
   
      bool Mistral::IntStack::empty() const 
     {
@@ -353,6 +379,14 @@ void Mistral::IntStack::extend(const int new_elt)
       index_[elt] = size;
       ++size;
     }
+	
+    void Mistral::IntStack::set(const int elt, const int idx)
+   {
+     index_[list_[idx]] = index_[elt];
+     list_[index_[elt]] = list_[idx];
+     list_[idx] = elt;
+     index_[elt] = idx;
+   }
 
      void Mistral::IntStack::safe_add(const int elt)
     {

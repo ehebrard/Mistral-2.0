@@ -15901,6 +15901,581 @@ std::ostream& Mistral::PredicateVertexCover::display(std::ostream& os) const {
 
 
 
+#define _DEBUG_FOOTRULE true
+#define _DEBUG_FRDP true
+#define _SUM_ONLY 
+
+Mistral::PredicateFootrule::PredicateFootrule(Mistral::Vector< Variable >& scp) 
+: GlobalConstraint(scp) { 	
+	priority = 1;
+	N = scope.size/2;
+	uncorrelated_distance = N*N/4;
+	init_prop = true;
+}
+
+Mistral::PredicateFootrule::~PredicateFootrule() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete footrule predicate" << std::endl;
+#endif
+  
+  delete [] values;
+}
+
+
+// |X - N^/4| = 
+
+void Mistral::PredicateFootrule::initialise() {
+  ConstraintImplementation::initialise();
+  for(unsigned int i=0; i<scope.size-1; ++i) {
+    trigger_on(_DOMAIN_, scope[i]);
+  }
+  trigger_on(_DOMAIN_, scope[scope.size-1]);
+  GlobalConstraint::initialise();
+    
+  int dmax = std::min(scope[scope.size-1].get_max(), uncorrelated_distance*2);
+  
+  util_bitset.initialise(0, N-1, BitSet::empt);
+  util_stack.initialise(0, N-1, N, false);
+  
+  values      = new int[N];
+  state       = new IntStack[N+1];
+  distance    = new IntStack[N];
+  switness    = new int*[N];
+  twitness[0] = new int*[N];
+  twitness[1] = new int*[N];
+  
+  state[0].initialise(0, 0, 1, true);
+  for(int i=0; i<N; ++i) {
+	  state[i+1].initialise(0, dmax, dmax+1, false);
+	  distance[i].initialise(0, N-1, N, false);
+	  twitness[0][i] = new int[N-1];
+	  twitness[1][i] = new int[N-1];
+	  switness   [i] = new int[N-1];
+  }
+	
+#ifdef _CHECKED_MODE
+	domains = new IntStack[2*N];
+	for(int i=0; i<2*N; ++i) {
+		domains[i].initialise(scope[i].get_min(), scope[i].get_max(), scope[i].get_max()-scope[i].get_min()+1, false);
+		int val, vnxt = scope[i];
+	}
+#endif
+	
+    
+}
+
+
+int Mistral::PredicateFootrule::max_md(const int n, const int k) const {
+	// return the maximum manhattan distance over k coordinates of 2 n-permutations
+	int chk = (int)(ceil((double)k/2.0));
+	return k*n-(chk*chk)-(k%2 ? 0 : chk);
+}
+
+int Mistral::PredicateFootrule::check( const int* sol ) const {
+	
+#ifdef _DEBUG_FRCHECK
+	if(_DEBUG_FRCHECK>1) {
+	std::cout << "check {";
+	for(int i=0; i<scope.size-1; ++i) {
+		if(sol[i]) std::cout << " " << i;
+	}
+	std::cout << " } " ;
+}
+#endif
+		
+
+	int manhattan_distance = 0, repeat=false;
+	std::fill(values, values+N, 0);
+	
+	for(int i=0;
+#ifndef _SUM_ONLY
+	!repeat && 
+#endif
+															i<N; ++i) {
+		manhattan_distance += abs(sol[i]-sol[N+i]);
+#ifndef _SUM_ONLY
+		if(values[sol[i]]&1 || values[sol[N+i]]&2) repeat = true;
+		else {
+			values[sol[i]]   |= 1;
+			values[sol[N+i]] |= 2;
+		}
+#endif
+	}
+	
+	
+#ifdef _DEBUG_FRCHECK
+	if(_DEBUG_FRCHECK>1) {
+	if(!repeat && abs(manhattan_distance-uncorrelated_distance)==sol[scope.size-1]) {
+		std::cout << "ok!" << std::endl;
+	} else {
+		std::cout << "NO!" << std::endl;
+	}
+}
+#endif
+	
+	return 
+#ifndef _SUM_ONLY
+		repeat || 
+#endif
+		abs(manhattan_distance-uncorrelated_distance)!=sol[scope.size-1];
+}
+
+
+//void used_values
+Mistral::PropagationOutcome Mistral::PredicateFootrule::prune_from_transitions(const int i) {
+	PropagationOutcome wiped = CONSISTENT;
+	
+#ifdef _DEBUG_FRDP
+	if(_DEBUG_FRDP) {
+		std::cout << "look for inconsistent values in " << scope[i] << " and " << scope[N+i] << " in " 
+			<< scope[i].get_domain() << " x " << scope[N+i].get_domain() 
+				<< "\n   because the only possible transitions are " << util_stack << std::endl;
+	}
+#endif
+	
+	
+	int val, vnxt = scope[i].get_min(), not_supported;
+	do {
+		val = vnxt;
+		
+#ifdef _DEBUG_FRDP
+		if(_DEBUG_FRDP) {
+			std::cout <<  "look for a support to " << scope[i] << "=" << val << "\n";
+		}
+#endif	
+		not_supported = true;
+		for(int j=0; not_supported && j<util_stack.size; ++j) {
+			
+#ifdef _DEBUG_FRDP
+			if(_DEBUG_FRDP) {
+				std::cout << "  -transition " << util_stack[j] << "?";
+			}
+#endif
+			if(scope[i+N].contain(abs(util_stack[j]-val)) || scope[i+N].contain(abs(util_stack[j]+val))) {
+#ifdef _DEBUG_FRDP
+				if(_DEBUG_FRDP) {
+					std::cout << " yes b/c " << scope[N+i].get_domain() << " contains " << abs(util_stack[j]-val) << " or " << abs(util_stack[j]+val) << std::endl;
+				}
+#endif
+				not_supported = false;
+			} else {
+#ifdef _DEBUG_FRDP
+				if(_DEBUG_FRDP) {
+					std::cout << " no b/c " << scope[N+i].get_domain() << " does not contain " << abs(util_stack[j]-val) << " nor " << abs(util_stack[j]+val) << std::endl;
+				}
+#endif
+			}
+		}
+		if(not_supported) {
+#ifdef _DEBUG_FRDP
+			if(_DEBUG_FRDP) {
+				std::cout << "  => remove " << val << " from " << scope[i].get_domain() << std::endl;
+			}
+#endif
+			if(FAILED(scope[i].remove(val))) wiped = FAILURE(i);
+		}	
+		vnxt = scope[i].next(val);
+	} while(val != vnxt && IS_OK(wiped));
+	
+	
+	if(IS_OK(wiped)) {
+		vnxt = scope[N+i].get_min();
+		do {
+			val = vnxt;
+			
+#ifdef _DEBUG_FRDP
+			if(_DEBUG_FRDP) {
+				std::cout <<  "look for a support to " << scope[N+i] << "=" << val << "\n";
+			}
+#endif	
+			
+			not_supported = true;
+			for(int j=0; not_supported && j<util_stack.size; ++j) {
+				
+#ifdef _DEBUG_FRDP
+				if(_DEBUG_FRDP) {
+					std::cout << "  -transition " << util_stack[j] << "?";
+				}
+#endif
+				
+				if(scope[i].contain(abs(util_stack[j]-val)) || scope[i].contain(abs(util_stack[j]+val))) {
+					
+#ifdef _DEBUG_FRDP
+					if(_DEBUG_FRDP) {
+						std::cout << " yes b/c " << scope[i].get_domain() << " contains " << abs(util_stack[j]-val) << " or " << abs(util_stack[j]+val) << std::endl;
+					}
+#endif
+								
+					not_supported = false;
+				}  else {
+#ifdef _DEBUG_FRDP
+					if(_DEBUG_FRDP) {
+						std::cout << " no b/c " << scope[i].get_domain() << " does not contain " << abs(util_stack[j]-val) << " nor " << abs(util_stack[j]+val) << std::endl;
+					}
+#endif
+				}
+			}
+			if(not_supported) {
+				
+#ifdef _DEBUG_FRDP
+				if(_DEBUG_FRDP) {
+					std::cout << "  => remove " << val << " from " << scope[N+i].get_domain() << std::endl;
+				}
+#endif
+				
+				if(FAILED(scope[N+i].remove(val))) wiped = FAILURE(N+i);
+			}	
+			vnxt = scope[N+i].next(val);
+		} while(val != vnxt && IS_OK(wiped));
+	}
+
+	return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateFootrule::compute_DP_from_scratch() {
+	PropagationOutcome wiped = CONSISTENT;
+	
+	int v1, v1n, v2, v2n, d, ns, idx;
+	
+	
+	// for(int i=1; i<10; ++i) {
+	// 	std::cout << max_md(10, i) << std::endl;
+	//
+	// }
+	// exit(1);
+	
+#ifdef _DEBUG_FRDP
+	if(_DEBUG_FRDP) {
+		std::cout << get_solver()->statistics.num_propagations << " compute DP from scratch on:\n";
+		for(int i=0; i<N; ++i) {
+			std::cout << " " << std::setw(10) << scope[i].get_domain() ;
+		}
+		std::cout << std::endl;
+		for(int i=0; i<N; ++i) {
+			std::cout << " " << std::setw(10) << scope[N+i].get_domain() ;
+		}
+		//if(get_solver()->statistics.num_propagations==8) exit(1);
+		
+		std::cout << std::endl << "compute final state from the domain of " << scope.back() << ": " << scope.back().get_domain() << std::endl;
+	}
+#endif
+	
+
+	v1n = scope.back().get_min();
+	do {
+		v1 = v1n;
+				
+		ns = uncorrelated_distance+v1;
+		if(!(ns%2)) {
+			if(!state[N].contain(ns)) {
+				state[N].add(ns);
+			}
+			if(v1) {
+				ns = uncorrelated_distance-v1;
+				if(!state[N].contain(ns)) {
+					state[N].add(ns);
+				}
+			}
+		}
+		v1n = scope.back().next(v1);
+	} while(v1 != v1n);
+	
+	
+	
+#ifdef _DEBUG_FRDP
+	if(_DEBUG_FRDP) {
+		std::cout << "   -> " << state[N] << std::endl;
+	}
+#endif
+	
+	int mu = scope.back().get_max();
+	int ub_md = uncorrelated_distance+mu;
+	int lb_md = uncorrelated_distance-mu;
+	
+	
+	// forward
+	for(int i=0; i<N; ++i) {
+		
+#ifdef _DEBUG_FRDP
+		if(_DEBUG_FRDP) {
+			std::cout << "compute transitions out of state " << i << std::endl;
+		}
+#endif
+	
+
+		v1n = scope[i].get_min();
+		do {
+			v1 = v1n;
+			v2n = scope[N+i].get_min();
+			do {
+				v2 = v2n;
+				d = abs(v2-v1);
+				if(!distance[i].contain(d)) {
+					twitness[0][i][d] = v1;
+					twitness[1][i][d] = v2;
+					distance[i].add(d);
+						
+#ifdef _DEBUG_FRDP
+					if(_DEBUG_FRDP) {
+						std::cout << "  +" << d << " (" << scope[i] << "=" << v1 << ", " << scope[i+N] << "=" << v2 << ")\n";
+					}
+#endif
+					
+				}
+				v2n = scope[N+i].next(v2);
+			} while(v2 != v2n);
+			v1n = scope[i].next(v1);
+		} while(v1 != v1n);
+		
+		
+		//if(i<N-1) {
+			
+#ifdef _DEBUG_FRDP
+		if(_DEBUG_FRDP) {
+			std::cout << "compute state " << (i+1) << std::endl;
+		}
+#endif
+
+		ns = 0;
+		for(int s=0; s<state[i].size; ++s) {
+			for(int t=0; t<distance[i].size; ++t) {
+				d = state[i][s]+distance[i][t];
+				
+				if(d<=ub_md && d+max_md(N,N-i-1)>=lb_md) {
+				
+					if(i<N-1) {
+						if(!state[i+1].contain(d)) {
+							//switness[i][ns]
+							state[i+1].add(d);
+						
+						
+#ifdef _DEBUG_FRDP
+							if(_DEBUG_FRDP) {
+								std::cout << "  +" << d << " (" << state[i][s] << "+" << distance[i][t] << ")\n";
+							}
+#endif
+						
+						}
+					} else {
+						idx = state[N].get_index(d);
+						if(idx < state[N].size && idx >= ns) {
+							if(idx>ns) state[N].set(d,ns);
+							++ns;
+						
+#ifdef _DEBUG_FRDP
+							if(_DEBUG_FRDP) {
+								std::cout << "  ¬" << d << " (" << state[i][s] << "+" << distance[i][t] << " & |"
+									<< d << "-" << uncorrelated_distance << "| in " << scope.back().get_domain() << ")\n";
+							}
+#endif
+						
+						}
+					}
+				}
+			}
+		}
+		if(i==N-1) {
+			state[N].size = ns;
+#ifdef _DEBUG_FRDP
+			if(_DEBUG_FRDP) {
+				std::cout << "final state = " << state[N] << std::endl;
+			}
+#endif
+						
+		}
+	}
+	
+#ifdef _DEBUG_FRDP
+	if(_DEBUG_FRDP) {
+		print_automaton();
+		std::cout << std::endl << "do the backward pass\n";
+	}
+#endif
+	
+	// backward
+	
+	bool utra = false;
+	
+	for(int i=N; i>0; --i) {
+		
+#ifdef _DEBUG_FRDP
+		if(_DEBUG_FRDP) {
+			std::cout << "compute state " << (i-1) << std::endl;
+		}
+#endif
+		
+		ns = 0;
+		util_stack.clear();
+		for(int t=0; t<distance[i-1].size; ++t) util_stack.add(distance[i-1][t]);
+		util_stack.clear();
+		for(int s=0; s<state[i].size; ++s) {
+			for(int t=0; t<distance[i-1].size; ++t) {
+				d = state[i][s]-distance[i-1][t];
+				idx = state[i-1].get_index(d);
+				if(idx < state[i-1].size) {
+					if(!util_stack.contain(distance[i-1][t])) util_stack.add(distance[i-1][t]);
+					
+					
+					if(idx >= ns) {
+						if(idx>ns)
+							state[i-1].set(d, ns);
+						++ns;
+						
+#ifdef _DEBUG_FRDP
+	if(_DEBUG_FRDP) {
+		std::cout << "  +" << d << " (" << state[i][s] << "-" << distance[i-1][t] << ")\n";
+	}
+#endif
+					}
+				}
+			}
+		}
+		state[i-1].size = ns;
+		
+		if(util_stack.size < distance[i-1].size) {
+			
+			wiped = prune_from_transitions(i-1);
+			
+			utra = true;
+		}
+		
+		
+		
+// #ifdef _DEBUG_FRDP
+// 	if(_DEBUG_FRDP) {
+//
+// 	}
+// #endif
+	}
+	
+#ifdef _DEBUG_FRDP
+	if(_DEBUG_FRDP) {
+		print_automaton();
+		std::cout << std::endl ;
+	}
+
+	
+	
+	if(utra) {
+		exit(1);
+	}
+#endif
+	
+	return wiped;	
+}
+
+void Mistral::PredicateFootrule::print_automaton() const {
+	for(int i=0; i<N; ++i) {
+		std::cout << "s" << std::left << std::setw(2) << (i+1) << " " << std::setw(30) << state[i].to_str() << " | "
+				  << "t   " << distance[i] << " = " << scope[i].get_domain() 
+				  << " x " << scope[N+i].get_domain() << std::endl;
+	}
+	std::cout << "s" << std::setw(2) << (N+1) << " " << state[N] << std::endl;
+}
+
+
+Mistral::PropagationOutcome Mistral::PredicateFootrule::initial_propagate() {
+	PropagationOutcome wiped = CONSISTENT;
+	
+	if(FAILED(scope.back().set_min(0))) {
+	  wiped = FAILURE(2*N);
+	} else if(FAILED(scope.back().set_max(uncorrelated_distance))) {
+	  wiped = FAILURE(2*N);
+	} else {	
+		int val, vnxt=scope.back().get_min();
+		do {	
+			val = vnxt;
+			
+			if((uncorrelated_distance+val)%2) {
+				if(FAILED(scope.back().remove(val))) 
+					wiped = FAILURE(2*N);
+			}
+			
+			vnxt = scope.back().next(val);
+		} while(IS_OK(wiped) && val != vnxt);
+		
+		wiped = compute_DP_from_scratch();
+	}
+	
+	//init_prop = false;
+	return wiped;
+}
+
+Mistral::PropagationOutcome Mistral::PredicateFootrule::propagate() {
+
+  PropagationOutcome wiped = (init_prop ? initial_propagate() : CONSISTENT);
+
+#ifdef _DEBUG_FOOTRULE
+	std::cout << std::endl << "=================================\n";
+  //print_automaton();
+  std::cout << std::endl;
+#endif  
+  
+  
+  int var;
+  Event evt;
+
+
+#ifdef _DEBUG_FOOTRULE
+  
+  for(int i=0; i<changes.size; ++i) {
+    var = changes[i];
+    evt = event_type[var];
+
+	std::cout << " -change: " << scope[var] <<  " in " << scope[var].get_domain() << " ("<< event2str(evt) << ")" << std::endl;
+    
+  }	
+  
+#endif
+  
+  // compute_DP_from_scratch();
+  // print_automaton();
+  // for(int i=0; i<N; ++i) {
+  // 	  state[i+1].clear();
+  // 	  distance[i].clear();
+  // }
+  // std::cout << std::endl;
+ 
+ 
+   //wiped = GlobalConstraint::propagate();
+   
+   
+   for(int i=0; i<N; ++i) {
+ 	  state[i+1].clear();
+ 	  distance[i].clear();
+   }
+   compute_DP_from_scratch();
+   for(int i=0; i<N; ++i) {
+ 	  state[i+1].clear();
+ 	  distance[i].clear();
+   }
+   //print_automaton();
+   //std::cout << std::endl;
+   
+   //exit(1);
+	 
+	 
+	 wiped = GlobalConstraint::propagate();
+
+  return wiped;
+}
+
+std::ostream& Mistral::PredicateFootrule::display(std::ostream& os) const {
+  os << scope.back() << ":" << scope.back().get_domain() << " == |Manhattan([" << scope[0]/*.get_var()*/ << ":" << scope[0].get_domain();
+  for(unsigned int i=1; i<N; ++i) {
+    os << ", " << scope[i]/*.get_var()*/ << ":" << scope[i].get_domain();
+  }
+  os << "] vs [" << scope[N]/*.get_var()*/ << ":" << scope[N].get_domain();
+  for(unsigned int i=1; i<N; ++i) {
+    os << ", " << scope[i+N]/*.get_var()*/ << ":" << scope[i+N].get_domain();
+  }
+  os << "]) - " << uncorrelated_distance << "|";
+  return os;
+}
+
+
+
+
 
 
 Mistral::PredicateMin::PredicateMin(Vector< Variable >& scp) : GlobalConstraint(scp) { priority = 1; }

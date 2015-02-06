@@ -2971,7 +2971,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
    * Abs Predicate
    **********************************************/
   /*! \class PredicateAbs
-    \brief  Truth value of a conjunction (!x0 <-> y)
+    \brief  Absolute value of a variable
   */
   class PredicateAbs : public BinaryConstraint
   {
@@ -4717,7 +4717,83 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
      virtual std::string name() const { return "|vertex cover|="; }
      //@}
  };
+ 
+ 
+  /**********************************************
+   * Footrule Predicate
+   **********************************************/
+  /*! \class PredicateFootrule
+    \brief  Predicate on the size of the vertex cover {X} of a graph G
+  */
+  class PredicateFootrule : public GlobalConstraint {
 
+  public:
+    /**@name Parameters*/
+    //@{ 
+  	int  N;
+  	int  uncorrelated_distance;
+  	int* values;
+	
+	
+	bool init_prop;
+	
+	// structure for the DP
+	
+	// state <=> value of the sum [N+1]
+	IntStack* state;
+	
+	// transition <=> manhattan distance value [N]
+	IntStack* distance;
+	
+	
+	// util bitset/intstacks
+	BitSet   util_bitset;
+	IntStack util_stack;
+	
+	
+	int **twitness[2];
+	int **switness;
+	
+	
+#ifdef _CHECKED_MODE
+	IntStack *domains;/////.....
+#endif
+	
+	
+	// for each transition
+	
+    //@}
+
+    /**@name Constructors*/
+    //@{
+    PredicateFootrule(Vector< Variable >& scp);
+    virtual ~PredicateFootrule();
+    virtual Constraint clone() { return Constraint(new PredicateFootrule(scope)); }
+    virtual int idempotent() { return 1;}
+    virtual int postponed() { return 1;}
+    virtual int pushed() { return 1;}
+    virtual void initialise();
+    //virtual void mark_domain();
+    //@}
+
+    /**@name Solving*/
+    //@{
+	int max_md(const int n, const int k) const;
+	PropagationOutcome prune_from_transitions(const int i);
+	PropagationOutcome compute_DP_from_scratch();
+	PropagationOutcome initial_propagate();
+    virtual int check( const int* sol ) const ;
+    virtual PropagationOutcome propagate();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{  
+	void print_automaton() const;
+    virtual std::ostream& display(std::ostream&) const ;
+    virtual std::string name() const { return "footrule="; }
+    //@}
+};
+ 
 
   /**********************************************
    * Min Predicate

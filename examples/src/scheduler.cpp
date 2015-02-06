@@ -53,36 +53,9 @@ int main( int argc, char** argv )
   solver->consolidate();
 
   //std::cout << solver << std::endl;
-
-  // solver.print(std::cout);
-  // //exit(1);
-
-  // params.print(std::cout);  
-  // model->printStats(std::cout);  
-  // stats.print(std::cout, "INIT");  
-
-
-  // //if
-  // //solver.jtl_presolve();
-
-  // //exit(1);
-
-  // if(solver.status == UNKNOWN) 
   
   solver->dichotomic_search();
   
-  // else if( solver.status == SAT ) {
-  //   std::cout << "c Solved while building!" << std::endl;
-  //   exit(1);
-    
-  // } else if( solver.status == UNSAT ) {
-  //   std::cout << "c Found inconsistent while building!" << std::endl;
-  //   exit(1);
-
-  // }
-      
-
-  // stats.print(std::cout, "DS");
 
   if(!stats.solved()) {
     if(params.Algorithm == "bnb")
@@ -97,12 +70,9 @@ int main( int argc, char** argv )
 
 
 #ifdef _PROFILING
-  //solver->statistics.print_profile(std::cout);
   std::cout << solver->statistics.total_propag_time << std::endl;
 #endif
 
-  // delete mod
-  // delete model;
 
 }
   
