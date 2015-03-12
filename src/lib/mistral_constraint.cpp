@@ -9419,34 +9419,34 @@ Mistral::Explanation::iterator Mistral::ConstraintBoolSumInterval::get_reason_fo
   // }
   // std::cout << "\n" << gap << "\n" << std::endl;
 
-  explanation.clear();
-  int i=scope.size;
+	explanation.clear();
+	int i=scope.size;
 
-  if(a != NULL_ATOM) {
-    if(get_solver()->variables[a].get_value()) {
-      // the literal we try to explain is positive
-      while(i--) {
-	if( !(scope[i].get_max()) ) explanation.add(literal(scope[i], true));
-      }
-    } else {
-      // the literal we try to explain is positive
-      while(i--) {
-	if(  scope[i].get_min() ) explanation.add(literal(scope[i], false));
-      }
-    }
-  } else {
-    if(min_>upper_bound) {
-      // too many ones
-      while(i-- && (int)(explanation.size) <= upper_bound) {
-	if(scope[i].get_min()) explanation.add(literal(scope[i], false));
-      }
-    } else {
-      // too many zeros
-      while(i-- && explanation.size <= scope.size-lower_bound) {
-	if(!(scope[i].get_max())) explanation.add(literal(scope[i], true));
-      }
-    }
-  }
+	if(a != NULL_ATOM) {
+		if(get_solver()->variables[a].get_value()) {
+			// the literal we try to explain is positive
+			while(i--) {
+				if( !(scope[i].get_max()) ) explanation.add(literal(scope[i], true));
+			}
+		} else {
+			// the literal we try to explain is positive
+			while(i--) {
+				if(  scope[i].get_min() ) explanation.add(literal(scope[i], false));
+			}
+		}
+	} else {
+		if(min_>upper_bound) {
+			// too many ones
+			while(i-- && (int)(explanation.size) <= upper_bound) {
+				if(scope[i].get_min()) explanation.add(literal(scope[i], false));
+			}
+		} else {
+			// too many zeros
+			while(i-- && explanation.size <= scope.size-lower_bound) {
+				if(!(scope[i].get_max())) explanation.add(literal(scope[i], true));
+			}
+		}
+	}
 
   //std::cout << explanation << std::endl;
 

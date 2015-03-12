@@ -3199,7 +3199,7 @@ Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c,
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 
 	sequence.remove(variables[var_evt.first]);
-	last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
 	assignment_level[var_evt.first] = level;
 	assignment_order[var_evt.first] = assignment_rank;
 	++assignment_rank;
@@ -3325,7 +3325,7 @@ Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c,
 
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 	sequence.remove(variables[var_evt.first]);
-	last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
 	assignment_level[var_evt.first] = level;
 	assignment_order[var_evt.first] = assignment_rank;
 	++assignment_rank;
@@ -3496,7 +3496,7 @@ Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint 
 
       if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 	sequence.remove(variables[var_evt.first]);
-	last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
 	assignment_level[var_evt.first] = level;
 	assignment_order[var_evt.first] = assignment_rank;
 	++assignment_rank;
@@ -3690,7 +3690,7 @@ bool Mistral::Solver::propagate()
 	if(sequence.contain(variables[vidx]))
 	  sequence.remove(variables[vidx]);
       
-	last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
 	assignment_level[vidx] = level;
 	assignment_order[vidx] = assignment_rank;
 	++assignment_rank;
