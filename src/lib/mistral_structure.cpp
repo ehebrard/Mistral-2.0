@@ -359,6 +359,11 @@ void Mistral::IntStack::extend(const int new_elt)
     {
       return list_[size-1];
     }
+		
+    int Mistral::IntStack::back(const int offset) const
+   {
+     return list_[size+offset];
+   }
 
      void Mistral::IntStack::init_add(const int elt)
     {
