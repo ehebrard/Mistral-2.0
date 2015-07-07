@@ -48,6 +48,9 @@
 #include <vector>
 #include <set>
 
+
+//#define _DEBUG_CUMULATIVE true
+
 using namespace std;
 
 namespace FlatZinc {
@@ -1853,19 +1856,45 @@ namespace FlatZinc {
     void p_disjunctive(Solver& s, 
                        Vector<Variable>& start, 
                        Vector<Variable>& dur) {
+												 
+												 
+												 //std::cout << "Decompose disjunctive constraint" << std::endl;
       
       int n = start.size;
       for(int i=0; i<n-1; ++i) {
     	  for(int j=i+1; j<n; ++j) {
+					
+					
+					
     		  //Check if it's already a Precedence!
-    		  if (start[i].get_min()+dur[i].get_min() >start[j].get_min()){
-    			  s.add(Precedence(start[j], dur[j].get_min() , start[i]));
+    		  if (start[i].get_min()+dur[i].get_min() >start[j].get_max()){
+						//std::cout << start[i].get_domain() << " + " << dur[i].get_min() << " > " << start[j].get_domain() << " (i.e., not a disjunct)" << std::endl;
+						
+						if (start[j].get_max()+dur[j].get_min() >start[i].get_min()){
+
+							//std::cout << " add constraint "<< start[j] << " <= " << start[i] << std::endl;
+							
+    			  	s.add(Precedence(start[j], dur[j].get_min() , start[i]));
+						
+						} 
+							//else std::cout << start[j] << " must be before " << start[i] << std::endl;
     		  }
     		  else
-    			  if (start[j].get_min()+dur[j].get_min() >start[i].get_min()){
-    				  s.add(Precedence(start[i], dur[i].get_min() , start[j]));
+    			  if (start[j].get_min()+dur[j].get_min() >start[i].get_max()){
+							
+							if (start[i].get_max()+dur[i].get_min() >start[j].get_min()){
+								
+								//std::cout << " add constraint "<< start[i] << " <= " << start[j] << std::endl;
+								
+								s.add(Precedence(start[i], dur[i].get_min() , start[j]));
+								
+							}
+								//else std::cout << start[i] << " must be before " << start[j] << std::endl;
     			  }
     			  else{
+							
+							//std::cout << " add constraint "<< start[i] << " <> " << start[j] << std::endl;
+							
     				  s.add(Free(ReifiedDisjunctive(start[i], start[j], dur[i].get_min(), dur[j].get_min())));
     			  }
     	  }
@@ -1876,58 +1905,147 @@ namespace FlatZinc {
     void p_cumulative_flow(Solver& s, 
                            Vector<Variable>& start, 
                            Vector<Variable>& dur,
-                           Vector<Variable> req,
+                           Vector<Variable>& req,
                            Variable cap, 
                            int horizon) {
+									
+				int n = start.size;					 
+														 
+			 // std::cout << "Decompose cumulative constraint CAP=" << cap.get_max() << " (as a flow)" << std::endl;
+			 //
+			 // for(int i=0; i<n; ++i) {
+			 //
+			 // 				 std::cout << "r" << start[i].id() << " in " << start[i].get_domain() << ": p=" << dur[i].get_domain() << ", r=" << req[i].get_domain() << std::endl;
+			 //
+			 // }
+			 
+			 // std::cout << " create end variables:" << std::endl;
+			 //
+			 Vector<Variable> end;
+			 
+			 
+			 for(int i=0; i<n; ++i) {
+				 
+				 // std::cout << start[i].id() << " " << dur[i] << std::endl;
+				 
+			 				end.add(dur[i].is_ground() ? start[i] + dur[i].get_max() : start[i] + dur[i]);
+							// std::cout << end.back() << std::endl;
+			 } 
+			 
+			 // std::cout << " create flow variables:" << std::endl;
 
-      int n = start.size;
+      
       Variable **flow = new Variable*[n+1];
       for(int i=0; i<=n; ++i) {
         flow[i] = new Variable[n+1];
       }
 
       for(int i=0; i<n; ++i) {
+				
+				// std::cout << " from source to " << start[i].id() << ", or from " << start[i].id() << " to sink: [0," << req[i].get_max() << "]" << std::endl;
+				
         flow[i][n] = Variable(0, req[i].get_max());
         flow[n][i] = Variable(0, req[i].get_max());
+				
         for(int j=i+1; j<n; ++j) {
           // for each pair of tasks, create a variable for the amount flow going from ti to tj
           int mf = (req[i].get_max()>req[j].get_max() ? req[j].get_max() : req[i].get_max());
           flow[i][j] = Variable(0, mf);
           flow[j][i] = Variable(0, mf);
-          // the flow can go only in one direction 
-          s.add((flow[i][j]<=0) || (flow[j][i]<=0));
+					
+					if(mf>0) {
+						// the flow can go only in one direction 
+          	s.add((flow[i][j]<=0) || (flow[j][i]<=0));
+					}
         }
       }
+			
+			// for(int i=0; i<=n; ++i) {
+			// 	for(int j=0; j<=n; ++j) {
+			// 		if(i!=j)
+			// 			std::cout << flow[i][j].get_max() << " ";
+			// 		else
+			// 			std::cout << "  ";
+			// 		std::cout.flush();
+			// 	}
+			// 	std::cout << std::endl;
+			// }
+			
+			
+			//std::cout << " post flow conservation constraints:" << std::endl;
       
       // flow conservation constraints
       Vector<Variable> outflow;
       Vector<Variable> inflow;
       for(int i=0; i<n; ++i) {
+				
+				//std::cout << " conservation in node " << start[i].id() << std::endl;
+				
         for(int j=0; j<=n; ++j) {
           if(i != j) {
-            outflow.add(flow[i][j]);
-            inflow.add(flow[j][i]);
+						
+						// std::cout << i << "." << j << std::endl;
+						
+						if(flow[i][j].get_max()>0) {
+							
+							//std::cout << "  + flow to/from " << (j<n ? start[j].id() : n) << std::endl;
+							
+							outflow.add(flow[i][j]);
+            	inflow.add(flow[j][i]);
+						}
           }
         }
+				
+				
+				
+				
+				// std::cout << "Must be equal to: ";
+				// std::cout.flush();
+				
         if(req[i].is_ground()) {
-          s.add(Sum(outflow, req[i].get_min(), req[i].get_max()));
+					
+					//std::cout << "[" << req[i].get_min() << ", " << req[i].get_max() << "]" << std::endl;
+					
+					Variable sum_exp = Sum(outflow, req[i].get_min(), req[i].get_max());
+				
+				
+					s.add(sum_exp);	
+
+          //s.add(Sum(outflow, req[i].get_min(), req[i].get_max()));
           s.add(Sum(inflow, req[i].get_min(), req[i].get_max()));
+
+					
         } else {
+					
+					// std::cout << req[i].get_domain() << std::endl;
+					
           s.add(Sum(outflow) == req[i]);
           s.add(Sum(inflow) == req[i]);
         }
         outflow.clear();
         inflow.clear();
       }
+			
+			//std::cout << " post total flow constraints:" << std::endl;
+			
+			
       for(int j=0; j<n; ++j) {
-        outflow.add(flow[n][j]);
-        inflow.add(flow[j][n]);
+				if(flow[n][j].get_max()>0)
+					outflow.add(flow[n][j]);
+				if(flow[j][n].get_max()>0)
+        	inflow.add(flow[j][n]);
       }
 
       if(cap.is_ground()) {
-        s.add(Sum(outflow, cap.get_min(), cap.get_max()));
-        s.add(Sum(inflow, cap.get_min(), cap.get_max()));
+				
+				//std::cout << "fixed capacity" << std::endl;
+				
+        s.add(Sum(outflow, 0, cap.get_max()));
+        s.add(Sum(inflow, 0, cap.get_max()));
       } else {
+				
+				//std::cout << "variable capacity" << std::endl;
+				
         s.add(Sum(outflow) == cap);
         s.add(Sum(inflow) == cap);
       }
@@ -1936,13 +2054,22 @@ namespace FlatZinc {
       for(int i=0; i<n; ++i) {
         for(int j=0; j<n; ++j) {
           if(i != j) {
-            if(dur[i].is_ground())
-              s.add( (flow[i][j]>0) <= (start[i]+dur[i].get_min() <= start[j]) );
-            else
-              s.add( (flow[i][j]>0) <= ((start[i]+dur[i]) <= start[j]) );
+            // if(dur[i].is_ground())
+            //   s.add( (flow[i][j]>0) <= (start[i]+dur[i].get_min() <= start[j]) );
+            // else
+            //   s.add( (flow[i][j]>0) <= ((start[i]+dur[i]) <= start[j]) );
+						if(flow[i][j].get_max() > 0) {
+							s.add( (flow[i][j]>0) <= (end[i] <= start[j]) );
+							s.add( (flow[j][i]>0) <= (end[j] <= start[i]) );
+						}
           }
         }
       }
+
+
+			// s.consolidate();
+			// std::cout << s << std::endl;
+			// exit(1);
 
       for(int i=0; i<=n; ++i) {
         delete [] flow[i];
@@ -1956,6 +2083,14 @@ namespace FlatZinc {
                                      Vector<Variable> req,
                                      Variable cap, 
                                      int horizon) {
+																			 
+			 
+			 // std::cout << "Decompose cumulative constraint (time discretization)" << std::endl;
+			 
+			 
+			 
+																			 
+																			 
 
       Variable     in_process;
       Vector<Variable>  scope;
@@ -2055,7 +2190,9 @@ namespace FlatZinc {
     void p_cumulative(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
 
-      
+#ifdef _DEBUG_CUMULATIVE
+			std::cout << "Decompose cumulative constraint" << std::endl;
+#endif
       
       Vector<Variable> start = arg2intvarargs(s, m, ce[0]);
       Vector<Variable> dur = arg2intvarargs(s, m, ce[1]);
@@ -2161,7 +2298,7 @@ namespace FlatZinc {
         int *lb = new int[horizon-orig];
         int *ub = new int[horizon-orig];
         for(int i=orig; i<horizon; ++i) {
-          lb[i-orig] = cap.get_min();
+          lb[i-orig] = 0; //cap.get_min();
           ub[i-orig] = cap.get_max();
         }
         s.add(Occurrences(start, orig, horizon-1, lb, ub));
@@ -2182,9 +2319,9 @@ namespace FlatZinc {
         if(same_dur && same_req) {
           std::cout << "this is a symmetric cumulative" << std::endl;
         } else if(same_dur) {
-          std::cout << "this is a cumulative will equal processing times" << std::endl;
+          std::cout << "this is a cumulative with equal processing times" << std::endl;
         } else if(same_req) {
-          std::cout << "this is a cumulative will equal demands" << std::endl;
+          std::cout << "this is a cumulative with equal demands" << std::endl;
         } else {
           std::cout << "this is a general cumulative" << std::endl;
         }

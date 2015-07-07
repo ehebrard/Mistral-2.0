@@ -3439,10 +3439,12 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     /**@name Parameters*/
     //@{
     int processing_time[2];
-    int *min_t0_ptr;
-    int *max_t0_ptr;
-    int *min_t1_ptr;
-    int *max_t1_ptr;
+		
+		/// BUGGY WITH DYNAMIC DOMAIN TYPE CHANGE!
+    // int *min_t0_ptr;
+    // int *max_t0_ptr;
+    // int *min_t1_ptr;
+    // int *max_t1_ptr;
     int *state;
     //@}
 

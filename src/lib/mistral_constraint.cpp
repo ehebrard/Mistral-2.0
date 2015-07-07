@@ -45,6 +45,7 @@
 //#define _DEBUG_CLIQUENOTEQUAL (id == 1)
 //#define _DEBUG_WEIGHT_CONFLICT
 //#define _DEBUG_MUL (id == 4735)
+//#define _DEBUG_RDISJUNCTIVE (id==670)
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -2232,31 +2233,32 @@ void Mistral::ConstraintReifiedDisjunctive::initialise() {
 
   state = scope[2].get_var().bool_domain;
 
-  if(scope[0].domain_type == RANGE_VAR) {
-    min_t0_ptr = &(scope[0].range_domain->min);
-    max_t0_ptr = &(scope[0].range_domain->max);
-  } else if(scope[0].domain_type == BITSET_VAR) {
-    min_t0_ptr = &(scope[0].bitset_domain->domain.min);
-    max_t0_ptr = &(scope[0].bitset_domain->domain.max);
-  } else {
-    min_t0_ptr = &(scope[0].get_var().range_domain->min);
-    max_t0_ptr = &(scope[0].get_var().range_domain->max);
-    //std::cerr << "TODO " << scope[0].domain_type << std::endl;
-    //exit(1);
-  }
-
-  if(scope[1].domain_type == RANGE_VAR) {
-    min_t1_ptr = &(scope[1].range_domain->min);
-    max_t1_ptr = &(scope[1].range_domain->max);
-  } else if(scope[1].domain_type == BITSET_VAR) {
-    min_t1_ptr = &(scope[1].bitset_domain->domain.min);
-    max_t1_ptr = &(scope[1].bitset_domain->domain.max);
-  } else {
-    min_t1_ptr = &(scope[1].get_var().range_domain->min);
-    max_t1_ptr = &(scope[1].get_var().range_domain->max);
-    //std::cerr << "TODO " << scope[1].domain_type << std::endl;
-    //exit(1);
-  }
+	/// BUGGY WITH DYNAMIC DOMAIN TYPE CHANGE!
+  // if(scope[0].domain_type == RANGE_VAR) {
+  //   min_t0_ptr = &(scope[0].range_domain->min);
+  //   max_t0_ptr = &(scope[0].range_domain->max);
+  // } else if(scope[0].domain_type == BITSET_VAR) {
+  //   min_t0_ptr = &(scope[0].bitset_domain->domain.min);
+  //   max_t0_ptr = &(scope[0].bitset_domain->domain.max);
+  // } else {
+  //   min_t0_ptr = &(scope[0].get_var().range_domain->min);
+  //   max_t0_ptr = &(scope[0].get_var().range_domain->max);
+  //   //std::cerr << "TODO " << scope[0].domain_type << std::endl;
+  //   //exit(1);
+  // }
+  //
+  // if(scope[1].domain_type == RANGE_VAR) {
+  //   min_t1_ptr = &(scope[1].range_domain->min);
+  //   max_t1_ptr = &(scope[1].range_domain->max);
+  // } else if(scope[1].domain_type == BITSET_VAR) {
+  //   min_t1_ptr = &(scope[1].bitset_domain->domain.min);
+  //   max_t1_ptr = &(scope[1].bitset_domain->domain.max);
+  // } else {
+  //   min_t1_ptr = &(scope[1].get_var().range_domain->min);
+  //   max_t1_ptr = &(scope[1].get_var().range_domain->max);
+  //   //std::cerr << "TODO " << scope[1].domain_type << std::endl;
+  //   //exit(1);
+  // }
 
 }
 
@@ -2267,30 +2269,52 @@ void Mistral::ConstraintReifiedDisjunctive::mark_domain() {
 
 Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
   PropagationOutcome wiped = CONSISTENT;
+	
+	
+#ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
+  std::cout << std::endl << "propagate [" << id << "] " << this << " (init)" << std::endl;
+  for(unsigned int i=0; i<3; ++i) {
+    std::cout << scope[i] << " in " << scope[i].get_domain() << " ";
+  }
+  std::cout << std::endl;
+}
+#endif
+	
 
-  if( *min_t0_ptr + processing_time[0] > *max_t1_ptr ) {
+  if( scope[0].get_min() + processing_time[0] > scope[1].get_max() ) {
     
     if( scope[2].set_domain(0) == FAIL_EVENT) wiped = FAILURE(2);
     // x[1]+p[1] <= x[0] because x[0]'s min is too high or x[1]'s max is too low
-    else if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
-    else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+		
+		/// BUGGY WITH DYNAMIC DOMAIN TYPE CHANGE!
+    // else if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+    // else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+    else if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+    else if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
     
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
     std::cout << "  -> YES!: " ;
     display(std::cout);
     std::cout << std::endl;
+	}
 #endif
       
-  } else if( *min_t1_ptr + processing_time[1] > *max_t0_ptr ) {
+  } else if( scope[1].get_min() + processing_time[1] > scope[0].get_max()) {
     
     if( scope[2].set_domain(1) == FAIL_EVENT) wiped = FAILURE(2);
-    else if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
-    else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+    // else if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+    // else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+    else if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+    else if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
     
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
     std::cout << "  -> YES!: " ;
     display(std::cout);
     std::cout << std::endl;
+	}
 #endif
     
   }
@@ -2298,11 +2322,16 @@ Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate() {
 
   if(IS_OK(wiped) && *state != 3) {
     if(*state == 2) {
-      if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
-      else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+    //   if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+    //   else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+    // } else {
+    //   if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+    //   else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+      if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
     } else {
-      if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
-      else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+      if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
     }
   } 
 
@@ -2316,113 +2345,141 @@ Mistral::PropagationOutcome Mistral::ConstraintReifiedDisjunctive::propagate(con
 
 
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
   std::cout << std::endl << "propagate [" << id << "] " << this << " " << event2str(evt) 
-	    << " on " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << std::endl;
+	    << " on " << scope[changed_idx] << " in " << scope[changed_idx].get_domain() << " (" << changed_idx << ")"<< std::endl;
   for(unsigned int i=0; i<3; ++i) {
     std::cout << scope[i] << " in " << scope[i].get_domain() << " ";
   }
   std::cout << std::endl;
+	}
 #endif
 
 
   if(changed_idx == 2) {
 
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
     std::cout << "  -> now it's a precedence" << std::endl;
+	}
 #endif
     
     // it becomes a precedence, we must enforce both rules no matter what and there cannot be further changes.
     
     if(LB_CHANGED(evt)) {
-      if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
-      else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+    //   if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+    //   else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+    // } else {
+    //   if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+    //   else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+      if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
     } else {
-      if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
-      else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+      if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
     }
   } else if(*state!=3) {
     
 
 #ifdef _DEBUG_RDISJUNCTIVE
-    std::cout << "  -> it was already a precedence" << std::endl;
+		if(_DEBUG_RDISJUNCTIVE) {
+    std::cout << "  -> it was already a precedence " << (*state==2 ? "(<=)" : "(>=)") << std::endl;
+	}
 #endif
 
     // it was already a precedence, we enforce the changes
 
-    if(*state==2) {
-      if(// events.contain(1) 
-	 changed_idx == 1
-	 && UB_CHANGED(evt)) {
-	if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
-      }
-      if(IS_OK(wiped) && // events.contain(0)
-	 changed_idx == 0
-	 && LB_CHANGED(evt)) {
-	if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
-      }
-    } else {
-      if(// events.contain(0)
-	 changed_idx == 0
-	 && UB_CHANGED(evt)) {
-	if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
-      }
-      if(IS_OK(wiped) && // events.contain(1)
-	 changed_idx == 1
-	 && LB_CHANGED(evt)) {
-	if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
-      }
-    } 
-  } else {
+	if(*state==2) {
+		if(// events.contain(1) 
+			changed_idx == 1
+		&& UB_CHANGED(evt)) {
+			if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+		}
+		if(IS_OK(wiped) && // events.contain(0)
+			changed_idx == 0
+		&& LB_CHANGED(evt)) {
+			if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+		}
+	} else {
+		if(// events.contain(0)
+			changed_idx == 0
+		&& UB_CHANGED(evt)) {	
+			if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+		}
+		if(IS_OK(wiped) && // events.contain(1)
+			changed_idx == 1
+		&& LB_CHANGED(evt)) {
+			if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+		}
+	} 
+	
+	
+#ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
+    std::cout << (IS_OK(wiped) ? "  => inconsistency" : "  => ok") << std::endl;
+	}
+#endif	
+	
+} else {
 
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
     std::cout << "  -> could it be a precedence? (" 
-	      << *min_t0_ptr << " + " << processing_time[0] 
-	      << " > " <<  *max_t1_ptr << " || "
-	      << *min_t1_ptr << " + " << processing_time[1] 
-	      << " > " << *max_t0_ptr << ")" << std::endl;
+	      << scope[0].get_min() << " + " << processing_time[0] 
+	      << " > " <<  scope[1].get_max() << " || "
+	      << scope[1].get_min() << " + " << processing_time[1] 
+	      << " > " << scope[0].get_max() << ")" << std::endl;
+	}
 #endif
     
     // the disjunction is not yet decided, we check if it should
 
-    if( *min_t0_ptr + processing_time[0] > *max_t1_ptr ) {
+    if( scope[0].get_min() + processing_time[0] > scope[1].get_max() ) {
 
       if( scope[2].set_domain(0) == FAIL_EVENT) wiped = FAILURE(2);
       // x[1]+p[1] <= x[0] because x[0]'s min is too high or x[1]'s max is too low
-      else if( scope[0].set_min( *min_t1_ptr+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
-      else if( scope[1].set_max( *max_t0_ptr-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
+      else if( scope[0].set_min( scope[1].get_min()+processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_max( scope[0].get_max()-processing_time[1] ) == FAIL_EVENT) wiped = FAILURE(1);
 
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
       std::cout << "  -> YES!: " ;
       display(std::cout);
       std::cout << std::endl;
+	}
 #endif
 
-    } else if( *min_t1_ptr + processing_time[1] > *max_t0_ptr ) {
+    } else if( scope[1].get_min() + processing_time[1] > scope[0].get_max() ) {
 
       if( scope[2].set_domain(1) == FAIL_EVENT) wiped = FAILURE(2);
-      else if( scope[0].set_max( *max_t1_ptr-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
-      else if( scope[1].set_min( *min_t0_ptr+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
+      else if( scope[0].set_max( scope[1].get_max()-processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(0);
+      else if( scope[1].set_min( scope[0].get_min()+processing_time[0] ) == FAIL_EVENT) wiped = FAILURE(1);
     
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
       std::cout << "  -> YES!: " ;
       display(std::cout);
       std::cout << std::endl;
+	}
 #endif
 
     } 
 #ifdef _DEBUG_RDISJUNCTIVE
-    else 
+		else if(_DEBUG_RDISJUNCTIVE) {
       std::cout << "  -> NO!" << std::endl;
+	}
 #endif
 
   }
 
 #ifdef _DEBUG_RDISJUNCTIVE
+		if(_DEBUG_RDISJUNCTIVE) {
   for(unsigned int i=0; i<3; ++i) {
     std::cout << scope[i] << " in " << scope[i].get_domain() << " ";
   }
   std::cout << std::endl;
   std::cout << "+-> " << (IS_OK(wiped) ? "OK" : "inconsistency!") << std::endl;
+	}
 #endif
   
   //changes.clear();

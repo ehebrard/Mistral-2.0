@@ -4267,6 +4267,8 @@ template < int N, class T >
       return (elt >> EXP);
     }
 
+		
+
     bool operator==(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) {
       return equal(s);
     }
@@ -4746,9 +4748,10 @@ template < int N, class T >
 				if(wub>neg_words && wlb<pos_words) {
 					if(wub<=pos_words) {
 						i = wub-1;
-							//
-						//
-						//
+	
+
+
+						// std::cout << std::endl;
 						// showUint(table[wub-1], std::cout);
 						// std::cout << std::endl << " xor " << std::endl ;
 						// showUint((full >> (size_word_bit-1-(ub & CACHE))), std::cout);
@@ -4758,7 +4761,7 @@ template < int N, class T >
 						
 						// showUint(table[wub-1], std::cout);
 						// std::cout << std::endl ;
-						//
+
 					
 						
 						if(wlb>=neg_words) {
@@ -5568,8 +5571,10 @@ template < int N, class T >
     void  print_bits(std::ostream & os) const 
     {
       os << "[";
-      for(int i=neg_words; i<pos_words; ++i)
-	showUint( table[i], os );
+      for(int i=neg_words; i<pos_words; ++i) {
+				if(i) os << " ";
+				showUint( table[i], os );
+			}
       os << "]";
     }
 

@@ -4993,6 +4993,10 @@ Mistral::LinearExpression::~LinearExpression() {
 //  1  1  1: + x + y = -z: 
 
 void Mistral::LinearExpression::extract_constraint(Solver *s) {
+	
+	// std::cout << "linear exp: END extract constraint" << std::endl;
+	
+	
   // check if we can use an 'Add' or 'Sub' predicate
   int post_add = false;
   if(lower_bound == 0 &&
@@ -5048,11 +5052,14 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
       s->add(Constraint(new PredicateWeightedSum(children, weight, lower_bound, upper_bound)));
     }
   }
+	
+	// std::cout << "linear exp: END extract constraint" << std::endl;
 }
 
 
 void Mistral::LinearExpression::initialise_bounds() {
-
+	// std::cout << "linear exp: BEG initialise bounds" << std::endl;
+	
   int tlb=0;
   int tub=0;
 
@@ -5082,6 +5089,8 @@ void Mistral::LinearExpression::initialise_bounds() {
 
   if(tlb > lower_bound) lower_bound = tlb;
   if(tub < upper_bound) upper_bound = tub;
+	
+	// std::cout << "linear exp: END initialise bounds" << std::endl;
 
 }
 
@@ -5128,11 +5137,24 @@ Mistral::Variable Mistral::Sum(std::vector< Variable >& args, Variable T, const 
   return exp;
 }
 Mistral::Variable Mistral::Sum(Vector< Variable >& args, const int l, const int u, const int offset) {
-  Variable exp( new LinearExpression(args, l, u,offset) );
+	Variable exp;
+	
+	if(args.size>0) {
+		exp = Variable( new LinearExpression(args, l, u,offset) );
+	} else {
+		exp = Variable( (l<=offset && u>=offset) );
+	}
   return exp;
 }
 Mistral::Variable Mistral::Sum(std::vector< Variable >& args, const int l, const int u, const int offset) {
-  Variable exp( new LinearExpression(args, l, u,offset) );
+	Variable exp;
+	
+	if(args.size()>0) {
+		exp = Variable( new LinearExpression(args, l, u,offset) );
+	} else {
+		exp = Variable( (l<=offset && u>=offset) );
+	}
+	//Variable exp( new LinearExpression(args, l, u,offset) );
   return exp;
 }
 
