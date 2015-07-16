@@ -2120,6 +2120,11 @@ namespace FlatZinc {
             if(dur[i].is_ground()) {
               process_time = dur[i].get_min();
               // constant duration
+              if(process_time==1)
+            	  in_process = (start[i] == t);
+              else
+            	  in_process = (Member(start[i], t-process_time+1, t));
+              /*
               if(start[i].get_max()>t) {
                 if(start[i].get_min()+process_time<t) {
 
@@ -2142,6 +2147,7 @@ namespace FlatZinc {
                 in_process = (start[i] >= t-process_time);
                 //std::cout << "  -task t" << i << " is in process if it ends after or at " << t << ": " << in_process << " ";
               }
+              */
             } else {
               // TODO: tasks with variable durations
               report_unsupported("p_cumulative");
