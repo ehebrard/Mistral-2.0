@@ -8742,6 +8742,7 @@ Mistral::SolverCmdLine::~SolverCmdLine() {
   delete poutcomeArg;
 
   delete r_allowed;
+  delete vo_allowed;
   delete bo_allowed;
 }
 
