@@ -2007,8 +2007,9 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   //decisions.clear();
   for(unsigned int i=seq.size; i;) {
     Variable x = seq[--i].get_var();
-    if(!sequence.contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) sequence.add(x);
-    if(x.is_ground()) sequence.remove(x);
+    if(!x.is_ground())
+    	if(!sequence.contain(x) && !(domain_types[x.id()]&REMOVED_VAR)) sequence.add(x);
+    //if(x.is_ground()) sequence.remove(x);
   }
   num_search_variables = sequence.size;
 
@@ -8719,6 +8720,8 @@ Mistral::SolverCmdLine::~SolverCmdLine() {
   delete timeArg;
   //delete printArg;
   // delete printsolArg;
+  delete allsolArg;
+  delete printsolArg;
   delete printstaArg;
   delete printmodArg;
   delete printparArg;

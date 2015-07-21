@@ -910,23 +910,23 @@ FlatZincModel::set_annotations(const bool on) {
 
         //std::cout << 11 << std::endl;
 
-    	int domsize;
+    	//int domsize;
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
         for(int k=0; k<fz_search_sequences.size; ++k) {
           for(int i=0; i<fz_search_sequences[k].size; ++i) {
-        	domsize = fz_search_sequences[k][i].get_size();
-        	if (domsize> 1 ){
+        	//domsize = fz_search_sequences[k][i].get_size();
+        	//if (domsize> 1 ){
             search_vars.add(fz_search_sequences[k][i].id());
             search_sequence.add(fz_search_sequences[k][i]);
-        	}
+        	//}
 
           }
         }
 
 
         for(int i=0; i<solver.variables.size; ++i) {
-          domsize = solver.variables[i].get_size();
+          int domsize = solver.variables[i].get_size();
           // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
           //   {
           //     std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
@@ -972,22 +972,22 @@ FlatZincModel::set_annotations(const bool on) {
     } else {
       // follows flatzinc model's annotations
 
-        int domsize;
+        //int domsize;
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
         for(int k=0; k<fz_search_sequences.size; ++k) {
         	for(int i=0; i<fz_search_sequences[k].size; ++i) {
-        		domsize= fz_search_sequences[k][i].get_size();
-        		if (domsize>1){
+        	//	domsize= fz_search_sequences[k][i].get_size();
+        	//	if (domsize>1){
         			search_vars.add(fz_search_sequences[k][i].id());
         			search_sequence.add(fz_search_sequences[k][i]);
-        		}
+        	//	}
         	}
         }
 
 
         for(int i=0; i<solver.variables.size; ++i) {
-          domsize = solver.variables[i].get_size();
+         int domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
 
           /*
