@@ -910,17 +910,21 @@ FlatZincModel::set_annotations(const bool on) {
 
         //std::cout << 11 << std::endl;
 
-
+    	int domsize;
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
         for(int k=0; k<fz_search_sequences.size; ++k) {
           for(int i=0; i<fz_search_sequences[k].size; ++i) {
+        	domsize = fz_search_sequences[k][i].get_size();
+        	if (domsize> 1 ){
             search_vars.add(fz_search_sequences[k][i].id());
             search_sequence.add(fz_search_sequences[k][i]);
+        	}
+
           }
         }
 
-        int domsize;
+
         for(int i=0; i<solver.variables.size; ++i) {
           domsize = solver.variables[i].get_size();
           // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
@@ -968,17 +972,20 @@ FlatZincModel::set_annotations(const bool on) {
     } else {
       // follows flatzinc model's annotations
 
-
+        int domsize;
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
         for(int k=0; k<fz_search_sequences.size; ++k) {
-          for(int i=0; i<fz_search_sequences[k].size; ++i) {
-            search_vars.add(fz_search_sequences[k][i].id());
-            search_sequence.add(fz_search_sequences[k][i]);
-          }
+        	for(int i=0; i<fz_search_sequences[k].size; ++i) {
+        		domsize= fz_search_sequences[k][i].get_size();
+        		if (domsize>1){
+        			search_vars.add(fz_search_sequences[k][i].id());
+        			search_sequence.add(fz_search_sequences[k][i]);
+        		}
+        	}
         }
 
-        int domsize;
+
         for(int i=0; i<solver.variables.size; ++i) {
           domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
