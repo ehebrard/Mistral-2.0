@@ -836,7 +836,7 @@ FlatZincModel::set_annotations(const bool on) {
     case MINIMIZATION: {
 
       std::cout << " " << solver.parameters.prefix_comment << " Minimize " << iv[_optVar].get_var() << std::endl;
-      
+
       goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
       break;
     }

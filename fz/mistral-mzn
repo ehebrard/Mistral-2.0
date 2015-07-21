@@ -18,6 +18,10 @@
 # The default mzn2fzn and flatzinc programs can be overridden by setting the
 # environment variables MZN2FZN and FLATZINC.
 
+
+
+#Mohamed : I don't understand the difference between -I and -G. I made them the same for the 2015 challenge
+
 THISPROG=`basename "$0"`
 
 usage () {
@@ -84,16 +88,20 @@ cleanup () {
 MISTRAL_DIR=.
 
 MZN2FZN=${MZN2FZN:-mzn2fzn}
-FLATZINC=$MISTRAL_DIR/mistral-fz
+#FLATZINC=$MISTRAL_DIR/mistral-fz
+FLATZINC=mistral-fz
 CANONICALIZE="cat"
 QUIET=echo
-TMPDZN=$$.dzn
-DZN=$TMPDZN
-touch $TMPDZN   # Ensure this file exists.
+#Mohamed: Why TMPDZN?  
+#TMPDZN=$$.dzn
+#DZN=$TMPDZN
+DZN=""
+#touch $TMPDZN   # Ensure this file exists.
 
 # Parse flags.
 
-MZN2FZN_FLAGS="-I $MISTRAL_DIR/mznlib"
+#MZN2FZN_FLAGS="-I $MISTRAL_DIR/mznlib"
+MZN2FZN_FLAGS=" "
 FZNBASE=mistral-fzn
 
 while test $# -gt 0
@@ -109,7 +117,8 @@ do
     --stdlib-dir)           MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
     --mzn-stdlib-dir)       MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
     --minizinc-stdlib-dir)  MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
-    -G)                     MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
+#    -G)                     MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
+    -G)                     MZN2FZN_FLAGS="$MZN2FZN_FLAGS -I $1"; shift;;
     --globals-dir)          MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
     --mzn-globals-dir)      MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
     --minizinc-globals-dir) MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG $1"; shift;;
@@ -147,8 +156,13 @@ MODELDIR=`dirname $MZN`
 FZN=$FZNBASE.fzn
 
 # Flatten the model and create the model.o.mzn file.
-CMD="$MZN2FZN -o $FZN $MZN2FZN_FLAGS -I $MODELDIR $MZN $DZN"
-$QUIET "$THISPROG: $CMD"
+#Mohamed: I don't understand why "-I $MODELDIR" ? It's useless. The user can enforce it when calling the script. 
+#CMD="$MZN2FZN -o $FZN $MZN2FZN_FLAGS -I $MODELDIR $MZN $DZN"
+#echo $MZN
+#echo $DZN
+
+CMD="$MZN2FZN -o $FZN $MZN2FZN_FLAGS $MZN $DZN"
+$QUIET " % $THISPROG: $CMD"
 if ! $CMD
 then
     echo "$THISPROG: flattening failed" >&2
@@ -167,7 +181,7 @@ fi
 # formatted output.
 
 CMD="$FLATZINC $FLATZINC_FLAGS $FZN"
-$QUIET "$THISPROG: $CMD"
+$QUIET " % $THISPROG: $CMD"
 if ! $CMD | $CANONICALIZE 
 then
     echo "$THISPROG: evaluation terminated abnormally" >&2

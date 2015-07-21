@@ -1,4 +1,4 @@
-#echo "This script should be placed in the directory ~/entry_data"
+#echo "This script should be placed in the directory ~/entry_data in the Virtual Machine provided by the challenge organizers"
 
 cd /home/user/entry_data
 echo "You should probably change the keyboard layout with \n dpkg-reconfigure keyboard-configuration (then restart)" 
@@ -10,18 +10,18 @@ read -p "Press [Enter] key to start installation"
 #apt-get install git
 
 git clone https://github.com/ehebrard/Mistral-2.0.git
-cd Mistral-2.0
-make clean 
-make 
-cd ..
+cd Mistral-2.0 && make clean cd fz && make clean && cd .. && make 
 
+cd /home/user/entry_data
 cp Mistral-2.0/fz/mistral-fz fzn-exec
+cp Mistral-2.0/fz/mistral-mzn exec
 
+chmod 777 *exec
 #echo "export PATH=\$DIR/entry_data/Mistral-2.0/fz:\$PATH" >> ../bin/challenge_env.sh
 echo "PATH=/home/user/entry_data/Mistral-2.0/fz:$PATH" >> /home/user/.bashrc 
 
 cp Mistral-2.0/fz/mznlib/* mzn-lib/
-echo "Mistral-2.0 Installed.. We will performe lightweight tests."
+echo "Mistral-2.0 Installed.. We will performe lightweight tests. You may need to logout then login before"
 read -p "Press [Enter] key to start test"
 #nano fzn-exec
 
@@ -43,10 +43,11 @@ exec-free on-call-rostering 10s-50d oc-roster.mzn 10s-50d.dzn" > entry_data/list
 echo "Testing Global Constraints... [only cumulative]"
 
 cd
-wget homepages.laas.fr/msiala/minizinc2014/test--mzn-lib.sh 
+cp /home/user/entry_data/Mistral-2.0/fz/test--mzn-lib.sh ./
+#wget homepages.laas.fr/msiala/minizinc2014/test--mzn-lib.sh 
 chmod +x test--mzn-lib.sh 
 ./test--mzn-lib.sh 
-
-ls 
+rm test--mzn-lib.sh 
+#ls 
 echo "End"
 
