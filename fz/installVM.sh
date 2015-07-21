@@ -10,7 +10,7 @@ read -p "Press [Enter] key to start installation"
 #apt-get install git
 
 git clone https://github.com/ehebrard/Mistral-2.0.git
-cd Mistral-2.0 && make clean cd fz && make clean && cd .. && make 
+cd Mistral-2.0 && make clean && cd fz && make clean && cd .. && make 
 
 cd /home/user/entry_data
 cp Mistral-2.0/fz/mistral-fz fzn-exec
