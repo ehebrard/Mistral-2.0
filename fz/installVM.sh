@@ -2,7 +2,7 @@
 
 cd /home/user/entry_data
 echo "You should probably change the keyboard layout with \n dpkg-reconfigure keyboard-configuration (then restart)" 
-echo "We assume that g++ and git are installed"
+echo "g++ and git should be installed before this step"
 
 read -p "Press [Enter] key to start installation"
 
@@ -10,7 +10,20 @@ read -p "Press [Enter] key to start installation"
 #apt-get install git
 
 git clone https://github.com/ehebrard/Mistral-2.0.git
-cd Mistral-2.0 && make clean && cd fz && make clean && cd .. && make 
+cd Mistral-2.0
+make clean
+cd fz
+make clean
+cd ..
+make 
+mv fz/mistral-fzn ../
+make clean 
+cd fz 
+make clean 
+make parallel 
+mv ../../mistral-fzn ./
+
+#Here  mistral-fzn and mistral-fzn_parallel are in fz/
 
 cd /home/user/entry_data
 cp Mistral-2.0/fz/mistral-fz fzn-exec
@@ -21,7 +34,9 @@ chmod 777 *exec
 echo "PATH=/home/user/entry_data/Mistral-2.0/fz:$PATH" >> /home/user/.bashrc 
 
 cp Mistral-2.0/fz/mznlib/* mzn-lib/
-echo "Mistral-2.0 Installed.. We will performe lightweight tests. You may need to logout then login before"
+echo "Mistral-2.0 Installed. You need to logout then login to complete installation"
+echo "Please edit ~/bin/challenge_env.sh to support only free and parallel search"
+
 #read -p "Press [Enter] key to start test"
 #nano fzn-exec
 
@@ -50,4 +65,3 @@ echo "Mistral-2.0 Installed.. We will performe lightweight tests. You may need t
 #rm test--mzn-lib.sh 
 #ls 
 #echo "End"
-
