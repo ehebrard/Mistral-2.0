@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
 
   delete fm;
   delete sp;
+  exit(1);
 
 #ifdef _PARALLEL
   }
