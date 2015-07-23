@@ -44,7 +44,9 @@
 #include <string>
 #include <set>
 
-
+#ifdef _PARALLEL
+#include "omp.h"
+#endif
 
 #include <mistral_variable.hpp>
 
@@ -835,20 +837,29 @@ FlatZincModel::set_annotations(const bool on) {
     switch (_method) {
     case MINIMIZATION: {
 
+#ifdef _PARALLEL
+//crutial
+#else
       std::cout << " " << solver.parameters.prefix_comment << " Minimize " << iv[_optVar].get_var() << std::endl;
-
+#endif
       goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
       break;
     }
     case MAXIMIZATION: {
+#ifdef _PARALLEL
+//crutial
+#else
       std::cout << " " << solver.parameters.prefix_comment << " Maximize " << iv[_optVar].get_var() << std::endl;
-      
+#endif
       goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
       break;
     }
     case SATISFACTION: {
+#ifdef _PARALLEL
+//crutial
+#else
       std::cout << " " << solver.parameters.prefix_comment << " Solve " << std::endl;
-      
+#endif
       if(_option_enumerate) 
         goal = new Goal(Goal::ENUMERATION);
       else 
@@ -924,7 +935,9 @@ FlatZincModel::set_annotations(const bool on) {
           }
         }
 
-
+#ifdef _PARALLEL
+        if (branch_on_auxilary)
+#endif
         for(int i=0; i<solver.variables.size; ++i) {
           int domsize = solver.variables[i].get_size();
           // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
@@ -986,6 +999,9 @@ FlatZincModel::set_annotations(const bool on) {
         }
 
 
+#ifdef _PARALLEL
+        if (branch_on_auxilary)
+#endif
         for(int i=0; i<solver.variables.size; ++i) {
          int domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
@@ -1533,7 +1549,38 @@ FlatZinc::SolutionPrinter::SolutionPrinter(Printer *p, FlatZincModel *fm, Mistra
 FlatZinc::SolutionPrinter::~SolutionPrinter() {}
 
 void FlatZinc::SolutionPrinter::notify_solution() {
+#ifdef _PARALLEL
+#pragma omp critical
+	{
+		bool print = true;
+		if (fm_->method() == FlatZincModel::MINIMIZATION){
+			//std::cout << "\n \n  OLD BEST  " << * fm_->best_kown_objective << std::endl;
+			//std::cout << " MINIMIZATION Found  objective_value  " << fm_->get_last_objective_value() << std::endl;
+			if ( fm_->get_last_objective_value() >= * fm_->best_kown_objective){
+				print= false;
+			}
+			else
+				*fm_->best_kown_objective = fm_->get_last_objective_value();
+		}
+		else
+			if (fm_->method() == FlatZincModel::MAXIMIZATION){
+				//std::cout << "\n \n  OLD BEST  " << * fm_->best_kown_objective << std::endl;
+				//std::cout << " MAXIMIZATION found objective_value  " << fm_->get_last_objective_value() << std::endl;
+				if ( fm_->get_last_objective_value() <= * fm_->best_kown_objective){
+					print= false;
+				}
+				else
+					*fm_->best_kown_objective = fm_->get_last_objective_value();
+			}
+		if (print){
+			//std::cout << " thread ID : " << omp_get_thread_num() << std::endl;
+			fm_->print_solution(std::cout, *p_);
+		}
+	}
+#else
   fm_->print_solution(std::cout, *p_);
+#endif
+
 };
 
 // STATISTICS: flatzinc-any

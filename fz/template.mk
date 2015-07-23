@@ -27,21 +27,23 @@ COPTIMIZE ?= -O3 --param inline-unit-growth=60
 #GOOGLE_PROFILER ?= -lprofiler
 GOOGLE_PROFILER ?= 
 
-.PHONY : s p d r rs c lib libd clean 
+.PHONY : s p d r rs c parallel lib libd clean 
 
 s:	$(EXEC)
 p:	$(EXEC)_profile
 d:	$(EXEC)_debug
 r:	$(EXEC)_release
 rs:	$(EXEC)_static
+parallel: $(EXEC)_parallel
 c:      $(EXEC)_cov
 lib:	lib$(LIB).a
 libd:	lib$(LIB)d.a
 
-
+parallel: COMPILFLAGS := $(COMPILFLAGS) -D_PARALLEL -fopenmp  
 
 ## Link options
 $(EXEC):		LFLAGS := $(LFLAGS) #-ggdb $(LFLAGS) $(GOOGLE_PROFILER)
+$(EXEC)_parallel:		LFLAGS := $(LFLAGS) -fopenmp #-ggdb $(LFLAGS) $(GOOGLE_PROFILER)
 $(EXEC)_profile:	LFLAGS := -ggdb -pg $(LFLAGS)
 $(EXEC)_debug:		LFLAGS := -ggdb $(LFLAGS)
 $(EXEC)_release:	LFLAGS := $(LFLAGS)
@@ -50,6 +52,7 @@ $(EXEC)_cov:            LFLAGS := -ggdb -fprofile-arcs -ftest-coverage $(LFLAGS)
 
 ## Dependencies
 $(EXEC):		$(COBJS)
+$(EXEC)_parallel:		$(COBJS)
 $(EXEC)_profile:	$(PCOBJS)
 $(EXEC)_debug:		$(DCOBJS)
 $(EXEC)_release:	$(RCOBJS)
@@ -66,7 +69,7 @@ lib$(LIB)d.a:	$(filter-out Main.od, $(DCOBJS))
 	$(CXX) $(CFLAGS) -c -o $@ $<
 
 ## Linking rules (standard/profile/debug/release)
-$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static $(EXEC)_cov:
+$(EXEC) $(EXEC)_parallel $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static $(EXEC)_cov:
 	@echo Linking: "$@ ( $^ )"
 	$(CXX) $^ $(LFLAGS) -o $@
 
@@ -78,7 +81,7 @@ lib$(LIB).a lib$(LIB)d.a:
 
 ## Clean rule
 clean:
-	@rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static $(EXEC)_cov \
+	@rm -f $(EXEC) $(EXEC)_parallel $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static $(EXEC)_cov \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) $(CCOBJS) *.gcno *.gcda *.gcov *.core depend.mak lib$(LIB).a lib$(LIB)d.a *~ *.dzn *.ozn
 
 ## Make dependencies

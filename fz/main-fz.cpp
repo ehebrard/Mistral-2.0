@@ -10,6 +10,12 @@
 using namespace std;
 #include <typeinfo>
 
+
+#ifdef _PARALLEL
+#include "omp.h"
+#include <limits>
+#endif
+
 #ifdef _VERIFICATION
 void write_solution(FlatZinc::FlatZincModel *fm, string filename)
 {
@@ -66,13 +72,61 @@ int main(int argc, char *argv[])
   TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);
   cmd.add( simple_rewriteArg );
 
+#ifdef _PARALLEL
+  //std::cout << "PARALLEL \n \n \n " << std::endl;
+  TCLAP::ValueArg<int> threadsArg("p","number-threads","Use multithreading with this option.", false, 4, "int");
+  cmd.add( threadsArg );
+#endif
+
   cmd.parse(argc, argv);
-  
-  usrand(cmd.get_seed());
-  
+
+#ifdef _PARALLEL
+  int total = threadsArg.getValue();
+  std::cout << " % " << " will use " << total << " threads " << std::endl;
+  omp_set_num_threads(total);
+  long int global_obj =std::numeric_limits<int>::max();
+#endif
+
+
+
+  #ifdef _PARALLEL
+#pragma omp parallel
+  {
+	  //printf("multicore user! %d \n" , omp_get_thread_num());
+	  int id = omp_get_thread_num();
+#endif
+
+
+  int thread_seed = cmd.get_seed();
+
+#ifdef _PARALLEL
+  thread_seed+=id;
+#endif
+  usrand(thread_seed);
+
   Solver s;
-  
+
   cmd.set_parameters(s);
+
+  std::string policy;
+#ifdef _PARALLEL
+  if ( id%2 != 0)
+	  if (cmd.get_restart_policy()=="geom")
+		  policy="luby";
+	  else
+		  policy="geom";
+  else
+#endif
+	  policy =cmd.get_restart_policy();
+
+
+#ifdef _PARALLEL
+  bool branch_on_auxilary = true;
+  if ( id%4 < 2 )
+	  branch_on_auxilary=false;
+//#pragma omp critical
+//  std::cout << " " << s.parameters.prefix_statistics << "ID:  " << id  << " " << policy << " branch_on_auxilary " << branch_on_auxilary <<  "  "<< thread_seed <<  std::endl;
+#endif
 
   double cpu_time = get_run_time() ;
 
@@ -85,15 +139,24 @@ int main(int argc, char *argv[])
 
   fm = parse(cmd.get_filename(), s, p);
 
-  if( !fm ) return 0;
+  if( !fm )
+#ifdef _PARALLEL
+	  exit(1);
+#else
+  return 0;
+#endif
+
   double parse_time = get_run_time() - cpu_time;
 #ifdef _VERBOSE_PARSER
   std::cout << std::endl;
 #endif
+
+#ifdef _PARALLEL
+ //#pragma omp critical
+  //cout << " " << s.parameters.prefix_statistics << " PARSETIME " << parse_time << std::endl;
+#else
   cout << " " << s.parameters.prefix_statistics << " PARSETIME " << parse_time << std::endl;
-
-
-
+#endif
 
   FlatZinc::SolutionPrinter *sp = new FlatZinc::SolutionPrinter(&p, fm, &s);
   s.add(sp);
@@ -104,8 +167,11 @@ int main(int argc, char *argv[])
 
 
   // set flatzinc model options
+#ifdef _PARALLEL
+  fm->branch_on_auxilary=branch_on_auxilary;
+#endif
 
-  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), cmd.get_restart_policy());
+  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), policy);
   fm->set_display_model(cmd.print_model());
   fm->set_display_solution(cmd.print_solution());
   fm->set_annotations(annotationArg.getValue());
@@ -115,6 +181,13 @@ int main(int argc, char *argv[])
   fm->set_parity_processing(parityArg.getValue());
   fm->set_enumeration(cmd.enumerate_solutions());
   fm->encode_clauses();
+
+#ifdef _PARALLEL
+  if (fm->method() == FlatZinc::FlatZincModel::MAXIMIZATION)
+	  global_obj = std::numeric_limits<int>::min();
+  fm->best_kown_objective = &global_obj;
+#endif
+
   fm->run(cout , p);
   
   if(cmd.print_solution())
@@ -129,5 +202,10 @@ int main(int argc, char *argv[])
 
   delete fm;
   delete sp;
+
+#ifdef _PARALLEL
+  }
+#endif
+
   return 0;
 }
