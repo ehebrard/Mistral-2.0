@@ -1261,6 +1261,10 @@ void
 FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
 
   //#ifdef _FLATZINC_OUTPUT
+#ifdef _PARALLEL
+#pragma omp critical
+	{
+#endif
 	Mistral::Outcome outcome = solver.statistics.outcome;
         if (outcome == OPT)
           out<<"==========";
@@ -1271,6 +1275,10 @@ FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
         else if (outcome != SAT)
           out<<"=====UNKNOWN=====";
 	out<< std::endl;
+
+#ifdef _PARALLEL
+}
+#endif
         //#else
         //solver.statistics.print_full(out);
         //#endif
