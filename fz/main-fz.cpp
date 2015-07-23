@@ -14,6 +14,7 @@ using namespace std;
 #ifdef _PARALLEL
 #include "omp.h"
 #include <limits>
+#include <math.h>
 #endif
 
 #ifdef _VERIFICATION
@@ -82,7 +83,14 @@ int main(int argc, char *argv[])
 
 #ifdef _PARALLEL
   int total = threadsArg.getValue();
-  std::cout << " % " << " will use " << total << " threads " << std::endl;
+  //std::cout << "Available  threads : " << omp_get_max_threads() << std::endl;
+  int recommended= floor((double) (omp_get_max_threads()*3) / 4.0 )   ;
+  if (total >recommended){
+	  std::cout << " % " << " high value of -p. The solver will use only " << recommended << " threads (recommended) " << std::endl;
+	  total=recommended;
+  }
+  else
+	  std::cout << " % " << " will use " << total << " threads " << std::endl;
   omp_set_num_threads(total);
   long int global_obj =std::numeric_limits<int>::max();
 #endif
