@@ -84,8 +84,9 @@ int main(int argc, char *argv[])
 #ifdef _PARALLEL
   int total = threadsArg.getValue();
   //std::cout << "Available  threads : " << omp_get_max_threads() << std::endl;
-  int recommended= floor((double) (omp_get_max_threads()*3) / 4.0 )   ;
-  if (total >recommended){
+  //int recommended= floor((double) (omp_get_max_threads()*3) / 4.0 )   ;
+  int recommended= floor((double) (omp_get_max_threads()) / 2.0 )   ;
+   if (total >recommended){
 	  std::cout << " % " << " high value of -p. The solver will use only " << recommended << " threads (recommended) " << std::endl;
 	  total=recommended;
   }

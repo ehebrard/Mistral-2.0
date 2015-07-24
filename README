@@ -9,13 +9,15 @@ This will generate the executable file fzn-mistral in the 'bin' folder.
 
 3- You can test a flatzinc instance with
 
-$ bin/fzn-mistral data/zinc/zebra.fzn 
+$ fz/mistral-fz data/zinc/zebra.fzn 
 
 The option "-a" can be used to print all solutions.
 
-4- Mistral-2.0 implements a simple form of parallelism. To build the parallel solver, first clean the binaries in fz (i.e. by running "$ make clean" in fz/), then compile with:
+4- Mistral-2.0 implements a simple form of parallelism. To build the parallel solver, first clean the binaries in fz (i.e. by running "$ make clean" in fz/), then compile (within fz/) with:
 
 $ make parallel 
+
+The option '-p $n' can be passed to fz/mistral-fz to indicate $n available logical cores.
 
 
 5- Notes:
