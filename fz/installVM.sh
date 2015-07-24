@@ -27,7 +27,8 @@ mv ../../mistral-fzn ./
 
 cd /home/user/entry_data
 cp Mistral-2.0/fz/mistral-fz fzn-exec
-cp Mistral-2.0/fz/mistral-mzn exec
+cp Mistral-2.0/fz/mistral-mzn ../bin/exec
+cp Mistral-2.0/fz/mistral-mzn ./exec
 
 chmod 777 *exec
 #echo "export PATH=\$DIR/entry_data/Mistral-2.0/fz:\$PATH" >> ../bin/challenge_env.sh
