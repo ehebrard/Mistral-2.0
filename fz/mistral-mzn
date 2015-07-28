@@ -162,7 +162,7 @@ FZN=$FZNBASE.fzn
 #echo $DZN
 
 CMD="$MZN2FZN -o $FZN $MZN2FZN_FLAGS $MZN $DZN"
-$QUIET " % $THISPROG: $CMD"
+#$QUIET " % $THISPROG: $CMD"
 if ! $CMD
 then
     echo "$THISPROG: flattening failed" >&2
@@ -181,7 +181,7 @@ fi
 # formatted output.
 
 CMD="$FLATZINC $FLATZINC_FLAGS $FZN"
-$QUIET " % $THISPROG: $CMD"
+#$QUIET " % $THISPROG: $CMD"
 if ! $CMD | $CANONICALIZE 
 then
     echo "$THISPROG: evaluation terminated abnormally" >&2
