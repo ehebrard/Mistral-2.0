@@ -87,11 +87,11 @@ int main(int argc, char *argv[])
   //int recommended= floor((double) (omp_get_max_threads()*3) / 4.0 )   ;
   int recommended= floor((double) (omp_get_max_threads()) / 2.0 )   ;
    if (total >recommended){
-	  std::cout << " % " << " high value of -p. The solver will use only " << recommended << " threads (recommended) " << std::endl;
+	  //std::cout << " % " << " high value of -p. The solver will use only " << recommended << " threads (recommended) " << std::endl;
 	  total=recommended;
   }
-  else
-	  std::cout << " % " << " will use " << total << " threads " << std::endl;
+//  else
+//	  std::cout << " % " << " will use " << total << " threads " << std::endl;
   omp_set_num_threads(total);
   long int global_obj =std::numeric_limits<int>::max();
 #endif

@@ -780,7 +780,7 @@ FlatZincModel::set_annotations(const bool on) {
 
 
   void
-  FlatZincModel::run(std::ostream& out, const Printer& p) {
+  FlatZincModel::run(std::ostream& out, Printer& p) {
     using std::setw;
     using std::setfill;
     
@@ -968,6 +968,47 @@ FlatZincModel::set_annotations(const bool on) {
              << solver.variables << std::endl;
         */
 
+        //Add output variables here
+        AST::Array*  otp = p.get_output();
+        if (otp!=NULL){
+        	for (unsigned int i=0; i< otp->a.size(); i++) {
+        		AST::Node* ai = otp->a[i];
+        		if (ai->isArray()) {
+        			AST::Array* aia = ai->getArray();
+        			int size = aia->a.size();
+        			for (int j=0; j<size; j++) {
+        				int __id=-1;
+        				if (aia->a[j]->isIntVar()) {
+        					__id= iv[aia->a[j]->getIntVar()].id();
+        				} else if (aia->a[j]->isBoolVar()) {
+        					__id= iv[aia->a[j]->getBoolVar()].id();
+        				}
+
+        				if (__id>=0)
+        					if(!(search_vars.contain( __id ))) {
+        						search_vars.add(__id);
+        						search_sequence.add(solver.variables[__id]);
+        					}
+        			}
+
+        		} else {
+        			int __id=-1;
+        			if (ai->isIntVar()) {
+        				__id= iv[ai->getIntVar()].id();
+        			} else if (ai->isBoolVar()) {
+        				__id= iv[ai->getBoolVar()].id();
+        			}
+
+        			if (__id>=0)
+        				if(!(search_vars.contain( __id ))) {
+        					search_vars.add(__id);
+        					search_sequence.add(solver.variables[__id]);
+        				}
+        		}
+        	}
+        }
+
+
         result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
 
         /*
@@ -1036,6 +1077,46 @@ FlatZincModel::set_annotations(const bool on) {
              << search_sequence << std::endl
              << solver.variables << std::endl;        
         */
+
+        //Add output variables here
+        AST::Array*  otp = p.get_output();
+        if (otp!=NULL){
+        	for (unsigned int i=0; i< otp->a.size(); i++) {
+        		AST::Node* ai = otp->a[i];
+        		if (ai->isArray()) {
+        			AST::Array* aia = ai->getArray();
+        			int size = aia->a.size();
+        			for (int j=0; j<size; j++) {
+        				int __id=-1;
+        				if (aia->a[j]->isIntVar()) {
+        					__id= iv[aia->a[j]->getIntVar()].id();
+        				} else if (aia->a[j]->isBoolVar()) {
+        					__id= iv[aia->a[j]->getBoolVar()].id();
+        				}
+
+        				if (__id>=0)
+        					if(!(search_vars.contain( __id ))) {
+        						search_vars.add(__id);
+        						search_sequence.add(solver.variables[__id]);
+        					}
+        			}
+
+        		} else {
+        			int __id=-1;
+        			if (ai->isIntVar()) {
+        				__id= iv[ai->getIntVar()].id();
+        			} else if (ai->isBoolVar()) {
+        				__id= iv[ai->getBoolVar()].id();
+        			}
+
+        			if (__id>=0)
+        				if(!(search_vars.contain( __id ))) {
+        					search_vars.add(__id);
+        					search_sequence.add(solver.variables[__id]);
+        				}
+        		}
+        	}
+        }
 
         
         result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
@@ -1304,6 +1385,7 @@ FlatZincModel::print_solution(std::ostream& out, const Printer& p) const {
       p.print(out, solver, iv, bv, sv);
       
       if(_optVar >= 0)
+    	  if(solver.parameters.verbosity)
         out << " " << solver.parameters.prefix_comment << " objective: " << iv[_optVar].get_var() 
             << " in [" << iv[_optVar].get_solution_min() 
             << ".." << iv[_optVar].get_solution_max() << "]" << endl;

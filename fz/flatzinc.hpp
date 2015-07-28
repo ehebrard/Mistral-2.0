@@ -92,6 +92,8 @@ public:
 	Printer(void) : _output(NULL) {}
 	void init(AST::Array* output);
 
+	AST::Array* get_output() {return _output;}
+
 	void print(std::ostream& out,
 			Solver& solver,
 			const IntVarArray& iv,
@@ -405,7 +407,7 @@ public:
   void get_annotations();
 
 	/// Run the search
-	void run(std::ostream& out, const Printer& p);
+	void run(std::ostream& out, Printer& p);
 
   /// Produce output on \a out using \a p
   void print_final(std::ostream& out, const Printer& p) const;
