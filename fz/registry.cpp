@@ -450,6 +450,10 @@ namespace FlatZinc {
                        const ConExpr& ce, AST::Node* ann) {
      if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
+        	//additional test
+        	if (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())
+        		s.add(getBoolVar(s, m, ce[2])==1);
+        	else
           s.add( (getIntVar(s, m, ce[0]) == getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
         } else {
           s.add( (getIntVar(s, m, ce[0]) == ce[1]->getInt()) == getBoolVar(s, m, ce[2]) ); 
@@ -462,6 +466,10 @@ namespace FlatZinc {
                        const ConExpr& ce, AST::Node* ann) {
      if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
+        	//additional test
+        	if (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())
+        		s.add(getBoolVar(s, m, ce[2])==0);
+        	else
           s.add( (getIntVar(s, m, ce[0]) != getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
         } else {
           s.add( (getIntVar(s, m, ce[0]) != ce[1]->getInt()) == getBoolVar(s, m, ce[2]) ); 
@@ -472,18 +480,34 @@ namespace FlatZinc {
     }
     void p_int_ge_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
+    	//additional test
+    	if (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())
+    		s.add(getBoolVar(s, m, ce[2])==1);
+    	else
       s.add( (getIntVar(s, m, ce[0]) >= getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
     void p_int_gt_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
+    	//additional test
+    	if (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())
+    		s.add(getBoolVar(s, m, ce[2])==0);
+    	else
       s.add( (getIntVar(s, m, ce[0]) > getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
     void p_int_le_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
+    	//additional test
+    	if (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())
+    		s.add(getBoolVar(s, m, ce[2])==1);
+    	else
       s.add( (getIntVar(s, m, ce[0]) <= getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
     void p_int_lt_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
+    	//additional test
+    	if (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())
+    		s.add(getBoolVar(s, m, ce[2])==0);
+    	else
       s.add( (getIntVar(s, m, ce[0]) < getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
 
@@ -2670,6 +2694,10 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
+  	//additional test
+  	if (a.id() == b.id())
+  		s.add(r==1);
+  	else
       s.add((a == b) == r);
 
       //    p_bool_eq_reif can be decomposed as follows :
@@ -2763,7 +2791,10 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-
+  	//additional test
+  	if (a.id() == b.id())
+  		s.add(r==1);
+  	else
       s.add((a >= b) == r);
 
       // vec<Lit> ps1, ps2, ps3;
@@ -2800,7 +2831,10 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-
+  	//additional test
+  	if (a.id() == b.id())
+  		s.add(r==0);
+  	else
       s.add((a > b) == r);
 
       // vec<Lit> ps1, ps2, ps3;
@@ -2847,7 +2881,10 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]); 
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-
+  	//additional test
+  	if (a.id() == b.id())
+  		s.add(r==1);
+  	else
       s.add( (a <= b) == r );
 
 
@@ -2901,7 +2938,10 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-
+      //additional test
+      if (a.id() == b.id())
+    	  s.add(r==0);
+      else
       s.add( (a < b) == r );
     }
 
@@ -2928,7 +2968,10 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-
+      //additional test
+      if (a.id() == b.id())
+    	  s.add(r==0);
+      else
        s.add( (a != b) == r );
 
       /* Can be decomposed as follows
