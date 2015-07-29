@@ -973,6 +973,11 @@ Mistral::Solver::Solver()
   wiped_idx = CONSISTENT;
   prev_wiped_idx = CONSISTENT;
 
+#ifdef _PARALLEL
+    //used only with parallelization to indicate an exist because a solution is found by another thread
+   solution_found_elsewhere=NULL;
+#endif
+
   save();
 }
 
@@ -5263,6 +5268,13 @@ bool Mistral::Solver::limits_expired() {
 	))
       std::cout << "c LIMIT REACHED, RESTART!" << std::endl; 
   }
+#endif
+
+#ifdef _PARALLEL
+if (*solution_found_elsewhere){
+	 // std::cout << "c LIMIT REACHED, BECAUSE solution_found_elsewhere !" << std::endl;
+	return true;
+}
 #endif
 
   return (parameters.limit && 

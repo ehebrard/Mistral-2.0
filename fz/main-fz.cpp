@@ -94,6 +94,8 @@ int main(int argc, char *argv[])
 //	  std::cout << " % " << " will use " << total << " threads " << std::endl;
   omp_set_num_threads(total);
   long int global_obj =std::numeric_limits<int>::max();
+  bool solution_found_elsewhere= false;
+
 #endif
 
 
@@ -164,7 +166,8 @@ int main(int argc, char *argv[])
  //#pragma omp critical
   //cout << " " << s.parameters.prefix_statistics << " PARSETIME " << parse_time << std::endl;
 #else
-  cout << " " << s.parameters.prefix_statistics << " PARSETIME " << parse_time << std::endl;
+  if(s.parameters.verbosity >0)
+	  cout << " " << s.parameters.prefix_statistics << " PARSETIME " << parse_time << std::endl;
 #endif
 
   FlatZinc::SolutionPrinter *sp = new FlatZinc::SolutionPrinter(&p, fm, &s);
@@ -195,23 +198,45 @@ int main(int argc, char *argv[])
   if (fm->method() == FlatZinc::FlatZincModel::MAXIMIZATION)
 	  global_obj = std::numeric_limits<int>::min();
   fm->best_kown_objective = &global_obj;
+  fm->set_solution_found_elsewhere(&solution_found_elsewhere);
 #endif
 
   fm->run(cout , p);
-  
+
+
+#ifdef _PARALLEL
+#pragma omp critical
+  {
+  if (!solution_found_elsewhere){
+	  solution_found_elsewhere=true;
+	  //Secure shared memory
+#pragma omp flush
+ // }
+ // else
+#endif
+
   if(cmd.print_solution())
     fm->print_final(cout , p);
 
+
+#ifdef _PARALLEL
+}
+  }
+#endif
+
   if(cmd.print_statistics())
     s.statistics.print_full(std::cout);
+
+
 
 #ifdef _VERIFICATION
   write_solution(fm, args.back());
 #endif
 
+
   delete fm;
   delete sp;
-  exit(1);
+  //exit(1);
 
 #ifdef _PARALLEL
   }

@@ -323,7 +323,7 @@ public:
 	long int * best_kown_objective;
 	bool branch_on_auxilary;
 	long int get_last_objective_value() { return solver.statistics.objective_value ;}
-
+    void set_solution_found_elsewhere(bool * s) {solver.solution_found_elsewhere= s;}
 #endif
 
 	/// The integer variables

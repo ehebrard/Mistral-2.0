@@ -758,6 +758,10 @@ namespace Mistral {
     Outcome search_minimize(Variable X);
     Outcome search_maximize(Variable X);
 
+#ifdef _PARALLEL
+    //used only with parallelization to indicate an exist because a solution is found by another thread
+    bool * solution_found_elsewhere;
+#endif
     ///
     bool limits_expired();
 

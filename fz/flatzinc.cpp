@@ -840,7 +840,8 @@ FlatZincModel::set_annotations(const bool on) {
 #ifdef _PARALLEL
 //crutial
 #else
-      std::cout << " " << solver.parameters.prefix_comment << " Minimize " << iv[_optVar].get_var() << std::endl;
+    	if (solver.parameters.verbosity>0)
+    		std::cout << " " << solver.parameters.prefix_comment << " Minimize " << iv[_optVar].get_var() << std::endl;
 #endif
       goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
       break;
@@ -849,7 +850,8 @@ FlatZincModel::set_annotations(const bool on) {
 #ifdef _PARALLEL
 //crutial
 #else
-      std::cout << " " << solver.parameters.prefix_comment << " Maximize " << iv[_optVar].get_var() << std::endl;
+    	if (solver.parameters.verbosity>0)
+    		std::cout << " " << solver.parameters.prefix_comment << " Maximize " << iv[_optVar].get_var() << std::endl;
 #endif
       goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
       break;
@@ -858,7 +860,8 @@ FlatZincModel::set_annotations(const bool on) {
 #ifdef _PARALLEL
 //crutial
 #else
-      std::cout << " " << solver.parameters.prefix_comment << " Solve " << std::endl;
+    	if (solver.parameters.verbosity>0)
+    		std::cout << " " << solver.parameters.prefix_comment << " Solve " << std::endl;
 #endif
       if(_option_enumerate) 
         goal = new Goal(Goal::ENUMERATION);
@@ -1343,22 +1346,24 @@ FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
 
   //#ifdef _FLATZINC_OUTPUT
 #ifdef _PARALLEL
-#pragma omp critical
+//#pragma omp critical
 	{
+	//	if (! *(solver.solution_found_elsewhere)){
 #endif
 	Mistral::Outcome outcome = solver.statistics.outcome;
         if (outcome == OPT)
-          out<<"==========";
+          out<<"==========" << std::endl;
         else if (solver.statistics.num_solutions && solver.objective && solver.objective->is_optimization())
-          out<<"=====UNBOUNDED=====";
+          out<<"=====UNBOUNDED====="<< std::endl;
 	else if (outcome == UNSAT)
-          out<<"=====UNSATISFIABLE=====";
+          out<<"=====UNSATISFIABLE====="<< std::endl;
         else if (outcome != SAT)
-          out<<"=====UNKNOWN=====";
-	out<< std::endl;
+          out<<"=====UNKNOWN====="<< std::endl;
+	//out<< std::endl;
 
 #ifdef _PARALLEL
 }
+//	}
 #endif
         //#else
         //solver.statistics.print_full(out);
@@ -1385,7 +1390,7 @@ FlatZincModel::print_solution(std::ostream& out, const Printer& p) const {
       p.print(out, solver, iv, bv, sv);
       
       if(_optVar >= 0)
-    	  if(solver.parameters.verbosity)
+    	  if(solver.parameters.verbosity >0)
         out << " " << solver.parameters.prefix_comment << " objective: " << iv[_optVar].get_var() 
             << " in [" << iv[_optVar].get_solution_min() 
             << ".." << iv[_optVar].get_solution_max() << "]" << endl;
@@ -1649,8 +1654,11 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 			if ( fm_->get_last_objective_value() >= * fm_->best_kown_objective){
 				print= false;
 			}
-			else
+			else{
 				*fm_->best_kown_objective = fm_->get_last_objective_value();
+				  //Secure shared memory
+#pragma omp flush
+			}
 		}
 		else
 			if (fm_->method() == FlatZincModel::MAXIMIZATION){
@@ -1659,8 +1667,11 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 				if ( fm_->get_last_objective_value() <= * fm_->best_kown_objective){
 					print= false;
 				}
-				else
+				else{
 					*fm_->best_kown_objective = fm_->get_last_objective_value();
+					  //Secure shared memory
+#pragma omp flush
+				}
 			}
 		if (print){
 			//std::cout << " thread ID : " << omp_get_thread_num() << std::endl;
