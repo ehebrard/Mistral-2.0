@@ -1,7 +1,7 @@
 To use Mistral-2.0 as a flatzinc solver: 
 
 1- Mistral-2.0/fz should be in the $PATH 
-2- To compile the code, use (from within the folder Mistral-2.0):
+2- Compile the code (from within the folder Mistral-2.0) with:
 
 $ make
 
