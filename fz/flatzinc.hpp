@@ -393,6 +393,9 @@ public:
 	/// setup the rewriting step
   void set_enumeration(const bool on);
 
+  //return _option_enumerate
+  bool get_enumeration() {return _option_enumerate;}
+
 	/// setup the rewriting step
   void set_display_model(const bool on);
 
@@ -515,6 +518,10 @@ FlatZincModel* parse(std::istream& is,
     FlatZincModel *fm_;
     Mistral::Solver *solver_;
 
+#ifdef _PARALLEL
+    // minimization _method=1,  maximization: _method=2 ; satisfaction with one solution: _method=3 ; else _method=0
+    int method;
+#endif
     // SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) : p_(p), fm_(fm), solver_(s) {
     //   solver->add((SolutionPrinter*)this);
     // }

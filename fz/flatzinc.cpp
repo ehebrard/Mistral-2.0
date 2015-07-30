@@ -1639,6 +1639,17 @@ void FlatZincModel::encode_clauses()
 FlatZinc::SolutionPrinter::SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) 
   : p_(p), fm_(fm), solver_(s) {
   //solver_->add((SolutionListener*)this);
+#ifdef _PARALLEL
+	if (fm->method() == FlatZincModel::MINIMIZATION)
+		method=1;
+	else
+		if (fm->method() == FlatZincModel::MAXIMIZATION)
+			method=2;
+		else	if ((!fm_->get_enumeration()) && (fm->method() == FlatZincModel::SATISFACTION))
+			method=3;
+		else
+			method=0;
+#endif
 }
 
 FlatZinc::SolutionPrinter::~SolutionPrinter() {}
@@ -1648,7 +1659,8 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 #pragma omp critical
 	{
 		bool print = true;
-		if (fm_->method() == FlatZincModel::MINIMIZATION){
+		//test if minimization
+		if (method == 1){
 			//std::cout << "\n \n  OLD BEST  " << * fm_->best_kown_objective << std::endl;
 			//std::cout << " MINIMIZATION Found  objective_value  " << fm_->get_last_objective_value() << std::endl;
 			if ( fm_->get_last_objective_value() >= * fm_->best_kown_objective){
@@ -1656,12 +1668,13 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 			}
 			else{
 				*fm_->best_kown_objective = fm_->get_last_objective_value();
-				  //Secure shared memory
+				//Secure shared memory
 #pragma omp flush
 			}
 		}
 		else
-			if (fm_->method() == FlatZincModel::MAXIMIZATION){
+			//test if maximization
+			if (method == 2){
 				//std::cout << "\n \n  OLD BEST  " << * fm_->best_kown_objective << std::endl;
 				//std::cout << " MAXIMIZATION found objective_value  " << fm_->get_last_objective_value() << std::endl;
 				if ( fm_->get_last_objective_value() <= * fm_->best_kown_objective){
@@ -1669,10 +1682,20 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 				}
 				else{
 					*fm_->best_kown_objective = fm_->get_last_objective_value();
-					  //Secure shared memory
+					//Secure shared memory
 #pragma omp flush
 				}
 			}
+			else
+				//test if satisfaction without all solutions
+				if (method)
+					if (* solver_->solution_found_elsewhere) {
+						print=false;
+					}
+					else{
+						* solver_->solution_found_elsewhere=true;
+#pragma omp flush
+					}
 		if (print){
 			//std::cout << " thread ID : " << omp_get_thread_num() << std::endl;
 			fm_->print_solution(std::cout, *p_);

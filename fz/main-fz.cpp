@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
 
   fm = parse(cmd.get_filename(), s, p);
 
+
   if( !fm )
 #ifdef _PARALLEL
 	  exit(1);
@@ -161,6 +162,7 @@ int main(int argc, char *argv[])
   return 0;
 #endif
 
+  fm->set_enumeration(cmd.enumerate_solutions());
   double parse_time = get_run_time() - cpu_time;
 #ifdef _VERBOSE_PARSER
   std::cout << std::endl;
@@ -195,7 +197,6 @@ int main(int argc, char *argv[])
   fm->set_rewriting(cmd.use_rewrite());
   fm->set_simple_rewriting(simple_rewriteArg.getValue());
   fm->set_parity_processing(parityArg.getValue());
-  fm->set_enumeration(cmd.enumerate_solutions());
   fm->encode_clauses();
 
 #ifdef _PARALLEL
