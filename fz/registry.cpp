@@ -1355,9 +1355,9 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
       Variable x1 = getIntVar(s, m, ce[1]);
       Variable x2 = getIntVar(s, m, ce[2]);
 
-  	//if (identical(x0,x1))
-  	//	s.add(x0==x2);
-  	//else
+  	if (identical(x0,x1))
+  		s.add(x0==x2);
+  	else
       s.add(Min(x0, x1) == x2);
 
       // post_min(s, x2, x0, x1);
@@ -1371,9 +1371,9 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
       Variable x1 = getIntVar(s, m, ce[1]);
       Variable x2 = getIntVar(s, m, ce[2]);
 
- //     if (identical(x0,x1))
-  //  	  s.add(x0==x2);
-      //else
+      if (identical(x0,x1))
+    	  s.add(x0==x2);
+      else
       s.add(Max(x0, x1) == x2);
 
       // post_max(s, x2, x0, x1);
