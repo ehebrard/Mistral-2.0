@@ -55,6 +55,20 @@ using namespace std;
 
 namespace FlatZinc {
 
+//return true if the same variable or two constraints having the same value
+inline bool identical(Variable x, Variable y){
+	bool result=false;
+	//check if it is the same variable
+	if (x.id() >=0)
+		result= (x.id()==y.id());
+	else //x is constant, check if y is also constant and if they have the same value
+		if (y.id()==0)
+			result = (x.constant_value == y.constant_value);
+	return result;
+}
+//return true if same id
+inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
+
   void report_unsupported(const char* con) {
     std::cout << "% " << con << " is not yet supported!" << std::endl;
     exit(1);
@@ -369,7 +383,8 @@ namespace FlatZinc {
                   const ConExpr& ce, AST::Node* ann) {
       if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
-          s.add( getIntVar(s, m, ce[0]) == getIntVar(s, m, ce[1]) );
+        	if ( ! same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+        		s.add( getIntVar(s, m, ce[0]) == getIntVar(s, m, ce[1]) );
         } else {
           s.add( getIntVar(s, m, ce[0]) == ce[1]->getInt() );
         }
@@ -384,6 +399,11 @@ namespace FlatZinc {
                    const ConExpr& ce, AST::Node* ann) {
       if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
+        	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id())){
+        		//UNSAT
+        		s.fail();
+        	}
+        	else
           s.add( getIntVar(s, m, ce[0]) != getIntVar(s, m, ce[1]) );
         } else {
           s.add( getIntVar(s, m, ce[0]) != ce[1]->getInt() );
@@ -399,6 +419,13 @@ namespace FlatZinc {
                      AST::Node* ann) {
       if (ce0->isIntVar()) {
         if (ce1->isIntVar()) {
+        	if (same_id(getIntVar(s, m, ce0).id(), getIntVar(s, m, ce1).id())){
+        		if (c<0){
+        			//UNSAT
+        			s.fail();
+        		}
+        	}
+        	else
           s.add( Precedence( getIntVar(s, m, ce0), -c, getIntVar(s, m, ce1) ) );
 
 
@@ -450,9 +477,7 @@ namespace FlatZinc {
                        const ConExpr& ce, AST::Node* ann) {
      if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
-        	//additional test
-        	//Here (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())  should be sufficient ..
-        	if ((getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())  && (getIntVar(s, m, ce[0]).id()>=0))
+        	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
         		s.add(getBoolVar(s, m, ce[2])==1);
         	else
           s.add( (getIntVar(s, m, ce[0]) == getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
@@ -467,9 +492,7 @@ namespace FlatZinc {
                        const ConExpr& ce, AST::Node* ann) {
      if (ce[0]->isIntVar()) {
         if (ce[1]->isIntVar()) {
-        	//additional test
-        	//Here (getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())  should be sufficient ..
-        	if ((getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())  && (getIntVar(s, m, ce[0]).id()>=0))
+        	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
         		s.add(getBoolVar(s, m, ce[2])==0);
         	else
           s.add( (getIntVar(s, m, ce[0]) != getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
@@ -482,8 +505,7 @@ namespace FlatZinc {
     }
     void p_int_ge_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-    	//additional test
-    	if ((getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id() ) && (getIntVar(s, m, ce[0]).id()>=0))
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
     		s.add(getBoolVar(s, m, ce[2])==1);
     	else
       s.add( (getIntVar(s, m, ce[0]) >= getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
@@ -491,23 +513,21 @@ namespace FlatZinc {
     void p_int_gt_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
     	//additional test
-    	if ((getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())  && (getIntVar(s, m, ce[0]).id()>=0))
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
     		s.add(getBoolVar(s, m, ce[2])==0);
     	else
       s.add( (getIntVar(s, m, ce[0]) > getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
     void p_int_le_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-    	//additional test
-    	if ((getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id()) && (getIntVar(s, m, ce[0]).id()>=0))
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
     		s.add(getBoolVar(s, m, ce[2])==1);
     	else
       s.add( (getIntVar(s, m, ce[0]) <= getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
     void p_int_lt_reif(Solver& s, FlatZincModel& m,
                        const ConExpr& ce, AST::Node* ann) {
-    	//additional test
-    	if ((getIntVar(s, m, ce[0]).id() == getIntVar(s, m, ce[1]).id())  && (getIntVar(s, m, ce[0]).id()>=0))
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
     		s.add(getBoolVar(s, m, ce[2])==0);
     	else
       s.add( (getIntVar(s, m, ce[0]) < getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
@@ -1335,6 +1355,9 @@ namespace FlatZinc {
       Variable x1 = getIntVar(s, m, ce[1]);
       Variable x2 = getIntVar(s, m, ce[2]);
 
+  	//if (identical(x0,x1))
+  	//	s.add(x0==x2);
+  	//else
       s.add(Min(x0, x1) == x2);
 
       // post_min(s, x2, x0, x1);
@@ -1348,6 +1371,9 @@ namespace FlatZinc {
       Variable x1 = getIntVar(s, m, ce[1]);
       Variable x2 = getIntVar(s, m, ce[2]);
 
+ //     if (identical(x0,x1))
+  //  	  s.add(x0==x2);
+      //else
       s.add(Max(x0, x1) == x2);
 
       // post_max(s, x2, x0, x1);
@@ -2389,7 +2415,8 @@ namespace FlatZinc {
       Variable x0 = getBoolVar(s, m, ce[0]);
       Variable x1 = getIntVar(s, m, ce[1]);
 
-      s.add( x0 == x1 );
+      if (!identical(x0,x1))
+    	  s.add( x0 == x1 );
     }
 
     void p_int_in(Solver& s, FlatZincModel& m,
@@ -2562,6 +2589,9 @@ namespace FlatZinc {
       Variable x1 = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
 
+  	if (identical(x0,x1))
+  		s.add(r==x0);
+  	else
       s.add( (x0 || x1) == r );
 
       /*Can be decomposed into
@@ -2676,7 +2706,8 @@ namespace FlatZinc {
        Variable a = getBoolVar(s, m, ce[0]);
        Variable b = getBoolVar(s, m, ce[1]);
 
-       s.add(a == b);
+       if (!identical(a,b))
+    	   s.add(a == b);
 
       // vec<Lit> ps1, ps2;
       // ps1.push(~safeLit(s, a));
@@ -2697,7 +2728,7 @@ namespace FlatZinc {
       Variable r = getBoolVar(s, m, ce[2]);
 
   	//additional test
-      if ((a.id() == b.id()) && a.id()>=0)
+      if (identical(a,b))
   		s.add(r==1);
   	else
       s.add((a == b) == r);
@@ -2780,6 +2811,7 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
 
+      if(!identical(a,b))
       s.add(a >= b);
 
       // vec<Lit> ps;
@@ -2794,7 +2826,7 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
   	//additional test
-      if ((a.id() == b.id()) && a.id()>=0)
+      if (identical(a,b))
   		s.add(r==1);
   	else
       s.add((a >= b) == r);
@@ -2834,7 +2866,7 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
   	//additional test
-      if ((a.id() == b.id()) && a.id()>=0)
+      if (identical(a,b))
   		s.add(r==0);
   	else
       s.add((a > b) == r);
@@ -2858,7 +2890,8 @@ namespace FlatZinc {
     	Variable a = getBoolVar(s, m, ce[0]);
     	Variable b = getBoolVar(s, m, ce[1]);
 
-    	s.add( a <= b );
+    	if (!identical(a,b))
+    		s.add( a <= b );
 
     	//Add clause not(a) \/ b instead of a <= b
 /*
@@ -2883,8 +2916,8 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]); 
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-  	//additional test
-  	if ((a.id() == b.id()) && a.id()>=0)
+
+  	if (identical(a,b))
   		s.add(r==1);
   	else
       s.add( (a <= b) == r );
@@ -2940,8 +2973,8 @@ namespace FlatZinc {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
-      //additional test
-      if ((a.id() == b.id()) && a.id()>=0)
+
+      if (identical(a,b))
     	  s.add(r==0);
       else
       s.add( (a < b) == r );
@@ -2961,7 +2994,11 @@ namespace FlatZinc {
                    const ConExpr& ce, AST::Node* ann) {
       Variable a = getBoolVar(s, m, ce[0]);
       Variable b = getBoolVar(s, m, ce[1]);
-
+      if (identical(a,b)){
+    	  //UNSAT
+    	  s.fail();
+      }
+      else
       s.add( a != b );
     }
 
@@ -2971,7 +3008,7 @@ namespace FlatZinc {
       Variable b = getBoolVar(s, m, ce[1]);
       Variable r = getBoolVar(s, m, ce[2]);
       //additional test
-      if ((a.id() == b.id()) && a.id()>=0)
+      if (identical (a,b))
     	  s.add(r==0);
       else
        s.add( (a != b) == r );
