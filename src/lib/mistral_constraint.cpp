@@ -46,6 +46,7 @@
 //#define _DEBUG_WEIGHT_CONFLICT
 //#define _DEBUG_MUL (id == 4735)
 //#define _DEBUG_RDISJUNCTIVE (id==670)
+//#define _DEBUG_PREDBOOLSUM (get_solver()->statistics.num_nodes == 1072 && id == 154)
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -3623,18 +3624,20 @@ Mistral::PropagationOutcome Mistral::PredicateOr::propagate(const int changed_id
       }
     } 
   } else { // either z is not yet set, or it is a not(x and y) constraint
-    if( scope[2].is_ground() ) {
-      if(UB_CHANGED(evt)) {
-	// it is an "OR" constraint
-	if(FAILED(scope[1-changed_idx].remove(0))) wiped = FAILURE(1-changed_idx);
-      }
-    } else { 
-      if(LB_CHANGED(evt)) {
-	if( FAILED(scope[2].remove(0)) ) wiped = FAILURE(2);
-      } else if(scope[1-changed_idx].is_ground()) {
-	if( FAILED(scope[2].set_domain(0)) ) wiped = FAILURE(2);
-      }
-    }
+		if( scope[2].is_ground() ) {
+			if( scope[2].get_min() ) {
+				// it is an "OR" constraint
+				if(UB_CHANGED(evt)) {
+					if(FAILED(scope[1-changed_idx].remove(0))) wiped = FAILURE(1-changed_idx);
+				}
+			} // otherwise, it is a "NOR" constraint and that has been dealt with when scope[2] changed
+		} else {
+			if(LB_CHANGED(evt)) {
+				if( FAILED(scope[2].remove(0)) ) wiped = FAILURE(2);
+			} else if(scope[1-changed_idx].is_ground()) {
+				if( FAILED(scope[2].set_domain(scope[1-changed_idx].get_min())) ) wiped = FAILURE(2);
+			}
+		}
   }
 
   return wiped;
@@ -9735,32 +9738,59 @@ Mistral::Explanation::iterator Mistral::PredicateBoolSum::get_reason_for(const A
 
 Mistral::PropagationOutcome Mistral::PredicateBoolSum::propagate() 
 {
-  int _min_ = offset;
-  int _max_ = offset;
-  unsigned int // _min_=0, _max_=0,
-    i, n=scope.size-1;
-  int lb, ub;
+	
+#ifdef _DEBUG_PREDBOOLSUM
+	if(_DEBUG_PREDBOOLSUM) {
+		for(int i=0; i<scope.size; ++i) {
+			std::cout <<  " " << scope[i].get_domain();
+		}
+		std::cout << std::endl;
+	}
+#endif
+	
+	PropagationOutcome wiped = CONSISTENT;
+	
+	int _min_ = offset;
+	int _max_ = offset;
+	unsigned int // _min_=0, _max_=0,
+	i, n=scope.size-1;
+	int lb, ub;
 
-  for( i=0; i<n; ++i ) {
-    _min_ += scope[i].get_min();
-    _max_ += scope[i].get_max();
-  }
-  if(_min_ > scope[n].get_max() || _max_ < scope[n].get_min()) return FAILURE(n);
-  else {
-    scope[n].set_min(_min_);
-    scope[n].set_max(_max_);
-    lb = scope[n].get_min();
-    ub = scope[n].get_max();
+	for( i=0; i<n; ++i ) {
+		_min_ += scope[i].get_min();
+		_max_ += scope[i].get_max();
+	}
+	if(_min_ > scope[n].get_max() || _max_ < scope[n].get_min()) wiped = FAILURE(n);
+	else {
+		if(FAILED(scope[n].set_min(_min_))) wiped = FAILURE(n);
+		else if(FAILED(scope[n].set_max(_max_))) wiped = FAILURE(n);
+		// scope[n].set_min(_min_);
+		// scope[n].set_max(_max_);
+		
+		if(IS_OK(wiped)) {
+			lb = scope[n].get_min();
+			ub = scope[n].get_max();
 
-    if(_min_ == ub) {
-      for( i=0; i<n; ++i ) 
-	if( !scope[i].is_ground() ) scope[i].set_domain(0);
-    } else if(_max_ == lb) {
-      for( i=0; i<n; ++i ) 
-	if( !scope[i].is_ground() ) scope[i].set_domain(1);
-    }
-  }
-  return CONSISTENT;
+			if(_min_ == ub) {
+				for( i=0; i<n; ++i ) 
+					if( !scope[i].is_ground() ) scope[i].set_domain(0);
+			} else if(_max_ == lb) {
+				for( i=0; i<n; ++i ) 
+					if( !scope[i].is_ground() ) scope[i].set_domain(1);
+			}
+		}
+	}
+	
+#ifdef _DEBUG_PREDBOOLSUM
+	if(_DEBUG_PREDBOOLSUM) {
+		for(int i=0; i<scope.size; ++i) {
+			std::cout <<  " " << scope[i].get_domain();
+		}
+		std::cout << std::endl << wiped << std::endl;
+	}
+#endif
+	
+	return wiped;
 }
 
 int Mistral::PredicateBoolSum::check( const int* s ) const 
