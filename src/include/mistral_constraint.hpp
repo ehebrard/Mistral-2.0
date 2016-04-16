@@ -1820,35 +1820,30 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 
 
-    virtual void weight_conflict(double unit, Vector<double>& weights) {
-      int idx;
-      double w = unit
+		virtual double weight_conflict(double unit, Vector<double>& weights) {
+			int idx;
+			double w = unit
 #ifdef _DIV_ARITY
-	    / (double)(scope.size)
+				/ (double)(scope.size)
 #endif
-      ;
+					;
+			double the_max = 0;
 
-      for(int i=0; i<scope.size; ++i) {
-	idx = scope[i].id();
-
-	// std::cout << i << " " << idx << "/" << weights.size << std::endl;
-	// if(idx<0 || idx>weights.size) {
-	//   std::cout << this << std::endl;
-	//   std::cout << scope << std::endl;
-	//   std::cout << scope[i] << std::endl;
-	//   exit(1);
-	// }
-
-
-
-	if(idx>=0) // constants have negative ids
-	  weights[idx] += w;
-      }
-    }
+			for(int i=0; i<scope.size; ++i) {
+				idx = scope[i].id();
+				if(idx>=0) { // constants have negative ids
+					weights[idx] += w;
+					if(weights[idx]>the_max)
+						the_max = weights[idx];
+				}
+			}
+			
+			return the_max;
+		}
 
 
-    std::ostream& display(std::ostream& os) const;  
-  };
+		std::ostream& display(std::ostream& os) const;  
+	};
 
 
 
@@ -4115,7 +4110,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintBoolSumInterval();
 #ifdef _CBSI_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
     //@}
 
@@ -4197,10 +4192,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //virtual bool absorb_negation(const int var) { return true; }
     virtual ~ConstraintWeightedBoolSumInterval();
 #ifdef _CWBSI_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 #ifdef _CWBSI_WC_ALT
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 
     //@}
@@ -4283,10 +4278,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
 
 #ifdef _CIWBSI_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 #ifdef _CIWBSI_WC_ALT
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
     virtual void initialise_activity(double *lact, double *vact, double norm);
@@ -4363,10 +4358,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual void initialise_activity(double *lact, double *vact, double norm);
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 #ifdef _PWBS_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 #ifdef _PWBS_WC_ALT
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 
     /**@name Solving*/
@@ -4425,7 +4420,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
 
 #ifdef _PBS_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
@@ -4496,10 +4491,10 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual void initialise();
     virtual void mark_domain();
 #ifdef _PWS_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 #ifdef _PWS_WC_ALT
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
 //@}
 
@@ -4908,7 +4903,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual void initialise();
     virtual void mark_domain();
 #ifdef _ELT_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
     //@}
 
@@ -4953,7 +4948,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual int pushed() { return 1;}
     virtual void initialise();
     virtual void mark_domain();
-    //void weight_conflict(double unit, Vector<double>& weights);//  {
+    //double weight_conflict(double unit, Vector<double>& weights);//  {
     //@}
 
     /**@name Solving*/
@@ -5015,7 +5010,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual std::string name() const { return "{=/=}"; }
     //@}
 #ifdef _CNE_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
     //   std::cout << std::endl;
     //   for(int i=0; i<scope.size; ++i) {
@@ -5121,7 +5116,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     void print_structs();
 
 #ifdef _ALLDIFF_WC
-    void weight_conflict(double unit, Vector<double>& weights);//  {
+    double weight_conflict(double unit, Vector<double>& weights);//  {
 #endif
   };
 

@@ -442,177 +442,177 @@ std::ostream& Mistral::ImpactManager::display(std::ostream& os, const bool all) 
 
 std::ostream& Mistral::FailureCountManager::display(std::ostream& os, const bool all) const {
       
-      int *all_variables = new int[variable_weight.size];
-      int *all_constraints = new int[constraint_weight.size];
+	int *all_variables = new int[variable_weight.size];
+	int *all_constraints = new int[constraint_weight.size];
 
 
-      int w, 
+	int w, 
 	xwidth; //, // = log10(solver->variables[variable_weight.size-1].id()),
 	//cwidth; // = log10(solver->constraints[constraint_weight.size-1].id());
     
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	all_variables[i] = i;
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		all_variables[i] = i;
 
-	// w = log10(variable_weight[i]);
-	// if(w>xwidth) xwidth = w;
+		// w = log10(variable_weight[i]);
+		// if(w>xwidth) xwidth = w;
 
-      }
-
-      for(unsigned int i=0; i<constraint_weight.size; ++i) {
-	all_constraints[i] = i;
-
-	// w = log10(constraint_weight[i]);
-	// if(w>cwidth) cwidth = w;
-
-      }
-
-
-      weight_sorting_array = variable_weight.stack_;
-      qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
-
-      weight_sorting_array = constraint_weight.stack_;
-      qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
-
-      os << " c variable weight: \n c id: ";
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	if(all || solver->sequence.contain(all_variables[i])) {
-	  xwidth = log10(variable_weight[all_variables[i]]);
-	  w = log10(all_variables[i]);
-	  if(w>xwidth) xwidth = w;
-
-	  os << std::setw(xwidth) << all_variables[i] << " ";
 	}
-      }
-      os << "\n c va: ";
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	if(all || solver->sequence.contain(all_variables[i])) {
-	  xwidth = log10(variable_weight[all_variables[i]]);
-	  w = log10(all_variables[i]);
-	  if(w>xwidth) xwidth = w;
+
+	for(unsigned int i=0; i<constraint_weight.size; ++i) {
+		all_constraints[i] = i;
+
+		// w = log10(constraint_weight[i]);
+		// if(w>cwidth) cwidth = w;
+
+	}
+
+
+	weight_sorting_array = variable_weight.stack_;
+	qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+
+	weight_sorting_array = constraint_weight.stack_;
+	qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
+
+	os << " c variable weight: \n c id: ";
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		if(all || solver->sequence.contain(all_variables[i])) {
+			xwidth = log10(variable_weight[all_variables[i]]);
+			w = log10(all_variables[i]);
+			if(w>xwidth) xwidth = w;
+
+			os << std::setw(xwidth) << all_variables[i] << " ";
+		}
+	}
+	os << "\n c va: ";
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		if(all || solver->sequence.contain(all_variables[i])) {
+			xwidth = log10(variable_weight[all_variables[i]]);
+			w = log10(all_variables[i]);
+			if(w>xwidth) xwidth = w;
 	  
-	  os << std::setw(xwidth) << variable_weight[all_variables[i]] << " ";
+			os << std::setw(xwidth) << variable_weight[all_variables[i]] << " ";
+		}
 	}
-      }
-      os << "\n c constraint weight: \n c id: ";
-      for(unsigned int i=0; i<constraint_weight.size; ++i) {
-	xwidth = log10(constraint_weight[all_constraints[i]]);
-	w = log10(all_constraints[i]);
-	if(w>xwidth) xwidth = w;
+	os << "\n c constraint weight: \n c id: ";
+	for(unsigned int i=0; i<constraint_weight.size; ++i) {
+		xwidth = log10(constraint_weight[all_constraints[i]]);
+		w = log10(all_constraints[i]);
+		if(w>xwidth) xwidth = w;
 
-	os << std::setw(xwidth) << all_constraints[i] << " ";
-      }
-      os << "\n c va: ";
-      for(unsigned int i=0; i<constraint_weight.size; ++i) {
-	xwidth = log10(constraint_weight[all_constraints[i]]);
-	w = log10(all_constraints[i]);
-	if(w>xwidth) xwidth = w;
+		os << std::setw(xwidth) << all_constraints[i] << " ";
+	}
+	os << "\n c va: ";
+	for(unsigned int i=0; i<constraint_weight.size; ++i) {
+		xwidth = log10(constraint_weight[all_constraints[i]]);
+		w = log10(all_constraints[i]);
+		if(w>xwidth) xwidth = w;
 
-	os << std::setw(xwidth) << constraint_weight[all_constraints[i]] << " ";
-      }
-      os << std::endl;
+		os << std::setw(xwidth) << constraint_weight[all_constraints[i]] << " ";
+	}
+	os << std::endl;
 
-      delete [] all_constraints;
-      delete [] all_variables;
+	delete [] all_constraints;
+	delete [] all_variables;
 
-      return os;
-    }    
+	return os;
+}    
 
 
 
 std::ostream& Mistral::ConflictCountManager::display(std::ostream& os, const bool all) const {
       
-      int *all_variables = new int[variable_weight.size];
+	int *all_variables = new int[variable_weight.size];
 
-      int w, 
+	int w, 
 	xwidth; //, // = log10(solver->variables[variable_weight.size-1].id()),
 	//cwidth; // = log10(solver->constraints[constraint_weight.size-1].id());
     
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	all_variables[i] = i;
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		all_variables[i] = i;
 
-	// w = log10(variable_weight[i]);
-	// if(w>xwidth) xwidth = w;
+		// w = log10(variable_weight[i]);
+		// if(w>xwidth) xwidth = w;
 
-      }
-
-      weight_sorting_array = variable_weight.stack_;
-      qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
-
-
-      os << " c variable weight: \n c id: ";
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	if(all || solver->sequence.contain(all_variables[i])) {
-	  xwidth = log10(variable_weight[all_variables[i]]);
-	  w = log10(all_variables[i]);
-	  if(w>xwidth) xwidth = w;
-
-	  os << std::setw(xwidth) << all_variables[i] << " ";
 	}
-      }
-      os << "\n c va: ";
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	if(all || solver->sequence.contain(all_variables[i])) {
-	  xwidth = log10(variable_weight[all_variables[i]]);
-	  w = log10(all_variables[i]);
-	  if(w>xwidth) xwidth = w;
+
+	weight_sorting_array = variable_weight.stack_;
+	qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+
+
+	os << " c variable weight: \n c id: ";
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		if(all || solver->sequence.contain(all_variables[i])) {
+			xwidth = log10(variable_weight[all_variables[i]]);
+			w = log10(all_variables[i]);
+			if(w>xwidth) xwidth = w;
+
+			os << std::setw(xwidth) << all_variables[i] << " ";
+		}
+	}
+	os << "\n c va: ";
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		if(all || solver->sequence.contain(all_variables[i])) {
+			xwidth = log10(variable_weight[all_variables[i]]);
+			w = log10(all_variables[i]);
+			if(w>xwidth) xwidth = w;
 	  
-	  os << std::setw(xwidth) << variable_weight[all_variables[i]] << " ";
+			os << std::setw(xwidth) << variable_weight[all_variables[i]] << " ";
+		}
 	}
-      }
-      os << std::endl;
+	os << std::endl;
 
-      delete [] all_variables;
+	delete [] all_variables;
 
-      return os;
-    }    
+	return os;
+}    
 
 std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool all) const {
       
-      int *all_variables = new int[variable_weight.size];
+	int *all_variables = new int[variable_weight.size];
 
 
-      int w, 
+	int w, 
 	xwidth; //, // = log10(solver->variables[variable_weight.size-1].id()),
 	//cwidth; // = log10(solver->constraints[constraint_weight.size-1].id());
     
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	all_variables[i] = i;
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		all_variables[i] = i;
 
-	// w = log10(variable_weight[i]);
-	// if(w>xwidth) xwidth = w;
+		// w = log10(variable_weight[i]);
+		// if(w>xwidth) xwidth = w;
 
-      }
-
-
-      weight_sorting_array = variable_weight.stack_;
-      qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
-
-      os << " c variable weight: \n c id: ";
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	if(all || solver->sequence.contain(all_variables[i])) {
-	  xwidth = log10(variable_weight[all_variables[i]]);
-	  w = log10(all_variables[i]);
-	  if(w>xwidth) xwidth = w;
-	  
-	  os << std::setw(xwidth) << all_variables[i] << " ";
 	}
-      }
-      os << "\n c va: ";
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	if(all || solver->sequence.contain(all_variables[i])) {
-	  xwidth = log10(variable_weight[all_variables[i]]);
-	  w = log10(all_variables[i]);
-	  if(w>xwidth) xwidth = w;
+
+
+	weight_sorting_array = variable_weight.stack_;
+	qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+
+	os << " c variable weight: \n c id: ";
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		if(all || solver->sequence.contain(all_variables[i])) {
+			xwidth = log10(variable_weight[all_variables[i]]);
+			w = log10(all_variables[i]);
+			if(w>xwidth) xwidth = w;
 	  
-	  os << std::setw(xwidth) << variable_weight[all_variables[i]] << " ";
+			os << std::setw(xwidth) << all_variables[i] << " ";
+		}
 	}
-      }
-      os << std::endl;
+	os << "\n c va: ";
+	for(unsigned int i=0; i<variable_weight.size; ++i) {
+		if(all || solver->sequence.contain(all_variables[i])) {
+			xwidth = log10(variable_weight[all_variables[i]]);
+			w = log10(all_variables[i]);
+			if(w>xwidth) xwidth = w;
+	  
+			os << std::setw(xwidth) << variable_weight[all_variables[i]] << " ";
+		}
+	}
+	os << std::endl;
 
-    delete [] all_variables;
+	delete [] all_variables;
 
-      return os;
-    }    
+	return os;
+}    
 
 
 Mistral::LearningActivityManager::LearningActivityManager(Solver *s) : solver(s) {

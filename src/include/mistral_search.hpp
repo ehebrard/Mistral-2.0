@@ -301,7 +301,7 @@ namespace Mistral {
 
     virtual std::ostream& display(std::ostream& os, const bool all) const {
       for(unsigned int i=0; i<pool.size; ++i) {
-	os << pool[i] << std::endl;
+				os << pool[i] << std::endl;
       }
       return os;
     }
@@ -311,199 +311,220 @@ namespace Mistral {
 
 
 
-  /*! \class FailureCountanager
-    \brief FailureCountManager Class
+	/*! \class FailureCountanager
+	\brief FailureCountManager Class
 
-    * Listener interface for weighted degree *
-    * Counts the number of failures for each constraint *
-  */
-  //template< float DECAY > 
-  class FailureCountManager : public BacktrackListener, public ConstraintListener {
+	* Listener interface for weighted degree *
+	* Counts the number of failures for each constraint *
+	*/
+	//template< float DECAY > 
+	class FailureCountManager : public BacktrackListener, public ConstraintListener {
 
-  public:
+	public:
 
-    Solver *solver;
-    double weight_unit;
+		Solver *solver;
+		double weight_unit;
+		double threshold;
 
 
-    /*\ TODO: make it a variable listener \*/
-    Vector<double> constraint_weight;
-    Vector<double> variable_weight;
+		/*\ TODO: make it a variable listener \*/
+		Vector<double> constraint_weight;
+		Vector<double> variable_weight;
 
-    //FailureCountManager(Solver *s, void *a=NULL) : solver(s) {// }
-    FailureCountManager(Solver *s) : solver(s) {// }
+		//FailureCountManager(Solver *s, void *a=NULL) : solver(s) {// }
+		FailureCountManager(Solver *s) : solver(s) {
 
-      //std::cout << "OLD" << std::endl;
+			//std::cout << "OLD" << std::endl;
 
-      weight_unit = solver->parameters.activity_increment;
+			threshold = 1000000;
+
+			weight_unit = solver->parameters.activity_increment;
       
-      variable_weight.initialise(solver->variables.size, solver->variables.size);
+			variable_weight.initialise(solver->variables.size, solver->variables.size);
 
-      for(unsigned int i=0; i<solver->variables.size; ++i) {
-	variable_weight[i] = 0;
-      // 	variable_weight.add(weight_unit * solver->variables[i].get_degree());
-      }
-      Variable *scope;
-      int arity, j;
-      for(unsigned int i=0; i<solver->constraints.size; ++i) {
-	constraint_weight.add(weight_unit);
-	arity = solver->constraints[i].arity();
-	scope = solver->constraints[i].get_scope();
-	for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
-	    variable_weight[scope[j].id()] += weight_unit/(double)arity;
-	  }
-      }
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
+				variable_weight[i] = 0;
+				// 	variable_weight.add(weight_unit * solver->variables[i].get_degree());
+			}
+			Variable *scope;
+			int arity, j;
+			for(unsigned int i=0; i<solver->constraints.size; ++i) {
+				constraint_weight.add(weight_unit);
+				arity = solver->constraints[i].arity();
+				scope = solver->constraints[i].get_scope();
+				for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
+					variable_weight[scope[j].id()] += weight_unit/(double)arity;
+				}
+			}
 
       
-      // std::cout << variable_weight.stack_ << ":";
-      // for(unsigned int i=0; i<solver->variables.size; ++i) {
-      // 	std::cout << " " << variable_weight[i] ;
-      // }
-      // std::cout << std::endl;
+			// std::cout << variable_weight.stack_ << ":";
+			// for(unsigned int i=0; i<solver->variables.size; ++i) {
+			// 	std::cout << " " << variable_weight[i] ;
+			// }
+			// std::cout << std::endl;
 
 
-      solver->add((BacktrackListener*)this);
-      solver->add((ConstraintListener*)this);
-    }
+			solver->add((BacktrackListener*)this);
+			solver->add((ConstraintListener*)this);
+		}
 
-    virtual ~FailureCountManager() {// }
+		virtual ~FailureCountManager() {// }
 
-      solver->remove((ConstraintListener*)this);
-      solver->remove((BacktrackListener*)this);
-    }
-
-    double *get_variable_weight() { return variable_weight.stack_; }   
-    double **get_value_weight() { return NULL; }
-    double *get_bound_weight() { return NULL; }
-
-    virtual void check_consistency() {
-      
-      double xweight;
-      
-      solver->display(std::cout, 1);
-
-      for(unsigned int i=0; i<variable_weight.size; ++i) {
-	
-	if(!(solver->domain_types[i] & REMOVED_VAR) && solver->sequence.contain(i)) {
-
-	  xweight = 0;
-	  for(Event trig = 0; trig<3; ++trig) 
-	    for(int cons = solver->constraint_graph[i].on[trig].size; --cons>=0;) {
-	      xweight += constraint_weight[solver->constraint_graph[i].on[trig][cons].id()];
-	    }
-
-	  if(xweight != variable_weight[i]) {
-
-	    std::cout << "WARNING! inconsistency: on " << solver->variables[i] << ": " 
-		      << variable_weight[i] << " should be " << xweight << std::endl;
-
-	  } else {
-	    
-	    std::cout << "OK!" << std::endl;
-
-	  }
+		solver->remove((ConstraintListener*)this);
+		solver->remove((BacktrackListener*)this);
 	}
-      }
 
-    }
+	double *get_variable_weight() { return variable_weight.stack_; }   
+	double **get_value_weight() { return NULL; }
+	double *get_bound_weight() { return NULL; }
+
+	virtual void check_consistency() {
+      
+		double xweight;
+      
+		solver->display(std::cout, 1);
+
+		for(unsigned int i=0; i<variable_weight.size; ++i) {
+	
+			if(!(solver->domain_types[i] & REMOVED_VAR) && solver->sequence.contain(i)) {
+
+				xweight = 0;
+				for(Event trig = 0; trig<3; ++trig) 
+				for(int cons = solver->constraint_graph[i].on[trig].size; --cons>=0;) {
+					xweight += constraint_weight[solver->constraint_graph[i].on[trig][cons].id()];
+				}
+
+				if(xweight != variable_weight[i]) {
+
+					std::cout << "WARNING! inconsistency: on " << solver->variables[i] << ": " 
+						<< variable_weight[i] << " should be " << xweight << std::endl;
+
+				} else {
+	    
+					std::cout << "OK!" << std::endl;
+
+				}
+			}
+		}
+
+	}
   
 
-    virtual void notify_backtrack() {
-      int i;
-      Constraint con = solver->culprit;
+	virtual void notify_backtrack() {
+		int i;
+		Constraint con = solver->culprit;
+		double max_weight = 0;
 
 
-      //std::cout << "failure on " << con << std::endl;
+		//std::cout << "failure on " << con << std::endl;
 
-      if(!con.empty()) {
-	Variable *scope = con.get_scope();
-	int idx;
-	i = con.arity();
-	//++constraint_weight[con.id()];
-	constraint_weight[con.id()] += weight_unit;
-	while(i--) {
-	  idx = scope[i].id();
-	  if(idx>=0) {
-	    //std::cout << " ++x" << idx; 
-	    variable_weight[idx] += weight_unit;
-	  }
+		if(!con.empty()) {
+			Variable *scope = con.get_scope();
+			int idx;
+			i = con.arity();
+			//++constraint_weight[con.id()];
+			constraint_weight[con.id()] += weight_unit;
+			while(i--) {
+				idx = scope[i].id();
+				if(idx>=0) {
+					//std::cout << " ++x" << idx; 
+					variable_weight[idx] += weight_unit;
+					if(max_weight < variable_weight[idx])
+						max_weight = variable_weight[idx];
+				}
+			}
+		} 
+		// std::cout << std::endl;
+
+		// display(std::cout, false);
+		
+		if(max_weight>threshold) {
+		
+			double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
+			weight_unit *= factor;
+		
+			int n = solver->variables.size;
+			for(int i=0; i<n; ++i) {
+				variable_weight[i] *= factor;
+			}
+		
+		}
+	
+		if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
+			weight_unit /= solver->parameters.activity_decay;
+
 	}
-      } 
-      // std::cout << std::endl;
 
-      // display(std::cout, false);
+	virtual void notify_post(Constraint con) {
+		int i = con.num_active(), idx;
+		Variable *scope = con.get_scope();
+		while(i--) {
+			idx = scope[con.get_active(i)].id();
+			if(idx>=0) variable_weight[idx] += constraint_weight[con.id()];
+		}
+	}
 
-    }
+	virtual void notify_relax(Constraint con) {
+		int i = con.num_active(), idx;
+		Variable *scope = con.get_scope();
+		while(i--) {
+			idx = scope[con.get_active(i)].id();
+			if(idx>=0) variable_weight[idx] -= constraint_weight[con.id()];
+		}
+	}
 
-    virtual void notify_post(Constraint con) {
-      int i = con.num_active(), idx;
-      Variable *scope = con.get_scope();
-      while(i--) {
-	idx = scope[con.get_active(i)].id();
-	if(idx>=0) variable_weight[idx] += constraint_weight[con.id()];
-      }
-    }
+	virtual void notify_add_con(Constraint con) {
+		while(constraint_weight.size < solver->constraints.size) {
+			constraint_weight.add(weight_unit);
+		}
 
-    virtual void notify_relax(Constraint con) {
-      int i = con.num_active(), idx;
-      Variable *scope = con.get_scope();
-      while(i--) {
-	idx = scope[con.get_active(i)].id();
-	if(idx>=0) variable_weight[idx] -= constraint_weight[con.id()];
-      }
-    }
+		while(variable_weight.size < solver->variables.size) {
+			variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
+		}
+	}
 
-    virtual void notify_add_con(Constraint con) {
-      while(constraint_weight.size < solver->constraints.size) {
-	constraint_weight.add(weight_unit);
-      }
-
-      while(variable_weight.size < solver->variables.size) {
-	variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
-      }
-    }
-
-    virtual std::ostream& display(std::ostream& os, const bool all) const ;
-// {
+	virtual std::ostream& display(std::ostream& os, const bool all) const ;
+	// {
       
-//       int *all_variables = new int[variable_weight.size];
-//       int *all_constraints = new int[constraint_weight.size];
+	//       int *all_variables = new int[variable_weight.size];
+	//       int *all_constraints = new int[constraint_weight.size];
 
-//       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// 	all_variables[i] = i;
-//       }
+	//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+	// 	all_variables[i] = i;
+	//       }
 
-//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// 	all_constraints[i] = i;
-//       }
+	//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+	// 	all_constraints[i] = i;
+	//       }
 
-//       weight_sorting_array = variable_weight.stack_;
-//       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+	//       weight_sorting_array = variable_weight.stack_;
+	//       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
 
-//       weight_sorting_array = constraint_weight.stack_;
-//       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
+	//       weight_sorting_array = constraint_weight.stack_;
+	//       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
 
-//       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
-//       }
-//       os << std::endl;
-//       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// 	os << std::setw(5) << variable_weight[i] << " ";
-//       }
-//       os << std::endl;
+	//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+	// 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
+	//       }
+	//       os << std::endl;
+	//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+	// 	os << std::setw(5) << variable_weight[i] << " ";
+	//       }
+	//       os << std::endl;
 
-//      for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
-//       }
-//       os << std::endl;
-//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// 	os << std::setw(5) << constraint_weight[i] << " ";
-//       }
-//       os << std::endl;
+	//      for(unsigned int i=0; i<constraint_weight.size; ++i) {
+	// 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
+	//       }
+	//       os << std::endl;
+	//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+	// 	os << std::setw(5) << constraint_weight[i] << " ";
+	//       }
+	//       os << std::endl;
 
-//     }    
+	//     }    
 
-  };
+};
 
 
 
@@ -514,103 +535,123 @@ namespace Mistral {
     * Failed constraints weight variables with an aribtrary policy *
   */
   //template< float DECAY > 
-  class ConflictCountManager : public BacktrackListener {
+	class ConflictCountManager : public BacktrackListener {
 
-  public:
+	public:
 
-    Solver *solver;
-    double weight_unit;
+		Solver *solver;
+		double weight_unit;
+		double threshold;
 
 
-    /*\ TODO: make it a variable listener \*/
-    //Vector<double> constraint_weight;
-    Vector<double> variable_weight;
+		/*\ TODO: make it a variable listener \*/
+		//Vector<double> constraint_weight;
+		Vector<double> variable_weight;
 
-    //ConflictCountManager(Solver *s, void *a=NULL) : solver(s) {// }
-    ConflictCountManager(Solver *s) : solver(s) {// }
+		//ConflictCountManager(Solver *s, void *a=NULL) : solver(s) {// }
+		ConflictCountManager(Solver *s) : solver(s) {
 
-      //std::cout << "NEW" << std::endl;
+			//std::cout << "NEW" << std::endl;
 
-      weight_unit = solver->parameters.activity_increment;
+			threshold = 1000000;
+
+			weight_unit = solver->parameters.activity_increment;
       
-      variable_weight.initialise(solver->variables.size, solver->variables.size);
+			variable_weight.initialise(solver->variables.size, solver->variables.size);
 
-      for(unsigned int i=0; i<solver->variables.size; ++i) {
-	variable_weight[i] = 0;
-      // 	variable_weight.add(weight_unit * solver->variables[i].get_degree());
-      }
-      Variable *scope;
-      int arity, j;
-      for(unsigned int i=0; i<solver->constraints.size; ++i) {
-	arity = solver->constraints[i].arity();
-	scope = solver->constraints[i].get_scope();
-	for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
-	    variable_weight[scope[j].id()] += weight_unit/(double)arity;
-	  }
-      }
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
+				variable_weight[i] = 0;
+				// 	variable_weight.add(weight_unit * solver->variables[i].get_degree());
+			}
+			Variable *scope;
+			int arity, j;
+			for(unsigned int i=0; i<solver->constraints.size; ++i) {
+				arity = solver->constraints[i].arity();
+				scope = solver->constraints[i].get_scope();
+				for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
+					variable_weight[scope[j].id()] += weight_unit/(double)arity;
+				}
+			}
 
-      solver->add((BacktrackListener*)this);
-      solver->add((ConstraintListener*)this);
-    }
+			solver->add((BacktrackListener*)this);
+			solver->add((ConstraintListener*)this);
+		}
 
-    virtual ~ConflictCountManager() {
-      solver->remove((ConstraintListener*)this);
-      solver->remove((BacktrackListener*)this);
-    }
+		virtual ~ConflictCountManager() {
+			solver->remove((ConstraintListener*)this);
+			solver->remove((BacktrackListener*)this);
+		}
 
-    double *get_variable_weight() { return variable_weight.stack_; }   
-    double **get_value_weight() { return NULL; }
-    double *get_bound_weight() { return NULL; }
+		double *get_variable_weight() { return variable_weight.stack_; }   
+		double **get_value_weight() { return NULL; }
+		double *get_bound_weight() { return NULL; }
   
 
-    virtual void notify_backtrack() {
-      int i;
-      Constraint con = solver->culprit;
+		virtual void notify_backtrack() {
+			int i;
+			Constraint con = solver->culprit;
 
-      con.weight_conflict(weight_unit, variable_weight);
-    }
+			double max_weight = con.weight_conflict(weight_unit, variable_weight);
+			
+			
+			if(max_weight>threshold) {
+			
+				double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
+				weight_unit *= factor;
+			
+				int n = solver->variables.size;
+				for(int i=0; i<n; ++i) {
+					variable_weight[i] *= factor;
+				}
+			
+			}
+		
+			if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
+				weight_unit /= solver->parameters.activity_decay;
 
-    virtual std::ostream& display(std::ostream& os, const bool all) const ;
-// {
+		}
+
+		virtual std::ostream& display(std::ostream& os, const bool all) const ;
+		// {
       
-//       int *all_variables = new int[variable_weight.size];
-//       int *all_constraints = new int[constraint_weight.size];
+		//       int *all_variables = new int[variable_weight.size];
+		//       int *all_constraints = new int[constraint_weight.size];
 
-//       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// 	all_variables[i] = i;
-//       }
+		//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+		// 	all_variables[i] = i;
+		//       }
 
-//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// 	all_constraints[i] = i;
-//       }
+		//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+		// 	all_constraints[i] = i;
+		//       }
 
-//       weight_sorting_array = variable_weight.stack_;
-//       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
+		//       weight_sorting_array = variable_weight.stack_;
+		//       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
 
-//       weight_sorting_array = constraint_weight.stack_;
-//       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
+		//       weight_sorting_array = constraint_weight.stack_;
+		//       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
 
-//       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
-//       }
-//       os << std::endl;
-//       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// 	os << std::setw(5) << variable_weight[i] << " ";
-//       }
-//       os << std::endl;
+		//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+		// 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
+		//       }
+		//       os << std::endl;
+		//       for(unsigned int i=0; i<variable_weight.size; ++i) {
+		// 	os << std::setw(5) << variable_weight[i] << " ";
+		//       }
+		//       os << std::endl;
 
-//      for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
-//       }
-//       os << std::endl;
-//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// 	os << std::setw(5) << constraint_weight[i] << " ";
-//       }
-//       os << std::endl;
+		//      for(unsigned int i=0; i<constraint_weight.size; ++i) {
+		// 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
+		//       }
+		//       os << std::endl;
+		//       for(unsigned int i=0; i<constraint_weight.size; ++i) {
+		// 	os << std::setw(5) << constraint_weight[i] << " ";
+		//       }
+		//       os << std::endl;
 
-//     }    
+		//     }    
 
-  };
+	};
 
 
   /*! \class PruningCountManager
@@ -626,19 +667,21 @@ namespace Mistral {
 
     Solver *solver;
     double weight_unit;
+		double threshold;
 
     Vector<double> variable_weight;
 
     //PruningCountManager(Solver *s, void *a=NULL) : solver(s) {
     PruningCountManager(Solver *s) : solver(s) {
 
+			threshold = 1000000;
       weight_unit = solver->parameters.activity_increment;
       variable_weight.initialise(solver->variables.size, solver->variables.size);
 
-      for(unsigned int i=0; i<solver->variables.size; ++i) {
-	//variable_weight.add(weight_unit * (double)(solver->variables[i].get_degree()));
-	variable_weight[i] = (weight_unit * (double)(solver->variables[i].get_degree()));
-      }
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
+				//variable_weight.add(weight_unit * (double)(solver->variables[i].get_degree()));
+				variable_weight[i] = (weight_unit * (double)(solver->variables[i].get_degree()));
+			}
 
       // std::cout << variable_weight.stack_ << ":";
       // for(unsigned int i=0; i<solver->variables.size; ++i) {
@@ -660,16 +703,51 @@ namespace Mistral {
     double **get_value_weight() { return NULL; }
     double *get_bound_weight() { return NULL; }
 
-    virtual void notify_success() {
-      int id;
-      int i = solver->trail_.back(5), n=solver->saved_vars.size;
+		virtual void notify_success() {
+			
+			//display(std::cout, false);
+			
+			
+			int id;
+			int i = solver->trail_.back(5), n=solver->saved_vars.size;
+			double max_weight = 0;
 
-      //std::cout << "increment weight of ";
-      while(++i<n) {	
-	id = solver->saved_vars[i]; 
-	variable_weight[id] += weight_unit;
-      }
-    }
+			// std::cout << "increment by " << weight_unit << " weight of";
+			while(++i<n) {	
+				id = solver->saved_vars[i]; 
+				
+				// std::cout << " " << solver->variables[id];
+				
+				variable_weight[id] += weight_unit;
+				
+				if(variable_weight[id] > max_weight)
+					max_weight = variable_weight[id];
+			}
+			
+			// std::cout << " and decay by " << solver->parameters.activity_decay << std::endl;
+
+			if(max_weight>threshold) {
+			
+				// std::cout << "scaling down" << std::endl;
+			
+				double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
+				weight_unit *= factor;
+			
+				n = solver->variables.size;
+				for(int i=0; i<n; ++i) {
+					// std::cout << variable_weight[i] << " -> ";
+					variable_weight[i] *= factor;
+					// std::cout << variable_weight[i] << std::endl;
+				}
+			
+			}
+		
+			if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
+				weight_unit /= solver->parameters.activity_decay;
+			
+			
+			
+		}
 
    // virtual void notify_add_variable() {
    //   while(variable_weight.size < solver->variables.size) {

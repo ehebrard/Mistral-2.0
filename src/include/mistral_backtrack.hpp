@@ -238,7 +238,7 @@ namespace Mistral {
 
 
     // weight the variables according to how much they are responsible for the last conflict
-    void weight_conflict(double unit, Vector<double>& weights);
+    double weight_conflict(double unit, Vector<double>& weights);
 
     // call the rewriting procedure of the constraint
     RewritingOutcome rewrite();
@@ -372,7 +372,7 @@ namespace Mistral {
       trail_.add(saved_lists.size);
       trail_.add(saved_ints.size);
       trail_.add(saved_cons.size);
-
+			
       ++level;
 
     }
