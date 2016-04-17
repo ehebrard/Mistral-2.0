@@ -140,7 +140,7 @@ void Mistral::SolverParameters::initialise() {
   forgetfulness = .75;
   randomization = 1; //2;
   shuffle = false; //true;
-  activity_decay = 0.96;
+  activity_decay = 1.0;
   checked = 1;
   backjump = 0;
   value_selection = 2;
