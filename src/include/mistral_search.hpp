@@ -49,6 +49,13 @@ namespace Mistral {
   // };
 
 
+	class WeightMap {
+	
+	public:
+		virtual int get_minweight_value(const Variable x) {return x.get_min();}
+		virtual int get_maxweight_value(const Variable x) {return x.get_min();}
+	
+	};
 
 
 
@@ -226,7 +233,7 @@ namespace Mistral {
     
     * Manager doing nothing, used for genericity *
     */
-  class NoManager {
+  class NoManager : public WeightMap {
     
   public:
 
@@ -318,7 +325,7 @@ namespace Mistral {
 	* Counts the number of failures for each constraint *
 	*/
 	//template< float DECAY > 
-	class FailureCountManager : public BacktrackListener, public ConstraintListener {
+	class FailureCountManager : public BacktrackListener, public ConstraintListener, public WeightMap {
 
 	public:
 
@@ -535,7 +542,7 @@ namespace Mistral {
     * Failed constraints weight variables with an aribtrary policy *
   */
   //template< float DECAY > 
-	class ConflictCountManager : public BacktrackListener {
+	class ConflictCountManager : public BacktrackListener, public WeightMap {
 
 	public:
 
@@ -660,7 +667,7 @@ namespace Mistral {
     * Listener interface for ABS *
     * Counts the number of nodes in which at least one pruning event occurred for each variable *
   */
-  class PruningCountManager : public SuccessListener// , public VariableListener
+  class PruningCountManager : public SuccessListener, public WeightMap // , public VariableListener
   {
 
   public:
@@ -668,7 +675,14 @@ namespace Mistral {
     Solver *solver;
     double weight_unit;
 		double threshold;
-
+		
+#ifdef _ABS_VAL
+		Vector<double*> value_weight;
+		Vector<int*> value_visit;
+		Vector<int> init_min;
+		Vector<int> factor;
+#endif
+		
     Vector<double> variable_weight;
 
     //PruningCountManager(Solver *s, void *a=NULL) : solver(s) {
@@ -689,6 +703,34 @@ namespace Mistral {
       // }
       // std::cout << std::endl;
 
+#ifdef _ABS_VAL
+			value_weight.initialise(solver->variables.size, solver->variables.size);
+			value_visit.initialise(solver->variables.size, solver->variables.size);
+			init_min.initialise(solver->variables.size, solver->variables.size);
+			factor.initialise(solver->variables.size, solver->variables.size);
+			for(int i=0; i<solver->variables.size; ++i) {
+				int m = solver->variables[i].get_min();
+				int d = solver->variables[i].get_max() - m + 1;
+				init_min[i] = m;
+				if(d>max_values) {
+					factor[i] = d/max_values;
+					if(d%max_values) factor[i]++;
+					value_weight[i] = new double[max_values];
+					value_visit[i] = new int[max_values];
+					std::fill(value_weight[i], value_weight[i]+max_values, solver->parameters.activity_increment);
+					std::fill(value_visit[i], value_visit[i]+max_values, 1);
+					// factor[i] = factor;
+				} else {
+					factor[i] = 1;
+					value_weight[i] = new double[d];
+					value_visit[i] = new int[d];
+					std::fill(value_weight[i], value_weight[i]+d, solver->parameters.activity_increment);
+					std::fill(value_visit[i], value_visit[i]+d, 1);
+				}
+				//value_weight[i] -= init_min[i];
+			}
+#endif
+
 
       solver->add((SuccessListener*)this);
       //solver->add((VariableListener*)this);
@@ -702,7 +744,12 @@ namespace Mistral {
     double *get_variable_weight() { return variable_weight.stack_; }     
     double **get_value_weight() { return NULL; }
     double *get_bound_weight() { return NULL; }
-
+		
+#ifdef _ABS_VAL
+		virtual int get_minweight_value(const Variable x);
+		virtual int get_maxweight_value(const Variable x);
+#endif
+		
 		virtual void notify_success() {
 			
 			//display(std::cout, false);
@@ -711,6 +758,7 @@ namespace Mistral {
 			int id;
 			int i = solver->trail_.back(5), n=solver->saved_vars.size;
 			double max_weight = 0;
+			
 
 			// std::cout << "increment by " << weight_unit << " weight of";
 			while(++i<n) {	
@@ -766,7 +814,7 @@ namespace Mistral {
     * Listener interface for ABS *
     * Activitys the number of times each variable was visited when computing a nogood *
     */
-  class LearningActivityManager : public BacktrackListener {
+  class LearningActivityManager : public BacktrackListener, public WeightMap {
 
   public:
 
@@ -827,557 +875,150 @@ namespace Mistral {
 
 
 
-
-//   /*! \class ImpactManager
-//     \brief ImpactManager Class
-
-//     * Listener interface for Impact *
-//     * NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
-//   */
-//   class ImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener {
-
-//   public:
-
-//     Solver *solver;
-//     double weight_unit;
-//     int left;
-
-//     /*\ TODO: make it a variable listener \*/
-//     Vector<double> variable_weight;
-//     Vector<double> left_weight;
-//     Vector<double> right_weight;
-//     Vector<double> avg_right_branches;
-//     Vector<int> num_right_branches;
-//     Vector<int> num_probes;
-//     Vector<int> num_left_probes;
-//     Vector<int> num_right_probes;
-
-//     //ImpactManager(Solver *s, void *a=NULL) : solver(s) {// }
-//     ImpactManager(Solver *s) : solver(s) {// }
-
-//       left = -1;
-//       weight_unit = solver->parameters.activity_increment;
-      
-//       variable_weight.initialise(solver->variables.size, solver->variables.size);
-//       left_weight.initialise(solver->variables.size, solver->variables.size);
-//       right_weight.initialise(solver->variables.size, solver->variables.size);
-//       num_probes.initialise(solver->variables.size, solver->variables.size);
-//       num_left_probes.initialise(solver->variables.size, solver->variables.size);
-//       num_right_probes.initialise(solver->variables.size, solver->variables.size);
-//       num_right_branches.initialise(solver->variables.size, solver->variables.size);
-//       avg_right_branches.initialise(solver->variables.size, solver->variables.size);
-
-
-//       std::cout << solver->variables << std::endl;
-
-//       for(unsigned int i=0; i<solver->variables.size; ++i) {
-// 	variable_weight[i] = 0;
-// 	left_weight[i] = 0;
-// 	right_weight[i] = 0;
-// 	num_probes[i] = 0;
-// 	num_left_probes[i] = 0;
-// 	num_right_probes[i] = 0;
-// 	num_right_branches[i] = 0;
-// 	avg_right_branches[i] = solver->variables[i].get_size();
-//       }
-
-//       solver->add((BacktrackListener*)this);
-//       solver->add((SuccessListener*)this);
-//       solver->add((DecisionListener*)this);
-//       solver->add((VariableListener*)this);
-//     }
-
-//     virtual ~ImpactManager() {// }
-
-//       solver->remove((VariableListener*)this);
-//       solver->remove((SuccessListener*)this);
-//       solver->remove((DecisionListener*)this);
-//       solver->remove((BacktrackListener*)this);
-//     }
-
-//     double *get_variable_weight() { return variable_weight.stack_; }   
-//     double **get_value_weight() { return NULL; }
-//     double *get_bound_weight() { return NULL; }
-
-//     virtual void check_consistency() {
-//     }
-
-//     virtual void notify_add_var() {
-// #ifdef _DEBUG_IMPACT
-//       std::cout << "NEW VAR!!\n";
-// #endif
-//     }
-
-//     virtual void notify_change(const int id) {
-// #ifdef _DEBUG_IMPACT
-//       std::cout << solver->variables[id] << "'s domain implementation has changed!!\n";
-// #endif
-//     }
-
-//     virtual void notify_decision() {
-//       left = 1;
-//     }
-  
-//     virtual void notify_success() {
-//       // propagation went without wipe-out
-//       // - check if it was after a left or a right branch
-//       // - find out what was the decision/refutation
-//       int dec=-1, nxt=-1;
-//       int id;
-//       int i, n;
-//       Variable x;
-//       double residual_space;
-//       int size;
-//       if(left>=0) {
-// 	i = solver->trail_.back(5), n=solver->saved_vars.size;
-// 	if(left) {
-// 	  // left branch
-// 	  dec = solver->decisions.back().var.id();
-
-// 	  // if(num_right_branches[dec]>=0) {
-// 	  //   avg_right_branches[dec] = avg_right_branches[dec]
-// 	  // }
-// 	  //num_right_branches[dec] = 0;
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " notified of success after a left branch on " << solver->variables[dec] << "\n";
-// #endif
-
-// 	} else {
-// 	  // right branch
-// 	  if(!solver->decisions.empty()) dec = solver->decisions.back().var.id();
-// 	  nxt = solver->decisions.back(0).var.id();
-// 	  ++num_right_branches[nxt];
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " notified of success after the " << num_right_branches[nxt] 
-// 		    << "th right branch on " << solver->variables[nxt] << "\n";
-// #endif
-
-// 	}
-
-// 	residual_space = 1.0;
-// 	//std::cout << "increment weight of ";
-// 	while(i<n) {	
-// 	  id = solver->saved_vars[i];
-// 	  x = solver->variables[id];
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " -> " << x << x.get_domain() << " lost " << x.get_reduction() << " values (";
-// #endif
-
-// 	  size = x.get_size();
-// 	  residual_space *= (((double)size))/((double)(size+x.get_reduction()));
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << residual_space << ")\n";
-// #endif
-
-// 	  ++i;
-// 	} 
-
-// 	if(left) {
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << left_weight[dec] ;
-// #endif
-
-// 	  left_weight[dec] = (((double)(num_left_probes[dec]) * left_weight[dec]) + residual_space)/(double)(++num_left_probes[dec]);
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " now " << left_weight[dec] << std::endl;
-// #endif
-
-// 	  variable_weight[dec] = avg_right_branches[dec] * (left_weight[dec] + right_weight[dec]);
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_right_branches[dec] << " * (" << left_weight[dec] << " + " << right_weight[dec] << ") = " << variable_weight[dec] << " \n";
-// #endif
-
-// 	} else {
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " ==> right-weight[" << solver->variables[nxt] << "] was " << right_weight[nxt] ;
-// 	  //std::cout << " [" << dec << "]";
-// 	  std::cout << " (tot=" << residual_space << ")";
-// #endif
-
-// 	  if(dec>=0) 
-// 	    residual_space /= left_weight[dec];
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " (/" << "lw[x" << dec << "/" << left_weight[dec] << "]=" << residual_space << ")";
-// #endif
-
-// 	  for(int i=0; i<num_right_branches[nxt]-1; ++i)
-// 	    residual_space /= right_weight[nxt];
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " (slf=" << residual_space << ")";
-// #endif
-
-// 	  right_weight[nxt] = (((double)(num_right_probes[nxt]) * right_weight[nxt]) + residual_space)/(double)(++num_right_probes[nxt]);
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " now " << right_weight[nxt] << std::endl;
-// #endif
-
-// 	  variable_weight[nxt] = avg_right_branches[nxt] * (left_weight[nxt] + right_weight[nxt]);
-	  
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " ===> total weight of " << solver->variables[nxt] << " = " << avg_right_branches[nxt] << " * (" << left_weight[nxt] << " + " << right_weight[nxt] << ") = " << variable_weight[nxt] << " \n";
-// #endif
-
-// 	}
-//       }
-
-// #ifdef _DEBUG_IMPACT
-//       else {
-// 	std::cout << "initial propagate!!\n";
-//       }
-// #endif
-
-//       left = 0;
-//     }
-
-//     virtual void notify_backtrack() {
-//       // propagation produced a wipe-out
-//       // - check if it was after a left or a right branch
-//       // - find out what was the decision/refutation
-
-//       int dec;
-//       //if(!solver->decisions.empty()) {
-//       if(left==1) {
-// 	// left branch
-// 	dec = solver->decisions.back().var.id();
-
-// #ifdef _DEBUG_IMPACT
-// 	std::cout << " notified of backtrack after a left branch on " << solver->variables[dec] << "\n";
-// 	std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << left_weight[dec] ;
-// #endif
-
-
-// 	left_weight[dec] = (((double)(num_left_probes[dec]) * left_weight[dec]))/(double)(++num_left_probes[dec]);
-
-// #ifdef _DEBUG_IMPACT
-// 	std::cout << " now " << left_weight[dec] << std::endl;
-// #endif
-
-// 	variable_weight[dec] = avg_right_branches[dec] * (left_weight[dec] + right_weight[dec]);
-	  
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_right_branches[dec] << " * (" << left_weight[dec] << " + " << right_weight[dec] << ") = " << variable_weight[dec] << " \n";
-// #endif
-
-//       } else if(left==0) {
-// 	// right branch
-// 	dec = solver->decisions.back(0).var.id();
-
-// #ifdef _DEBUG_IMPACT
-// 	double rwb = right_weight[dec];
-// 	double nbr = avg_right_branches[dec];
-// #endif
-
-// 	right_weight[dec] = (((double)(num_right_probes[dec]) * right_weight[dec]))/(double)(++num_right_probes[dec]);
-
-// 	++num_right_branches[dec];
-// 	avg_right_branches[dec] = (avg_right_branches[dec]*(double)(num_probes[dec]) + (double)(num_right_branches[dec]))/((double)(++num_probes[dec]));
-
-// #ifdef _DEBUG_IMPACT
-// 	std::cout << " notified of backtrack after the " << (num_right_branches[dec]) 
-// 		  << "th right branch on " << solver->variables[dec] << "\n";
-// 	std::cout << " ==> right-weight[" << solver->variables[dec] << "] was " << rwb
-// 		  << " now " << right_weight[dec] << std::endl;
-// 	std::cout << " ==> num branches on " << solver->variables[dec] << " was " << nbr
-// 		  << " now " << avg_right_branches[dec] << std::endl;
-// #endif
-
-// 	num_right_branches[dec] = 0;
-
-// 	variable_weight[dec] = avg_right_branches[dec] * (left_weight[dec] + right_weight[dec]);
-
-// #ifdef _DEBUG_IMPACT
-// 	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_right_branches[dec] << " * (" << left_weight[dec] << " + " << right_weight[dec] << ") = " << variable_weight[dec] << " \n";
-// #endif
-
-// 	//}
-//       } 
-
-// #ifdef _DEBUG_IMPACT
-//       else {
-// 	std::cout << "initial propagate!!\n";
-//       }
-// #endif
-
-//       left = 0;
-//     }
-
- 
-
-
-
-
-//     virtual std::ostream& display(std::ostream& os, const bool all) const ;
-// // {
-      
-// //       int *all_variables = new int[variable_weight.size];
-// //       int *all_constraints = new int[constraint_weight.size];
-
-// //       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// // 	all_variables[i] = i;
-// //       }
-
-// //       for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// // 	all_constraints[i] = i;
-// //       }
-
-// //       weight_sorting_array = variable_weight.stack_;
-// //       qsort(all_variables, variable_weight.size, sizeof(int), decreasing_weight);
-
-// //       weight_sorting_array = constraint_weight.stack_;
-// //       qsort(all_constraints, constraint_weight.size, sizeof(int), decreasing_weight);
-
-// //       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// // 	os << std::setw(5) << solver->variables[all_variables[i]] << " ";
-// //       }
-// //       os << std::endl;
-// //       for(unsigned int i=0; i<variable_weight.size; ++i) {
-// // 	os << std::setw(5) << variable_weight[i] << " ";
-// //       }
-// //       os << std::endl;
-
-// //      for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// // 	os << std::setw(5) << solver->constraints[all_constraints[i]] << " ";
-// //       }
-// //       os << std::endl;
-// //       for(unsigned int i=0; i<constraint_weight.size; ++i) {
-// // 	os << std::setw(5) << constraint_weight[i] << " ";
-// //       }
-// //       os << std::endl;
-
-// //     }    
-
-//   };
-
-
-
-
-
-  /*! \class ImpactManager
-    \brief ImpactManager Class
-
-    * Listener interface for Impact *
-    * NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
-  */
+	/*! \class ImpactManager
+	\brief ImpactManager Class
+
+	* Listener interface for Impact *
+	* NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
+	*/
 #define INIT_IMPACT .001
-  class ImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener {
+	class ImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener, public WeightMap {
 
-  public:
+	public:
 
-    Solver *solver;
-    double weight_unit;
-    int left;
+		Solver *solver;
+		double weight_unit;
+		int left;
+		//int max_values;
 
-    Vector<double> variable_weight;
-    Vector<double> impact;
-    Vector<double> avg_branches;
-    Vector<int> num_probes;
-    Vector<int> tot_probes;
-    Vector<int> tot_fails;
+		Vector<double> variable_weight;
+		Vector<double*> value_weight;
+		Vector<int*> value_visit;
+		Vector<int> init_min;
+		Vector<int> factor;
+		Vector<double> bound_weight;
+		Vector<double> impact;
+		Vector<double> avg_branches;
+		Vector<int> num_probes;
+		Vector<int> tot_probes;
+		Vector<int> tot_fails;
 
 
-    ImpactManager(Solver *s) : solver(s) {// }
+		ImpactManager(Solver *s) : solver(s) {
+			
+			int max_values = 10;
 
-      left = -1;
-      weight_unit = solver->parameters.activity_increment;
+			left = -1;
+			weight_unit = solver->parameters.activity_increment;
       
-      // actual weight put on the variable (for xi)
-      variable_weight.initialise(solver->variables.size, solver->variables.size);
+			// actual weight put on the variable (for xi)
+			variable_weight.initialise(solver->variables.size, solver->variables.size);
+			
+			// weight on values
+			value_weight.initialise(solver->variables.size, solver->variables.size);
+			value_visit.initialise(solver->variables.size, solver->variables.size);
+			init_min.initialise(solver->variables.size, solver->variables.size);
+			factor.initialise(solver->variables.size, solver->variables.size);
+			for(int i=0; i<solver->variables.size; ++i) {
+				int m = solver->variables[i].get_min();
+				int d = solver->variables[i].get_max() - m + 1;
+				init_min[i] = m;
+				if(d>max_values) {
+					factor[i] = d/max_values;
+					if(d%max_values) factor[i]++;
+					value_weight[i] = new double[max_values];
+					value_visit[i] = new int[max_values];
+					std::fill(value_weight[i], value_weight[i]+max_values, 0.0);
+					std::fill(value_visit[i], value_visit[i]+max_values, 1);
+					// factor[i] = factor;
+				} else {
+					factor[i] = 1;
+					value_weight[i] = new double[d];
+					value_visit[i] = new int[d];
+					std::fill(value_weight[i], value_weight[i]+d, 0.0);
+					std::fill(value_visit[i], value_visit[i]+d, 1);
+				}
+				//value_weight[i] -= init_min[i];
+			}
 
-      // average impact (stored as the ratio size_after/size_before) (for xi)
-      impact.initialise(solver->variables.size, solver->variables.size);
+			// average impact (stored as the ratio size_after/size_before) (for xi)
+			impact.initialise(solver->variables.size, solver->variables.size);
 
-      // total number of probes (on xi)
-      tot_probes.initialise(solver->variables.size, solver->variables.size); 
+			// total number of probes (on xi)
+			tot_probes.initialise(solver->variables.size, solver->variables.size); 
 
-      // number of probes since the last failure (on xi)
-      num_probes.initialise(solver->variables.size, solver->variables.size);
+			// number of probes since the last failure (on xi)
+			num_probes.initialise(solver->variables.size, solver->variables.size);
 
-      // total number of failures (on xi)
-      tot_fails.initialise(solver->variables.size, solver->variables.size); 
+			// total number of failures (on xi)
+			tot_fails.initialise(solver->variables.size, solver->variables.size); 
       
-      // average number of branches explored (for xi)
-      avg_branches.initialise(solver->variables.size, solver->variables.size);
+			// average number of branches explored (for xi)
+			avg_branches.initialise(solver->variables.size, solver->variables.size);
 
 
-      for(unsigned int i=0; i<solver->variables.size; ++i) {
-	avg_branches[i] = solver->variables[i].get_size();
-	impact[i] = INIT_IMPACT/(double)(solver->variables[i].get_degree());
-	num_probes[i] = 1;
-	tot_probes[i] = 0;
-	tot_fails[i] = 0;
-	variable_weight[i] = avg_branches[i] * impact[i] ;
-      }
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
+				avg_branches[i] = solver->variables[i].get_size();
+				impact[i] = INIT_IMPACT/(double)(solver->variables[i].get_degree());
+				num_probes[i] = 1;
+				tot_probes[i] = 0;
+				tot_fails[i] = 0;
+				variable_weight[i] = avg_branches[i] * impact[i] ;
+			}
 
-      solver->add((BacktrackListener*)this);
-      solver->add((SuccessListener*)this);
-      solver->add((DecisionListener*)this);
-      solver->add((VariableListener*)this);
-    }
+			solver->add((BacktrackListener*)this);
+			solver->add((SuccessListener*)this);
+			solver->add((DecisionListener*)this);
+			solver->add((VariableListener*)this);
+		}
 
-    virtual ~ImpactManager() {// }
+		virtual ~ImpactManager() {
 
-      solver->remove((VariableListener*)this);
-      solver->remove((SuccessListener*)this);
-      solver->remove((DecisionListener*)this);
-      solver->remove((BacktrackListener*)this);
-    }
+			solver->remove((VariableListener*)this);
+			solver->remove((SuccessListener*)this);
+			solver->remove((DecisionListener*)this);
+			solver->remove((BacktrackListener*)this);
+		}
+		
+		int get_windex(const int x, const int v) {
+			int idx = v-init_min[x];
+			if(factor[x]!=1) idx /= factor[x];
+			return idx;
+		}
 
-    double *get_variable_weight() { return variable_weight.stack_; }   
-    double **get_value_weight() { return NULL; }
-    double *get_bound_weight() { return NULL; }
+		double *get_variable_weight() { return variable_weight.stack_; }   
+		double **get_value_weight() { return NULL; }
+		double *get_bound_weight() { return NULL; }
+		
+		virtual int get_minweight_value(const Variable x);
+		virtual int get_maxweight_value(const Variable x);
 
-    virtual void check_consistency() {
-    }
+		virtual void check_consistency() {
+		}
 
-    virtual void notify_add_var() {
+		virtual void notify_add_var() {
 #ifdef _DEBUG_IMPACT
-      std::cout << "NEW VAR!!\n";
+			std::cout << "NEW VAR!!\n";
 #endif
-    }
+		}
 
-    virtual void notify_change(const int id) {
+		virtual void notify_change(const int id) {
 #ifdef _DEBUG_IMPACT
-      std::cout << solver->variables[id] << "'s domain implementation has changed!!\n";
+			std::cout << solver->variables[id] << "'s domain implementation has changed!!\n";
 #endif
-    }
+		}
 
-    virtual void notify_decision() {
-      left = 1;
-    }
+		virtual void notify_decision() {
+			left = 1;
+		}
   
-    virtual void notify_success() {
-      // propagation went without wipe-out
-      // - check if it was after a left or a right branch
-      // - find out what was the decision/refutation
-      int dec;
-      int id;
-      int i, n;
-      Variable x;
-      double residual_space;
-      int size;
-      if(left==1) {
-	i = solver->trail_.back(5), n=solver->saved_vars.size;
-	if(left) {
-	  // left branch
-	  dec = solver->decisions.back().var.id();
-
-#ifdef _DEBUG_IMPACT
-	  std::cout << " notified of success after the " << num_probes[dec] << "th left branch on " << solver->variables[dec] << "\n";
-#endif
-
-	  residual_space = 1.0;
-	  while(i<n) {	
-	    id = solver->saved_vars[i];
-	    x = solver->variables[id];
-	    
-#ifdef _DEBUG_IMPACT
-	    std::cout << " -> " << x << x.get_domain() << " lost " << x.get_reduction() << " values (";
-#endif
-	    
-	    size = x.get_size();
-	    residual_space *= (((double)size))/((double)(size+x.get_reduction()));
-	    
-#ifdef _DEBUG_IMPACT
-	    std::cout << residual_space << ")\n";
-#endif
-	    
-	    ++i;
-	  } 
-
-#ifdef _DEBUG_IMPACT
-	  std::cout << " ==> impact[" << solver->variables[dec] << "] was " << impact[dec] ;
-#endif
-	  
-	  impact[dec] = (((double)(tot_probes[dec]) * impact[dec]) + residual_space)/(double)(++tot_probes[dec]);
-	  
-#ifdef _DEBUG_IMPACT
-	  std::cout << " now " << impact[dec] << std::endl;
-#endif
-	  
-	  ++num_probes[dec];
-	  variable_weight[dec] = avg_branches[dec] * impact[dec];
-	  
-#ifdef _DEBUG_IMPACT
-	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
-#endif
-	  
-	}
-      }
-      
-      left = 0;
-    }
-      
-    virtual void notify_backtrack() {
-      // propagation produced a wipe-out
-      // - check if it was after a left or a right branch
-      // - find out what was the decision/refutation
-
-      int dec;
-      //if(!solver->decisions.empty()) {
-      if(left==1) {
-	// left branch
-	dec = solver->decisions.back().var.id();
-
-#ifdef _DEBUG_IMPACT
-	std::cout << " notified of backtrack after the " << num_probes[dec] << " left branch on " << solver->variables[dec] << "\n";
-	std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << impact[dec] ;
-#endif
-
-	impact[dec] = (((double)(tot_probes[dec]) * impact[dec]))/(double)(++tot_probes[dec]);
-
-#ifdef _DEBUG_IMPACT
-	std::cout << " now " << impact[dec] << std::endl;
-#endif
-
-	variable_weight[dec] = avg_branches[dec] * impact[dec] ;
-	++num_probes[dec];
-
-#ifdef _DEBUG_IMPACT
-	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
-#endif
-
-      } else if(left==0) {
-	// right branch
-	dec = solver->decisions.back(0).var.id();
-
-#ifdef _DEBUG_IMPACT
-	double nbr = avg_branches[dec];
-#endif
-
-	avg_branches[dec] = (avg_branches[dec]*(double)(tot_fails[dec]) + (double)(num_probes[dec]))/((double)(++tot_fails[dec]));
-
-#ifdef _DEBUG_IMPACT
-	std::cout << " notified of backtrack after a right branch on " << solver->variables[dec] << "\n";
-	std::cout << " ==> num branches on " << solver->variables[dec] << " was " << nbr
-		  << " now " << avg_branches[dec] << std::endl;
-#endif
-
-	variable_weight[dec] = avg_branches[dec] * impact[dec];
-
-#ifdef _DEBUG_IMPACT
-	  std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
-#endif
-
-	num_probes[dec] = 0;
-      } 
-
-      left = 0;
-    }
+		virtual void notify_success();
+  
+		virtual void notify_backtrack();
     
-    virtual std::ostream& display(std::ostream& os, const bool all) const ;
+		virtual std::ostream& display(std::ostream& os, const bool all) const ;
     
-  };
+	};
 
 
 
@@ -1624,7 +1265,10 @@ namespace Mistral {
       //std::cout << s << std::endl;
 
       var.initialise(s);
-      choice = ValSelector(s,var.get_value_weight(),var.get_bound_weight());
+      choice = ValSelector(s,
+				var.get_value_weight(),var.get_bound_weight()
+					,var.get_weight_map()
+					);
     }
 
     virtual ~GenericHeuristic() {}
@@ -1752,7 +1396,7 @@ namespace Mistral {
     double *get_variable_weight() { return manager->get_variable_weight(); }  
     double **get_value_weight() { return manager->get_value_weight(); }
     double *get_bound_weight() { return manager->get_bound_weight(); }
-
+    WeightMap *get_weight_map() { return manager; }
 
     Variable select()
     {
@@ -2017,6 +1661,7 @@ namespace Mistral {
     double *get_variable_weight() { return NULL; }
     double **get_value_weight() { return NULL; }
     double *get_bound_weight() { return NULL; }
+		WeightMap *get_weight_map() { return NULL; }
     
     Variable select();
 
@@ -3232,8 +2877,8 @@ namespace Mistral {
   public: 
     
     AnyValue() {}
-    AnyValue(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    AnyValue(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //AnyValue(Solver *s, void *a) {}
     virtual ~AnyValue() {};
     
@@ -3264,8 +2909,8 @@ namespace Mistral {
   public: 
     
     MinValue() {}
-    MinValue(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    MinValue(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //MinValue(Solver *s, void *a) {}
     virtual ~MinValue() {};
     
@@ -3302,8 +2947,8 @@ namespace Mistral {
   public: 
     
     MaxValue() {}
-    MaxValue(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    MaxValue(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //MaxValue(Solver *s, void *a) {}
     virtual ~MaxValue() {};
     
@@ -3334,8 +2979,8 @@ namespace Mistral {
   public: 
     
     MiddleValue() {}
-    MiddleValue(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    MiddleValue(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //MiddleValue(Solver *s, void *a) {}
     virtual ~MiddleValue() {};
     
@@ -3368,8 +3013,8 @@ namespace Mistral {
   public: 
     
     MedianValue() {}
-    MedianValue(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    MedianValue(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     virtual ~MedianValue() {};
     
     inline Decision make(Variable x) {
@@ -3412,8 +3057,8 @@ namespace Mistral {
   public: 
     
     HalfSplit() {}
-    HalfSplit(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    HalfSplit(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //HalfSplit(Solver *s, void *a) {}
     virtual ~HalfSplit() {};
     
@@ -3448,8 +3093,8 @@ namespace Mistral {
   public: 
     
     ReverseSplit() {}
-    ReverseSplit(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    ReverseSplit(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //ReverseSplit(Solver *s, void *a) {}
     virtual ~ReverseSplit() {};
     
@@ -3480,8 +3125,8 @@ namespace Mistral {
   public: 
     
     RandomSplit() {}
-    RandomSplit(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    RandomSplit(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //RandomSplit(Solver *s, void *a) {}
     virtual ~RandomSplit() {};
     
@@ -3513,8 +3158,8 @@ namespace Mistral {
   public: 
     
     RandomMinMax() {}
-    RandomMinMax(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    RandomMinMax(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     //RandomMinMax(Solver *s, void *a) {}
     virtual ~RandomMinMax() {};
     
@@ -3546,8 +3191,8 @@ namespace Mistral {
   public: 
     
     RandomValue() {}
-    RandomValue(Solver *s, double **vw, double *bw) {}
-    void initialise(Solver *s, double **vw, double *bw) {}
+    RandomValue(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
     virtual ~RandomValue() {};
     
     inline Decision make(Variable x) {
@@ -3590,38 +3235,55 @@ namespace Mistral {
   public: 
 
     double **weight;
+		WeightMap *w_function;
     
     MinWeightValue() {}
-    MinWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(s, vw, bw);
+    MinWeightValue(Solver *s, double **vw, double *bw, WeightMap *wm) {
+      initialise(s, vw, bw, wm);
     }
-    void initialise(Solver *s, double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
+			
+			std::cout << ((int*)vw) << " " << ((int*)wm) << std::endl;
+			
       weight = vw;
+			w_function = wm;
     }
     //MinWeightValue(Solver *s, void *a) { weight = (double**)a; }
     virtual ~MinWeightValue() {};
     
-    inline Decision make(Variable x) {
-      int // id_x = x.id(),
-	best_val = x.get_min();
-      double *wgt = weight[x.id()];
-      //double min_weight = weight[id_x][best_val]// [best_val][id_x]
-      double min_weight = wgt[best_val]// [best_val][id_x]
-	, aux_weight;
-      int vali, vnxt=x.next(best_val);
-      do {
-	vali = vnxt;
-	vnxt = x.next(vali);
-	aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
-	if(aux_weight < min_weight) {
-	  min_weight = aux_weight;
-	  best_val = vali;
-	}
-      } while(vali<vnxt);
-      
-      Decision d(x, Decision::ASSIGNMENT, best_val);
-      return d;
-    }
+		Decision make(Variable x);
+		
+		// inline Decision make(Variable x) {
+		//
+		// 	int best_val = 0;
+		//
+		// 	if(weight) {
+		// 		best_val = x.get_min();
+		//
+		// 		double *wgt = weight[x.id()];
+		// 		//double min_weight = weight[id_x][best_val]// [best_val][id_x]
+		// 		double min_weight = wgt[best_val]// [best_val][id_x]
+		// 			, aux_weight;
+		// 		int vali, vnxt=x.next(best_val);
+		// 		do {
+		// 			vali = vnxt;
+		// 			vnxt = x.next(vali);
+		// 			aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
+		// 			if(aux_weight < min_weight) {
+		// 				min_weight = aux_weight;
+		// 				best_val = vali;
+		// 			}
+		// 		} while(vali<vnxt);
+		//
+		// 	} else {
+		//
+		// 		best_val = w_function->get_minweight_value(x);
+		//
+		// 	}
+		//
+		// 	Decision d(x, Decision::ASSIGNMENT, best_val);
+		// 	return d;
+		// }
 
      std::ostream& display(std::ostream& os) const {
        os << "assign it to the value with minimum weight in its domain";
@@ -3647,10 +3309,10 @@ namespace Mistral {
     double **weight;
     
     MaxWeightValue() {}
-    MaxWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(s, vw, bw);
+    MaxWeightValue(Solver *s, double **vw, double *bw, WeightMap *wm) {
+      initialise(s, vw, bw, wm);
     }
-    void initialise(Solver *s, double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
       weight = vw;
     }
     //MaxWeightValue(Solver *s, void *a) { weight = (double**)a; }
@@ -3703,10 +3365,10 @@ namespace Mistral {
     double *weight;
     
     MinWeightBound() {}
-    MinWeightBound(Solver *s, double **vw, double *bw) {
-      initialise(s, vw, bw);
+    MinWeightBound(Solver *s, double **vw, double *bw, WeightMap *wm) {
+      initialise(s, vw, bw, wm);
     }
-    void initialise(Solver *s, double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
       weight = bw;
     }
     //MinWeightBound(Solver *s, void *a) { weight = (double**)a; }
@@ -3784,8 +3446,8 @@ namespace Mistral {
     int cool;
 
     Guided() {cool=150;}
-    Guided(Solver *s, double **vw, double *bw) { initialise(s, vw, bw); cool=150;}
-    void initialise(Solver *s, double **vw, double *bw) { solver=s, init_choice.initialise(s, vw, bw); }
+    Guided(Solver *s, double **vw, double *bw, WeightMap *wm) { initialise(s, vw, bw, wm); cool=150;}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) { solver=s, init_choice.initialise(s, vw, bw, wm); }
     virtual ~Guided() {};
     
     inline Decision make(Variable x) {
@@ -3833,54 +3495,54 @@ namespace Mistral {
 
     Restricts the variable to the half that contains the solution value
   */
-  template< class Default >
-  class GuidedSplit {
+	template< class Default >
+	class GuidedSplit {
     
-  public: 
+	public: 
     
-    Solver *solver;
-    Default init_choice;
+		Solver *solver;
+		Default init_choice;
     
-    GuidedSplit() {}
-    GuidedSplit(Solver *s, double **vw, double *bw) { initialise(s, vw, bw); }
-    void initialise(Solver *s, double **vw, double *bw) { solver=s; init_choice.initialise(s, vw, bw); }
-    virtual ~GuidedSplit() {};
+		GuidedSplit() {}
+		GuidedSplit(Solver *s, double **vw, double *bw, WeightMap *wm) { initialise(s, vw, bw, wm); }
+		void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) { solver=s; init_choice.initialise(s, vw, bw, wm); }
+		virtual ~GuidedSplit() {};
     
-    inline Decision make(Variable x) {
+		inline Decision make(Variable x) {
 
-      //std::cout << "(GS) make a decision on " << x << " in " << x.get_domain() << std::endl;
+			//std::cout << "(GS) make a decision on " << x << " in " << x.get_domain() << std::endl;
 
-      int val = solver->last_solution_lb[x.id()];
-      Decision d;
-      if(val == -INFTY || !x.contain(val)) 
-	d = init_choice.make(x);
-      else {
-	int half = (x.get_min()+x.get_max())/2;
-	if(half < val)
-	  d = Decision(x, Decision::LOWERBOUND, half);
-	else
-	  d = Decision(x, Decision::UPPERBOUND, half);
-      }
-      return d;
-    }
+			int val = solver->last_solution_lb[x.id()];
+			Decision d;
+			if(val == -INFTY || !x.contain(val)) 
+				d = init_choice.make(x);
+			else {
+				int half = (x.get_min()+x.get_max())/2;
+				if(half < val)
+					d = Decision(x, Decision::LOWERBOUND, half);
+				else
+					d = Decision(x, Decision::UPPERBOUND, half);
+			}
+			return d;
+		}
     
-    std::ostream& display(std::ostream& os) const {
-      os << "halves the domain so that it keeps the value of this variable in the last solution";
-      return os;
-    }
+		std::ostream& display(std::ostream& os) const {
+			os << "halves the domain so that it keeps the value of this variable in the last solution";
+			return os;
+		}
     
-  };
+	};
 
 
-  template< class Default >
-  std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>& x) {
-    return x.display(os);
-  }
+	template< class Default >
+	std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>& x) {
+		return x.display(os);
+	}
 
-  template< class Default >
-  std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>* x) {
-    return x->display(os);
-  }
+	template< class Default >
+	std::ostream& operator<<(std::ostream& os, GuidedSplit<Default>* x) {
+		return x->display(os);
+	}
 
 
 
@@ -3903,8 +3565,8 @@ namespace Mistral {
     int threshold;
     
     ConditionalOnSize() {}
-    ConditionalOnSize(Solver *s, double **vw, double *bw) { initialise(s, vw, bw); }
-    void initialise(Solver *s, double **vw, double *bw) {
+    ConditionalOnSize(Solver *s, double **vw, double *bw, WeightMap *wm) { initialise(s, vw, bw, wm); }
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
 
       //std::cout << "initialise COS" << std::endl;
       //std::cout << (int*)s << std::endl;
@@ -3916,8 +3578,8 @@ namespace Mistral {
 
 
       threshold=10; 
-      range_branching.initialise(solver, vw, bw); 
-      fd_branching.initialise(solver, vw, bw);  
+      range_branching.initialise(solver, vw, bw, wm); 
+      fd_branching.initialise(solver, vw, bw, wm);  
     }
     virtual ~ConditionalOnSize() {};
     
@@ -3987,10 +3649,10 @@ namespace Mistral {
     double *weight;
     
     BoolMinWeightValue() {}
-    BoolMinWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(s, vw, bw);
+    BoolMinWeightValue(Solver *s, double **vw, double *bw, WeightMap *wm) {
+      initialise(s, vw, bw, wm);
     }
-    void initialise(Solver *s, double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
       weight = bw;
     }
     // BoolMinWeightValue(Solver *s, void *a) {
@@ -4037,10 +3699,10 @@ namespace Mistral {
     double *weight;
     
     BoolMaxWeightValue() {}
-    BoolMaxWeightValue(Solver *s, double **vw, double *bw) {
-      initialise(s, vw, bw);
+    BoolMaxWeightValue(Solver *s, double **vw, double *bw, WeightMap *wm) {
+      initialise(s, vw, bw, wm);
     }
-    void initialise(Solver *s, double **vw, double *bw) {
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
       weight = bw;
     }
     // BoolMaxWeightValue(Solver *s, void *a) {

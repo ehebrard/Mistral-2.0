@@ -27,6 +27,9 @@
 #include <mistral_variable.hpp>
 
 
+//#define _COUNT_BRANCHES
+
+
 
 Mistral::ConsolidateListener::ConsolidateListener(Mistral::Solver *s) 
   : VariableListener(), ConstraintListener(), solver(s)
@@ -433,9 +436,306 @@ int log10(const double x){
   return log;
 }
 
-std::ostream& Mistral::ImpactManager::display(std::ostream& os, const bool all) const {
-  
 
+int Mistral::ImpactManager::get_minweight_value(const Variable x) {
+	
+	int best_val = 0;
+	int idx = x.id();
+	int offset = init_min[idx];
+	double *wgt = value_weight[idx];
+	
+	if(factor[idx]==1) {
+		best_val = x.get_min();
+		double min_weight = wgt[best_val-offset], aux_weight;
+		int vali, vnxt=x.next(best_val);
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali-offset]; 
+			if(aux_weight < min_weight) {
+				min_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+	} else {
+		int fact = factor[idx];
+		int the_min = x.get_min();
+		int the_max = x.get_max();	
+		int best_group = (the_min-offset)/fact;
+		int group = best_group;
+		double min_weight = wgt[best_group];
+		int lb = group*fact+offset;
+		int ub = lb+fact-1;
+		while(ub < the_max) {
+			++group;
+			lb += fact;
+			ub += fact;
+			
+			if(x.intersect(lb, ub) && min_weight>wgt[group]) {
+				min_weight = wgt[group];
+				best_group = group;
+			}
+		}
+		best_val = x.next(best_group*fact+offset-1);
+	}
+	
+	return best_val;
+}
+int Mistral::ImpactManager::get_maxweight_value(const Variable x) {return x.get_min();}
+
+void Mistral::ImpactManager::notify_success() {
+			
+	// propagation went without wipe-out
+	// - check if it was after a left or a right branch
+	// - find out what was the decision/refutation
+	int dec;
+	int id;
+	int i, n;
+	Variable x, y;
+	double residual_space;
+	int size;
+	if(solver->decisions.size>0) {
+				
+				
+#ifdef _DEBUG_IMPACT
+		std::cout << " left " << solver->trail_.size << std::endl;
+#endif
+				
+				
+				
+		i = solver->trail_.back(5), n=solver->saved_vars.size;
+
+		// left branch
+		Decision branch = solver->decisions.back();
+		x = branch.var;
+		dec = x.id();
+		int dec_type = branch.type();
+		int dec_val = branch.value();
+		
+		// std::cout << solver->variables[dec] << " " << x << std::endl;
+		// exit(1);
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " notified of success after the " << num_probes[dec] << "th left branch on " << solver->variables[dec] << "\n";
+#endif
+
+		residual_space = 1.0;
+		while(i<n) {	
+			id = solver->saved_vars[i];
+			y = solver->variables[id];
+	    
+#ifdef _DEBUG_IMPACT2
+			std::cout << " -> " << y << y.get_domain() << " lost " << y.get_reduction() << " values (";
+#endif
+	    
+			size = y.get_size();
+			residual_space *= (((double)size))/((double)(size+y.get_reduction()));
+	    
+#ifdef _DEBUG_IMPACT2
+			std::cout << residual_space << ")\n";
+#endif
+	    
+			++i;
+		} 
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " ==> impact[" << solver->variables[dec] << "] was " << impact[dec]  ;
+#endif
+	  
+		impact[dec] = (((double)(tot_probes[dec]) * impact[dec]) + residual_space)/(double)(++tot_probes[dec]);
+		
+#ifdef _DEBUG_IMPACT
+		std::cout << " now " << impact[dec] << std::endl;
+#endif
+		
+		int offset = init_min[dec];
+		int fact = factor[dec];
+		if(dec_type == Decision::ASSIGNMENT) {
+			dec_val -= offset;
+			dec_val /= fact;
+			
+#ifdef _DEBUG_IMPACT
+			std::cout << "i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+#endif
+			
+			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]) * solver->parameters.activity_decay);
+			value_weight[dec][dec_val] += (1.0 - residual_space);
+			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
+			
+#ifdef _DEBUG_IMPACT
+			std::cout << value_weight[dec][dec_val] << std::endl;
+#endif
+			
+		} else if(fact!=1) {
+			int lb = x.get_min();
+			int ub = x.get_min();
+			int stag = (lb-offset)/fact;
+			int endg = (ub-offset)/fact;
+			int decg = (dec_val-offset)/fact;
+			//int numg = (endg-stag+1);
+			for(int g=stag; g<=endg; ++g) if(g!=decg) {
+				
+#ifdef _DEBUG_IMPACT
+				std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
+#endif
+				
+				value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+				value_weight[dec][g] += (1.0 - residual_space);
+				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+
+#ifdef _DEBUG_IMPACT				
+				std::cout << value_weight[dec][g] << std::endl;
+#endif
+			}
+		} else {
+			int vali, vnxt=x.get_min();
+			do {
+				vali = vnxt;
+				vnxt = x.next(vali);
+
+#ifdef _DEBUG_IMPACT				
+				std::cout << "i[" << x << "=" << vali << "]: " << value_weight[dec][dec_val]  << " -> ";
+#endif
+				
+				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+				value_weight[dec][vali] += (1.0 - residual_space);
+				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
+
+#ifdef _DEBUG_IMPACT				
+				std::cout << value_weight[dec][vali] << std::endl;		
+#endif
+				
+			} while(vali<vnxt);
+		}
+	  
+		++num_probes[dec];
+		variable_weight[dec] = avg_branches[dec] * impact[dec];
+	  
+#ifdef _DEBUG_IMPACT
+		std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
+#endif
+	  		
+	}
+      
+	left = 1;
+}
+
+
+void Mistral::ImpactManager::notify_backtrack() {
+	// propagation produced a wipe-out
+	// - check if it was after a left or a right branch
+	// - find out what was the decision/refutation
+
+	int dec;
+	Variable x;
+
+	//if(!solver->decisions.empty()) {
+	if(left==1) {
+		// left branch
+		x = solver->decisions.back().var;
+		dec = x.id();
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " notified of backtrack after the " << num_probes[dec] << " left branch on " << solver->variables[dec] << "\n";
+		std::cout << " ==> left-weight[" << solver->variables[dec] << "] was " << impact[dec] ;
+#endif
+
+		impact[dec] = (((double)(tot_probes[dec]) * impact[dec]))/(double)(++tot_probes[dec]);
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " now " << impact[dec] << std::endl;
+#endif
+
+		variable_weight[dec] = avg_branches[dec] * impact[dec] ;
+		++num_probes[dec];
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
+#endif
+
+	} else if(left==0) {
+		// right branch
+		x = solver->decisions.back(0).var;
+		dec = x.id();
+		
+
+#ifdef _DEBUG_IMPACT
+		double nbr = avg_branches[dec];
+#endif
+
+#ifdef _COUNT_BRANCHES
+		avg_branches[dec] = (avg_branches[dec]*(double)(tot_fails[dec]) + (double)(num_probes[dec]))/((double)(++tot_fails[dec]));
+#endif		
+		
+#ifdef _DEBUG_IMPACT
+		std::cout << " notified of backtrack after a right branch on " << solver->variables[dec] << "\n";
+		std::cout << " ==> num branches on " << solver->variables[dec] << " was " << nbr
+			<< " now " << avg_branches[dec] << std::endl;
+#endif
+
+		variable_weight[dec] = avg_branches[dec] * impact[dec];
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " ===> total weight of " << solver->variables[dec] << " = " << avg_branches[dec] << " * " << impact[dec] << " = " << variable_weight[dec] << " \n";
+#endif
+
+		num_probes[dec] = 0;
+	} 
+
+	int offset = init_min[dec];
+	int fact = factor[dec];
+	
+	if(fact!=1) {
+		int lb = x.get_min();
+		int ub = x.get_min();
+		int stag = (lb-offset)/fact;
+		int endg = (ub-offset)/fact;
+		//int decg = (dec_val-offset)/fact;
+		//int numg = (endg-stag+1);
+		for(int g=stag; g<=endg; ++g) 
+		//if(g!=decg) 
+		{
+			
+#ifdef _DEBUG_IMPACT	
+			std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
+#endif
+			
+			value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+			value_weight[dec][g] += 1.0;
+			value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+
+#ifdef _DEBUG_IMPACT			
+			std::cout << value_weight[dec][g] << std::endl;
+#endif
+			
+		}
+	} else {
+		int vali, vnxt=x.get_min();
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+
+#ifdef _DEBUG_IMPACT			
+			std::cout << "i[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
+#endif
+			
+			value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+			value_weight[dec][vali] += 1.0;
+			value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
+
+#ifdef _DEBUG_IMPACT			
+			std::cout << value_weight[dec][vali] << std::endl;				
+#endif
+			
+		} while(vali<vnxt);
+	}
+
+
+	left = 0;
+}
+
+
+std::ostream& Mistral::ImpactManager::display(std::ostream& os, const bool all) const {
 
   return os;
 }
@@ -565,6 +865,54 @@ std::ostream& Mistral::ConflictCountManager::display(std::ostream& os, const boo
 
 	return os;
 }    
+
+#ifdef _ABS_VAL
+int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
+	
+	int best_val = 0;
+	int idx = x.id();
+	int offset = init_min[idx];
+	double *wgt = value_weight[idx];
+	
+	if(factor[idx]==1) {
+		best_val = x.get_min();
+		double min_weight = wgt[best_val-offset], aux_weight;
+		int vali, vnxt=x.next(best_val);
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali-offset]; 
+			if(aux_weight < min_weight) {
+				min_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+	} else {
+		int fact = factor[idx];
+		int the_min = x.get_min();
+		int the_max = x.get_max();	
+		int best_group = (the_min-offset)/fact;
+		int group = best_group;
+		double min_weight = wgt[best_group];
+		int lb = group*fact+offset;
+		int ub = lb+fact-1;
+		while(ub < the_max) {
+			++group;
+			lb += fact;
+			ub += fact;
+			
+			if(x.intersect(lb, ub) && min_weight>wgt[group]) {
+				min_weight = wgt[group];
+				best_group = group;
+			}
+		}
+		best_val = x.next(best_group*fact+offset-1);
+	}
+	
+	return best_val;
+}
+int Mistral::PruningCountManager::get_maxweight_value(const Variable x) {return x.get_min();}
+#endif
 
 std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool all) const {
       
@@ -856,6 +1204,40 @@ std::ostream& Mistral::LearningActivityManager::display(std::ostream& os, const 
 
   return os;
 }
+
+Decision Mistral::MinWeightValue::make(Variable x) {
+	
+	int best_val = 0;
+
+	if(weight) {
+		best_val = x.get_min();
+
+		double *wgt = weight[x.id()];
+		//double min_weight = weight[id_x][best_val]// [best_val][id_x]
+		double min_weight = wgt[best_val]// [best_val][id_x]
+			, aux_weight;
+		int vali, vnxt=x.next(best_val);
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
+			if(aux_weight < min_weight) {
+				min_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+		
+	} else {
+		
+		best_val = w_function->get_minweight_value(x);
+		
+	}
+  
+	Decision d(x, Decision::ASSIGNMENT, best_val);
+	
+	return d;
+}
+
 
 std::ostream& operator<<(std::ostream& os, Mistral::MinDomain& x) {
   return x.display(os);
