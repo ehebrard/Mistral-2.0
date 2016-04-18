@@ -443,6 +443,14 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
     if(solver->objective->is_optimization()) {
       os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OBJECTIVE"
 	 << std::right << std::setw(46) << objective_value  << std::endl;
+
+      if (outcome ==  OPT)
+         os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OPT"
+       	<< std::right << std::setw(46) << 1  << std::endl;
+         else
+         os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OPT"
+       	   	<< std::right << std::setw(46) << 0  << std::endl;
+
     } else if(solver->objective->is_satisfaction()) {
       os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  MAXDEPTH"
 	 << std::right << std::setw(46) << max_depth  << std::endl;
