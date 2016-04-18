@@ -8352,6 +8352,7 @@ void Mistral::SolverCmdLine::initialise() {
   voallowed.push_back("dom/gwdeg");
   voallowed.push_back("dom/pruning");
   voallowed.push_back("dom/activity");
+  voallowed.push_back("ibs");
   voallowed.push_back("activity");
   voallowed.push_back("neighbor");
   voallowed.push_back("mindomain");
