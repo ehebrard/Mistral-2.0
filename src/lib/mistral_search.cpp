@@ -712,7 +712,7 @@ void Mistral::ImpactManager::notify_backtrack() {
 	} else {
 		int vali, vnxt=x.get_min();
 		do {
-			vali = vnxt;
+			vali = vnxt-offset;
 			vnxt = x.next(vali);
 
 #ifdef _DEBUG_IMPACT			
