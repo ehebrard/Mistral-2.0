@@ -321,10 +321,12 @@ public:
 #ifdef _PARALLEL
 	//used only with parallelization
 	long int * best_kown_objective;
-	bool branch_on_auxilary;
+	//bool branch_on_auxilary;
 	long int get_last_objective_value() { return solver.statistics.objective_value ;}
     void set_solution_found_elsewhere(bool * s) {solver.solution_found_elsewhere= s;}
 #endif
+
+    bool branch_on_auxilary;
 
 	/// The integer variables
 	IntVarArray iv;

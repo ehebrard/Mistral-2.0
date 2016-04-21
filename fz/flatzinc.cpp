@@ -944,9 +944,9 @@ FlatZincModel::set_annotations(const bool on) {
           }
         }
 
-#ifdef _PARALLEL
+//#ifdef _PARALLEL
         if (branch_on_auxilary)
-#endif
+//#endif
         for(int i=0; i<solver.variables.size; ++i) {
           int domsize = solver.variables[i].get_size();
           // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
@@ -1049,9 +1049,9 @@ FlatZincModel::set_annotations(const bool on) {
         }
 
 
-#ifdef _PARALLEL
+//#ifdef _PARALLEL
         if (branch_on_auxilary)
-#endif
+//#endif
         for(int i=0; i<solver.variables.size; ++i) {
          int domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
