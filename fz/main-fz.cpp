@@ -191,10 +191,6 @@ int main(int argc, char *argv[])
 					  << " CUTOFF " << s.parameters.time_limit << std::endl;
 
 
-  // set flatzinc model options
-#ifdef _PARALLEL
-  fm->branch_on_auxilary=branch_on_auxilary;
-#endif
   fm->branch_on_auxilary=branch_on_auxilary;
 
   fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), policy);
