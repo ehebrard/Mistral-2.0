@@ -714,6 +714,7 @@ void Mistral::ImpactManager::notify_backtrack() {
 		do {
 			vali = vnxt;
 			vnxt = x.next(vali);
+			vali -= offset;
 
 #ifdef _DEBUG_IMPACT			
 			std::cout << "i[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
@@ -727,7 +728,7 @@ void Mistral::ImpactManager::notify_backtrack() {
 			std::cout << value_weight[dec][vali] << std::endl;				
 #endif
 			
-		} while(vali<vnxt);
+		} while((vali+offset)<vnxt);
 	}
 
 

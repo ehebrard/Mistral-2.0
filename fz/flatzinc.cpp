@@ -506,12 +506,18 @@ bool FlatZincModel::getAnnotations( AST::Call*  c , Vector<Variable> &__vars, st
 
 			for (unsigned int j=0; j< __varsArray->a.size(); j++ )
 			{
-                          if (__varsArray->a[j]->isIntVar())
+                          if (__varsArray->a[j]->isIntVar()){
+                          	  if (iv[__varsArray->a[j]->getIntVar()].get_var().id()>=0)
                             __vars.push_back(iv[__varsArray->a[j]->getIntVar()].get_var());
-                          else if (__varsArray->a[j]->isSetVar())
+                          }
+                          else if (__varsArray->a[j]->isSetVar()){
+                        	  if (sv[__varsArray->a[j]->getSetVar()].get_var().id() >=0)
                             __vars.push_back( sv[__varsArray->a[j]->getSetVar()]);
-                          else if (__varsArray->a[j]->isBoolVar())
+                          }
+                          else if (__varsArray->a[j]->isBoolVar()){
+                        	  if (bv[__varsArray->a[j]->getBoolVar()].get_var().id() >=0 )
                             __vars.push_back( bv[__varsArray->a[j]->getBoolVar()].get_var());
+                          }
                           else
                             return false;
 			}
@@ -938,9 +944,9 @@ FlatZincModel::set_annotations(const bool on) {
           }
         }
 
-#ifdef _PARALLEL
+//#ifdef _PARALLEL
         if (branch_on_auxilary)
-#endif
+//#endif
         for(int i=0; i<solver.variables.size; ++i) {
           int domsize = solver.variables[i].get_size();
           // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
@@ -984,7 +990,7 @@ FlatZincModel::set_annotations(const bool on) {
         				if (aia->a[j]->isIntVar()) {
         					__id= iv[aia->a[j]->getIntVar()].id();
         				} else if (aia->a[j]->isBoolVar()) {
-        					__id= iv[aia->a[j]->getBoolVar()].id();
+        					__id= bv[aia->a[j]->getBoolVar()].id();
         				}
 
         				if (__id>=0)
@@ -999,7 +1005,7 @@ FlatZincModel::set_annotations(const bool on) {
         			if (ai->isIntVar()) {
         				__id= iv[ai->getIntVar()].id();
         			} else if (ai->isBoolVar()) {
-        				__id= iv[ai->getBoolVar()].id();
+        				__id= bv[ai->getBoolVar()].id();
         			}
 
         			if (__id>=0)
@@ -1043,9 +1049,9 @@ FlatZincModel::set_annotations(const bool on) {
         }
 
 
-#ifdef _PARALLEL
+//#ifdef _PARALLEL
         if (branch_on_auxilary)
-#endif
+//#endif
         for(int i=0; i<solver.variables.size; ++i) {
          int domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
@@ -1094,7 +1100,7 @@ FlatZincModel::set_annotations(const bool on) {
         				if (aia->a[j]->isIntVar()) {
         					__id= iv[aia->a[j]->getIntVar()].id();
         				} else if (aia->a[j]->isBoolVar()) {
-        					__id= iv[aia->a[j]->getBoolVar()].id();
+        					__id= bv[aia->a[j]->getBoolVar()].id();
         				}
 
         				if (__id>=0)
@@ -1109,7 +1115,7 @@ FlatZincModel::set_annotations(const bool on) {
         			if (ai->isIntVar()) {
         				__id= iv[ai->getIntVar()].id();
         			} else if (ai->isBoolVar()) {
-        				__id= iv[ai->getBoolVar()].id();
+        				__id= bv[ai->getBoolVar()].id();
         			}
 
         			if (__id>=0)

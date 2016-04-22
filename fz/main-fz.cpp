@@ -73,6 +73,9 @@ int main(int argc, char *argv[])
   TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);
   cmd.add( simple_rewriteArg );
 
+  TCLAP::SwitchArg branchOnaux("","branch_on_aux","Branching on auxiliary variables", false);
+  cmd.add( branchOnaux );
+
 #ifdef _PARALLEL
   //std::cout << "PARALLEL \n \n \n " << std::endl;
   TCLAP::ValueArg<int> threadsArg("p","number-threads","Use multithreading with this option.", false, 4, "int");
@@ -134,9 +137,13 @@ int main(int argc, char *argv[])
 #endif
 	  policy =cmd.get_restart_policy();
 
+  bool branch_on_auxilary =   branchOnaux.getValue();
+  //std::cout << "branch_on_auxilary " << branch_on_auxilary << std::endl;
+  //exit(1);
+
 
 #ifdef _PARALLEL
-  bool branch_on_auxilary = true;
+//  bool branch_on_auxilary = true;
   if ( id%4 < 2 )
 	  branch_on_auxilary=false;
 //#pragma omp critical
@@ -184,10 +191,7 @@ int main(int argc, char *argv[])
 					  << " CUTOFF " << s.parameters.time_limit << std::endl;
 
 
-  // set flatzinc model options
-#ifdef _PARALLEL
   fm->branch_on_auxilary=branch_on_auxilary;
-#endif
 
   fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), policy);
   fm->set_display_model(cmd.print_model());

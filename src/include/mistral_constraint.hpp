@@ -41,7 +41,6 @@
 #define _ELT_WC
 #define _CNE_WC
 
-//#define _DIV_ARITY
 
 //#define _DIV_WEIGHT
 
