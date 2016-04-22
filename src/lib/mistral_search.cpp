@@ -558,7 +558,7 @@ void Mistral::ImpactManager::notify_success() {
 			std::cout << "i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
 #endif
 			
-			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]) * solver->parameters.activity_decay);
+			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]));// * solver->parameters.activity_decay);
 			value_weight[dec][dec_val] += (1.0 - residual_space);
 			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
 			
@@ -579,7 +579,7 @@ void Mistral::ImpactManager::notify_success() {
 				std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
 #endif
 				
-				value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+				value_weight[dec][g] *= ((double)(value_visit[dec][g]));// * solver->parameters.activity_decay);
 				value_weight[dec][g] += (1.0 - residual_space);
 				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
 
@@ -592,18 +592,20 @@ void Mistral::ImpactManager::notify_success() {
 			do {
 				vali = vnxt;
 				vnxt = x.next(vali);
+				vali -= offset;
 
 #ifdef _DEBUG_IMPACT				
-				std::cout << "i[" << x << "=" << vali << "]: " << value_weight[dec][dec_val]  << " -> ";
+				std::cout << "i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][dec_val]  << " -> ";
 #endif
 				
-				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]));// * solver->parameters.activity_decay);
 				value_weight[dec][vali] += (1.0 - residual_space);
 				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
 
 #ifdef _DEBUG_IMPACT				
 				std::cout << value_weight[dec][vali] << std::endl;		
 #endif
+				vali += offset;
 				
 			} while(vali<vnxt);
 		}
@@ -876,7 +878,7 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 	int offset = init_min[idx];
 	double *wgt = value_weight[idx];
 	
-	std::cout << "get min weight " << x << " in " << x.get_domain() << " " << factor[idx] << " " << offset << std::endl;
+	// std::cout << "get min weight " << x << " in " << x.get_domain() << " " << factor[idx] << " " << offset << std::endl;
 	
 	
 	if(factor[idx]==1) {
@@ -884,14 +886,14 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 		double min_weight = wgt[best_val-offset], aux_weight;
 		int vali, vnxt=x.next(best_val);
 		
-		std::cout << "  " << best_val << " " << min_weight << std::endl;
+		// std::cout << "  " << best_val << " " << min_weight << std::endl;
 		
 		do {
 			vali = vnxt;
 			vnxt = x.next(vali);
 			aux_weight = wgt[vali-offset]; 
 			
-			std::cout << "  " << vali << " " << aux_weight << std::endl;
+			// std::cout << "  " << vali << " " << aux_weight << std::endl;
 			
 			if(aux_weight < min_weight) {
 				min_weight = aux_weight;
@@ -908,7 +910,7 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 		int lb = group*fact+offset;
 		int ub = lb+fact-1;
 		
-		std::cout << "  [" << lb << "," << ub << "] " << min_weight << std::endl;
+		// std::cout << "  [" << lb << "," << ub << "] " << min_weight << std::endl;
 		
 		while(ub < the_max) {
 			++group;
@@ -917,7 +919,7 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 			
 			if(x.intersect(lb, ub)) {
 				
-				std::cout << "  [" << lb << "," << ub << "] " << wgt[group] << std::endl;
+				// std::cout << "  [" << lb << "," << ub << "] " << wgt[group] << std::endl;
 				
 				if(min_weight>wgt[group]) {
 					min_weight = wgt[group];
@@ -928,7 +930,7 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 		best_val = x.next(best_group*fact+offset-1);
 	}
 	
-	std::cout << " return " << best_val << std::endl;
+	// std::cout << " return " << best_val << std::endl;
 	
 	return best_val;
 }
@@ -936,9 +938,12 @@ int Mistral::PruningCountManager::get_maxweight_value(const Variable x) {return 
 #endif
 
 
+
+
 void Mistral::PruningCountManager::notify_success() {
 	
 	//display(std::cout, false);
+	
 	
 	int id;
 	int i = solver->trail_.back(5), n=solver->saved_vars.size;
@@ -964,25 +969,44 @@ void Mistral::PruningCountManager::notify_success() {
 	
 		// std::cout << "scaling down" << std::endl;
 	
-		double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
-		weight_unit *= factor;
+		double rfactor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
+		weight_unit *= rfactor;
 	
 		n = solver->variables.size;
 		for(int i=0; i<n; ++i) {
 			// std::cout << variable_weight[i] << " -> ";
-			variable_weight[i] *= factor;
+			variable_weight[i] *= rfactor;
 			// std::cout << variable_weight[i] << std::endl;
+#ifdef _ABS_VAL	
+			if(factor[i]==1) {
+				Variable x = solver->variables[i];
+				int vali, vnxt=x.get_min();
+				do {
+					vali = vnxt;
+					vnxt = x.next(vali);
+					value_weight[i][vali-init_min[i]] *= rfactor;
+				} while(vali<vnxt);
+			} else {
+				for(int j=0; j<10; ++j) {
+					value_weight[i][j] *= rfactor;
+				}
+			}
+#endif
 		}
 	
 	}
 	
 	
-#ifdef _ABS_VAL
-	Decision branch = solver->decisions.back();
-	Variable x = branch.var;
-	int dec = x.id();
-	int dec_type = branch.type();
-	int dec_val = branch.value();
+	//std::cout << 11 << std::endl;
+
+#ifdef _ABS_VAL	
+	if(solver->decisions.size>0) {
+
+		Decision branch = solver->decisions.back();
+		Variable x = branch.var;
+		int dec = x.id();
+		int dec_type = branch.type();
+		int dec_val = branch.value();
 		int offset = init_min[dec];
 		int fact = factor[dec];
 		if(dec_type == Decision::ASSIGNMENT) {
@@ -1045,11 +1069,14 @@ void Mistral::PruningCountManager::notify_success() {
 				
 			} while(vali<vnxt);
 		}
+	}
 #endif	
 		
-		if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
-			weight_unit /= solver->parameters.activity_decay;
+	if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0) 
+		weight_unit /= solver->parameters.activity_decay;
 	
+	
+	// std::cout << 22 << std::endl;
 }
 
 std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool all) const {

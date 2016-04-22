@@ -37,6 +37,7 @@
 //#define _DEBUG_VARORD
 
 #define _ABS_VAL true
+//#define _DEBUG_ABS true
 
 namespace Mistral {
 
@@ -707,9 +708,7 @@ namespace Mistral {
 
 #ifdef _ABS_VAL
 			int max_values = 10;
-			
-			std::cout << 11 << std::endl;
-			
+
 			value_weight.initialise(solver->variables.size, solver->variables.size);
 			value_visit.initialise(solver->variables.size, solver->variables.size);
 			init_min.initialise(solver->variables.size, solver->variables.size);
@@ -734,9 +733,7 @@ namespace Mistral {
 					std::fill(value_visit[i], value_visit[i]+d, 1);
 				}
 				//value_weight[i] -= init_min[i];
-				
-				std::cout << 22 << std::endl;
-				
+	
 			}
 #endif
 
