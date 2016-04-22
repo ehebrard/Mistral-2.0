@@ -36,6 +36,8 @@
 
 //#define _DEBUG_VARORD
 
+#define _ABS_VAL true
+
 namespace Mistral {
 
 
@@ -704,6 +706,10 @@ namespace Mistral {
       // std::cout << std::endl;
 
 #ifdef _ABS_VAL
+			int max_values = 10;
+			
+			std::cout << 11 << std::endl;
+			
 			value_weight.initialise(solver->variables.size, solver->variables.size);
 			value_visit.initialise(solver->variables.size, solver->variables.size);
 			init_min.initialise(solver->variables.size, solver->variables.size);
@@ -728,6 +734,9 @@ namespace Mistral {
 					std::fill(value_visit[i], value_visit[i]+d, 1);
 				}
 				//value_weight[i] -= init_min[i];
+				
+				std::cout << 22 << std::endl;
+				
 			}
 #endif
 
@@ -750,52 +759,53 @@ namespace Mistral {
 		virtual int get_maxweight_value(const Variable x);
 #endif
 		
-		virtual void notify_success() {
-			
-			//display(std::cout, false);
-			
-			
-			int id;
-			int i = solver->trail_.back(5), n=solver->saved_vars.size;
-			double max_weight = 0;
-			
-
-			// std::cout << "increment by " << weight_unit << " weight of";
-			while(++i<n) {	
-				id = solver->saved_vars[i]; 
-				
-				// std::cout << " " << solver->variables[id];
-				
-				variable_weight[id] += weight_unit;
-				
-				if(variable_weight[id] > max_weight)
-					max_weight = variable_weight[id];
-			}
-			
-			// std::cout << " and decay by " << solver->parameters.activity_decay << std::endl;
-
-			if(max_weight>threshold) {
-			
-				// std::cout << "scaling down" << std::endl;
-			
-				double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
-				weight_unit *= factor;
-			
-				n = solver->variables.size;
-				for(int i=0; i<n; ++i) {
-					// std::cout << variable_weight[i] << " -> ";
-					variable_weight[i] *= factor;
-					// std::cout << variable_weight[i] << std::endl;
-				}
-			
-			}
-		
-			if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
-				weight_unit /= solver->parameters.activity_decay;
-			
-			
-			
-		}
+		virtual void notify_success();
+		// virtual void notify_success() {
+		//
+		// 	//display(std::cout, false);
+		//
+		//
+		// 	int id;
+		// 	int i = solver->trail_.back(5), n=solver->saved_vars.size;
+		// 	double max_weight = 0;
+		//
+		//
+		// 	// std::cout << "increment by " << weight_unit << " weight of";
+		// 	while(++i<n) {
+		// 		id = solver->saved_vars[i];
+		//
+		// 		// std::cout << " " << solver->variables[id];
+		//
+		// 		variable_weight[id] += weight_unit;
+		//
+		// 		if(variable_weight[id] > max_weight)
+		// 			max_weight = variable_weight[id];
+		// 	}
+		//
+		// 	// std::cout << " and decay by " << solver->parameters.activity_decay << std::endl;
+		//
+		// 	if(max_weight>threshold) {
+		//
+		// 		// std::cout << "scaling down" << std::endl;
+		//
+		// 		double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
+		// 		weight_unit *= factor;
+		//
+		// 		n = solver->variables.size;
+		// 		for(int i=0; i<n; ++i) {
+		// 			// std::cout << variable_weight[i] << " -> ";
+		// 			variable_weight[i] *= factor;
+		// 			// std::cout << variable_weight[i] << std::endl;
+		// 		}
+		//
+		// 	}
+		//
+		// 	if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
+		// 		weight_unit /= solver->parameters.activity_decay;
+		//
+		//
+		//
+		// }
 
    // virtual void notify_add_variable() {
    //   while(variable_weight.size < solver->variables.size) {

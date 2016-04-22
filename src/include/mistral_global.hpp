@@ -111,7 +111,7 @@ namespace Mistral {
   //#define _DEBUG_BUILD true
   //#define _DEBUG_BACKTRACK (id == 84)
   //#define _DEBUG_RESTORE true
-  //#define _DEBUG_RELAX (id == 84)
+	//#define _DEBUG_RELAX (id == 365 || id==27)
   //#define _DEBUG_HISTORY true  
   //#define _DEBUG_GENPROPAG (id == 5)
   //#define _DEBUG_MUL (id==7660)

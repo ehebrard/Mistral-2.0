@@ -5317,10 +5317,46 @@ void Mistral::MaxExpression::extract_predicate(Solver *s) {
 
 
 Mistral::ElementExpression::ElementExpression(const Vector< Variable >& args, 
-					      Variable X, int ofs) 
-  : Expression(), offset(ofs) {
-  for(unsigned int i=0; i<args.size; ++i) children.add(args[i]);
-  children.add(X);
+Variable X, int ofs) 
+: Expression(), offset(ofs) {
+		
+	int rmd = 0;
+		
+	// std::cout << args << " [" << offset << "] [" << (X.get_min()-offset) << ".." << X.get_max()-offset << "]" << std::endl;
+
+	for(unsigned int i=0; i<args.size; ++i) {
+		if(i<(X.get_min()-offset)) {
+			
+			// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " < " << (X.get_min()-offset) << std::endl;
+			
+			++rmd;
+		} else if(i<=(X.get_max()-offset)) {
+			children.add(args[i]);
+		} else {
+			
+			// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " > " << (X.get_max()-offset) << std::endl;
+			
+		}
+	}
+	offset+=rmd;
+
+	// std::cout << children << " [" << offset << "]" << std::endl;
+	
+	// for(unsigned int i=0; i<args.size; ++i) {
+	// 		children.add(args[i]);
+	// }
+	
+	children.add(X);
+	
+	// for(int i=0; i<children.size; ++i) {
+	// 	for(int j=i+1; j<children.size; ++j) {
+	// 		if(children[i].id()!=-1 && children[i].id() == children[j].id()) {
+	// 			std::cout << "REPETITIONS IN " << this << " " << X << " in " << X.get_domain() << " " << offset << std::endl;
+	// 			exit(1);
+	// 		}
+	// 	}
+	// }
+	
 }
 
 Mistral::ElementExpression::~ElementExpression() {
@@ -5347,7 +5383,6 @@ void Mistral::ElementExpression::initialise_domain() {
 
   int i, nxt = children[arity].get_min();
 
-
   do {
     i = nxt-offset;
     if(i>=0 && i<arity) {
@@ -5357,7 +5392,7 @@ void Mistral::ElementExpression::initialise_domain() {
 
     nxt = children[arity].next(i+offset);
   } while(i+offset<nxt);
-  
+	
   domain.initialise(lower_bound, upper_bound, BitSet::empt);
   
   nxt = children[arity].get_min();
@@ -5371,6 +5406,8 @@ void Mistral::ElementExpression::initialise_domain() {
     nxt = children[arity].next(i+offset);
   } while(i+offset<nxt);
 
+	// std::cout << domain << std::endl;
+
 
   nxt = lower_bound;
   do {
@@ -5379,6 +5416,8 @@ void Mistral::ElementExpression::initialise_domain() {
     nxt = domain.next(i);
   } while(i<nxt);
   
+	// std::cout << values << std::endl;
+	
 }
 
 void Mistral::ElementExpression::extract_variable(Solver *s) {
@@ -5389,6 +5428,7 @@ void Mistral::ElementExpression::extract_variable(Solver *s) {
 
   _self.initialise(s, 1);
   _self = _self.get_var();
+	
   children.add(_self);
 }
 
@@ -5396,37 +5436,38 @@ const char* Mistral::ElementExpression::get_name() const {
   return "element";
 }
 
+//#define _DEBUG_AC_ELT
 void Mistral::ElementExpression::extract_predicate(Solver *s) {
-  int arity = children.size-2;
-#ifdef _DEBUG_AC
-  std::cout << "pre-propagte element(" 
-	    << children[arity] << " of ["
-	    << children[0] ;
-  for(unsigned int i=0; i<arity; ++i)
-    std::cout << ", " << children[i];
-  std::cout << "]) = " << children[arity+1] ;
+	int arity = children.size-2;
+#ifdef _DEBUG_AC_ELT
+	std::cout << "pre-propagte element(" 
+		<< children[arity] << " of ["
+			<< children[0] ;
+	for(unsigned int i=0; i<arity; ++i)
+		std::cout << ", " << children[i];
+	std::cout << "]) = " << children[arity+1] ;
 #endif
-  if(FAILED(children[arity].set_min(offset)))
-    { 
-#ifdef _DEBUG_AC
-      std::cout << " FAIL!" << std::endl;
-      //exit(1);
+	if(FAILED(children[arity].set_min(offset)))
+	{ 
+#ifdef _DEBUG_AC_ELT
+		std::cout << " FAIL!" << std::endl;
+		//exit(1);
 #endif
-      s->fail(); 
-    }
-  else if(FAILED(children[arity].set_max(arity-1+offset)))
-    { 
-#ifdef _DEBUG_AC
-      std::cout << " FAIL!" << std::endl;
-      //exit(1);
+		s->fail(); 
+	}
+	else if(FAILED(children[arity].set_max(arity-1+offset)))
+	{ 
+#ifdef _DEBUG_AC_ELT
+		std::cout << " FAIL!" << std::endl;
+		//exit(1);
 #endif
-      s->fail(); 
-    }
-#ifdef _DEBUG_AC
-  else
-    std::cout << "ok\n";
+		s->fail(); 
+	}
+#ifdef _DEBUG_AC_ELT
+	else
+		std::cout << "ok\n";
 #endif
-  s->add(Constraint(new PredicateElement(children, offset)));
+	s->add(Constraint(new PredicateElement(children, offset)));
 }
 
 

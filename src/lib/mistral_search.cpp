@@ -869,19 +869,29 @@ std::ostream& Mistral::ConflictCountManager::display(std::ostream& os, const boo
 #ifdef _ABS_VAL
 int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 	
+	
 	int best_val = 0;
 	int idx = x.id();
 	int offset = init_min[idx];
 	double *wgt = value_weight[idx];
 	
+	std::cout << "get min weight " << x << " in " << x.get_domain() << " " << factor[idx] << " " << offset << std::endl;
+	
+	
 	if(factor[idx]==1) {
 		best_val = x.get_min();
 		double min_weight = wgt[best_val-offset], aux_weight;
 		int vali, vnxt=x.next(best_val);
+		
+		std::cout << "  " << best_val << " " << min_weight << std::endl;
+		
 		do {
 			vali = vnxt;
 			vnxt = x.next(vali);
 			aux_weight = wgt[vali-offset]; 
+			
+			std::cout << "  " << vali << " " << aux_weight << std::endl;
+			
 			if(aux_weight < min_weight) {
 				min_weight = aux_weight;
 				best_val = vali;
@@ -896,23 +906,150 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 		double min_weight = wgt[best_group];
 		int lb = group*fact+offset;
 		int ub = lb+fact-1;
+		
+		std::cout << "  [" << lb << "," << ub << "] " << min_weight << std::endl;
+		
 		while(ub < the_max) {
 			++group;
 			lb += fact;
 			ub += fact;
 			
-			if(x.intersect(lb, ub) && min_weight>wgt[group]) {
-				min_weight = wgt[group];
-				best_group = group;
+			if(x.intersect(lb, ub)) {
+				
+				std::cout << "  [" << lb << "," << ub << "] " << wgt[group] << std::endl;
+				
+				if(min_weight>wgt[group]) {
+					min_weight = wgt[group];
+					best_group = group;
+				}
 			}
 		}
 		best_val = x.next(best_group*fact+offset-1);
 	}
 	
+	std::cout << " return " << best_val << std::endl;
+	
 	return best_val;
 }
 int Mistral::PruningCountManager::get_maxweight_value(const Variable x) {return x.get_min();}
 #endif
+
+
+void Mistral::PruningCountManager::notify_success() {
+	
+	//display(std::cout, false);
+	
+	int id;
+	int i = solver->trail_.back(5), n=solver->saved_vars.size;
+	double max_weight = 0;
+	
+	int sz = (n-i);
+	
+	// std::cout << "increment by " << weight_unit << " weight of";
+	while(++i<n) {	
+		id = solver->saved_vars[i]; 
+		
+		// std::cout << " " << solver->variables[id];
+		
+		variable_weight[id] += weight_unit;
+		
+		if(variable_weight[id] > max_weight)
+			max_weight = variable_weight[id];
+	}
+	
+	// std::cout << " and decay by " << solver->parameters.activity_decay << std::endl;
+
+	if(max_weight>threshold) {
+	
+		// std::cout << "scaling down" << std::endl;
+	
+		double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
+		weight_unit *= factor;
+	
+		n = solver->variables.size;
+		for(int i=0; i<n; ++i) {
+			// std::cout << variable_weight[i] << " -> ";
+			variable_weight[i] *= factor;
+			// std::cout << variable_weight[i] << std::endl;
+		}
+	
+	}
+	
+	
+#ifdef _ABS_VAL
+	Decision branch = solver->decisions.back();
+	Variable x = branch.var;
+	int dec = x.id();
+	int dec_type = branch.type();
+	int dec_val = branch.value();
+		int offset = init_min[dec];
+		int fact = factor[dec];
+		if(dec_type == Decision::ASSIGNMENT) {
+			dec_val -= offset;
+			dec_val /= fact;
+			
+#ifdef _DEBUG_ABS
+			std::cout << "i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+#endif
+			
+			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]) * solver->parameters.activity_decay);
+			value_weight[dec][dec_val] += weight_unit*double(sz);
+			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
+			
+#ifdef _DEBUG_ABS
+			std::cout << value_weight[dec][dec_val] << std::endl;
+#endif
+			
+		} else if(fact!=1) {
+			int lb = x.get_min();
+			int ub = x.get_min();
+			int stag = (lb-offset)/fact;
+			int endg = (ub-offset)/fact;
+			int decg = (dec_val-offset)/fact;
+			//int numg = (endg-stag+1);
+			for(int g=stag; g<=endg; ++g) if(g!=decg) {
+				
+#ifdef _DEBUG_ABS
+				std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
+#endif
+				
+				value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+				value_weight[dec][g] += weight_unit*double(sz);
+				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+
+#ifdef _DEBUG_ABS				
+				std::cout << value_weight[dec][g] << std::endl;
+#endif
+			}
+		} else {
+			int vali, vnxt=x.get_min();
+			do {
+				vali = vnxt;
+				vnxt = x.next(vali);
+				vali -= offset;
+
+#ifdef _DEBUG_ABS				
+				std::cout << "i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][vali]  << " -> ";
+#endif
+				
+				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+				value_weight[dec][vali] += weight_unit*double(sz);
+				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
+
+#ifdef _DEBUG_ABS				
+				std::cout << value_weight[dec][vali] << std::endl;		
+#endif
+				
+				vali += offset;
+				
+			} while(vali<vnxt);
+		}
+#endif	
+		
+		if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
+			weight_unit /= solver->parameters.activity_decay;
+	
+}
 
 std::ostream& Mistral::PruningCountManager::display(std::ostream& os, const bool all) const {
       

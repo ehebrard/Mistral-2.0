@@ -288,12 +288,22 @@ namespace Mistral {
     }
 
    void un_post_from(const int var) {
-     //std::cout << "relax [" << id << "] from " << scope[var] << ": " << on[var] << " -> " ;      
-      
+     
+#ifdef _DEBUG_RELAX
+  if(_DEBUG_RELAX) {
+		 	std::cout << "relax [" << id << "] from " << _scope[var] << ": " << on[var] << " -> " ;      
+		}
+#endif
+		      
       on[var]->relax(index[var]);
       index[var] = -1;    
       
-      //std::cout << on[var]  << std::endl;
+#ifdef _DEBUG_RELAX
+  if(_DEBUG_RELAX) {
+      std::cout << on[var]  << std::endl;
+		}
+#endif
+		
     }
     
     void un_relax_from(const int var) {
@@ -649,129 +659,96 @@ namespace Mistral {
 
     void post_on(const int var) {
 
-      // std::cout << "po post " ;
-      // display(std::cout);
-      // std::cout << " on " << scope[var] << std::endl;
-
-//       if(scope[var].is_ground()) {
-// 	active^=(1<<var);
-// 	index[var] = -1;
-//       } else {
-
-// #ifdef _DEBUG_RELAX
-//  if(_DEBUG_RELAX) {
-// 	std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[var] << std::endl;
-// #endif
-// 	//std::cout << "(yep)" << std::endl;
-	
-// 	Constraint c = self[var];
-// 	c.data |= POSTED;
-// 	solver->save( c );
-// 	un_relax_from(var);
-//       }
-
-
-
-      if(scope[var].is_ground()) {
-	active^=(1<<var);
-	index[var] = -1;
-      } else {
+			if(scope[var].is_ground()) {
+				active^=(1<<var);
+				index[var] = -1;
+			} else {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[var] << std::endl;
-  }
+				if(_DEBUG_RELAX) {
+					std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[var] << std::endl;
+				}
 #endif
-	//std::cout << "(yep)" << std::endl;
+				//std::cout << "(yep)" << std::endl;
 	
-	Constraint c = self[var];
-	c.data |= POSTED;
-	solver->save( c );
-	un_relax_from(var);
-      }
-    }
+				Constraint c = self[var];
+				c.data |= POSTED;
+				solver->save( c );
+				un_relax_from(var);
+			}
+		}
   
-    void post() {
+		void post() {
 
-      // std::cout << "p post " ;
-      //  display(std::cout);
-      //  std::cout << std::endl;
+			// std::cout << "p post " ;
+			//  display(std::cout);
+			//  std::cout << std::endl;
 
-      active = (1 << ARITY)-1;
-      int nb_actives = on.size;
-      int i = nb_actives;
+			active = (1 << ARITY)-1;
+			int nb_actives = on.size;
+			int i = nb_actives;
 
-      while(i--) {
-	index[i] = -1;
-	if(scope[i].is_ground()) {
-	  active^=(1<<i);
-	  --nb_actives;
-	}
-      }
+			while(i--) {
+				index[i] = -1;
+				if(scope[i].is_ground()) {
+					active^=(1<<i);
+					--nb_actives;
+				}
+			}
 
-      if(!enforce_nfc1 || nb_actives>1) {
-	Constraint c;
+			if(!enforce_nfc1 || nb_actives>1) {
+				Constraint c;
 	
-	for(i=on.size; i--;) {
-	  //if(!scope[i].is_ground()) {
-	  if(on[i]) {
+				for(i=on.size; i--;) {
+					//if(!scope[i].is_ground()) {
+					if(on[i]) {
 
-	    //std::cout << "c *** " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+						//std::cout << "c *** " << scope[i] << " in " << scope[i].get_domain() << std::endl;
 
-	    c = self[i];
-	    c.data |= POSTED;
-	    solver->save( c );
-	    un_relax_from(i);	  
-	  }
-	}
-      }
-    }
+						c = self[i];
+						c.data |= POSTED;
+						solver->save( c );
+						un_relax_from(i);	  
+					}
+				}
+			}
+		}
 
 
-    void relax() {
-      
-      // std::cout << "active variables: ";
-      // print_bitset(active, 0, std::cout);
-      // std::cout << "( ";
-      // for(int i=on.size; i--;) {
-      // 	if(active & (1 << i)) {
-      // 	  std::cout << scope[i] << " ";
-      // 	}
-      // }
-      // std::cout << ")" << std::endl;
+		void relax() {
 
-      for(int i=on.size; i--;) {
-	if(active & (1 << i)) relax_from(i);
-      }    
-    }
+			for(int i=on.size; i--;) {
+				if(active & (1 << i)) relax_from(i);
+			}    
+		}
 
-    void relax_from(const int var) {
+		void relax_from(const int var) {
 
-      //if(active & (1 << var)) {
-      if(index[var] >= 0) {
+			//if(active & (1 << var)) {
+			if(index[var] >= 0) {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-      std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[var] << std::endl;
-  }
+				if(_DEBUG_RELAX) {
+					std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[var] << std::endl;
+				}
 #endif
 
-     Constraint c = self[var];
-      c.data |= RELAXED;
-      solver->save( c ); //self[var]|RELAXED );
-	un_post_from(var);
-      }
-    }    
+				Constraint c = self[var];
+				c.data |= RELAXED;
+				solver->save( c ); //self[var]|RELAXED );
+				un_post_from(var);
+			}
+		}    
 
-    std::ostream& display(std::ostream& os) const {
-      os << name() << "(" << scope[0] << ", " << scope[1];
-      if(ARITY > 2)
-	os << ", " << scope[2];
-      os << ")";
-      return os;
-    }
+		std::ostream& display(std::ostream& os) const {
+			os << name() << "(" << scope[0] << ", " << scope[1];
+			if(ARITY > 2)
+				os << ", " << scope[2];
+			os << ")";
+			return os;
+		}
   
-  };
+	};
 
 
   class BinaryConstraint : public FixedArityConstraint<2> {
@@ -800,49 +777,40 @@ namespace Mistral {
     bool find_bound_support(const int revise_idx, const int vli);
 
 
-   inline void notify_assignment(const int var) {
+		inline void notify_assignment(const int var) {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-     std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << std::endl;
-  }
+			if(_DEBUG_RELAX) {
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << std::endl;
+			}
 #endif
-     
-     
-     // if(!(active & (1 << var))) {
-       
-     //   std::cout << "SHOULD NOT NOTIFY TWICE (" << scope[var] << " in " << scope[var].get_domain() << ")" << std::endl;
-       
-     // } else {
 
-     if(active & (1 << var)) {
+			if(active & (1 << var)) {
        
-       active ^= (1 << var);
+				active ^= (1 << var);
      
-       int last = (active&7)/2;
-       Constraint c = self[last];
-       c.data |= ACTIVITY;
+				int last = (active&7)/2;
+				Constraint c = self[last];
+				c.data |= ACTIVITY;
 
-       // print_active();
-       // std::cout << " " << last << std::endl;
 
-       if(enforce_nfc1 && size_byte[active] == 1) {
+				if(enforce_nfc1 && size_byte[active] == 1) {
 	 
-	 if(index[last] >= 0) {
+					if(index[last] >= 0) {
 	   
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	   std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[last] << std::endl;
-  }
+						if(_DEBUG_RELAX) {
+							std::cout << "[" << std::setw(4) << id << "](" << name() << "): f relax from " << scope[last] << std::endl;
+						}
 #endif
-	   c.data |= RELAXED;
-	   un_post_from(last);
-	 }
-       }
+						c.data |= RELAXED;
+						un_post_from(last);
+					}
+				}
        
-       solver->save( c ); //self[var]|RELAXED );
-     }
-   }
+				solver->save( c ); //self[var]|RELAXED );
+			}
+		}
 
     void restore(const int rtype) {
 
@@ -1381,310 +1349,301 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     virtual void initialise_vars(Solver*);
 
-    virtual void desactivate(const int var) { 
+		virtual void desactivate(const int var) { 
 
-// #ifdef _DEBUG_RELAX
-//       std::cout // << "[" << std::setw(4) << id << "](" << name() << "): desactivate "
-// 	<< "-"
-// 	<< scope[var] << " " ; //<< std::endl;
-// #endif
-      
-      //active.remove(var);
-      active.reversible_remove(var);
-   }
+			//active.remove(var);
+			active.reversible_remove(var);
+		}
 
-    void trigger();
+		void trigger();
 
-    virtual void consolidate() {
-      for(unsigned int i=0; i<scope.size; ++i) {
-	scope[i] = scope[i].get_var();
-      }
-     for(unsigned int i=0; i<_scope.size; ++i) {
-	_scope[i] = _scope[i].get_var();
-      }
-    }
+		virtual void consolidate() {
+			for(unsigned int i=0; i<scope.size; ++i) {
+				scope[i] = scope[i].get_var();
+			}
+			for(unsigned int i=0; i<_scope.size; ++i) {
+				_scope[i] = _scope[i].get_var();
+			}
+		}
 
-    virtual void consolidate_var(const int idx) {
+		virtual void consolidate_var(const int idx) {
 
-      //std::cout << "consolidate " << scope[idx] << "/" << _scope[idx] << " -> ";
+			//std::cout << "consolidate " << scope[idx] << "/" << _scope[idx] << " -> ";
 
-      scope[idx] = scope[idx].get_var();
-      _scope[idx] = _scope[idx].get_var();
+			scope[idx] = scope[idx].get_var();
+			_scope[idx] = _scope[idx].get_var();
 
-      //      std::cout << scope[idx] << "/" << _scope[idx] << std::endl;
+			//      std::cout << scope[idx] << "/" << _scope[idx] << std::endl;
 
-    }
+		}
   
-    /// An idempotent constraint should not be called on events triggered by itself.
-    /// To forbid that, the lists 'events' and 'changes' are merged
-    /// during its propagation, events will be added to the events list of the constraint 
-    /// after the propagation, the lists events and changes are swapped back
-    /// and the change list is cleared. When idempotent, since the two lists
-    /// point to the same object, they are both cleared.
-    inline void set_idempotent() {
-      if(idempotent()) {
-	events.size = 0;
-	events.index_capacity = changes.index_capacity;
-	events.list_capacity = changes.list_capacity;
-	events.list_ = changes.list_;
-	events.index_ = changes.index_;
-	events.start_ = NULL;
-      } else {
-	events.initialise(0, changes.index_capacity-1, changes.index_capacity, false);
-      }
-    }
+		/// An idempotent constraint should not be called on events triggered by itself.
+		/// To forbid that, the lists 'events' and 'changes' are merged
+		/// during its propagation, events will be added to the events list of the constraint 
+		/// after the propagation, the lists events and changes are swapped back
+		/// and the change list is cleared. When idempotent, since the two lists
+		/// point to the same object, they are both cleared.
+		inline void set_idempotent() {
+			if(idempotent()) {
+				events.size = 0;
+				events.index_capacity = changes.index_capacity;
+				events.list_capacity = changes.list_capacity;
+				events.list_ = changes.list_;
+				events.index_ = changes.index_;
+				events.start_ = NULL;
+			} else {
+				events.initialise(0, changes.index_capacity-1, changes.index_capacity, false);
+			}
+		}
 
 
-    virtual void print_active() {
-      std::cout << active << std::endl;
-    }
+		virtual void print_active() {
+			std::cout << active << std::endl;
+		}
 
 
-    // called before propagation, the events strored in the list 'events'
-    // are copied onto the list 'changes'.
-    inline void freeze() {
-      // if the constraint is idempotent, the two lists point to the same
-      // elements, we just set the size up to what it should be.
-      changes.size = events.size;
+		// called before propagation, the events strored in the list 'events'
+		// are copied onto the list 'changes'.
+		inline void freeze() {
+			// if the constraint is idempotent, the two lists point to the same
+			// elements, we just set the size up to what it should be.
+			changes.size = events.size;
 
-      // otherwise,
-      // before each propagation, the lists events and changes are swapped 
-      if(changes.list_ != events.list_) {
+			// otherwise,
+			// before each propagation, the lists events and changes are swapped 
+			if(changes.list_ != events.list_) {
 
-	// make the changes list points to the events list, and clear the other
-	events.size = 0;
+				// make the changes list points to the events list, and clear the other
+				events.size = 0;
 	
-	int *iaux = events.list_;
-	events.list_ = changes.list_;
-	changes.list_ = iaux;
+				int *iaux = events.list_;
+				events.list_ = changes.list_;
+				changes.list_ = iaux;
 	
-	unsigned int *uaux = events.index_;
-	events.index_ = changes.index_;
-	changes.index_ = uaux;
-      }
-    }
+				unsigned int *uaux = events.index_;
+				events.index_ = changes.index_;
+				changes.index_ = uaux;
+			}
+		}
 
-    inline void defrost() {
-      //      if(is_posted && active.size <= stress) {
+		inline void defrost() {
 
-      // #ifdef _DEBUG_CGRAPH
-      // 	std::cout << " ---> relax " ;
-      // 	display(std::cout);
-      // 	std::cout << std::endl;
-      // #endif
+			if(enforce_nfc1 && active.size == 1) {
+				relax_from(active.back());
+			}
 
-      // 	relax();
-      //       }
+			if(changes.list_ == events.list_)
+				// if idempotent, clear the events list
+				events.size = 0;	
+		}
 
-      if(enforce_nfc1 && active.size == 1) {
-	relax_from(active.back());
-      }
-
-      if(changes.list_ == events.list_)
-	// if idempotent, clear the events list
-	events.size = 0;	
-    }
-
-    inline void un_relax() {
+		inline void un_relax() {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNRELAX " << std::endl;
-  }
+			if(_DEBUG_RELAX) {
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNRELAX " << std::endl;
+			}
 #endif
-
-      int i, n;
-      for(n=active.size; --n>=0;) {
-	i = active[n];
-
-	if(index[i]<0) {
-	  
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[i] << std::endl;
-  }
-#endif
-	  
-	  index[i] = on[i]->post(self[i]);
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		//std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
 	}
-	
-// #ifdef _DEBUG_RELAX
-// 	else {
-// 	  std::cout << "SHOULD NOT TRY TO post on " << scope[i] << std::endl;
-// 	}
-// #endif
-	
-      }
-    }
+#endif
 
-    inline void post() {
+			int i, n;
+			for(n=active.size; --n>=0;) {
+				i = active[n];
 
-      // save 
-      solver->save( Constraint(this, type|POSTED) );
-      //solver->save( Constraint(this, type|2) );
+				if(index[i]<0) {
+	  
+#ifdef _DEBUG_RELAX
+					if(_DEBUG_RELAX) {
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[i] << std::endl;
+					}
+#endif
+	  
+					index[i] = on[i]->post(self[i]);
+				}
+
+			}
+			
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
+#endif
+		}
+
+		inline void post() {
+
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
+#endif
+	
+			// save 
+			solver->save( Constraint(this, type|POSTED) );
+			//solver->save( Constraint(this, type|2) );
     
-      active.fill();
-      for(int i=on.size; --i>=0;) {
-	if(scope[i].is_ground()) {
-	  active.reversible_remove(i);
-	  index[i] = -1;
-	} else {
+			active.fill();
+			for(int i=on.size; --i>=0;) {
+				if(scope[i].is_ground()) {
+					active.reversible_remove(i);
+					index[i] = -1;
+				} else {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-      std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[i] << std::endl;
-  }
+					if(_DEBUG_RELAX) {
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): post on " << scope[i] << std::endl;
+					}
 #endif
 
-	  index[i] = on[i]->post(self[i]);
+					index[i] = on[i]->post(self[i]);
+				}
+			}
+			
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
 	}
-      }
-    }
+#endif
+		}
 
-    inline void un_post() {
-
-// #ifdef _DEBUG_RELAX
-// 	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNPOST " << std::endl;
-// #endif
-
-//       for(int i=on.size; --i;) {
-// 	if(index[i]>=0) {
-
-// #ifdef _DEBUG_RELAX
-// 	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[i] << std::endl;
-// #endif
-
-// 	  un_post_from(i);
-// 	  // on[i]->relax(index[i]);
-// 	  // index[i] = -1;
-// 	}
-// #ifdef _DEBUG_RELAX
-// 	else {
-// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[i] << std::endl;
-// 	}
-// #endif
-//       }
-
+		inline void un_post() {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-      std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNPOST " << std::endl;
-  }
+			if(_DEBUG_RELAX) {
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): UNPOST " << std::endl;
+			}
+#endif
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
 #endif
       
-      int var;
-      for(int i=active.size; --i>=0;) {
-	//if(active.contain(i)) {
-	var = active[i];
+			int var;
+			for(int i=active.size; --i>=0;) {
+				//if(active.contain(i)) {
+				var = active[i];
 	
-	if(index[var]>=0) {
+				if(index[var]>=0) {
 	  
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[var] << std::endl;
-  }
+					if(_DEBUG_RELAX) {
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[var] << std::endl;
+					}
 #endif
 	  
-	  un_post_from(var);
-	  // on[i]->relax(index[i]);
-	  // index[i] = -1;
-	}
-	
-// #ifdef _DEBUG_RELAX
-// 	else {
-// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[var] << std::endl;
-// 	}
-// #endif
-      }
+					un_post_from(var);
+				}
+
+			}
       
-    }
-
-    inline void relax() {
-
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): RELAX " << std::endl;
-  }
-#endif
-
-      //solver->save( Constraint(this, type|1) );
-      solver->save( Constraint(this, type|RELAXED) );
-
-//       for(int i=on.size; --i;) {
-// 	if(active.contain(i)) {
-	  
-// #ifdef _DEBUG_RELAX
-// 	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[i] << std::endl;
-// #endif
-// 	  if(index[i]>=0) {
-// 	    un_post_from(i);
-// 	    // on[i]->relax(index[i]);
-// 	    // index[i] = -1;
-// 	  }
-// #ifdef _DEBUG_RELAX
-// 	else {
-// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[i] << std::endl;
-// 	}
-// #endif
-// 	}    
-//       }
-
-      int var;
-      for(int i=active.size; --i>=0;) {
-	//if(active.contain(i)) {
-	var = active[i];
-	  
-	if(index[var]>=0) {
-	  
-#ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[var] << std::endl;
-  }
-#endif
-
-	  un_post_from(var);
-	  // on[i]->relax(index[i]);
-	  // index[i] = -1;
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
 	}
-// #ifdef _DEBUG_RELAX
-// 	else {
-// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[i] << std::endl;
-// 	}
-// #endif
-      } 
-    }
+#endif
+		}
 
-
-    inline void relax_from(const int var) {
-      //if(index[var] > -1) {
+		inline void relax() {
 
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): RELAX FROM "  << std::endl;
-  }
+			if(_DEBUG_RELAX) {
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): RELAX " << std::endl;
+			}
+#endif
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
 #endif
 
-      if(index[var]>=0) {
+			solver->save( Constraint(this, type|RELAXED) );
+
+			int var;
+			for(int i=active.size; --i>=0;) {
+				//if(active.contain(i)) {
+				var = active[i];
+	  
+				if(index[var]>=0) {
+	  
+#ifdef _DEBUG_RELAX
+					if(_DEBUG_RELAX) {
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): g1 relax from " << scope[var] << std::endl;
+					}
+#endif
+
+					un_post_from(var);
+				}
+			} 
+			
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
+#endif
+		}
+
+
+		inline void relax_from(const int var) {
+			//if(index[var] > -1) {
+
+#ifdef _DEBUG_RELAX
+			if(_DEBUG_RELAX) {
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): RELAX FROM "  << std::endl;
+			}
+#endif
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
+#endif
+
+			if(index[var]>=0) {
 	
-	//solver->save( Constraint(this, type|1) );
-	solver->save( Constraint(this, type|RELAXED) );
+				//solver->save( Constraint(this, type|1) );
+				solver->save( Constraint(this, type|RELAXED) );
 	
 	
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-	std::cout << "[" << std::setw(4) << id << "](" << name() << "): g2 relax from " << scope[var] << std::endl;
-  }
+				if(_DEBUG_RELAX) {
+					std::cout << "[" << std::setw(4) << id << "](" << name() << "): g2 relax from "<< var << " = " << scope[var] << " " << on[var] << std::endl;
+				}
 #endif
 	
-	un_post_from(var);
+				un_post_from(var);
       
-      }    
-// #ifdef _DEBUG_RELAX
-// 	else {
-// 	  std::cout << "SHOULD NOT TRY TO relax from " << scope[var] << std::endl;
-// 	}
-// #endif
-    }
+			}    
+
+#ifdef _DEBUG_RELAX
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
+	}
+#endif
+		}
 
     virtual PropagationOutcome checker_propagate() { return GlobalConstraint::propagate(); }
     virtual PropagationOutcome bound_checker_propagate() { return GlobalConstraint::bound_propagate(); }
@@ -1705,118 +1664,116 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     bool find_support(const int vri, const int vli);
     bool find_bound_support(const int vri, const int vli);
 
-    inline void notify_assignment(const int var) {
+		inline void notify_assignment(const int var) {
       
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-      std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << " => ";//<< std::endl;
-  }
+			if(_DEBUG_RELAX) {
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): notify assignment of " << scope[var] << " => ";//<< std::endl;
+			}
 #endif
-      
-      // if(!active.contain(var)) {
-      
-      //   std::cout << "SHOULD NOT NOTIFY TWICE (" << scope[var] << " in " << scope[var].get_domain() << ")" << std::endl;
-      
-      //   //exit(1);
-      // } else {
-      
-      if(active.contain(var)) {
-	
-	active.reversible_remove(var);
-       
-	// if(enforce_nfc1 && active.size == 1) {
-	//   relax_from(active.back());
-	// }
-	
-      }
-      
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-      print_active();
-      std::cout << std::endl;
-  }
-#endif
-      
-    }
-
-    inline void notify_other_event(const int var, 
-				   const Mistral::Event evt) {
-
-      
-
-      // if(ASSIGNED(evt) && active.contain(var)) {
-
-      // 	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
-      // 	// 	  << " is assigned -> " ;
-	
-      // 	active.reversible_remove(var);
-	
-      // 	// std::cout << active << std::endl;
-
-      // }
-
-      if(events.contain(var)) {
-	event_type[var] |= evt;
-      } else {
-	events.add(var);
-	event_type[var] = evt;
-      }
-    }
-
-    inline void notify_first_event(const int var, 
-				   const Mistral::Event evt) {
-
-      // if(ASSIGNED(evt) && active.contain(var)) {
-
-      // 	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
-      // 	// 	  << " is assigned -> " ;
-
-      // 	active.reversible_remove(var);
-
-      // 	// std::cout << active << std::endl;
-
-      // }
-
-      events.set_to(var);
-      event_type[var] = evt;
-    }
-
-
-    void check_active() {
-      for(int i=on.size; i--;) {
-	if(index[i]>=0) {
-	  if(active.contain(i)) {
-	    if(scope[i].is_ground()) {
-	      std::cout << "[" << std::setw(4) << id << "] " ;
-	      display(std::cout);
-	      std::cout << std::endl;
-	      std::cout << "Warning: " << scope[i] << " = " << scope[i].get_domain()
-			<< " is ground and active!!" << std::endl;
-	      print_active();
-	      std::cout << " :: ";
-	      for(unsigned int j=0; j<on.size; ++j)
-		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
-	      std::cout << " (exit on check_active())" << std::endl;
-	      //exit(1);
-	    }
-	  } else {
-	    if(!(scope[i].is_ground())) {
-	      std::cout << "[" << std::setw(4) << id << "] " ;
-	      display(std::cout);
-	      std::cout << std::endl;
-	      std::cout << "Warning: " << scope[i] << " in " << scope[i].get_domain()
-			<< " is not ground and not active!!" << std::endl;
-	      print_active();
-	      std::cout << " :: ";
-	      for(unsigned int j=0; j<on.size; ++j)
-		std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
-	      std::cout << " (exit on check_active())" << std::endl;
-	      //exit(1);
-	    }
-	  }
+	if(_DEBUG_RELAX) {
+		std::cout << "set_scope" << std::endl;
+		// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+		//std::cout << on[14] << std::endl;
 	}
-      }
-    }
+#endif
+      
+			if(active.contain(var)) {
+	
+				active.reversible_remove(var);
+
+			}
+      
+#ifdef _DEBUG_RELAX
+			if(_DEBUG_RELAX) {
+				print_active();
+				std::cout << std::endl;
+				std::cout << ((int*)this) << " " << on.size << std::endl;
+				// std::cout << ((int*)(on.stack_)) << " " << ((int*)(on[14])) << " " << on[14] << std::endl;
+			}
+#endif
+      
+		}
+
+		inline void notify_other_event(const int var, 
+		const Mistral::Event evt) {
+
+      
+
+			// if(ASSIGNED(evt) && active.contain(var)) {
+
+			// 	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
+			// 	// 	  << " is assigned -> " ;
+	
+			// 	active.reversible_remove(var);
+	
+			// 	// std::cout << active << std::endl;
+
+			// }
+
+			if(events.contain(var)) {
+				event_type[var] |= evt;
+			} else {
+				events.add(var);
+				event_type[var] = evt;
+			}
+		}
+
+		inline void notify_first_event(const int var, 
+		const Mistral::Event evt) {
+
+			// if(ASSIGNED(evt) && active.contain(var)) {
+
+			// 	// std::cout << active << " -> " << scope[var] << " in " << scope[var].get_domain() 
+			// 	// 	  << " is assigned -> " ;
+
+			// 	active.reversible_remove(var);
+
+			// 	// std::cout << active << std::endl;
+
+			// }
+
+			events.set_to(var);
+			event_type[var] = evt;
+		}
+
+
+		void check_active() {
+			for(int i=on.size; i--;) {
+				if(index[i]>=0) {
+					if(active.contain(i)) {
+						if(scope[i].is_ground()) {
+							std::cout << "[" << std::setw(4) << id << "] " ;
+							display(std::cout);
+							std::cout << std::endl;
+							std::cout << "Warning: " << scope[i] << " = " << scope[i].get_domain()
+								<< " is ground and active!!" << std::endl;
+							print_active();
+							std::cout << " :: ";
+							for(unsigned int j=0; j<on.size; ++j)
+								std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
+							std::cout << " (exit on check_active())" << std::endl;
+							//exit(1);
+						}
+					} else {
+						if(!(scope[i].is_ground())) {
+							std::cout << "[" << std::setw(4) << id << "] " ;
+							display(std::cout);
+							std::cout << std::endl;
+							std::cout << "Warning: " << scope[i] << " in " << scope[i].get_domain()
+								<< " is not ground and not active!!" << std::endl;
+							print_active();
+							std::cout << " :: ";
+							for(unsigned int j=0; j<on.size; ++j)
+								std::cout << scope[j] << " in " << scope[j].get_domain() << " ";
+							std::cout << " (exit on check_active())" << std::endl;
+							//exit(1);
+						}
+					}
+				}
+			}
+		}
 
 
 

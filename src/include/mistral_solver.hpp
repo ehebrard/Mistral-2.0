@@ -592,6 +592,8 @@ namespace Mistral {
     //@}
 
 
+		void checkcg(const char* msg);
+			
     // Vector< Variable > non_boolean_variables;
     // Vector< Constraint > non_explained_constraints;
     // //statistics.pseudo_boolean &= (x.is_boolean() || (objective && objective->objective == x));
