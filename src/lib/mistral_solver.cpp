@@ -950,6 +950,8 @@ Mistral::Solver::Solver()
   initialised_cons = 0;
   num_search_variables = 0;
   base = NULL;
+	
+	search_root = -2;
 
   // trail stuff
   level = -1;
@@ -1656,6 +1658,9 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
   initialise_search(seq, heu, pol, goal);
 
   statistics.start_time = get_run_time();
+	
+	search_started = true;
+	
   return restart_search(0, _restore_);
 }
  
@@ -2413,9 +2418,11 @@ void Mistral::Solver::restore() {
 }
 
 void Mistral::Solver::restore(const int lvl) {
-  //decisions.size = lvl;
-  decisions.size = lvl -search_root;
-  while(lvl < level) restore();
+	if(lvl>=search_root && search_root>=-1) {
+		//decisions.size = lvl;
+  	decisions.size = lvl -search_root;
+  	while(lvl < level) restore();
+	}
 }
 
 
