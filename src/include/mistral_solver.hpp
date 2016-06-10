@@ -155,6 +155,8 @@ namespace Mistral {
 
     /// Number of nodes, that is recursive calls to  the dfs algo
     unsigned long int num_nodes; 
+    /// Number of decisions
+    unsigned long int num_decisions; 
     /// Number of backtracks, that is unsuccesful recursive calls 
     unsigned long int num_backtracks;
     /// Number of constraint failures

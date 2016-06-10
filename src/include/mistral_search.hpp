@@ -25,6 +25,7 @@
 #define __SEARCH_HPP
 
 #include <algorithm>
+#include <math.h> 
 
 #include <mistral_global.hpp>
 #include <mistral_structure.hpp>
@@ -1029,6 +1030,71 @@ namespace Mistral {
 
 
 
+	/*! \class DecisionCountManager
+	\brief DecisionCountManager Class
+
+	* Listener interface for counting decisions *
+	*/
+	class DecisionCountManager : public DecisionListener, public VariableListener {
+
+	public:
+
+		Solver *solver;
+
+		Vector<int> num_decision;
+		Vector<double> variable_weight;
+
+		DecisionCountManager() {}	
+		
+		DecisionCountManager(Solver *s) {
+			initialise(s);
+		}	
+		
+		virtual void initialise(Solver *s) {
+
+			solver = s;
+			num_decision.initialise(solver->variables.size, solver->variables.size);
+			variable_weight.initialise(solver->variables.size, solver->variables.size);
+			solver->add((DecisionListener*)this);
+			solver->add((VariableListener*)this);
+			
+		}
+
+		virtual ~DecisionCountManager() {
+			solver->remove((VariableListener*)this);
+			solver->remove((DecisionListener*)this);
+		}
+		
+
+		double *get_variable_weight() { return variable_weight.stack_; }   
+		double **get_value_weight() { return NULL; }
+		double *get_bound_weight() { return NULL; }
+	
+	
+		virtual void notify_add_var() {
+			num_decision.add(0);
+			variable_weight.add(0.0);
+		}
+
+		virtual void notify_change(const int id) {}
+
+		virtual void notify_decision() {
+			int idx = solver->decisions.back().var.id();
+			int mi = ++num_decision[idx];
+			int m = solver->statistics.num_decisions;
+			
+			
+			//std::cout << mi << "/" << m << ": " << log((double)m) << " " << (log((double)m) / (double)mi) << std::endl;
+			
+			variable_weight[idx] = sqrt(2.0 * log((double)m) / (double)mi);
+		}
+  
+		virtual std::ostream& display(std::ostream& os, const bool all) const ;
+    
+	};
+
+
+
 
   // /*! \class ProgressSavingManager
   //   \brief ProgressSavingManager Class
@@ -1310,6 +1376,100 @@ namespace Mistral {
 
 
 
+	/*! \class MultiArmedBandit
+	\brief  Class MultiArmedBandit
+	
+	use the scoring function of the templated comparator as reward in a multi-armed bandit scheme (one arm per variable)
+
+	*/
+	template< class VarComparator >
+	class MultiArmedBandit {
+    
+	public:
+		
+    /**@name Constructors*/
+    //@{
+		MultiArmedBandit() { 
+			factor=100.0; 
+		}
+		void initialise(Solver *s, double *_w) {
+			dcount.initialise(s);
+			score.initialise(s, _w); 
+		}
+		virtual ~MultiArmedBandit() {};
+    //@}
+
+    /**@name Parameters*/
+    //@{ 
+		double factor;
+ 	 	DecisionCountManager dcount; 
+		VarComparator score;
+		double diversification;
+		double var_score;
+    //@}  
+
+    /**@name Utils*/
+    //@{
+    inline double value() { return var_score + diversification; } 
+    inline bool operator<( const MultiArmedBandit<VarComparator>& x ) const { return (var_score + diversification) > (x.var_score + x.diversification); }
+    inline bool operator>( const MultiArmedBandit<VarComparator>& x ) const { return (var_score + diversification) < (x.var_score + x.diversification); }
+    inline bool operator==( const MultiArmedBandit<VarComparator>& x ) const { return (var_score + diversification) == (x.var_score + x.diversification); }
+
+    // inline MinDomain& operator*( const int x ) const { MinDomain d; d.dom_=(dom_ * x); return d; }
+    // inline MinDomain& operator+( const int x ) const { MinDomain d; d.dom_=(dom_ + x); return d; }
+    // inline MinDomain& operator-( const int x ) const { MinDomain d; d.dom_=(dom_ - x); return d; }
+    // inline MinDomain& operator/( const int x ) const { MinDomain d; d.dom_=(dom_ / x); return d; }
+
+    inline MultiArmedBandit<VarComparator>& operator*=( const int x ) { var_score *= x; diversification *= x; return *this; }
+    inline MultiArmedBandit<VarComparator>& operator+=( const int x ) { var_score += x; diversification += x; return *this; }
+    inline MultiArmedBandit<VarComparator>& operator-=( const int x ) { var_score -= x; diversification -= x; return *this; }
+    inline MultiArmedBandit<VarComparator>& operator/=( const int x ) { var_score /= x; diversification /= x; return *this; }
+
+    // inline MinDomain& operator*( const MinDomain& x ) const { MinDomain d; d.dom_=(dom_ * x.dom_); return d; }
+    // inline MinDomain& operator+( const MinDomain& x ) const { MinDomain d; d.dom_=(dom_ + x.dom_); return d; }
+    // inline MinDomain& operator-( const MinDomain& x ) const { MinDomain d; d.dom_=(dom_ - x.dom_); return d; }
+    // inline MinDomain& operator/( const MinDomain& x ) const { MinDomain d; d.dom_=(dom_ / x.dom_); return d; }
+
+    inline MultiArmedBandit<VarComparator>& operator*=( const MultiArmedBandit<VarComparator>& x ) { double v = x.value(); var_score *= v; diversification *= v; return *this; }
+    inline MultiArmedBandit<VarComparator>& operator+=( const MultiArmedBandit<VarComparator>& x ) { double v = x.value(); var_score += v; diversification += v; return *this; }
+    inline MultiArmedBandit<VarComparator>& operator-=( const MultiArmedBandit<VarComparator>& x ) { double v = x.value(); var_score -= v; diversification -= v; return *this; }
+    inline MultiArmedBandit<VarComparator>& operator/=( const MultiArmedBandit<VarComparator>& x ) { double v = x.value(); var_score /= v; diversification /= v; return *this; }
+
+    inline void operator=( const MultiArmedBandit<VarComparator>& x ) { diversification = x.diversification; var_score = x.var_score; }
+    inline void operator=( const Variable x ) { 
+			score = x; diversification = dcount.variable_weight[x.id()]; 
+			var_score = factor/score.value();
+			//std::cout << x << ": " << var_score << " + " << diversification << std::endl;
+		}
+
+    //@}  
+
+    std::ostream& display_criterion(std::ostream& os) const {
+      os << "with MAB(";
+			score.display_criterion(os);
+			os << ")";
+      return os;
+    }
+
+    std::ostream& display(std::ostream& os) const {
+      os << var_score << " + " << diversification;
+      return os;
+    }
+  };
+
+	template< class VarComparator >
+  std::ostream& operator<<(std::ostream& os, MultiArmedBandit<VarComparator>& x) {
+  	return x.display(os);
+  }
+	
+	template< class VarComparator >
+  std::ostream& operator<<(std::ostream& os, MultiArmedBandit<VarComparator>* x) {
+  	return x->display(os);
+  }
+		
+
+
+
   template< class VarComparator >
   class Identifiable {
     
@@ -1387,13 +1547,13 @@ namespace Mistral {
 
       //std::cout << "initialise manager (" << manager << ") \n";
 
-      if(!manager) {
-	manager = new WeightManager(solver);
-	current.initialise(manager->get_variable_weight());
-	for(int i=0; i<=RAND; ++i)
-	  bests[i].initialise(manager->get_variable_weight());
-      }
-    }
+			if(!manager) {
+				manager = new WeightManager(solver);
+				current.initialise(solver, manager->get_variable_weight());
+				for(int i=0; i<=RAND; ++i)
+					bests[i].initialise(solver, manager->get_variable_weight());
+			}
+		}
 
     virtual ~GenericDVO() { delete manager; }
     //@}
@@ -1405,105 +1565,105 @@ namespace Mistral {
     double *get_bound_weight() { return manager->get_bound_weight(); }
     WeightMap *get_weight_map() { return manager; }
 
-    Variable select()
-    {
+		Variable select()
+		{
 
 #ifdef _DEBUG_VARORD
-      std::cout << std::endl;
+			std::cout << std::endl;
 #endif
 
-      Variable *variables = solver->sequence.list_;
-      unsigned int length = solver->sequence.size-1;
-      unsigned int realsize=1, i, j;
-      bests[0] = bestvars[0] = variables[length];
-      for(j=length; j--;)
-	{  
-	  current = variables[j];
-	  i = realsize;
-	  while( i && current < bests[i-1] ) {
-	    bests[i] = bests[i-1];
-	    bestvars[i] = bestvars[i-1];
-	    --i;
-	  }
+			Variable *variables = solver->sequence.list_;
+			unsigned int length = solver->sequence.size-1;
+			unsigned int realsize=1, i, j;
+			bests[0] = bestvars[0] = variables[length];
+			for(j=length; j--;)
+			{  
+				current = variables[j];
+				i = realsize;
+				while( i && current < bests[i-1] ) {
+					bests[i] = bests[i-1];
+					bestvars[i] = bestvars[i-1];
+					--i;
+				}
 
 #ifdef _DEBUG_VARORD
-	  if(i<RAND) {
-	    std::cout << "*";
-	  }
-	  std::cout << std::endl;
+				if(i<RAND) {
+					std::cout << "*";
+				}
+				std::cout << std::endl;
 #endif
 
-	  bests[i] = current;
-	  bestvars[i] = variables[j];
+				bests[i] = current;
+				bestvars[i] = variables[j];
 	  
-	  if(realsize<RAND) ++realsize;
-	}
-      return bestvars[(realsize>1 ? randint(realsize) : 0)];
-    }
-    //@}
+				if(realsize<RAND) ++realsize;
+			}
+			return bestvars[(realsize>1 ? randint(realsize) : 0)];
+		}
+		//@}
 
 
 
-    virtual std::ostream& display(std::ostream& os) const { //,  const int n, double* weights) {
+		virtual std::ostream& display(std::ostream& os) const { //,  const int n, double* weights) {
 
-      manager->display(os, false);
+			manager->display(os, false);
 
-      //double* weights = (manager ? manager->get_variable_weight() : NULL);
-      //int n = RAND;
+			//double* weights = (manager ? manager->get_variable_weight() : NULL);
+			//int n = RAND;
 
-      os << " c Select the " ;
-      if(RAND>1) os << RAND << " ";
-      os << "variable" << (RAND > 1 ? "s " : " ") ;//<< "with minimal value of ";
-      VarComparator v;
-      v.display_criterion(os);
-      if(RAND>1) os << " and pick one uniformly at random" ;
-      os << std::endl;
+			os << " c Select the " ;
+			if(RAND>1) os << RAND << " ";
+			os << "variable" << (RAND > 1 ? "s " : " ") ;//<< "with minimal value of ";
+			VarComparator v;
+			v.display_criterion(os);
+			if(RAND>1) os << " and pick one uniformly at random" ;
+			os << std::endl;
 
-      if(solver->sequence.size > 1) {
-	Variable *variables = solver->sequence.list_;
-	unsigned int length = solver->sequence.size-1;
-	Variable var = variables[length];
+			if(solver->sequence.size > 1) {
+				Variable *variables = solver->sequence.list_;
+				unsigned int length = solver->sequence.size-1;
+				Variable var = variables[length];
 	
 	
-	os << "--> branch in [";
+				os << "--> branch in [";
 	
-	std::vector< Identifiable< VarComparator > > all_vars;
-	for(unsigned int i=0; i<=length; ++i) {
-	  Identifiable<VarComparator> vc;
-	  //if(weights) vc.criterion.weight = weights;
-	  vc = variables[i];
-	  vc.id = i;
-	  all_vars.push_back(vc);
+				std::vector< Identifiable< VarComparator > > all_vars;
+				for(unsigned int i=0; i<=length; ++i) {
+					Identifiable<VarComparator> vc;
+					//if(weights) vc.criterion.weight = weights;
+					vc = variables[i];
+					vc.id = i;
+					all_vars.push_back(vc);
 	  
-	  os << variables[i] << " in " << variables[i].get_domain() << " ";
+					os << variables[i] << " in " << variables[i].get_domain() << " ";
 	  
-	}
+				}
 	
-	os << std::endl;
+				os << std::endl;
 
 
-	sort(all_vars.begin(), all_vars.end());
+				sort(all_vars.begin(), all_vars.end());
 	
-	os << " c [" << variables[all_vars[0].id].id() << ":";
-	all_vars[0].display(os);
+				os << " c [" << variables[all_vars[0].id].id() << ":";
+				all_vars[0].display(os);
 	
-	for(int i=1; i<RAND; ++i) {
-	  os << " " << variables[all_vars[i].id].id() << ":";
-	  all_vars[i].display(os);
-	}
+				for(int i=1; i<RAND; ++i) {
+					os << " " << variables[all_vars[i].id].id() << ":";
+					all_vars[i].display(os);
+				}
 	
-	os << "]";
+				os << "]";
 
-	for(unsigned int i=RAND; i<all_vars.size(); ++i) {
-	  os << " " << variables[all_vars[i].id].id() << ":";
-	  all_vars[i].display(os);
-	}
-	os << std::endl;
-      }
-      return os;
-    }
+				for(unsigned int i=RAND; i<all_vars.size(); ++i) {
+					os << " " << variables[all_vars[i].id].id() << ":";
+					all_vars[i].display(os);
+				}
+				os << std::endl;
+			}
+			return os;
+		}
 
-  };
+	};
 
 
 
@@ -1731,7 +1891,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomain() {dom_ = LARGE_VALUE;}
-    void initialise(const double* _w) {dom_ = LARGE_VALUE;}
+    void initialise(Solver* s, double* _w) {dom_ = LARGE_VALUE;}
     //@}
 
     /**@name Parameters*/
@@ -1798,7 +1958,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinMin() {min_ = LARGE_VALUE;}
-    void initialise(const double* _w) {min_ = LARGE_VALUE;}
+    void initialise(Solver* s, double* _w) {min_ = LARGE_VALUE;}
     //@}
 
     /**@name Parameters*/
@@ -1853,7 +2013,7 @@ namespace Mistral {
       /**@name Constructors*/
       //@{
       MaxMax() {max_ = SMALL_VALUE;}
-      void initialise(const double* _w) {max_ = SMALL_VALUE;}
+      void initialise(Solver* s, double* _w) {max_ = SMALL_VALUE;}
       //@}
 
       /**@name Parameters*/
@@ -1909,7 +2069,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MaxRegret() {reg_ = SMALL_VALUE;}
-    void initialise(const double* _w) {reg_ = SMALL_VALUE;}
+    void initialise(Solver* s, double* _w) {reg_ = SMALL_VALUE;}
     //@}
 
     /**@name Parameters*/
@@ -1970,7 +2130,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     Anti() : crit() {}
-    void initialise(const double* _w) {crit.initialise(_w);}
+    void initialise(Solver* s, double* _w) {crit.initialise(s, _w);}
     //@}
 
     /**@name Parameters*/
@@ -2038,7 +2198,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     LexCombination() : critA(), critB() {}
-    void initialise(const double* _w) {critA.initialise(_w); critB.initialise(_w);}
+    void initialise(Solver* s, double* _w) {critA.initialise(s, _w); critB.initialise(s, _w);}
     //@}
 
     /**@name Parameters*/
@@ -2111,7 +2271,7 @@ namespace Mistral {
   //   /**@name Constructors*/
   //   //@{
   //   DivCombination() : crit() {}
-  //   void initialise(const double* _w) {critA.initialise(_w); critB.initialise(_w);}
+  //   void initialise(Solver* s, double* _w) {critA.initialise(_w); critB.initialise(_w);}
   //   //@}
 
   //   /**@name Parameters*/
@@ -2183,7 +2343,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MaxDegree() {deg_ = LARGE_VALUE;}
-    void initialise(const double* _w) {deg_ = LARGE_VALUE;}
+    void initialise(Solver* s, double* _w) {deg_ = LARGE_VALUE;}
     //@}
 
     /**@name Parameters*/
@@ -2251,7 +2411,7 @@ namespace Mistral {
   //   /**@name Constructors*/
   //   //@{
   //   MinDomainMaxDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
-  //   void initialise(const double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
+  //   void initialise(Solver* s, double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
   //   //@}
 
   //   /**@name Parameters*/
@@ -2312,7 +2472,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainOverDegree() {dom_ = LARGE_VALUE; deg_ = 0;}
-    void initialise(const double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
+    void initialise(Solver* s, double* _w) {dom_ = LARGE_VALUE; deg_ = 0;}
     //@}
 
     /**@name Parameters*/
@@ -2394,7 +2554,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
-    void initialise(double* _w=NULL) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
+    void initialise(Solver* s, double* _w) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
     //MinDomainOverWeight(void *w) : weight((double*)w) {dom_ = LARGE_VALUE; wei_ = 0;}
     //@}
 
@@ -2419,13 +2579,13 @@ namespace Mistral {
     // inline MinDomainOverWeight& operator/( const MinDomainOverWeight& x ) const { MinDomainOverWeight d; d.dom_=(dom_ / x.dom_); d.wei_=(wei_ / x.wei_); return d; }
 
 
-    inline void reduce() {
-      while(dom_>100000 || !(dom_&1)) {
-	dom_ /=2;
-	wei_ /=2;
-      }
-    }
-
+		inline void reduce() {
+			while(dom_>100000 || !(dom_&1)) {
+				dom_ /=2;
+				wei_ /=2;
+			}
+		}
+		
 
     inline MinDomainOverWeight& operator*=( const int x ) { dom_ *= x; return *this; }
     inline MinDomainOverWeight& operator+=( const int x ) { dom_ += x * wei_; return *this; }
@@ -2448,7 +2608,7 @@ namespace Mistral {
     inline void operator=( const MinDomainOverWeight& x ) { dom_ = x.dom_; wei_ = x.wei_; }
     inline void operator=( const Variable x ) { 
       dom_ = x.get_size(); wei_ = weight[x.id()]; 
-      //std::cout << x << ": " << dom_ << "/" << wei_ << std::endl;
+      //std::cout << x << ": " << dom_ << "/" << wei_ << ": " << value() << std::endl;
     }
     //@}  
 
@@ -2480,7 +2640,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinDomainTimesWeight() {sco_ = LARGE_VALUE; }
-    void initialise(double* _w=NULL) {sco_ = LARGE_VALUE; weight = _w;}
+    void initialise(Solver* s, double* _w) {sco_ = LARGE_VALUE; weight = _w;}
     //MinDomainTimesWeight(void *w) : weight((double*)w) {dom_ = LARGE_VALUE; wei_ = 0;}
     //@}
 
@@ -2543,7 +2703,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinNeighborDomainOverNeighborWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
-    void initialise(double* _w=NULL) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
+    void initialise(Solver* s, double* _w) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
     //@}
 
     /**@name Parameters*/
@@ -2608,7 +2768,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     SelfPlusAverage() { map = NULL; }
-    void initialise(double* _w=NULL) { crit.initialise(_w); map = NULL; weight = _w; }
+    void initialise(Solver* s, double* _w) { crit.initialise(s, _w); map = NULL; weight = _w; }
     //@}
 
     /**@name Parameters*/
@@ -2718,7 +2878,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinNeighborDomainOverWeight() {dom_ = LARGE_VALUE; wei_ = 0;}
-    void initialise(double* _w=NULL) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
+    void initialise(Solver* s, double* _w) {dom_ = LARGE_VALUE; wei_ = 0; weight = _w;}
     //@}
 
     /**@name Parameters*/
@@ -2783,7 +2943,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MaxWeight() {wei_ = 0;}
-    void initialise(double* _w=NULL) {wei_ = 0; weight = _w;}
+    void initialise(Solver* s, double* _w) {wei_ = 0; weight = _w;}
     //MaxWeight(int *w) : weight(w) {wei_ = 0;}
     //@}
 
@@ -2833,7 +2993,7 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     MinWeight() {wei_ = 0;}
-    void initialise(double* _w=NULL) {wei_ = 0; weight = _w;}
+    void initialise(Solver* s, double* _w) {wei_ = 0; weight = _w;}
     //MinWeight(int *w) : weight(w) {wei_ = 0;}
     //@}
 
@@ -3551,91 +3711,92 @@ namespace Mistral {
 		return x->display(os);
 	}
 
+	
+	
+	
+	/*! \class ConditionalOnSize
+	\brief  Class ConditionalOnSize
 
-
-
-  /*! \class ConditionalOnSize
-    \brief  Class ConditionalOnSize
-
-    - uses range_branching if the domain size is continuous and larger than threshold 
-    - uses fd_branching otherwise
-  */
-  template< class RangeBranching, class FDBranching >
-  class ConditionalOnSize {
+	- uses range_branching if the domain size is continuous and larger than threshold 
+	- uses fd_branching otherwise
+	*/
+	template< class RangeBranching, class FDBranching >
+	class ConditionalOnSize {
     
-  public: 
+	public: 
     
-    Solver *solver;
-    RangeBranching range_branching;
-    FDBranching fd_branching;
+		Solver *solver;
+		RangeBranching range_branching;
+		FDBranching fd_branching;
 
-    int threshold;
+		int threshold;
     
-    ConditionalOnSize() {}
-    ConditionalOnSize(Solver *s, double **vw, double *bw, WeightMap *wm) { initialise(s, vw, bw, wm); }
-    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
+		ConditionalOnSize() {}
+		ConditionalOnSize(Solver *s, double **vw, double *bw, WeightMap *wm) { initialise(s, vw, bw, wm); }
+		void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
 
-      //std::cout << "initialise COS" << std::endl;
-      //std::cout << (int*)s << std::endl;
+			//std::cout << "initialise COS" << std::endl;
+			//std::cout << (int*)s << std::endl;
 
-      solver=s; 
+			solver=s; 
 
-      //std::cout << (int*)solver << std::endl;
-      //std::cout << solver << std::endl;
+			//std::cout << (int*)solver << std::endl;
+			//std::cout << solver << std::endl;
 
 
-      threshold=10; 
-      range_branching.initialise(solver, vw, bw, wm); 
-      fd_branching.initialise(solver, vw, bw, wm);  
-    }
-    virtual ~ConditionalOnSize() {};
+			threshold=10; 
+			range_branching.initialise(solver, vw, bw, wm); 
+			fd_branching.initialise(solver, vw, bw, wm);  
+		}
+		virtual ~ConditionalOnSize() {};
     
-    inline Decision make(Variable x) {
+		inline Decision make(Variable x) {
 
 
-      //std::cout << "(COS) make a decision on " << x << " in " << x.get_domain() << std::endl;
+			//std::cout << "(COS) make a decision on " << x << " in " << x.get_domain() << std::endl;
 
-      Decision d;
-      if(x.is_range() && x.get_size()>=threshold) {
+			Decision d;
+			if(x.is_range() && x.get_size()>=threshold) {
 
-	//std::cout << "  -> RANGE!\n";
+				//std::cout << "  -> RANGE!\n";
 
-	d = range_branching.make(x);
-      } else {
+				d = range_branching.make(x);
+			} else {
 
-	//std::cout << "  -> FD!\n";
+				//std::cout << "  -> FD!\n";
 	
 
-	d = fd_branching.make(x);
-      }
+				d = fd_branching.make(x);
+			}
 
 
-      //std::cout << "  ==> " << d << std::endl;
+			//std::cout << "  ==> " << d << std::endl;
 
-      return d;
-    }
+			return d;
+		}
     
-    std::ostream& display(std::ostream& os) const {
-      os << "uses ";
-      range_branching.display(os);
-      os << " on large intervals and ";
-      fd_branching.display(os); 
-      os << " otherwise";
-      return os;
-    }
+		std::ostream& display(std::ostream& os) const {
+			os << "uses ";
+			range_branching.display(os);
+			os << " on large intervals and ";
+			fd_branching.display(os); 
+			os << " otherwise";
+			return os;
+		}
     
-  };
+	};
 
 
-  template< class RangeBranching, class FDBranching >
-  std::ostream& operator<<(std::ostream& os, ConditionalOnSize< RangeBranching, FDBranching >& x) {
-    return x.display(os);
-  }
+	template< class RangeBranching, class FDBranching >
+	std::ostream& operator<<(std::ostream& os, ConditionalOnSize< RangeBranching, FDBranching >& x) {
+		return x.display(os);
+	}
 
-  template< class RangeBranching, class FDBranching >
-  std::ostream& operator<<(std::ostream& os, ConditionalOnSize< RangeBranching, FDBranching >* x) {
-    return x->display(os);
-  }
+	template< class RangeBranching, class FDBranching >
+	std::ostream& operator<<(std::ostream& os, ConditionalOnSize< RangeBranching, FDBranching >* x) {
+		return x->display(os);
+	}
+	
 
 
 

@@ -250,6 +250,7 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
   num_learned = 0;
   size_learned = 0;
   num_nodes = 0; 
+	num_decisions = 0; 
   num_restarts = 0; 
   num_backtracks = 0;
   num_failures = 0; 
@@ -509,8 +510,7 @@ std::ostream& Mistral::SolverStatistics::print_short(std::ostream& os) const {
     os << std::right << std::setw(4) << (int)avg_learned_size << " " ;
     if(num_learned)
       os << std::right << std::setw(4) << (num_learned ? size_learned/num_learned : 0) << " |";
-    else
-      os << " n/a |";
+    else      os << " n/a |";
   }
   os << std::right << std::setw(9) << num_nodes << " " ;
   os << std::right << std::setw(11) << num_propagations << " " ;
@@ -555,6 +555,7 @@ void Mistral::SolverStatistics::copy(const SolverStatistics& sp) {
   num_constraints = sp.num_constraints; 
   num_values = sp.num_values; 
   num_nodes = sp.num_nodes; 
+	num_decisions = sp.num_decisions; 
   num_restarts = sp.num_restarts; 
   num_backtracks = sp.num_backtracks;
   num_failures = sp.num_failures; 
@@ -568,6 +569,7 @@ void Mistral::SolverStatistics::update(const SolverStatistics& sp) {
   objective_value = sp.objective_value;
 
   num_nodes += sp.num_nodes; 
+	num_decisions += sp.num_decisions; 
   num_restarts += sp.num_restarts; 
   num_backtracks += sp.num_backtracks;
   num_failures += sp.num_failures; 
@@ -2159,8 +2161,6 @@ void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> 
   heuristic->initialise(sequence);
 
   
-
-
   parameters.restart_limit = policy->base;
   parameters.limit = (policy->base > 0);
 
@@ -5139,6 +5139,7 @@ void Mistral::Solver::branch_left() {
 
   decision.make();
 
+	++statistics.num_decisions;
   notify_decision();
 
 }
@@ -5374,126 +5375,126 @@ if (*solution_found_elsewhere){
 */
 Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root) 
 {
-  search_root = _root;
+	search_root = _root;
 
 
 
-  //std::cout << sequence << std::endl;
+	//std::cout << sequence << std::endl;
 
 #ifdef _OUTPUT_TIKZ
-  int tikz_level = 0;
-  Vector<int> deficit;
-  deficit.add(0);
-  //int last = tikz_level;
-  if(!_OUTPUT_TIKZ) {
-    std::cout << "\\node (Root) [refutation] {$\\emptyset$}\n";
-  }
+	int tikz_level = 0;
+	Vector<int> deficit;
+	deficit.add(0);
+	//int last = tikz_level;
+	if(!_OUTPUT_TIKZ) {
+		std::cout << "\\node (Root) [refutation] {$\\emptyset$}\n";
+	}
 #endif
 
-  int status = UNKNOWN;
-  while(status == UNKNOWN) {
+	int status = UNKNOWN;
+	while(status == UNKNOWN) {
 
-    if(propagate()) {
+		if(propagate()) {
 
 #ifdef _OUTPUT_TIKZ
-      if(_OUTPUT_TIKZ) {
-	if(tikz_level > 0)
-	  std::cout << "child{\n";
-	else
-	  std::cout << "\\";
-	std::cout << "node (state" << statistics.num_filterings << ") [state] {\n";
-	std::cout << "\\begin{tabular}{ll}\n";
-	for(unsigned int i=0; i<variables.size; ++i) {
-	  std::cout << "${\\cal D}(x_" << variables[i].id() << ")$ & $" << variables[i].get_domain(true) << "$ \\\\\n";
-	}
-	std::cout << "\\end{tabular}\n}\n";
-      } 
+			if(_OUTPUT_TIKZ) {
+				if(tikz_level > 0)
+					std::cout << "child{\n";
+				else
+					std::cout << "\\";
+				std::cout << "node (state" << statistics.num_filterings << ") [state] {\n";
+				std::cout << "\\begin{tabular}{ll}\n";
+				for(unsigned int i=0; i<variables.size; ++i) {
+					std::cout << "${\\cal D}(x_" << variables[i].id() << ")$ & $" << variables[i].get_domain(true) << "$ \\\\\n";
+				}
+				std::cout << "\\end{tabular}\n}\n";
+			} 
 #endif
       
 #ifdef _MONITOR
-      monitor_list.display(std::cout);
-      std::cout << std::endl;
-      //display(std::cout, 2);
-      //check_constraint_graph_integrity();
+			monitor_list.display(std::cout);
+			std::cout << std::endl;
+			//display(std::cout, 2);
+			//check_constraint_graph_integrity();
 #endif
 
 #ifdef _OUTPUT_TIKZ
-      deficit.add(0);
-      ++tikz_level;
-      //last = tikz_level;
-      std::cout << "child{ [sibling distance=" << (tikz_level > 5 ? 4 : (1<<(7-tikz_level))) << "mm]\n";
+			deficit.add(0);
+			++tikz_level;
+			//last = tikz_level;
+			std::cout << "child{ [sibling distance=" << (tikz_level > 5 ? 4 : (1<<(7-tikz_level))) << "mm]\n";
 #endif
       
-      ++statistics.num_nodes;
-      if( sequence.empty()  ) 
-	status = satisfied();
-      else branch_left();
+			++statistics.num_nodes;
+			if( sequence.empty()  ) 
+				status = satisfied();
+			else branch_left();
 
-    } else {
+		} else {
 
 #ifdef _OUTPUT_TIKZ
-      std::cout << "child{ \nnode[fail] (Fail" << statistics.num_failures << ") {\\bf fail}\n}\n";
+			std::cout << "child{ \nnode[fail] (Fail" << statistics.num_failures << ") {\\bf fail}\n}\n";
 
-      //std::cout << "LEVEL=" << level << " deficit=" << deficit << std::endl;
+			//std::cout << "LEVEL=" << level << " deficit=" << deficit << std::endl;
 
-      int open = deficit.pop();
-      while(open--) {
-	--tikz_level;
+			int open = deficit.pop();
+			while(open--) {
+				--tikz_level;
 
-	if(_OUTPUT_TIKZ) {
-	  std::cout << "}\n";
-	} 
+				if(_OUTPUT_TIKZ) {
+					std::cout << "}\n";
+				} 
 
-	std::cout << "}\n";
-      } 
-      ++deficit[level-1];
+				std::cout << "}\n";
+			} 
+			++deficit[level-1];
 
-      //std::cout << "LEVEL=" << level << " deficit=" << deficit << std::endl;
+			//std::cout << "LEVEL=" << level << " deficit=" << deficit << std::endl;
 
 
-      if(level != search_root) {
-	// if(_OUTPUT_TIKZ) {
-	//   std::cout << "}\n";
-	// } 
-	std::cout << "}\nchild{ [sibling distance=" << (tikz_level > 5 ? 4 : (1<<(7-tikz_level))) << "mm]\n";
-      }
+			if(level != search_root) {
+				// if(_OUTPUT_TIKZ) {
+				//   std::cout << "}\n";
+				// } 
+				std::cout << "}\nchild{ [sibling distance=" << (tikz_level > 5 ? 4 : (1<<(7-tikz_level))) << "mm]\n";
+			}
 #endif
       
 #ifdef _OLD_
-      if( parameters.backjump ) learn_nogood();
+			if( parameters.backjump ) learn_nogood();
 
-      if( limits_expired() ) {
-      	status = //interrupted();
-	  LIMITOUT;
-      } else status = branch_right();
+			if( limits_expired() ) {
+				status = //interrupted();
+				LIMITOUT;
+			} else status = branch_right();
 #else
-      status = branch_right();
+			status = branch_right();
 #endif	
 
-    }
+		}
 
 
-  }
+	}
 
-  //std::cout << outcome2str(status) << std::endl;
+	//std::cout << outcome2str(status) << std::endl;
 
-  //  std::cout << deficit << std::endl;
+	//  std::cout << deficit << std::endl;
 
 #ifdef _OUTPUT_TIKZ
-  if(deficit.size) {
-    int open = deficit.pop();
-    if(open>0)
-      while(--open) {
-	if(_OUTPUT_TIKZ) {
-	  std::cout << "}\n";
-	} 
-	std::cout << "}\n";
-      }
-  }
-  std::cout << ";\n";
+	if(deficit.size) {
+		int open = deficit.pop();
+		if(open>0)
+		while(--open) {
+			if(_OUTPUT_TIKZ) {
+				std::cout << "}\n";
+			} 
+			std::cout << "}\n";
+		}
+	}
+	std::cout << ";\n";
 #endif
 
-  return status;
+	return status;
 }
 
 
@@ -5674,6 +5675,2471 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const i
 Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching, const int randomness) {
 
   BranchingHeuristic *heu = NULL;
+
+	
+	if(var_ordering.find("MBA") == 0) {
+		var_ordering.erase(0,3);
+	
+	
+	  if(var_ordering == "wdeg" || var_ordering == "WDEG" || var_ordering == "Weighted Degree" || var_ordering == "WeightedDegree" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "dom/wdeg" || var_ordering == "dwdeg" || var_ordering == "DWDEG" || var_ordering == "Domain Over Weighted Degree" || var_ordering == "DomainOverWeightedDegree" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+				if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+				if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+				if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+				if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+				if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+				if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, FailureCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "gwdeg" || var_ordering == "GWDEG" || var_ordering == "Global Weighted Degree" || var_ordering == "GlobalWeightedDegree" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 1, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 2, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 3, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 4, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MaxWeight >, 5, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "dom/gwdeg" || var_ordering == "dgwdeg" || var_ordering == "DGWDEG" || var_ordering == "Domain Over Global Weighted Degree" || var_ordering == "DomainOverGlobalWeightedDegree" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "Impact" || var_ordering == "impact" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "IBS" || var_ordering == "ibs" || var_ordering == "Impact Based Search" || var_ordering == "impact based search" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "ABS" || var_ordering == "abs" || var_ordering == "activity based search" || var_ordering == "Activity Based Search" || var_ordering == "dom/activity" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "mindomain" || var_ordering == "MinDomain" || var_ordering == "min domain" || var_ordering == "minimum domain" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "Neighbor" || var_ordering == "Neighbor" || var_ordering == "Neighbour" || var_ordering == "neighbour" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 1, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 2, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 3, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 4, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic< GenericNeighborDVO < SelfPlusAverage, MinDomainOverWeight, 5, ConflictCountManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "mindom->maxdeg" || var_ordering == "MinDomainMaxDegree" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< LexCombination< MinDomain, MaxDegree >  > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	  if(var_ordering == "mindomain" || var_ordering == "MinDomain" || var_ordering == "min domain" || var_ordering == "minimum domain" || var_ordering == "MinDomnMaxDeg" ) {
+	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, AnyValue > (this);
+	      }
+	    }
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinValue > (this);
+	      }
+	    }
+	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MaxValue > (this);
+	      }
+	    }
+	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, HalfSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomSplit > (this);
+	      }
+	    }
+	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, RandomMinMax > (this);
+	      }
+	    }
+	    if( branching == "minweight" || branching == "MinWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxValue > > (this);
+	      }
+	    }
+	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MinWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< MaxWeightValue > > (this);
+	      }
+	    }
+	    if( branching == "Random+Guided" || branching == "random+guided" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, Guided< RandomMinMax > > (this);
+	      }
+	    }
+	    if( branching == "Adpated" || branching == "adapted" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight > >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	      }
+	    }
+	  }
+	
+	
+		//ICI
+	} else {
+	
+	
 
   if(var_ordering == "wdeg" || var_ordering == "WDEG" || var_ordering == "Weighted Degree" || var_ordering == "WeightedDegree" ) {
     if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
@@ -5899,7 +8365,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     }
   }
   if(var_ordering == "dom/wdeg" || var_ordering == "dwdeg" || var_ordering == "DWDEG" || var_ordering == "Domain Over Weighted Degree" || var_ordering == "DomainOverWeightedDegree" ) {
-    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+		if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
       if( randomness <= 1 ) {
         heu = new GenericHeuristic < GenericDVO < MinDomainOverWeight, 1, FailureCountManager >, AnyValue > (this);
       }
@@ -8128,6 +10594,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       }
     }
   }
+}
 
   if(!heu) {
     std::cout << " " << parameters.prefix_comment << " Warning, there is no known heuristic \"" << var_ordering << "/" << branching << "\"" << std::endl;
@@ -8412,6 +10879,17 @@ void Mistral::SolverCmdLine::initialise() {
   voallowed.push_back("most_constrained");
   voallowed.push_back("max_regret");
 	voallowed.push_back("impact");
+	
+  voallowed.push_back("MBAdom/deg");
+  voallowed.push_back("MBAdom/wdeg");
+  voallowed.push_back("MBAdom/gwdeg");
+  voallowed.push_back("MBAdom/pruning");
+  voallowed.push_back("MBAdom/activity");
+  voallowed.push_back("MBAibs");
+  voallowed.push_back("MBAactivity");
+  voallowed.push_back("MBAmindomain");
+  voallowed.push_back("MBAmaxdegree");
+	voallowed.push_back("MBAimpact");
 
   vo_allowed = new TCLAP::ValuesConstraint<std::string>( voallowed );
   orderingArg = new TCLAP::ValueArg<std::string>("c","choice","variable selection",false,"dom/gwdeg",vo_allowed);
