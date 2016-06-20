@@ -1512,6 +1512,37 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
 
 
     /*
+     %-----------------------------------------------------------------------------%
+     % Requires exactly 'n' variables in 'x' to take the value 'v'.
+     %-----------------------------------------------------------------------------%
+
+     predicate exactly_int(int: n, array[int] of var int: x, int: v) =
+         n == sum(i in index_set(x)) ( bool2int(x[i] == v) );
+     */
+
+     void p_exactly_int(Solver& s, FlatZincModel& m,
+     		const ConExpr& ce, AST::Node* ann) {
+
+     	int n= ce[0]->getInt(), v = ce[2]->getInt();
+     	Vector< Variable > iv = arg2intvarargs(s, m, ce[1]);
+
+     	int size = iv.size;
+
+     	if (size){
+
+     		VarArray subsequence;
+     		for (int i=0; i < size; ++i)
+     		{
+     			subsequence.add(iv[i]==v);
+     			//s.add( Free(subsequence.back()));
+     		}
+
+     		s.add( BoolSum(subsequence) == n);
+     	}
+     }
+
+
+    /*
      *
      %-----------------------------------------------------------------------------%
     % Constrains 'c' to be the number of occurrences of 'y' in 'x'.
@@ -2399,6 +2430,67 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
 
     }
 
+
+
+    /*
+      @group globals.counting
+  Requires that for all i, the value cover[i] appears at least lbound[\p i]
+  and at most ubound[\p i] times in the array \a x.
+
+predicate global_cardinality_low_up(array[int] of var int: x,
+                                    array[int] of int: cover,
+                                    array[int] of int: lbound,
+                                    array[int] of int: ubound)=
+    forall(i in index_set(cover)) (
+        sum(j in index_set(x)) ( bool2int(x[j] = cover[i]) )
+        in lbound[i]..ubound[i]
+    );
+
+*/
+
+/*Not tested
+ *     void p_global_cardinality_low_up(Solver& s, FlatZincModel& m,
+                      const ConExpr& ce, AST::Node* ann) {
+
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	Vector< int > values = arg2intargs(ce[1]);
+    	Vector< int > lower_b = arg2intargs(ce[2]);
+    	Vector< int > upper_b = arg2intargs(ce[3]);
+
+    	//values is not necessarily sorted
+    	int min=values[0], max=values[0];
+
+    	for (int i=1; i <values.size;++i )
+    	{
+    		if (min >values[i])
+    			min=values[i];
+    		if (max<values[i] )
+    			max=values[i];
+    	}
+
+    	int * index= new int[max-min +1];
+
+    	for (int i=0; i <values.size;++i )
+    	{
+    		index[values[i]-min]=i;
+    	}
+
+    	int *lb = new int[max-min +1];
+    	int *ub = new int[max-min +1];
+
+    	++max;
+    	for(int i=min; i<max; ++i) {
+    		lb[i-min] = lower_b[index[i-min]];
+    		ub[i-min] = upper_b[index[i-min]];
+    	}
+    	--max;
+    	s.add(Occurrences(x, min, max, lb, ub));
+    	delete [] lb;
+    	delete [] ub;
+    	delete [] index;
+
+    }
+*/
 
     /* global cardinality constraint */
     void p_distribute(Solver& s, FlatZincModel& m,
@@ -3327,6 +3419,7 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
         registry().add("all_different_int", &p_all_different);
         registry().add("all_equal_int", &p_all_equal_int);
         registry().add("at_most_int", &p_at_most_int);
+        registry().add("exactly_int", &p_exactly_int);
         registry().add("at_least_int", &p_at_least_int);
         registry().add("count_eq", &p_count_eq);
         registry().add("count_eq_reif", &p_count_eq_reif);
@@ -3335,8 +3428,8 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
         registry().add("count_leq", &p_count_leq);
         registry().add("count_lt", &p_count_lt);
         registry().add("count_neq", &p_count_neq);
-
         registry().add("cumulative", &p_cumulative);
+        //registry().add("global_cardinality_low_up", p_global_cardinality_low_up);
 
         registry().add("bool2int", &p_bool2int);
 
