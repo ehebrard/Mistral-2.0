@@ -1412,7 +1412,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     		// if ((val<=0) || (val >iv.size ) )
     		//	  s.fail();
     		//  else
-    		s.add(iv[val]==result);
+    		s.add(iv[val-1]==result);
     	}
     	else
     	{
@@ -1478,10 +1478,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
   	if (selector.is_ground()){
   		//std::cout <<" selector is_ground  " << std::endl;
   		int val= selector.get_min();
-  		// if ((val<=0) || (val >iv.size ) )
-  		//	  s.fail();
-  		//  else
-  		s.add(iv[val]==result);
+  		s.add(iv[val-1]==result);
   	}
   	else
   	{
@@ -1544,7 +1541,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     	  // if ((val<=0) || (val >iv.size ) )
     	  //	  s.fail();
     	  //  else
-    	  s.add(result==iv[val]);
+    	  s.add(result==iv[val-1]);
       }
       else
       {

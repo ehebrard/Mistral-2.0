@@ -1789,7 +1789,7 @@ namespace Mistral {
     double *get_variable_weight() { return NULL; }
     double **get_value_weight() { return NULL; }
     double *get_bound_weight() { return NULL; }
-
+    WeightMap *get_weight_map() { return NULL; }
     
     Variable select();
 
