@@ -1397,6 +1397,48 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       // post_max(s, x2, x0, x1);
     }
 
+
+
+    /*%-----------------------------------------------------------------------------%
+    % Requires that 'y' occurs in the array or set 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate member_bool(array[int] of var bool: x, var bool: y) =
+        exists(i in index_set(x)) ( x[i] == y );
+	*/
+    void p_member_bool(Solver& s, FlatZincModel& m,
+                              const ConExpr& ce, AST::Node* ann) {
+
+    	Vector<Variable> iv = arg2boolvarargs(s, m, ce[0]);
+    	Variable result = getBoolVar(s, m, ce[1]);
+
+    	Variable tmp(0,iv.size);
+    	s.add (BoolSum(iv)==tmp);
+    	s.add(result <= tmp);
+    	s.add((result==0) <= (tmp < iv.size) );
+
+//    	Variable selector (0,iv.size -1);
+ //   	s.add(Element(iv,selector)==result);
+    }
+
+    /*
+    %-----------------------------------------------------------------------------%
+    % Requires that 'y' occurs in the array or set 'x'.
+    %-----------------------------------------------------------------------------%
+
+    predicate member_int(array[int] of var int: x, var int: y) =
+        exists(i in index_set(x)) ( x[i] == y );
+	*/
+    void p_member_int(Solver& s, FlatZincModel& m,
+                              const ConExpr& ce, AST::Node* ann) {
+
+    	Vector<Variable> iv = arg2intvarargs(s, m, ce[0]);
+    	Variable result = getIntVar(s, m, ce[1]);
+    	Variable selector (0,iv.size -1);
+    	s.add(Element(iv,selector)==result);
+    }
+
+
     /* element constraints */
     void p_array_int_element(Solver& s, FlatZincModel& m,
                              const ConExpr& ce, AST::Node* ann) {
@@ -1545,15 +1587,20 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       }
       else
       {
-    	  if (result.is_ground())
-    		  s.add(Member(selector, good_values) == result.get_min());
-    	  else
-    		  if (result.id()==selector.id())
-    			  s.add(Member(duplicate_variable(selector,&s), good_values) == result);
+    	  if (good_values.size)
+    	  {
+    		  if (result.is_ground())
+    			  s.add(Member(selector, good_values) == result.get_min());
     		  else
-    			  s.add(Member(selector, good_values) == result);
-      }
+    			  if (result.id()==selector.id())
+    				  s.add(Member(duplicate_variable(selector,&s), good_values) == result);
+    			  else
+    				  s.add(Member(selector, good_values) == result);
+    	  }
 
+    	  else
+    		  s.add (result==0);
+      }
       //exit(1);
       //s.add(Element(iv, selector, 1) == result);
     }
@@ -3522,6 +3569,9 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("int_mod", &p_int_mod);
 
         registry().add("int_in", &p_int_in);
+
+		registry().add("member_bool", &p_member_bool);
+		registry().add("member_int", &p_member_int);
 
         registry().add("array_var_int_element", &p_array_int_element);
         registry().add("array_int_element", &p_array_int_element);
