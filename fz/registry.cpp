@@ -69,6 +69,24 @@ inline bool identical(Variable x, Variable y){
 //return true if same id
 inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
 
+
+
+//return true if id in is one of the variables ids in vec
+inline bool id_in_vect(int id, Vector<Variable> & vect){
+	unsigned int __size= vect.size ;
+	for (unsigned int i=0; i< __size ; ++i)
+		if (vect[i].id()==id)
+			return true;
+	return false;
+}
+
+//duplicate variable
+inline Variable duplicate_variable(Variable var, Solver * s){
+	Variable tmp (var.get_min(), var.get_max() );
+	s->add(tmp==var);
+	return tmp;
+}
+
   void report_unsupported(const char* con) {
     std::cout << "% " << con << " is not yet supported!" << std::endl;
     exit(1);
@@ -1382,13 +1400,51 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
     /* element constraints */
     void p_array_int_element(Solver& s, FlatZincModel& m,
                              const ConExpr& ce, AST::Node* ann) {
-      Variable selector = getIntVar(s, m, ce[0]);
-      Variable result = getIntVar(s, m, ce[2]);
-      Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
+    	Variable selector = getIntVar(s, m, ce[0]);
+    	Variable result = getIntVar(s, m, ce[2]);
+    	Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
+    	s.add(selector > 0);
+    	s.add(selector <= iv.size);
 
-      s.add(selector > 0);
-      s.add(selector <= iv.size);
-      s.add(Element(iv, selector, 1) == result);
+    	if (selector.is_ground()){
+    		//std::cout <<" selector is_ground  " << std::endl;
+    		int val= selector.get_min();
+    		// if ((val<=0) || (val >iv.size ) )
+    		//	  s.fail();
+    		//  else
+    		s.add(iv[val]==result);
+    	}
+    	else
+    	{
+    		bool r_is_g = result.is_ground();
+
+    		bool s_in_v = id_in_vect(selector.id(), iv);
+
+    		bool r_in_v = false ;
+    		if (!r_is_g)
+    			r_in_v = id_in_vect(result.id(), iv);
+
+    		if (s_in_v){
+    			if (r_in_v)
+    				s.add(Element(iv, duplicate_variable(selector, &s), 1) == duplicate_variable(result, &s));
+    			else
+    				s.add(Element(iv, duplicate_variable(selector, &s), 1) == result);
+    		}
+    		else
+    		{
+    			if (r_in_v)
+    				s.add(Element(iv, selector, 1) == duplicate_variable(result, &s));
+    			else
+    			{
+    				if (selector.id()== result.id())
+    					s.add(Element(iv, selector, 1) == duplicate_variable(result, &s));
+    				else
+    				s.add(Element(iv, selector, 1) == result);
+    			}
+    		}
+
+			//      s.add(Element(iv, selector, 1) == result);
+    	}
     }
     void p_array_set_element(Solver& s, FlatZincModel& m,
                              const ConExpr& ce, AST::Node* ann) {
@@ -1416,7 +1472,49 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
 
       s.add(selector > 0);
       s.add(selector <= iv.size);
-      s.add(Element(iv, selector, 1) == result);
+      //s.add(Element(iv, selector, 1) == result);
+
+
+  	if (selector.is_ground()){
+  		//std::cout <<" selector is_ground  " << std::endl;
+  		int val= selector.get_min();
+  		// if ((val<=0) || (val >iv.size ) )
+  		//	  s.fail();
+  		//  else
+  		s.add(iv[val]==result);
+  	}
+  	else
+  	{
+  		bool r_is_g = result.is_ground();
+
+  		bool s_in_v = id_in_vect(selector.id(), iv);
+
+  		bool r_in_v = false ;
+  		if (!r_is_g)
+  			r_in_v = id_in_vect(result.id(), iv);
+
+  		if (s_in_v){
+  			if (r_in_v)
+  				s.add(Element(iv, duplicate_variable(selector, &s), 1) == duplicate_variable(result, &s));
+  			else
+  				s.add(Element(iv, duplicate_variable(selector, &s), 1) == result);
+  		}
+  		else
+  		{
+			if (r_in_v)
+				s.add(Element(iv, selector, 1) == duplicate_variable(result, &s));
+			else
+			{
+				if (selector.id()== result.id())
+					s.add(Element(iv, selector, 1) == duplicate_variable(result, &s));
+				else
+				s.add(Element(iv, selector, 1) == result);
+			}
+  		}
+
+			//      s.add(Element(iv, selector, 1) == result);
+  	}
+
     }
     void p_array_bool_element(Solver& s, FlatZincModel& m,
                               const ConExpr& ce, AST::Node* ann) {
@@ -1436,7 +1534,28 @@ inline bool same_id(int id1, int id2){ return (id1==id2) && (id1>=0);}
 
       s.add(selector > 0);
       s.add(selector <= iv.size);
-      s.add(Member(selector, good_values) == result);
+//      s.add(Member(selector, good_values) == result);
+
+
+
+      if (selector.is_ground()){
+    	  //std::cout <<" selector is_ground  " << std::endl;
+    	  int val= selector.get_min();
+    	  // if ((val<=0) || (val >iv.size ) )
+    	  //	  s.fail();
+    	  //  else
+    	  s.add(result==iv[val]);
+      }
+      else
+      {
+    	  if (result.is_ground())
+    		  s.add(Member(selector, good_values) == result.get_min());
+    	  else
+    		  if (result.id()==selector.id())
+    			  s.add(Member(duplicate_variable(selector,&s), good_values) == result);
+    		  else
+    			  s.add(Member(selector, good_values) == result);
+      }
 
       //exit(1);
       //s.add(Element(iv, selector, 1) == result);
