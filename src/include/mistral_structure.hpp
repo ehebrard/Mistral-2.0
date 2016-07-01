@@ -4613,22 +4613,22 @@ template < int N, class T >
     /*!
       Maximum element in the set [O(N/8)]. 
     */
-    inline int max() const
-    { 
-      WORD_TYPE tab;
-      int i=pos_words, j, k;
+		inline int max() const
+		{ 
+			WORD_TYPE tab;
+			int i=pos_words, j, k;
     
-      while( i-- > neg_words )
-	if( (tab = table[i]) ) {
-	  j = size_word_byte;
-	  while( j-- ) {
-	    if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 ) 
-	      return ( (i<<EXP)+(j<<3)+k );	
-	    tab = (tab << 8);
-	  }
-	}
-      return NOVAL;
-    }
+			while( i-- > neg_words )
+			if( (tab = table[i]) ) {
+				j = size_word_byte;
+				while( j-- ) {
+					if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 ) 
+						return ( (i<<EXP)+(j<<3)+k );	
+					tab = (tab << 8);
+				}
+			}
+			return NOVAL;
+		}
 
     inline void  remove(const int elt) 
     {
@@ -4680,6 +4680,8 @@ template < int N, class T >
 
 			WORD_TYPE tab;
 			int i = ((elt-1) >> EXP);
+			if(i>=pos_words) return max();
+			
 			int SHFT = size_word_byte;
 
 			if( i >= neg_words ) {
@@ -5058,6 +5060,8 @@ template < int N, class T >
 		{
 			int neg_int = lb >> EXP;
 			int pos_int = ub >> EXP;
+			if(neg_int<neg_words || pos_int>pos_words) return false;
+			
 			int k = pos_int-1;
 			unsigned int u, l;
 			while( k > neg_int ) {
