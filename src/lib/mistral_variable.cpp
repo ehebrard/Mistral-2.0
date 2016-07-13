@@ -135,13 +135,19 @@ void Mistral::Variable::free_object() {
   else if(domain_type == VIRTUAL_VAR) delete virtual_domain;
   else if(domain_type ==  EXPRESSION) delete expression;
   else if(domain_type !=   CONST_VAR) delete variable;
+	domain_type = CONST_VAR;
+	// else {
+	// 	std::cout << "UNKNOWN DOMAIN TYPE AT DESTRUCTION" << std::endl;
+	// }
 }
 
 
 void Mistral::Variable::initialise_domain(const int lo, const int up, const int type) {
 
 #ifdef _DEBUG_BUILD
+	if(_DEBUG_BUILD) {
   std::cout << "init domain from bounds [" << lo << "," << up << "] (type = " << domain2str(type) << " -> " ; //<< ")";
+}
 #endif 
 
   if(lo == up) {
@@ -178,7 +184,9 @@ void Mistral::Variable::initialise_domain(const int lo, const int up, const int 
   }
 
 #ifdef _DEBUG_BUILD
+	if(_DEBUG_BUILD) {
   std::cout << domain2str(domain_type) << ": " << get_domain() << ")\n";
+}
 #endif
 
 }
@@ -199,48 +207,48 @@ void Mistral::Variable::initialise_domain(const Vector< int >& values, const int
 void Mistral::Variable::initialise_domain(const int min, const int max, const Vector< int >& values, const int type) {
 
 #ifdef _DEBUG_BUILD
-  std::cout << "init domain from set [" << min << "," << max << "] " << values << " (type = " << domain2str(type) << " -> " ; //<< ")";
+	std::cout << "init domain from set [" << min << "," << max << "] " << values << " (type = " << domain2str(type) << " -> " ; //<< ")";
 #endif 
-	  //std::cout << type << " " << BITSET_VAR << " " << LIST_VAR << std::endl;
+	//std::cout << type << " " << BITSET_VAR << " " << LIST_VAR << std::endl;
 
-  if(max - min + 1 == (int)(values.size)) {
-    initialise_domain(min, max, type);
-  } else {
-    if(type == EXPRESSION) {
+	if(max - min + 1 == (int)(values.size)) {
+		initialise_domain(min, max, type);
+	} else {
+		if(type == EXPRESSION) {
 		
-		//std::cout << "->build expression" << std::endl;
+			//std::cout << "->build expression" << std::endl;
 		
-      domain_type = EXPRESSION;
-      expression = new Expression(min, max, values);
-    } else if(type & BITSET_VAR) {
-      domain_type = BITSET_VAR;
-      int nwords = 1+(max >> BitSet::EXP)-(min >> BitSet::EXP);
+			domain_type = EXPRESSION;
+			expression = new Expression(min, max, values);
+		} else if(type & BITSET_VAR) {
+			domain_type = BITSET_VAR;
+			int nwords = 1+(max >> BitSet::EXP)-(min >> BitSet::EXP);
       
 #ifdef _BIT64
-      if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(min, max, values);
-      else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(min, max, values);
-      else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(min, max, values);
+			if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(min, max, values);
+			else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(min, max, values);
+			else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(min, max, values);
 #else
-      if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(min, max, values);
-      else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(min, max, values);
-      else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(min, max, values);
-      else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(min, max, values);
-      else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(min, max, values);
+			if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(min, max, values);
+			else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(min, max, values);
+			else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(min, max, values);
+			else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(min, max, values);
+			else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(min, max, values);
 #endif
-      else {
+			else {
 		  
 		  
 		  
-	bitset_domain = new VariableBitmap(min, max, values);
-      }
+				bitset_domain = new VariableBitmap(min, max, values);
+			}
 	  
-	  //std::cout << "->build bitsetvar " << bitset_domain->domain << std::endl;
+			//std::cout << "->build bitsetvar " << bitset_domain->domain << std::endl;
 	  
-    } else {
-      domain_type = LIST_VAR;
-      list_domain = new VariableList(min, max, values);
-    }
-  }
+		} else {
+			domain_type = LIST_VAR;
+			list_domain = new VariableList(min, max, values);
+		}
+	}
 
 #ifdef _DEBUG_BUILD
   std::cout << domain2str(domain_type) << ": " << get_domain() << ")\n";
@@ -1849,6 +1857,9 @@ Mistral::Event Mistral::VariableRange::set_domain(const BitSet& s) {
 
     // std::cout << solver->variables[id] << " in " 
     // 	  << solver->variables[id].get_domain() << std::endl;
+
+		
+		// std::cout << "SETDOMAIN " << id << " " << (((Solver*)solver)->variables[id].domain_type == BITSET_VAR) << " " << (((Solver*)solver)->variables[id].get_domain()) << " " << s << std::endl;
 
     return ((Solver*)solver)->variables[id].set_domain(s);
   }

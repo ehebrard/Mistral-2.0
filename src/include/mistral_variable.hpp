@@ -43,6 +43,9 @@
 #define _MISTRAL_VARIABLE_HPP
 
 
+//#define _DEBUG_HISTORY true //(id == 1422)
+//#define _DEBUG_BUILD true
+
 
 //
 namespace Mistral {
@@ -192,245 +195,277 @@ namespace Mistral {
     };
 
 
-    VariableBitset(const VariableBitset< WORD_TYPE > *x) : VariableImplementation() {
-      if(x->is_range()) 
-	initialise(x->get_min(), x->get_max());
-      else 
-	initialise(x->get_min(), x->get_max(), x->domain.values);
-    };
+		VariableBitset(const VariableBitset< WORD_TYPE > *x) : VariableImplementation() {
+			if(x->is_range()) 
+				initialise(x->get_min(), x->get_max());
+			else 
+				initialise(x->get_min(), x->get_max(), x->domain.values);
+		};
 
 
-    virtual void initialise(const int lb, const int ub, const Vector< int >& values) {
+		virtual void initialise(const int lb, const int ub, const Vector< int >& values) {
 
-      //std::cout << "initialise domain with " << lb << ".." << ub << ": " << values << std::endl; 
+			//std::cout << "initialise domain with " << lb << ".." << ub << ": " << values << std::endl; 
 
-      domain.initialise(lb, ub, values);
+			domain.initialise(lb, ub, values);
 
-      // std::cout << domain.size << std::endl;
-      // std::cout << domain.values << std::endl;
+			// std::cout << domain.size << std::endl;
+			// std::cout << domain.values << std::endl;
 
-      // domain.display(std::cout);
+			// domain.display(std::cout);
       
-      // std::cout << std::endl;
+			// std::cout << std::endl;
 
-      // exit(1);
+			// exit(1);
 
-      initialise_trail();
-    }
+			initialise_trail();
+		}
 
-    // int set_iterator(int*& _beg_ptr, int*& _end_ptr) {
-    //   int rvalue = solver->iterator_space.reserve(domain.size);
-    //   domain.values.iterate_into(_beg_ptr);
-    //   return rvalue;
-    // }
+		// int set_iterator(int*& _beg_ptr, int*& _end_ptr) {
+		//   int rvalue = solver->iterator_space.reserve(domain.size);
+		//   domain.values.iterate_into(_beg_ptr);
+		//   return rvalue;
+		// }
 
-    // void release(const int id) {
-    //   solver->iterator_space.release(id);
-    // }
+		// void release(const int id) {
+		//   solver->iterator_space.release(id);
+		// }
 
 
-    std::string get_history() {
-      std::ostringstream buf;
-      int k = trail_.size-1, n=domain.values.pos_words-domain.values.neg_words;
-      BitSet dom(trail_[0], trail_[1], BitSet::empt);
-      int counter[n];
-      for(int i=0; i<n; ++i) counter[i] = 0;
+		std::string get_history() {
+			std::ostringstream buf;
+			int k = trail_.size-1, n=domain.values.pos_words-domain.values.neg_words;
+			BitSet dom(trail_[0], trail_[1], BitSet::empt);
+			int counter[n];
+			for(int i=0; i<n; ++i) counter[i] = 0;
 
-      while(k>0) {
-	buf << " " << trail_[k] << ":";
-	if(trail_[k-1] == 1) buf << trail_[k-2];
-	else if(trail_[k-1] == trail_[k-2]-trail_[k-3]+1) buf << "[" << trail_[k-3] << "," << trail_[k-2] << "]";
-	//else {
-	  int lvl = trail_[k], j=domain.values.neg_words;
-	  dom.clear();
-	  for(int i=domain.values.pos_words-1; i>=j; --i) {
-	    dom.table[i] = *(delta_[i]-counter[i-j]);
-	    if(*(level_[i]-counter[i-j]) == lvl) ++counter[i-j];
-	  }
-	  buf << dom ;
-	  //}
-	k -= 4;
-      }
-      return buf.str();
-    }
+			while(k>0) {
+				buf << " " << trail_[k] << ":";
+				if(trail_[k-1] == 1) buf << trail_[k-2];
+				else if(trail_[k-1] == trail_[k-2]-trail_[k-3]+1) buf << "[" << trail_[k-3] << "," << trail_[k-2] << "]";
+				//else {
+				int lvl = trail_[k], j=domain.values.neg_words;
+				dom.clear();
+				for(int i=domain.values.pos_words-1; i>=j; --i) {
+					dom.table[i] = *(delta_[i]-counter[i-j]);
+					if(*(level_[i]-counter[i-j]) == lvl) ++counter[i-j];
+				}
+				buf << dom ;
+				//}
+				k -= 4;
+			}
+			return buf.str();
+		}
 
-    void initialise_trail() {
-      int i, k;
+		void initialise_trail() {
+			int i, k;
 
-      trail_.initialise(0,8);
-      trail_.add(domain.min);
-      trail_.add(domain.max);
-      trail_.add(domain.size);
-      trail_.add(-1);
+			trail_.initialise(0,8);
+			trail_.add(domain.min);
+			trail_.add(domain.max);
+			trail_.add(domain.size);
+			trail_.add(-1);
 
-      delta_abs = new WORD_TYPE*[domain.values.pos_words-domain.values.neg_words];
-      delta_abs -= domain.values.neg_words;
-      delta_ = new WORD_TYPE*[domain.values.pos_words-domain.values.neg_words];
-      delta_ -= domain.values.neg_words;
-      level_abs = new int*[domain.values.pos_words-domain.values.neg_words];
-      level_abs -= domain.values.neg_words;
-      level_ = new int*[domain.values.pos_words-domain.values.neg_words];
-      level_ -= domain.values.neg_words;
-      for(i=domain.values.neg_words; i<domain.values.pos_words; ++i) {
-	k = domain.values.size(i)+1;
-	delta_[i] = new WORD_TYPE[k];
-	delta_abs[i] = delta_[i];
-	delta_[i][0] = domain.values.table[i];
-	level_[i] = new int[k];
-	level_abs[i] = level_[i];
-	level_[i][0] = -1;
-      }
-    }
+			delta_abs = new WORD_TYPE*[domain.values.pos_words-domain.values.neg_words];
+			delta_abs -= domain.values.neg_words;
+			delta_ = new WORD_TYPE*[domain.values.pos_words-domain.values.neg_words];
+			delta_ -= domain.values.neg_words;
+			level_abs = new int*[domain.values.pos_words-domain.values.neg_words];
+			level_abs -= domain.values.neg_words;
+			level_ = new int*[domain.values.pos_words-domain.values.neg_words];
+			level_ -= domain.values.neg_words;
+			for(i=domain.values.neg_words; i<domain.values.pos_words; ++i) {
+				k = domain.values.size(i)+1;
+				delta_[i] = new WORD_TYPE[k];
+				delta_abs[i] = delta_[i];
+				delta_[i][0] = domain.values.table[i];
+				level_[i] = new int[k];
+				level_abs[i] = level_[i];
+				level_[i][0] = -1;
+			}
+		}
 
-    virtual ~VariableBitset() {
+		virtual ~VariableBitset() {
 
-      for(int i=domain.values.neg_words; i<domain.values.pos_words; ++i) {
-	delete [] delta_abs[i];
-	delete [] level_abs[i];
-      }
-      delta_abs += domain.values.neg_words;
-      level_abs += domain.values.neg_words;
-      delta_ += domain.values.neg_words;
-      level_ += domain.values.neg_words;
+			for(int i=domain.values.neg_words; i<domain.values.pos_words; ++i) {
+				delete [] delta_abs[i];
+				delete [] level_abs[i];
+			}
+			delta_abs += domain.values.neg_words;
+			level_abs += domain.values.neg_words;
+			delta_ += domain.values.neg_words;
+			level_ += domain.values.neg_words;
 
-      delete [] delta_abs;
-      delta_abs = NULL;
-      delete [] level_abs;
-      level_abs = NULL;
-      delete [] delta_;
-      delta_ = NULL;
-      delete [] level_;
-      level_ = NULL;
+			delete [] delta_abs;
+			delta_abs = NULL;
+			delete [] level_abs;
+			level_abs = NULL;
+			delete [] delta_;
+			delta_ = NULL;
+			delete [] level_;
+			level_ = NULL;
 
-      if(domain.values.table) {
-	domain.values.table += domain.values.neg_words;
-	delete [] domain.values.table;
-	domain.values.table = NULL;
-      } //else {
-      domain.values.neg_words = 0;
-      //}
-    }
+			if(domain.values.table) {
+				domain.values.table += domain.values.neg_words;
+				delete [] domain.values.table;
+				domain.values.table = NULL;
+			} else {
+				domain.values.neg_words = 0;
+			}
+		}
 
-    void set_bound_history(const int lb, const int ub, const int level) {
-
+		void set_bound_history(const int lb, const int ub, const int level) {
+			
 #ifdef _DEBUG_HISTORY
-      std::cout << domain << std::endl;
-      std::cout << "set bound history " << lb << ".." << ub << " @ " << level << std::endl;
+			if(_DEBUG_HISTORY) {
+				std::cout << domain << std::endl;
+				std::cout << "set bound history " << lb << ".." << ub << " @ " << level << std::endl;
+			}
 #endif
 
-      // first find out which words have changed
-      int prev_lb = domain.min; //trail_.back(-4);
-      int prev_ub = domain.max; //trail_.back(-3);
-      int i, j, k, l;
-      WORD_TYPE w;
+			// first find out which words have changed
+			int prev_lb = domain.min; //trail_.back(-4);
+			int prev_ub = domain.max; //trail_.back(-3);
+			int i, j, k, l;
+			WORD_TYPE w;
 
 #ifdef _DEBUG_HISTORY
-      std::cout << prev_lb << " -> " << lb << ".." << ub << " <- " << prev_ub << std::endl;
+			if(_DEBUG_HISTORY) {
+				std::cout << prev_lb << " -> " << lb << ".." << ub << " <- " << prev_ub << std::endl;
+			}
 #endif
 
-      if(prev_lb < lb || prev_ub > ub) {
-	j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
-	i = (lb >> BitSet::EXP);
-	l = (ub >> BitSet::EXP);
-	k = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
+			if(prev_lb < lb || prev_ub > ub) {
+				j = (prev_lb >> BitSet::EXP); //BitSet::word_index(prev_lb);
+				i = (lb >> BitSet::EXP);
+				l = (ub >> BitSet::EXP);
+				k = (prev_ub >> BitSet::EXP); //BitSet::word_index(prev_ub);
 	
 #ifdef _DEBUG_HISTORY
-	std::cout << "change table[" << j << ":" << i << "]" << std::endl;
-	std::cout << "change table[" << l << ":" << k << "]" << std::endl;
+				if(_DEBUG_HISTORY) {
+					std::cout << "change table[" << j << ":" << i << "]" << std::endl;
+					std::cout << "change table[" << l << ":" << k << "]" << std::endl;
+				}
 #endif
 
-	while( j < i ) {
+				while( j < i ) {
 
 #ifdef _DEBUG_HISTORY
-	  std::cout << "set table[" << (j) << "] = ";
-	  print_bitset(domain.values.table[j], (j), std::cout);
-	  std::cout << " to void" << std::endl ;
+					if(_DEBUG_HISTORY) {
+						std::cout << "set table[" << (j) << "] = ";
+						print_bitset(domain.values.table[j], (j), std::cout);
+						std::cout << " to void" << std::endl ;
+						// if(domain.values.table[k] == 0) {
+						// 	std::cout << "\nHERE 1" << std::endl;
+						// 	exit(1);
+						// }
+					}
 #endif
 
-	  *(++delta_[j]) = BitSet::empt;
-	  domain.values.table[j] = BitSet::empt;
-	  *(++level_[j]) = level;
+					*(++delta_[j]) = BitSet::empt;
+					domain.values.table[j] = BitSet::empt;
+					*(++level_[j]) = level;
 
-	  ++j;
-	}
+					++j;
+				}
 	
-	while( k > l ) {
+				while( k > l ) {
 
 #ifdef _DEBUG_HISTORY
-	  std::cout << "set table[" << k << "] = ";
-	  print_bitset(domain.values.table[k], k, std::cout);
-	  std::cout << " to void" << std::endl ;
+					if(_DEBUG_HISTORY) {
+						std::cout << "set table[" << k << "] = ";
+						print_bitset(domain.values.table[k], k, std::cout);
+						std::cout << " to void" << std::endl ;
+						// if(domain.values.table[k] == 0) {
+						// 	std::cout << "\nHERE 2" << std::endl;
+						// 	exit(1);
+						// }
+					}
 #endif
 
-	  *(++delta_[k]) = BitSet::empt;
-	  domain.values.table[k] = BitSet::empt;
-	  *(++level_[k]) = level;
+					*(++delta_[k]) = BitSet::empt;
+					domain.values.table[k] = BitSet::empt;
+					*(++level_[k]) = level;
 
-	  --k;
-	}
+					--k;
+				}
 
-	if(i == l) {
-	  w = (BitSet::full << (lb & BitSet::CACHE)) & (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+				if(i == l) {
+					w = (BitSet::full << (lb & BitSet::CACHE)) & (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+
+					if(domain.values.table[i] != w) { // can we avoid this test?
+#ifdef _DEBUG_HISTORY
+						if(_DEBUG_HISTORY) {
+							std::cout << "change " ;
+							print_bitset(domain.values.table[i], i, std::cout);
+							std::cout << " to " ;
+							print_bitset(w, i, std::cout);
+							std::cout << std::endl;
+						}
+#endif
+
+						domain.values.table[i] = w;
+						*(++delta_[i]) = w;
+						*(++level_[i]) = level;
+					}
+				} else {
+					if(prev_lb < lb) {
+						w = (BitSet::full << (lb & BitSet::CACHE));
+
+						if(domain.values.table[i] != w) { // can we avoid this test?
+#ifdef _DEBUG_HISTORY
+							if(_DEBUG_HISTORY) {
+								std::cout << "change " ;
+								print_bitset(domain.values.table[i], i, std::cout);
+								std::cout << " to " ;
+								print_bitset(w, i, std::cout);
+								std::cout << std::endl;
+							}
+#endif
+
+							domain.values.table[i] = w;
+							*(++delta_[i]) = w;
+							*(++level_[i]) = level;
+						}
+					}
+					if(prev_ub > ub) {
+						w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
+
+						if(domain.values.table[l] != w) { // can we avoid this test?
+#ifdef _DEBUG_HISTORY
+							if(_DEBUG_HISTORY) {
+								std::cout << "change "  ;
+								print_bitset(domain.values.table[l], l, std::cout);
+								std::cout << " to " ;
+								print_bitset(w, l, std::cout);
+								std::cout << std::endl;
+							}
+#endif
+
+							domain.values.table[l] = w;
+							*(++delta_[l]) = w;
+							*(++level_[l]) = level;
+						}
+					}
+				}
+			}
+
+
+			domain.min = lb;
+			domain.max = ub;
+
+			trail_.add(lb);
+			trail_.add(ub);
+			trail_.add(ub-lb+1);
+			trail_.add(level);
 
 #ifdef _DEBUG_HISTORY
-	  std::cout << "change " ;
-	  print_bitset(domain.values.table[i], i, std::cout);
-	  std::cout << " to " ;
-	  print_bitset(w, i, std::cout);
-	  std::cout << std::endl;
+			if(_DEBUG_HISTORY) {
+				std::cout << domain << " " << domain.values << std::endl << std::endl;
+			}
 #endif
 
-	  domain.values.table[i] = w;
-	  *(++delta_[i]) = w;
-	  *(++level_[i]) = level;
-	} else {
-	  if(prev_lb < lb) {
-	    w = (BitSet::full << (lb & BitSet::CACHE));
-
-#ifdef _DEBUG_HISTORY
-	  std::cout << "change " ;
-	  print_bitset(domain.values.table[i], i, std::cout);
-	  std::cout << " to " ;
-	  print_bitset(w, i, std::cout);
-	  std::cout << std::endl;
-#endif
-
-	    domain.values.table[i] = w;
-	    *(++delta_[i]) = w;
-	    *(++level_[i]) = level;
-	  }
-	  if(prev_ub > ub) {
-	    w = (BitSet::full >> (BitSet::CACHE - (ub & BitSet::CACHE)));
-
-#ifdef _DEBUG_HISTORY
-	    std::cout << "change "  ;
-	  print_bitset(domain.values.table[l], l, std::cout);
-	  std::cout << " to " ;
-	  print_bitset(w, l, std::cout);
-	  std::cout << std::endl;
-#endif
-
-	    domain.values.table[l] = w;
-	    *(++delta_[l]) = w;
-	    *(++level_[l]) = level;
-	  }
-	}
-      }
-
-
-      domain.min = lb;
-      domain.max = ub;
-
-      trail_.add(lb);
-      trail_.add(ub);
-      trail_.add(ub-lb+1);
-      trail_.add(level);
-
-#ifdef _DEBUG_HISTORY
-      std::cout << domain << " " << domain.values << std::endl << std::endl;
-#endif
-
-    }
+		}
 
     /*!@name Static Accessors and Iterators*/
     //@{
@@ -530,269 +565,269 @@ namespace Mistral {
     
 
 
-    inline Event remove(const int v) {
-      Event removal = DOMAIN_EVENT;
+		inline Event remove(const int v) {
+			Event removal = DOMAIN_EVENT;
 
-      // first check if we can abort early
-      if(!contain(v)) return NO_EVENT;
-      if(domain.size == 1) return FAIL_EVENT;
+			// first check if we can abort early
+			if(!contain(v)) return NO_EVENT;
+			if(domain.size == 1) return FAIL_EVENT;
 
-      save();
+			save();
 
-      // then change the static domain
-      if(--domain.size == 1) removal |= VALUE_C; 
-      domain.values.fast_remove(v);
+			// then change the static domain
+			if(--domain.size == 1) removal |= VALUE_C; 
+			domain.values.fast_remove(v);
 	
-      if(removal & VALUE_C) {
-	if(domain.min == v) {
-	  removal |= LB_EVENT;
-	  domain.min = domain.max;
-	} else {
-	  removal |= UB_EVENT;
-	  domain.max = domain.min;
-	}
-      } else {
-	if(domain.max == v) {
-	  removal |= UB_EVENT;
-	  domain.max = domain.values.prev(v);
-	} else if(domain.min == v) {
-	  removal |= LB_EVENT;
-	  domain.min = domain.values.next(v);
-	}       
-      }  
+			if(removal & VALUE_C) {
+				if(domain.min == v) {
+					removal |= LB_EVENT;
+					domain.min = domain.max;
+				} else {
+					removal |= UB_EVENT;
+					domain.max = domain.min;
+				}
+			} else {
+				if(domain.max == v) {
+					removal |= UB_EVENT;
+					domain.max = domain.values.prev(v);
+				} else if(domain.min == v) {
+					removal |= LB_EVENT;
+					domain.min = domain.values.next(v);
+				}       
+			}  
       
 
-      // if(id==1) {
-      // 	std::cout << event2str(removal) << " event ==> " << this << " = " << domain << std::endl;
-      // }
+			// if(id==1) {
+			// 	std::cout << event2str(removal) << " event ==> " << this << " = " << domain << std::endl;
+			// }
 
-      solver->trigger_event(id, removal);
-      return removal; 
-    }
+			solver->trigger_event(id, removal);
+			return removal; 
+		}
 
-    inline Event remove_wo_trigger(const int v) {
-      Event removal = DOMAIN_EVENT;
+		inline Event remove_wo_trigger(const int v) {
+			Event removal = DOMAIN_EVENT;
 
-      // first check if we can abort early
-      if(!contain(v)) return NO_EVENT;
-      if(domain.size == 1) return FAIL_EVENT;
+			// first check if we can abort early
+			if(!contain(v)) return NO_EVENT;
+			if(domain.size == 1) return FAIL_EVENT;
 
-      save();
+			save();
 
-      // then change the static domain
-      if(--domain.size == 1) removal = VALUE_EVENT; 
-      domain.values.fast_remove(v);
+			// then change the static domain
+			if(--domain.size == 1) removal = VALUE_EVENT; 
+			domain.values.fast_remove(v);
 	
-      if(removal == VALUE_EVENT)
-	if(domain.min == v) domain.min = domain.max;
-	else domain.max = domain.min;
-      else {
-	if(domain.max == v) {
-	  removal |= UB_EVENT;
-	  domain.max = domain.values.max();
-	} else if(domain.min == v) {
-	  removal |= LB_EVENT;
-	  domain.min = domain.values.min();
-	}       
-      }  
+			if(removal == VALUE_EVENT)
+				if(domain.min == v) domain.min = domain.max;
+			else domain.max = domain.min;
+			else {
+				if(domain.max == v) {
+					removal |= UB_EVENT;
+					domain.max = domain.values.max();
+				} else if(domain.min == v) {
+					removal |= LB_EVENT;
+					domain.min = domain.values.min();
+				}       
+			}  
       
-      //solver->trigger_event(id, removal);
-      return removal; 
-    }
+			//solver->trigger_event(id, removal);
+			return removal; 
+		}
 
-    /// Remove all values but "v"
-    inline Event set_domain(const int v) {
-      Event setdomain = VALUE_C;
+		/// Remove all values but "v"
+		inline Event set_domain(const int v) {
+			Event setdomain = VALUE_C;
 
-      // this->display(std::cout);
-      // std::cout << " <- " << v << " (was: " << domain << " " << domain.values << ") " 
-      //  		<< contain(v) << "/" << domain.size << std::endl;
+			// this->display(std::cout);
+			// std::cout << " <- " << v << " (was: " << domain << " " << domain.values << ") " 
+			//  		<< contain(v) << "/" << domain.size << std::endl;
 
-      // first check if we can abort early
-      if(!contain(v)) return FAIL_EVENT;
-      else if(domain.size == 1) return NO_EVENT;
+			// first check if we can abort early
+			if(!contain(v)) return FAIL_EVENT;
+			else if(domain.size == 1) return NO_EVENT;
 
-      //setdomain = VALUE_EVENT;
-      save();
+			//setdomain = VALUE_EVENT;
+			save();
 
 
-      // std::cout << domain.values.table << std::endl;
+			// std::cout << domain.values.table << std::endl;
 
-      if(domain.values.table) 
-	domain.values.set_to(v);
-      domain.size = 1;
-      if(domain.min != v) {
-	domain.min = v;
-	setdomain |= LB_EVENT;
-      }
-      if(domain.max != v) {
-	domain.max = v;
-	setdomain |= UB_EVENT;
-      }
+			if(domain.values.table) 
+				domain.values.set_to(v);
+			domain.size = 1;
+			if(domain.min != v) {
+				domain.min = v;
+				setdomain |= LB_EVENT;
+			}
+			if(domain.max != v) {
+				domain.max = v;
+				setdomain |= UB_EVENT;
+			}
       
-      solver->trigger_event(id, setdomain);	
-      //trigger_event(setdomain);
+			solver->trigger_event(id, setdomain);	
+			//trigger_event(setdomain);
 
-      return setdomain; 
-    }
+			return setdomain; 
+		}
 
-    /// Remove all values strictly lower than l
-    inline Event set_min(const int lo) {
-      Event lower_bound = LB_EVENT;
+		/// Remove all values strictly lower than l
+		inline Event set_min(const int lo) {
+			Event lower_bound = LB_EVENT;
 
-      // first check if we can abort early
-      if(domain.max <  lo) return FAIL_EVENT;
-      if(domain.min >= lo) return NO_EVENT;
+			// first check if we can abort early
+			if(domain.max <  lo) return FAIL_EVENT;
+			if(domain.min >= lo) return NO_EVENT;
       
-      // if(id==1) {
-      // 	std::cout << "set_min " << lo << " of " << this << " in " << domain << std::endl;
-      // }
+			// if(id==1) {
+			// 	std::cout << "set_min " << lo << " of " << this << " in " << domain << std::endl;
+			// }
 
 
 
-      save();
+			save();
       
-      // then change the static domain
-      domain.values.set_min(lo);
-      if(lo == domain.max) {
-	domain.min = lo;
-	domain.size = 1;
-	lower_bound |= VALUE_C;
-      } else {
-	domain.size = domain.values.size();
-	if(domain.values.contain(lo)) domain.min = lo;
-	else domain.min = domain.values.next(lo-1);
-	if(domain.size == 1) lower_bound |= VALUE_C;
-      }
+			// then change the static domain
+			domain.values.set_min(lo);
+			if(lo == domain.max) {
+				domain.min = lo;
+				domain.size = 1;
+				lower_bound |= VALUE_C;
+			} else {
+				domain.size = domain.values.size();
+				if(domain.values.contain(lo)) domain.min = lo;
+				else domain.min = domain.values.next(lo-1);
+				if(domain.size == 1) lower_bound |= VALUE_C;
+			}
 
 
-      // if(id==1) {
-      // 	std::cout << event2str(lower_bound) << " event ==> " << this << " = " << domain << std::endl;
-      // }
+			// if(id==1) {
+			// 	std::cout << event2str(lower_bound) << " event ==> " << this << " = " << domain << std::endl;
+			// }
       
-      solver->trigger_event(id, lower_bound);
-      //trigger_event(lower_bound);
-      return lower_bound; 
-    }
+			solver->trigger_event(id, lower_bound);
+			//trigger_event(lower_bound);
+			return lower_bound; 
+		}
 
-    /// Remove all values strictly greater than u
-    inline Event set_max(const int up) {
-      Event upper_bound = UB_EVENT;
+		/// Remove all values strictly greater than u
+		inline Event set_max(const int up) {
+			Event upper_bound = UB_EVENT;
 
-      //std::cout << "x_set_max(" << up << ") " << domain << " " << domain.values << std::endl;
+			//std::cout << "x_set_max(" << up << ") " << domain << " " << domain.values << std::endl;
 
 
 
-      // first check if we can abort early
-      if(domain.min >  up) return FAIL_EVENT;
-      if(domain.max <= up) return NO_EVENT;
+			// first check if we can abort early
+			if(domain.min >  up) return FAIL_EVENT;
+			if(domain.max <= up) return NO_EVENT;
       
-      save();
+			save();
 
-      // then change the static domain
-      domain.values.set_max(up);
-      if(up == domain.min) {
-	domain.max = up;
-	domain.size = 1;
-	upper_bound |= VALUE_C;
-      } else {
-	domain.size = domain.values.size();
-	if(domain.values.contain(up)) domain.max = up;
-	else domain.max = domain.values.prev(up);
-	if(domain.size == 1) upper_bound |= VALUE_C;
-      }
+			// then change the static domain
+			domain.values.set_max(up);
+			if(up == domain.min) {
+				domain.max = up;
+				domain.size = 1;
+				upper_bound |= VALUE_C;
+			} else {
+				domain.size = domain.values.size();
+				if(domain.values.contain(up)) domain.max = up;
+				else domain.max = domain.values.prev(up);
+				if(domain.size == 1) upper_bound |= VALUE_C;
+			}
 
-      //std::cout << domain << std::endl;
+			//std::cout << domain << std::endl;
 
-      solver->trigger_event(id, upper_bound);
-      //trigger_event(upper_bound);
-      return upper_bound; 
-    }
+			solver->trigger_event(id, upper_bound);
+			//trigger_event(upper_bound);
+			return upper_bound; 
+		}
 
 
-    /// Remove all values that do not appear in the set "s"
-    inline Event set_domain(const BitSet& s) {
-      Event intersection = DOMAIN_EVENT;
+		/// Remove all values that do not appear in the set "s"
+		inline Event set_domain(const BitSet& s) {
+			Event intersection = DOMAIN_EVENT;
 
-      if( !domain.values.intersect(s) ) return FAIL_EVENT;
-      if( domain.values.included(s) ) return NO_EVENT;
+			if( !domain.values.intersect(s) ) return FAIL_EVENT;
+			if( domain.values.included(s) ) return NO_EVENT;
 
-      save();
+			save();
 
-      // then change the static domain
-      domain.values.intersect_with(s);
-      domain.size = domain.values.size();
-      if(!s.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
-      if(!s.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
-      if(domain.min == domain.max) intersection |= VALUE_EVENT;
+			// then change the static domain
+			domain.values.intersect_with(s);
+			domain.size = domain.values.size();
+			if(!s.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
+			if(!s.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
+			if(domain.min == domain.max) intersection |= VALUE_EVENT;
     
-      solver->trigger_event(id, intersection);
-      //trigger_event(intersection);
-      return intersection; 
-    }
+			solver->trigger_event(id, intersection);
+			//trigger_event(intersection);
+			return intersection; 
+		}
 
 
-    //   Event set_domain(Variable x) ;
-    //     /// Remove all values that do not appear in the current domain of the Variable "x"
-    //     inline Event set_domain(Variable x) {
-    //       if(domain.size == 1) {
-    // 	return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
-    //       } else {
-    // 	int xsize = x.get_size();
-    // 	if(xsize == 1) {
-    // 	  return set_domain(x.get_value());
-    // 	} else {
-    // 	  int xmin = x.get_min();
-    // 	  int xmax = x.get_max();
-    // 	  if(xsize == (xmax-xmin+1)) {
-    // 	    return(set_min(xmin) | set_max(xmax));
-    // 	  } else if(x.includes(domain.values)) {
-    // 	    return NO_EVENT;
-    // 	  } else if(x.intersect(domain.values)) {
-    // 	    Event intersection = DOMAIN_EVENT;
-    // 	    save();
-    // 	    x.intersect_to(domain.values);
-    // 	    domain.size = domain.values.size();
-    // 	    if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
-    // 	    if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
-    // 	    if(domain.min == domain.max) intersection |= VALUE_EVENT;
+		//   Event set_domain(Variable x) ;
+		//     /// Remove all values that do not appear in the current domain of the Variable "x"
+		//     inline Event set_domain(Variable x) {
+		//       if(domain.size == 1) {
+		// 	return(x.contain(domain.min) ? NO_EVENT : FAIL_EVENT);
+		//       } else {
+		// 	int xsize = x.get_size();
+		// 	if(xsize == 1) {
+		// 	  return set_domain(x.get_value());
+		// 	} else {
+		// 	  int xmin = x.get_min();
+		// 	  int xmax = x.get_max();
+		// 	  if(xsize == (xmax-xmin+1)) {
+		// 	    return(set_min(xmin) | set_max(xmax));
+		// 	  } else if(x.includes(domain.values)) {
+		// 	    return NO_EVENT;
+		// 	  } else if(x.intersect(domain.values)) {
+		// 	    Event intersection = DOMAIN_EVENT;
+		// 	    save();
+		// 	    x.intersect_to(domain.values);
+		// 	    domain.size = domain.values.size();
+		// 	    if(!domain.values.contain(domain.min)) { intersection |= LB_EVENT; domain.min = domain.values.next(domain.min); }
+		// 	    if(!domain.values.contain(domain.max)) { intersection |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
+		// 	    if(domain.min == domain.max) intersection |= VALUE_EVENT;
     
-    // 	    solver->trigger_event(id, intersection);
+		// 	    solver->trigger_event(id, intersection);
 	    
-    // 	  } else return FAIL_EVENT;
-    // 	}
-    //       }
-    //       return NO_EVENT;
-    //     }
+		// 	  } else return FAIL_EVENT;
+		// 	}
+		//       }
+		//       return NO_EVENT;
+		//     }
 
-    /// Remove all values that belong to the set "s"
-    inline Event remove_set(const BitSet& s) {
-      Event setdifference = NO_EVENT;
+		/// Remove all values that belong to the set "s"
+		inline Event remove_set(const BitSet& s) {
+			Event setdifference = NO_EVENT;
 
-      //       if(type != VIRTUAL_VAR) {
-      // 	// first check if we can abort early
-      // 	if(domain.values.table) {
-      // 	  if( !domain.values.intersect(s) ) return NO_EVENT;
-      // 	  if( domain.values.included(s) ) return FAIL_EVENT;
+			//       if(type != VIRTUAL_VAR) {
+			// 	// first check if we can abort early
+			// 	if(domain.values.table) {
+			// 	  if( !domain.values.intersect(s) ) return NO_EVENT;
+			// 	  if( domain.values.included(s) ) return FAIL_EVENT;
 
-      // 	  _save_();
+			// 	  _save_();
 	  
-      // 	  // then change the static domain
-      // 	  setdifference = DOMAIN_EVENT;
-      // 	  domain.values.setminus_with(s);
-      // 	  domain.size = domain.values.size();
-      // 	  if(s.contain(domain.min)) { setdifference |= LB_EVENT; domain.min = domain.values.next(domain.min); }
-      // 	  if(s.contain(domain.max)) { setdifference |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
-      // 	  if(domain.min == domain.max) setdifference |= VALUE_EVENT;
-      // 	} else {
-      // 	  std::cerr << "not supported" << std::endl;
-      // 	  exit(0);
-      // 	}
-      //       } 
+			// 	  // then change the static domain
+			// 	  setdifference = DOMAIN_EVENT;
+			// 	  domain.values.setminus_with(s);
+			// 	  domain.size = domain.values.size();
+			// 	  if(s.contain(domain.min)) { setdifference |= LB_EVENT; domain.min = domain.values.next(domain.min); }
+			// 	  if(s.contain(domain.max)) { setdifference |= UB_EVENT; domain.max = domain.values.prev(domain.max); }
+			// 	  if(domain.min == domain.max) setdifference |= VALUE_EVENT;
+			// 	} else {
+			// 	  std::cerr << "not supported" << std::endl;
+			// 	  exit(0);
+			// 	}
+			//       } 
 
-      //       trigger_event(setdifference);
-      return setdifference; // do nothing more for BOOL or CONSTANT or BITSET or RANGE
-    }
+			//       trigger_event(setdifference);
+			return setdifference; // do nothing more for BOOL or CONSTANT or BITSET or RANGE
+		}
 
     /// Remove all values in the interval [l..u]
     inline Event remove_interval(const int lo, const int up) {
@@ -845,77 +880,78 @@ namespace Mistral {
 
     //@}   
 
-    inline void save() {
+		inline void save() {
 
-      // std::cout << "SAVE " << this << " at level " << solver->level << std::endl
-      //  		<< trail_  ;
-      // // for(int i=domain.values.pos_words; i-->domain.values.neg_words;)
-      // // 	std::cout << " " << delta_[i]-delta_abs[i] ;
-      // std::cout << std::endl;
+			// std::cout << "SAVE " << this << " at level " << solver->level << std::endl
+			//  		<< trail_  ;
+			// // for(int i=domain.values.pos_words; i-->domain.values.neg_words;)
+			// // 	std::cout << " " << delta_[i]-delta_abs[i] ;
+			// std::cout << std::endl;
 
-      int i, j;//, lvl = get_current_level();
-      if(trail_.back() != solver->level) {
+			int i, j;//, lvl = get_current_level();
+			if(trail_.back() != solver->level) {
 
-	//if(trail_.back() != lvl) {
-	//store();
-	//Variable self(this, BITSET_VAR);
-	//solver->save(self);
-	//solver->save(this, BITSET_VAR);
-	solver->save(id);
-	//store(this, BITSET_VAR);
+				//if(trail_.back() != lvl) {
+				//store();
+				//Variable self(this, BITSET_VAR);
+				//solver->save(self);
+				//solver->save(this, BITSET_VAR);
+				solver->save(id);
+				//store(this, BITSET_VAR);
 
-	//int i = domain.values.pos_words, j = domain.values.neg_words;
-	i = domain.values.pos_words;
-	j = domain.values.neg_words;
+				//int i = domain.values.pos_words, j = domain.values.neg_words;
+				i = domain.values.pos_words;
+				j = domain.values.neg_words;
+				//if(i>delta_.pos_words || j<delta_)
 
-	trail_.add(domain.min);
-	trail_.add(domain.max);
-	trail_.add(domain.size);
+				trail_.add(domain.min);
+				trail_.add(domain.max);
+				trail_.add(domain.size);
 	
-	if(delta_) 
-	  while( i --> j ) {
-	    //WORD_TYPE buf = domain.values.table[i];
-	    if(*(delta_[i]) != domain.values.table[i]) {
-	      *(++delta_[i]) = domain.values.table[i];
-	      *(++level_[i]) = solver->level; //lvl;
-	    }
-	  }
+				if(delta_) 
+				while( i --> j ) {
+					//WORD_TYPE buf = domain.values.table[i];
+					if(*(delta_[i]) != domain.values.table[i]) {
+						*(++delta_[i]) = domain.values.table[i];
+						*(++level_[i]) = solver->level; //lvl;
+					}
+				}
 	
-	trail_.add(solver->level);
-      }
+				trail_.add(solver->level);
+			}
 
 
-    // std::cout << "===> " << this << std::endl
-    //    		<< trail_  ;
-    //   std::cout << std::endl;
+			// std::cout << "===> " << this << std::endl
+			//    		<< trail_  ;
+			//   std::cout << std::endl;
       
-    }
+		}
 
-    inline Event restore() {
+		inline Event restore() {
 
-      // backtrack from solver->level to solver->level-1;
-      // the domain has changed at solver->level
-      int i = domain.values.pos_words;
-      int j = domain.values.neg_words;
-      //int lvl = get_current_level();
+			// backtrack from solver->level to solver->level-1;
+			// the domain has changed at solver->level
+			int i = domain.values.pos_words;
+			int j = domain.values.neg_words;
+			//int lvl = get_current_level();
 
-      trail_.pop();
-      trail_.pop(domain.size);
-      trail_.pop(domain.max);
-      trail_.pop(domain.min);
+			trail_.pop();
+			trail_.pop(domain.size);
+			trail_.pop(domain.max);
+			trail_.pop(domain.min);
 
-      if(delta_) 
-	while( i --> j ) {
-	  domain.values.table[i] = *(delta_[i]);
-	  if(*(level_[i]) == solver->level) {
-	    //if(*(level_[i]) == lvl) {
-	    --level_[i];
-	    --delta_[i];
-	  }
-	}
+			if(delta_) 
+			while( i --> j ) {
+				domain.values.table[i] = *(delta_[i]);
+				if(*(level_[i]) == solver->level) {
+					//if(*(level_[i]) == lvl) {
+					--level_[i];
+					--delta_[i];
+				}
+			}
 
-      return NO_EVENT;
-    }
+			return NO_EVENT;
+		}
 
     virtual std::ostream& display(std::ostream& os) const
     {
@@ -1320,11 +1356,11 @@ namespace Mistral {
       std::cout << "setup a bitset trail for ";
       display(std::cout);
       std::cout << " in [" << min << "," << max << "] at level " << solver->level << std::endl;
-      std::cout << "current trail: " << trail_ << std::endl;
+      //std::cout << "current trail: " << trail_ << std::endl;
 #endif
 
       for(unsigned int i = 3; i<trail_.size; i+=3) {
-	X->set_bound_history(trail_[i], trail_[i+1], trail_[i+2]);
+				X->set_bound_history(trail_[i], trail_[i+1], trail_[i+2]);
       }
 
       X->domain.values.set_min(min);
@@ -1504,14 +1540,14 @@ namespace Mistral {
 
     //@}   
 
-    inline void save() {
-      if(trail_.back() != solver->level) {
-	solver->save(id);
-	trail_.add(min);
-	trail_.add(max);
-	trail_.add(solver->level);
-      }
-    }
+		inline void save() {
+			if(trail_.back() != solver->level) {
+				solver->save(id);
+				trail_.add(min);
+				trail_.add(max);
+				trail_.add(solver->level);
+			}
+		}
 
     inline Event restore() {
       trail_.pop();

@@ -4630,13 +4630,13 @@ template < int N, class T >
 			return NOVAL;
 		}
 
-    inline void  remove(const int elt) 
-    {
-      int i = (elt >> EXP);
-      if( (i >= neg_words) && 
-	  (i <  pos_words) )
-	table[i] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
-    }
+		inline void  remove(const int elt) 
+		{
+			int i = (elt >> EXP);
+			if( (i >= neg_words) && 
+				(i <  pos_words) )
+					table[i] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
+		}
 
     inline void  fast_remove(const int elt) 
     {
@@ -4708,40 +4708,43 @@ template < int N, class T >
 			return elt;
 		}
 
-    inline void xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
-      int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
-      while( i-- > j )
-	s.table[i] ^= table[i];
-    }
+		inline void xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
+			int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
+			while( i-- > j )
+				s.table[i] ^= table[i];
+		}
 
-    inline void fast_xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = pos_words;
-      while( i-- > neg_words )
-	s.table[i] ^= table[i];
-    }
+		inline void fast_xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = pos_words;
+			while( i-- > neg_words )
+				s.table[i] ^= table[i];
+		}
 
-    inline void xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
-      int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
-      while( i-- > j )
-	table[i] ^= s.table[i];
-    }
+		inline void xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
+			int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
+			while( i-- > j )
+				table[i] ^= s.table[i];
+		}
 
-    inline void fast_xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = pos_words;
-      while( i-- > neg_words )
-	table[i] ^= s.table[i];
-    }
+		inline void fast_xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = pos_words;
+			while( i-- > neg_words )
+				table[i] ^= s.table[i];
+		}
 		
 		inline void xor_with(const int lb, const int ub) 
 		{
 			int wlb = (lb >> EXP), i;
 			int wub = (ub >> EXP), j;
+			
+			if(wlb<neg_words) wlb=neg_words;
+			if(wub>=pos_words) wub=pos_words-1;
 			
 			if(wlb==wub) {
 				table[wlb] ^= ((full << (lb & CACHE)) & (full >> (size_word_bit-1-(ub & CACHE))));

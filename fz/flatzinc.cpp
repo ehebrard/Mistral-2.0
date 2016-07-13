@@ -631,17 +631,19 @@ FlatZincModel::maximize(int var, AST::Array* ann) {
 FlatZincModel::~FlatZincModel(void) {
 	delete _solveAnnotations;
 
-        // for(unsigned int i=0; i<iv.size; ++i) {
-        
-        //   int domain_type = iv[i].domain_type;
-        //   if     (domain_type ==  BITSET_VAR) delete iv[i].bitset_domain;
-        //   else if(domain_type ==    LIST_VAR) delete iv[i].list_domain;
-        //   else if(domain_type ==   RANGE_VAR) delete iv[i].range_domain;
-        //   else if(domain_type == VIRTUAL_VAR) delete iv[i].virtual_domain;
-        //   else if(domain_type ==  EXPRESSION) delete iv[i].expression;
-        //   else if(domain_type !=   CONST_VAR) delete iv[i].variable;
- 
-        // }
+	// for(unsigned int i=0; i<iv.size; ++i) {
+	//
+	// 	iv[i].free_object();
+	//
+	//         //   int domain_type = iv[i].domain_type;
+	//         //   if     (domain_type ==  BITSET_VAR) delete iv[i].bitset_domain;
+	//         //   else if(domain_type ==    LIST_VAR) delete iv[i].list_domain;
+	//         //   else if(domain_type ==   RANGE_VAR) delete iv[i].range_domain;
+	//         //   else if(domain_type == VIRTUAL_VAR) delete iv[i].virtual_domain;
+	//         //   else if(domain_type ==  EXPRESSION) delete iv[i].expression;
+	//         //   else if(domain_type !=   CONST_VAR) delete iv[i].variable;
+	//
+	// }
 }
 
 
