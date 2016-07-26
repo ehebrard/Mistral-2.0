@@ -48,6 +48,7 @@
 //#define _DEBUG_RDISJUNCTIVE (id==670)
 //#define _DEBUG_PREDBOOLSUM (get_solver()->statistics.num_nodes == 1072 && id == 154)
 //#define _DEBUG_ELEMENT (get_solver()->statistics.num_propagations == 143511 && id == 680)
+//#define _DEBUG_SQ true
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -3075,6 +3076,13 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate(const int change
 
 Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {      
 	Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+#ifdef _DEBUG_SQ
+  if(_DEBUG_SQ) {
+    std::cout  << scope[0].get_domain() << "^2 = " << scope[1].get_domain() << std::endl;
+  }
+#endif
+	
   
 	if( FAILED(scope[1].set_min(0)) ) wiped = FAILURE(1);
 	else {
@@ -3089,11 +3097,11 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 			 ub_sr = scope[0].get_max();
 				
 			// compute the bounds of the square, given the bounds of x [taking into account a hole centered on 0]
-			if(lb_sr > 0) {
+			if(lb_sr >= 0) {
 				// The domain is strictly positive
 				lb_sq = lb_sr*lb_sr;
 				ub_sq = ub_sr*ub_sr;
-			} else if(ub_sq < 0) {
+			} else if(ub_sq <= 0) {
 				// The domain is strictly negative
 				lb_sq = ub_sr*ub_sr;
 				ub_sq = lb_sr*lb_sr;
@@ -3111,9 +3119,15 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 				}
 				lb_sq *= lb_sq;
 			}
-			if( FAILED(scope[1].set_max(ub_sq)) ||
-				FAILED(scope[1].set_min(lb_sq))
-					) wiped = FAILURE(1);
+			
+			
+#ifdef _DEBUG_SQ
+  if(_DEBUG_SQ) {
+			std::cout << "[" << lb_sr << ".." << ub_sr << "]^2 = [" << lb_sq << ".." << ub_sq << "]" << std::endl;
+	  }
+#endif			
+			
+			if( FAILED(scope[1].set_max(ub_sq)) || FAILED(scope[1].set_min(lb_sq)) ) wiped = FAILURE(1);
 			else {
 				// compute the bounds of x given the bounds of x^2
 				int cur_ub_xsq = scope[1].get_max();
@@ -3127,6 +3141,11 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 					if(cur_lb_xsq > lb_sq) {
 						// there's something to prune because of x^2 upper bound
 						lb_sr = (int)(ceil(sqrt((double)(cur_ub_xsq))));
+						
+						// std::cout << "\n\nHEREHERE" << std::endl;
+						// std::cout << cur_ub_xsq << " " << (sqrt((double)(cur_ub_xsq))) << " " << ceil(sqrt((double)(cur_ub_xsq))) << " " << lb_sr << std::endl;
+						// exit(1);
+						
 						if( FAILED(scope[0].set_min(lb_sr)) ) wiped = FAILURE(0);
 					}
 				}
@@ -3134,6 +3153,14 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 		} while(lb_sr < scope[0].get_min() || ub_sr > scope[0].get_max());
 	
 	}	
+	
+	
+#ifdef _DEBUG_SQ
+  if(_DEBUG_SQ) {
+    std::cout  << scope[0].get_domain() << "^2 = " << scope[1].get_domain() << std::endl;
+		// exit(1);
+  }
+#endif
 
   
 	return wiped;
