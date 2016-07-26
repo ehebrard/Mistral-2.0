@@ -1111,166 +1111,166 @@ namespace Mistral {
     }
 
 
-    void restore(const int rtype) {
+		void restore(const int rtype) {
       
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-            std::cout << "c ";
-      int lvl=solver->level;
-      while(--lvl>=0) std::cout << " ";
-std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std::endl;
-  }
+			if(_DEBUG_BACKTRACK) {
+				std::cout << "c ";
+				int lvl=solver->level;
+				while(--lvl>=0) std::cout << " ";
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std::endl;
+			}
 #endif
       
-      // //if(id==36) {
-      // //std::cout << std::endl;
+			// //if(id==36) {
+			// //std::cout << std::endl;
       
-      // // std::cout << scope[0] << " " << on[0] << std::endl;
-      // // std::cout << scope[1] << " " << on[1] << std::endl;
-      // // std::cout << scope[2] << " " << on[2] << std::endl;
-      // print_active();
-      // std::cout << " restore " ;
-      // //}
+			// // std::cout << scope[0] << " " << on[0] << std::endl;
+			// // std::cout << scope[1] << " " << on[1] << std::endl;
+			// // std::cout << scope[2] << " " << on[2] << std::endl;
+			// print_active();
+			// std::cout << " restore " ;
+			// //}
 
-      if(rtype&ACTIVITY) active >>= 3;	
+			if(rtype&ACTIVITY) active >>= 3;	
       
-      if(rtype&RELAXED) {
-	int var = rtype&CTYPE;
+			if(rtype&RELAXED) {
+				int var = rtype&CTYPE;
 	
-	// if(index[var]>=0) {
+				// if(index[var]>=0) {
 	  
-	//   std::cout << "SHOULD NOT REPOST TWICE!" << std::endl;
-	//   exit(1);
+				//   std::cout << "SHOULD NOT REPOST TWICE!" << std::endl;
+				//   exit(1);
 
-	// }
-	// std::cout << on[var] << " repost " ;
-	// display(std::cout);
-	// //std::cout << std::endl; 
+				// }
+				// std::cout << on[var] << " repost " ;
+				// display(std::cout);
+				// //std::cout << std::endl; 
 	
-	if(index[var] < 0) {
+				if(index[var] < 0) {
 
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-	  std::cout << "c ";
-	  lvl=solver->level;
-	  while(--lvl>=0) std::cout << " ";
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
-  }
+					if(_DEBUG_BACKTRACK) {
+						std::cout << "c ";
+						lvl=solver->level;
+						while(--lvl>=0) std::cout << " ";
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+					}
 #endif
 	
-	  un_relax_from(var);
-	}
-      }
+					un_relax_from(var);
+				}
+			}
       
       
-      if(rtype&POSTED) {
+			if(rtype&POSTED) {
 	
-	int var = rtype&CTYPE;
+				int var = rtype&CTYPE;
 	
-	// if(index[var]<0) {
+				// if(index[var]<0) {
 	  
-	//   std::cout << "SHOULD NOT RELAX TWICE!" << std::endl;
-	//   exit(1);
+				//   std::cout << "SHOULD NOT RELAX TWICE!" << std::endl;
+				//   exit(1);
 
-	// }
+				// }
 	
-	if(index[var] >= 0) {
+				if(index[var] >= 0) {
 
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-	  std::cout << "c ";
-	  int lvl=solver->level;
-	  while(--lvl>=0) std::cout << " ";
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
-  }
+					if(_DEBUG_BACKTRACK) {
+						std::cout << "c ";
+						int lvl=solver->level;
+						while(--lvl>=0) std::cout << " ";
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+					}
 #endif
 	  
-	  un_post_from(var);
-	}
-      }
+					un_post_from(var);
+				}
+			}
       
-      //       else {
-      //       int var = rtype&CTYPE;
+			//       else {
+			//       int var = rtype&CTYPE;
       
-  //       //std::cout << var << " " << index[var] << " ";
+			//       //std::cout << var << " " << index[var] << " ";
   
   
-  //       if(index[var]<0) {
+			//       if(index[var]<0) {
   
-  // 	// std::cout << on[var] << " repost " ;
-  // 	// display(std::cout);
-  // 	// //std::cout << std::endl; 
+			// 	// std::cout << on[var] << " repost " ;
+			// 	// display(std::cout);
+			// 	// //std::cout << std::endl; 
   
-  // #ifdef _DEBUG_RELAX
-  //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
-  // #endif
+			// #ifdef _DEBUG_RELAX
+			//        std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+			// #endif
   
-  // 	un_relax_from(var);
+			// 	un_relax_from(var);
   
-  // 	// std::cout << " " << on[var] << " ";
+			// 	// std::cout << " " << on[var] << " ";
 
-  //       } else {
+			//       } else {
   
   
-  // #ifdef _DEBUG_RELAX
-  //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
-  // #endif
+			// #ifdef _DEBUG_RELAX
+			//        std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+			// #endif
   
-  // 	un_post_from(var);
-  //       }
-  //       }
-  // //if(id==36) {
-  // print_active();
-  // std::cout << std::endl ;
+			// 	un_post_from(var);
+			//       }
+			//       }
+			// //if(id==36) {
+			// print_active();
+			// std::cout << std::endl ;
   
-  // // std::cout << scope[0] << " " << on[0] << std::endl;
-  // // std::cout << scope[1] << " " << on[1] << std::endl;
-  // // std::cout << scope[2] << " " << on[2] << std::endl;
-  // std::cout << std::endl;
+			// // std::cout << scope[0] << " " << on[0] << std::endl;
+			// // std::cout << scope[1] << " " << on[1] << std::endl;
+			// // std::cout << scope[2] << " " << on[2] << std::endl;
+			// std::cout << std::endl;
   
-  // //}
+			// //}
   
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-      std::cout << "c ";
-      lvl=solver->level;
-      while(--lvl>=0) std::cout << " ";
-  std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
-  print_active();
-  std::cout << std::endl;
-  }
+			if(_DEBUG_BACKTRACK) {
+				std::cout << "c ";
+				lvl=solver->level;
+				while(--lvl>=0) std::cout << " ";
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
+				print_active();
+				std::cout << std::endl;
+			}
 #endif
    
-}
+		}
 
-    void update(const int changed_idx, const Event evt) {
+		void update(const int changed_idx, const Event evt) {
 
-      if(ASSIGNED(evt) && assign(changed_idx)) {
+			if(ASSIGNED(evt) && assign(changed_idx)) {
 
 	
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-     std::cout << "[" << std::setw(4) << id << "](" << name() << "): ff notify assignment of " << scope[changed_idx] << std::endl;
-  }
+				if(_DEBUG_RELAX) {
+					std::cout << "[" << std::setw(4) << id << "](" << name() << "): ff notify assignment of " << scope[changed_idx] << std::endl;
+				}
 #endif
 
-	// std::cout << " (" << ((active&7)/2) << ") ";
-	// std::cout.flush();
-	// std::cout << on[((active&7)/2)] << " relax " ;
-	// display(std::cout) ;
-	// std::cout.flush();
+				// std::cout << " (" << ((active&7)/2) << ") ";
+				// std::cout.flush();
+				// std::cout << on[((active&7)/2)] << " relax " ;
+				// display(std::cout) ;
+				// std::cout.flush();
 
 
-	relax_from((active&7)/2);
+				relax_from((active&7)/2);
 
-	// std::cout << " from " << scope[((active&7)/2)] 
-	// 	  << on[((active&7)/2)] << std::endl;
+				// std::cout << " from " << scope[((active&7)/2)] 
+				// 	  << on[((active&7)/2)] << std::endl;
 
-      }
-    }
+			}
+		}
     
-    void trigger();
-  };
+		void trigger();
+	};
 
 
   // class Contradiction : public ConstraintImplementation {

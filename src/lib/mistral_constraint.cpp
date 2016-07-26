@@ -49,6 +49,7 @@
 //#define _DEBUG_PREDBOOLSUM (get_solver()->statistics.num_nodes == 1072 && id == 154)
 //#define _DEBUG_ELEMENT (get_solver()->statistics.num_propagations == 143511 && id == 680)
 //#define _DEBUG_SQ true
+//#define _DEBUG_ADD (id == 6425)
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -4057,247 +4058,244 @@ Mistral::PropagationOutcome Mistral::PredicateAdd::rewrite() {
 }
 
 Mistral::PropagationOutcome Mistral::PredicateAdd::propagate() {      
-  Mistral::PropagationOutcome wiped = CONSISTENT;
+	Mistral::PropagationOutcome wiped = CONSISTENT;
 
-  int ub_not_revised = 7;
-  int lb_not_revised = 7;
-  Event cevt;
+	int ub_not_revised = 7;
+	int lb_not_revised = 7;
+	Event cevt;
 
 
 #ifdef _DEBUG_ADD
-  if(_DEBUG_ADD) {
-    std::cout << "init prop "
-	      << scope[0].get_domain() << " + " 
-	      << scope[1].get_domain() << " = " 
-	      << scope[2].get_domain() << std::endl;
-  }
+	if(_DEBUG_ADD) {		std::cout << "init prop "
+			<< scope[0].get_domain() << " + " 
+				<< scope[1].get_domain() << " = " 
+					<< scope[2].get_domain() << std::endl;
+	}
 #endif
 
-  while(ub_not_revised || lb_not_revised) {
+	while(ub_not_revised || lb_not_revised) {
     
-    if(lb_not_revised&1) {
-      // revise scope[0]'lb
-      cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
-      if(FAILED(cevt)) {
-	wiped = FAILURE(0);
-	break;
-      } else if(cevt != NO_EVENT) {
-	// scope[0]'s lb changed and may trigger scope[2]'s lb or scope[1]'s ub
-	lb_not_revised |= 4;
-	ub_not_revised |= 2;
-      }
-      lb_not_revised ^= 1;
-    }
+		if(lb_not_revised&1) {
+			// revise scope[0]'lb
+			cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
+			if(FAILED(cevt)) {
+				wiped = FAILURE(0);
+				break;
+			} else if(cevt != NO_EVENT) {
+				// scope[0]'s lb changed and may trigger scope[2]'s lb or scope[1]'s ub
+				lb_not_revised |= 4;
+				ub_not_revised |= 2;
+			}
+			lb_not_revised ^= 1;
+		}
 
-    if(ub_not_revised&1) {
-      // revise scope[0]'ub
-      cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
-      if(FAILED(cevt)) {
-	wiped = FAILURE(0);
-	break;
-      } else if(cevt != NO_EVENT) {
-	// scope[0]'s ub changed and may trigger scope[2]'s ub or scope[1]'s lb
-	ub_not_revised |= 4;
-	lb_not_revised |= 2;
-      }
-      ub_not_revised ^= 1;
-    }
-
-
-    if(lb_not_revised&2) {
-      // revise scope[1]'lb
-      cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
-      if(FAILED(cevt)) {
-	wiped = FAILURE(1);
-	break;
-      } else if(cevt != NO_EVENT) {
-	// scope[1]'s lb changed and may trigger scope[2]'s lb or scope[0]'s ub
-	lb_not_revised |= 4;
-	ub_not_revised |= 1;
-      }
-      lb_not_revised ^= 2;
-    }
-
-    if(ub_not_revised&2) {
-      // revise scope[1]'ub
-      cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
-      if(FAILED(cevt)) {
-	wiped = FAILURE(1);
-	break;
-      } else if(cevt != NO_EVENT) {
-	// scope[1]'s ub changed and may trigger scope[2]'s ub or scope[0]'s lb
-	ub_not_revised |= 4;
-	lb_not_revised |= 1;
-      }
-      ub_not_revised ^= 2;
-    }
+		if(ub_not_revised&1) {
+			// revise scope[0]'ub
+			cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
+			if(FAILED(cevt)) {
+				wiped = FAILURE(0);
+				break;
+			} else if(cevt != NO_EVENT) {
+				// scope[0]'s ub changed and may trigger scope[2]'s ub or scope[1]'s lb
+				ub_not_revised |= 4;
+				lb_not_revised |= 2;
+			}
+			ub_not_revised ^= 1;
+		}
 
 
-    if(lb_not_revised&4) {
-      // revise scope[2]'lb
-      cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
-      if(FAILED(cevt)) {
-	wiped = FAILURE(2);
-	break;
-      } else if(cevt != NO_EVENT) {
-	// scope[2]'s lb changed and may trigger scope[0]'s lb or scope[1]'s lb
-	lb_not_revised |= 2;
-	lb_not_revised |= 1;
-      }
-      lb_not_revised ^= 4;
-    }
+		if(lb_not_revised&2) {
+			// revise scope[1]'lb
+			cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
+			if(FAILED(cevt)) {
+				wiped = FAILURE(1);
+				break;
+			} else if(cevt != NO_EVENT) {
+				// scope[1]'s lb changed and may trigger scope[2]'s lb or scope[0]'s ub
+				lb_not_revised |= 4;
+				ub_not_revised |= 1;
+			}
+			lb_not_revised ^= 2;
+		}
 
-    if(ub_not_revised&4) {
-      // revise scope[2]'ub
-      cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
-      if(FAILED(cevt)) {
-	wiped = FAILURE(2);
-	break;
-      } else if(cevt != NO_EVENT) {
-	// scope[2]'s ub changed and may trigger scope[0]'s ub or scope[1]'s ub
-	ub_not_revised |= 2;
-	ub_not_revised |= 1;
-      }
-      ub_not_revised ^= 4;
-    }
-  }
+		if(ub_not_revised&2) {
+			// revise scope[1]'ub
+			cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
+			if(FAILED(cevt)) {
+				wiped = FAILURE(1);
+				break;
+			} else if(cevt != NO_EVENT) {
+				// scope[1]'s ub changed and may trigger scope[2]'s ub or scope[0]'s lb
+				ub_not_revised |= 4;
+				lb_not_revised |= 1;
+			}
+			ub_not_revised ^= 2;
+		}
+
+
+		if(lb_not_revised&4) {
+			// revise scope[2]'lb
+			cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
+			if(FAILED(cevt)) {
+				wiped = FAILURE(2);
+				break;
+			} else if(cevt != NO_EVENT) {
+				// scope[2]'s lb changed and may trigger scope[0]'s lb or scope[1]'s lb
+				lb_not_revised |= 2;
+				lb_not_revised |= 1;
+			}
+			lb_not_revised ^= 4;
+		}
+
+		if(ub_not_revised&4) {
+			// revise scope[2]'ub
+			cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
+			if(FAILED(cevt)) {
+				wiped = FAILURE(2);
+				break;
+			} else if(cevt != NO_EVENT) {
+				// scope[2]'s ub changed and may trigger scope[0]'s ub or scope[1]'s ub
+				ub_not_revised |= 2;
+				ub_not_revised |= 1;
+			}
+			ub_not_revised ^= 4;
+		}
+	}
 
 #ifdef _DEBUG_ADD
-  if(_DEBUG_ADD) {
-    std::cout << scope[0].get_domain() << " + " 
-	      << scope[1].get_domain() << " = " 
-	      << scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
-  }
+	if(_DEBUG_ADD) {
+		std::cout << scope[0].get_domain() << " + " 
+			<< scope[1].get_domain() << " = " 
+				<< scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
+	}
 #endif
 
-  return wiped;
+	return wiped;
 }
 
 
-Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_idx, 
-							     const Event evt) {      
-  Mistral::PropagationOutcome wiped = CONSISTENT;
-  int cidx = changed_idx;
-  int cevt = evt;
+Mistral::PropagationOutcome Mistral::PredicateAdd::propagate(const int changed_idx, const Event evt) {      
+	Mistral::PropagationOutcome wiped = CONSISTENT;
+	int cidx = changed_idx;
+	int cevt = evt;
 
 #ifdef _DEBUG_ADD
-  if(_DEBUG_ADD) {
-    std::cout << scope[0] << " + " 
-	      << scope[1] << " = " 
-	      << scope[2] << std::endl; 
-    std::cout << scope[0].get_domain() << " + " 
-	      << scope[1].get_domain() << " = " 
-	      << scope[2].get_domain() << " " << event2str(evt) 
-	      << " on " << scope[changed_idx].get_domain() << std::endl 
-	      << on[0] << std::endl
-	      << on[1] << std::endl
-	      << on[2] << std::endl;
-  }
+	if(_DEBUG_ADD) {
+		std::cout << scope[0] << " + " 
+			<< scope[1] << " = " 
+				<< scope[2] << std::endl; 
+		std::cout << scope[0].get_domain() << " + "
+			<< scope[1].get_domain() << " = "
+				<< scope[2].get_domain() << " " << event2str(evt)
+					<< " on " << scope[changed_idx].get_domain()
+						<< std::endl
+						// << on[0] << std::endl
+						// 	<< on[1] << std::endl
+						// 		<< on[2] << std::endl
+						;
+	}
 #endif
 
-  //_x_ + y = z
+	//_x_ + y = z
   
-  //do {
-  if(cidx == 0) {
-    if(LB_CHANGED(evt)) {
-      // max(y) = max(z) - min(x) 
-      // update y's ub
-      cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
-      if(FAILED(cevt)) wiped = FAILURE(1);
+	//do {
+	if(cidx == 0) {
+		if(LB_CHANGED(evt)) {
+			// max(y) = max(z) - min(x) 
+			// update y's ub
+			cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
+			if(FAILED(cevt)) wiped = FAILURE(1);
 	
-	if(IS_OK(wiped)) {
-	  // min(z) = min(x) + min(y);
-	  // update z's lb
-	  cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
-	  if(FAILED(cevt)) wiped = FAILURE(2);
-	}
-      }
-      if(UB_CHANGED(evt)) {
-	// min(y) = min(z) - max(x) 
-	// update y's lb
-	cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
-	if(FAILED(cevt)) wiped = FAILURE(1);
+			if(IS_OK(wiped)) {
+				// min(z) = min(x) + min(y);
+				// update z's lb
+				cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
+				if(FAILED(cevt)) wiped = FAILURE(2);
+			}
+		}
+		if(UB_CHANGED(evt)) {
+			// min(y) = min(z) - max(x) 
+			// update y's lb
+			cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
+			if(FAILED(cevt)) wiped = FAILURE(1);
 	
-	if(IS_OK(wiped)) {
-	  // max(z) = max(x) + max(y)
-	  // update z's ub
-	  cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
-	  if(FAILED(cevt)) wiped = FAILURE(2);
-	}
-      }
-    } else if(cidx == 1) {
-      if(LB_CHANGED(evt)) {
-	// max(x) = max(z) - min(y) 
-	// update x's ub
-	cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
-	if(FAILED(cevt)) wiped = FAILURE(0);
+			if(IS_OK(wiped)) {
+				// max(z) = max(x) + max(y)
+				// update z's ub
+				cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
+				if(FAILED(cevt)) wiped = FAILURE(2);
+			}
+		}
+	} else if(cidx == 1) {
+		if(LB_CHANGED(evt)) {
+			// max(x) = max(z) - min(y) 
+			// update x's ub
+			cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
+			if(FAILED(cevt)) wiped = FAILURE(0);
 	
-	if(IS_OK(wiped)) {
-	  // min(z) = min(x) + min(y);
-	  // update z's lb
-	  cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
-	  if(FAILED(cevt)) wiped = FAILURE(2);
-	}
-      }
-      if(UB_CHANGED(evt)) {
-	// min(x) = min(z) - max(y) 
-	// update x's lb
-	cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
-	if(FAILED(cevt)) wiped = FAILURE(0);
+			if(IS_OK(wiped)) {
+				// min(z) = min(x) + min(y);
+				// update z's lb
+				cevt = scope[2].set_min(scope[0].get_min() + scope[1].get_min());
+				if(FAILED(cevt)) wiped = FAILURE(2);
+			}
+		}
+		if(UB_CHANGED(evt)) {
+			// min(x) = min(z) - max(y) 
+			// update x's lb
+			cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
+			if(FAILED(cevt)) wiped = FAILURE(0);
 
-	if(IS_OK(wiped)) {	
-	  // max(z) = max(x) + max(y)
-	  // update z's ub
-	  cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
-	  if(FAILED(cevt)) wiped = FAILURE(2);
-	}
-      }
-    } else {
-      if(UB_CHANGED(evt)) {
-	// max(x) = max(z) - min(y) 
-	// update x's ub
-	cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
-	if(FAILED(cevt)) wiped = FAILURE(0);
+			if(IS_OK(wiped)) {	
+				// max(z) = max(x) + max(y)
+				// update z's ub
+				cevt = scope[2].set_max(scope[0].get_max() + scope[1].get_max());
+				if(FAILED(cevt)) wiped = FAILURE(2);
+			}
+		}
+	} else {
+		if(UB_CHANGED(evt)) {
+			// max(x) = max(z) - min(y) 
+			// update x's ub
+			cevt = scope[0].set_max(scope[2].get_max() - scope[1].get_min());
+			if(FAILED(cevt)) wiped = FAILURE(0);
 
-	if(IS_OK(wiped)) {	
-	  // max(y) = max(z) - min(x);
-	  // update y's ub
-	  cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
-	  if(FAILED(cevt)) wiped = FAILURE(1);
-	}
-      }
-      if(LB_CHANGED(evt)) {
-	// min(x) = min(z) - max(y) 
-	// update x's lb
-	cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
-	if(FAILED(cevt)) wiped = FAILURE(0);
+			if(IS_OK(wiped)) {	
+				// max(y) = max(z) - min(x);
+				// update y's ub
+				cevt = scope[1].set_max(scope[2].get_max() - scope[0].get_min());
+				if(FAILED(cevt)) wiped = FAILURE(1);
+			}
+		}
+		if(LB_CHANGED(evt)) {
+			// min(x) = min(z) - max(y) 
+			// update x's lb
+			cevt = scope[0].set_min(scope[2].get_min() - scope[1].get_max());
+			if(FAILED(cevt)) wiped = FAILURE(0);
 
-	if(IS_OK(wiped)) {	
-	  // min(y) = min(z) - max(x) 
-	  // update y's lb
-	  cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
-	  if(FAILED(cevt)) wiped = FAILURE(1);
-	}
-      }
-      //}
+			if(IS_OK(wiped)) {	
+				// min(y) = min(z) - max(x) 
+				// update y's lb
+				cevt = scope[1].set_min(scope[2].get_min() - scope[0].get_max());
+				if(FAILED(cevt)) wiped = FAILURE(1);
+			}
+		}
+		//}
     
-    if(IS_OK(wiped)) {
-      update(cidx, cevt);
-    }
-  }
+		// if(IS_OK(wiped)) {
+		// 	update(cidx, cevt);
+		// }
+	}
 
 #ifdef _DEBUG_ADD
-  if(_DEBUG_ADD) {
-    std::cout << on[0] << std::endl
-	      << on[1] << std::endl
-	      << on[2] << std::endl
-	      << scope[0].get_domain() << " + " 
-	      << scope[1].get_domain() << " = " 
-	      << scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
-  }
+	if(_DEBUG_ADD) {
+					std::cout << scope[0].get_domain() << " + " 
+						<< scope[1].get_domain() << " = " 
+							<< scope[2].get_domain() << (IS_OK(wiped) ? " ok" : " fail!") << std::endl << std::endl; 
+	}
 #endif
   
-  return wiped;
+	return wiped;
 }
 
 std::ostream& Mistral::PredicateAdd::display(std::ostream& os) const {
