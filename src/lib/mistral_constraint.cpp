@@ -49,7 +49,7 @@
 //#define _DEBUG_PREDBOOLSUM (get_solver()->statistics.num_nodes == 1072 && id == 154)
 //#define _DEBUG_ELEMENT (get_solver()->statistics.num_propagations == 143511 && id == 680)
 //#define _DEBUG_SQ true
-//#define _DEBUG_ADD (id == 6425)
+//et#define _DEBUG_ADD (id == 6425)
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);

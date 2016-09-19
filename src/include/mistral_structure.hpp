@@ -4561,13 +4561,13 @@ template < int N, class T >
       return b - float_offset;
     }
 
-    inline int lsb_gcc(const WORD_TYPE v) const {
-      return __builtin_ctz(v);
-    }
-
-    inline int msb_gcc(const WORD_TYPE v) const {
-      return __builtin_clz(v);
-    }
+#ifdef _BIT64
+    inline int lsb_gcc(const WORD_TYPE v) const { return __builtin_ctzl(v); }
+    inline int msb_gcc(const WORD_TYPE v) const { return __builtin_clzl(v); }
+#else
+    inline int lsb_gcc(const WORD_TYPE v) const { return __builtin_ctz(v); }
+    inline int msb_gcc(const WORD_TYPE v) const { return __builtin_clz(v); }
+#endif
 
       
 		inline int minimum_element(int idx, WORD_TYPE v, const int def=NOVAL) const
