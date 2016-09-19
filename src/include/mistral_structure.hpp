@@ -5093,7 +5093,11 @@ template < int N, class T >
      */
     inline unsigned int word_size(WORD_TYPE v) const 
     {
-      return __builtin_popcount(v);
+#ifdef _BIT32
+        return __builtin_popcount(v);
+#else
+				return __builtin_popcountl(v);
+#endif
       /*
       v = v - ((v >> 1) & (WORD_TYPE)~(WORD_TYPE)0/3);                           // temp
       v = (v & (WORD_TYPE)~(WORD_TYPE)0/15*3) + ((v >> 2) & (WORD_TYPE)~(WORD_TYPE)0/15*3);      // temp
