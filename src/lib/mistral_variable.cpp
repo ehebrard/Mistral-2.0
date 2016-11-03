@@ -8375,12 +8375,14 @@ Mistral::OccExpression::~OccExpression() {
 
 void Mistral::OccExpression::extract_constraint(Solver *s) {
   encode();
+  if (scope.size)
   if(lower_bound > -INFTY || upper_bound < INFTY) {    
     lower_bound -= current_occ;
     upper_bound -= current_occ;
     if(lower_bound > (int)(scope.size) || upper_bound < 0) {
       s->fail();
     } else {
+        if ( (scope.size>upper_bound) || (lower_bound>0))
       s->add(Constraint(new ConstraintBoolSumInterval(scope,lower_bound,upper_bound))); 
     }
   } 

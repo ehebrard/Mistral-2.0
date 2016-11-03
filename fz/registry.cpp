@@ -1610,8 +1610,33 @@ inline Variable duplicate_variable(Variable var, Solver * s){
                          const ConExpr& ce, AST::Node* ann) {
       Vector< Variable > iv = arg2intvarargs(s, m, ce[0]);
 
-      if(iv.size)
-        s.add( AllDiff(iv) );
+      Vector<Variable> posted;
+      unsigned int size= iv.size;
+
+      for (unsigned int i=0; i< size; ++i){
+    	  if (iv[i].is_ground()) {
+    		  int value =iv[i].get_min();
+    		  for (int j=(i+1); j< size; ++j){
+
+    			  if (iv[j].is_ground() ){
+    				  if (iv[j].get_min() == value )
+    					  s.fail();
+    			  }
+    			  else
+    				  s.add (iv[j]!=value);
+    		  }
+    	  }
+    	  else {
+    		  posted.add(iv[i]);
+    		  for (int j=(i+1); j< size; ++j){
+    			  if (iv[j].is_ground() )
+    				  s.add (iv[i] != iv[j].get_min());
+    		  }
+    	  }
+      }
+
+      if(posted.size >1)
+        s.add( AllDiff(posted) );
     }
 
     /*
