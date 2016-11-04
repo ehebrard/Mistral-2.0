@@ -261,6 +261,7 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
   creation_time = get_run_time();
   end_time = -1.0;
   start_time = end_time;
+  best_time = 0.0;
 
   outcome = UNKNOWN;
 
@@ -445,6 +446,9 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
       os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OBJECTIVE"
 	 << std::right << std::setw(46) << objective_value  << std::endl;
 
+      os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  BESTTIME"
+	 << std::right << std::setw(46) << best_time  << std::endl;
+
       if (outcome ==  OPT)
          os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OPT"
        	<< std::right << std::setw(46) << 1  << std::endl;
@@ -551,6 +555,7 @@ Mistral::SolverStatistics::SolverStatistics(const SolverStatistics& sp) {
 }
 void Mistral::SolverStatistics::copy(const SolverStatistics& sp) {
   objective_value = sp.objective_value;
+  best_time = sp.best_time;
   num_variables = sp.num_variables;
   num_constraints = sp.num_constraints; 
   num_values = sp.num_values; 
@@ -567,6 +572,7 @@ void Mistral::SolverStatistics::copy(const SolverStatistics& sp) {
 }
 void Mistral::SolverStatistics::update(const SolverStatistics& sp) {
   objective_value = sp.objective_value;
+  best_time = sp.best_time;
 
   num_nodes += sp.num_nodes; 
 	num_decisions += sp.num_decisions; 
@@ -5277,6 +5283,9 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   statistics.objective_value = objective->value();
   //std::cout << statistics.objective_value << std::endl;
 
+
+  statistics.best_time =  get_run_time() - statistics.start_time;
+  //std::cout << " c best_time  " <<  statistics.best_time << std::endl;
 
 
   for(i=0; i<solution_triggers.size; ++i) {
