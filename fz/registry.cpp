@@ -2554,6 +2554,9 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       //exit(1);
 #endif
 
+
+      delete [] order ;
+
       int size_discretization = horizon*start.size;
       int size_flow = start.size*start.size*cap.get_max();
 
@@ -2578,6 +2581,9 @@ inline Variable duplicate_variable(Variable var, Solver * s){
           ub[i-orig] = cap.get_max();
         }
         s.add(Occurrences(start, orig, horizon-1, lb, ub));
+        delete [] lb;
+        delete [] ub;
+
       } else if(disjunctive && !var_dur) {
 
 #ifdef _DEBUG_CUMULATIVE

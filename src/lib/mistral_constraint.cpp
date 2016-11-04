@@ -19632,8 +19632,8 @@ ConstraintOccurrences::initializePartialSum(const int firstValue, int count,
 void
 ConstraintOccurrences::destroyPartialSum(partialSum *p)
 {
-  delete p->ds;
-  delete p->sum;
+  delete [] p->ds;
+  delete [] p->sum;
   delete p;
 }
 
