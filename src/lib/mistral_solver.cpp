@@ -2223,6 +2223,10 @@ Mistral::Solver::~Solver() {
 
   //std::cout << "delete variables" << std::endl;
   for(unsigned int i=0; i<variables.size; ++i) {
+		
+		// std::cout << "free var " << i << std::endl;
+		// std::cout << variables[i] << " in " << variables[i].get_domain() << std::endl;
+		//
     //std::cout << removed_variables[0] << std::endl;
     variables[i].free_object();
     //std::cout << removed_variables[0] << std::endl;
@@ -2628,7 +2632,9 @@ void Mistral::Solver::make_non_convex(const int idx)
 {
 
   // std::cout << variables << std::endl;
-  // std::cout << "\nmake " << variables[idx] << " non convex\n"; 
+	
+	// if(idx==33)
+	//   std::cout << "\nmake " << variables[idx] << " non convex\n";
 
   if(variables[idx].domain_type == RANGE_VAR) {
     Variable r = variables[idx];
@@ -2647,7 +2653,7 @@ void Mistral::Solver::make_non_convex(const int idx)
     //   x.expression->self = X;
 
     // } else {
-    variables[idx] = X;
+    variables[idx] = X; //.get_var();
 
     // int ids = sequence.index(idx);
 
@@ -2658,7 +2664,7 @@ void Mistral::Solver::make_non_convex(const int idx)
     // 	constraint_graph[idx].on[i][j].consolidate();
     // }
 
-    //std::cout << "MAKE " << variables[idx] << " NON CONVEX: NOTIFY CHANGE" << std::endl; 
+    // std::cout << "MADE " << variables[idx] << " IN " << variables[idx].get_domain() << " NON CONVEX: NOTIFY CHANGE" << std::endl;
 
     notify_change_variable(idx);
     // }

@@ -305,13 +305,23 @@ namespace Mistral {
 			delete [] level_;
 			level_ = NULL;
 
+			// std::cout << "delete " << *this << std::endl;
+
 			if(domain.values.table) {
+				
+				// std::cout << "has a table" << std::endl;
+				
 				domain.values.table += domain.values.neg_words;
+				
 				delete [] domain.values.table;
 				domain.values.table = NULL;
-			} else {
-				domain.values.neg_words = 0;
 			}
+			 // else {
+				
+				// std::cout << "does not have a table" << std::endl;
+				
+				domain.values.neg_words = 0;
+			// }
 		}
 
 		void set_bound_history(const int lb, const int ub, const int level) {
