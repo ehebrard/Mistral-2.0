@@ -1831,13 +1831,9 @@ Mistral::Event Mistral::VariableRange::remove(const int v) {
 /// Remove all values that do not appear in the set "s"
 Mistral::Event Mistral::VariableRange::set_domain(const BitSet& s) {
   Event setdomain = NO_EVENT;
-
-  // std::cout << "include " << s.includes(min, max) << std::endl;
-  // std::cout << "intersect " << s.intersect(min, max) << std::endl;
-  // std::cout << "[" << s.next(min-1) << ".." << s.prev(max+1) << "]" << std::endl;
-  //std::cout << s << std::endl;
-
+	
   if(s.includes(min, max)) return NO_EVENT;
+	
   if(!s.intersect(min, max)) return FAIL_EVENT;
   int lb = s.next(min-1);
   int ub = s.prev(max+1);

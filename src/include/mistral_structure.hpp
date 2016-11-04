@@ -5063,7 +5063,8 @@ template < int N, class T >
 		{
 			int neg_int = lb >> EXP;
 			int pos_int = ub >> EXP;
-			if(neg_int<neg_words || pos_int>pos_words) return false;
+			
+			if(neg_int<neg_words || pos_int>=pos_words) return false;
 			
 			int k = pos_int-1;
 			unsigned int u, l;
