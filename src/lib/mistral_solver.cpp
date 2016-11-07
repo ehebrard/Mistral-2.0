@@ -5690,6 +5690,7 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const i
 Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching, const int randomness) {
 
   BranchingHeuristic *heu = NULL;
+	
 
 	
 	if(var_ordering.find("MBA") == 0) {
@@ -8151,7 +8152,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	  }
 	
 	
-		//ICI
+		// MBA ICI
 	} else {
 	
 	
@@ -10614,6 +10615,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
   if(!heu) {
     std::cout << " " << parameters.prefix_comment << " Warning, there is no known heuristic \"" << var_ordering << "/" << branching << "\"" << std::endl;
   }
+	
 					
   return heu;
 }
@@ -10880,6 +10882,9 @@ void Mistral::SolverCmdLine::initialise() {
   voallowed.push_back("dom/pruning");
   voallowed.push_back("dom/activity");
   voallowed.push_back("ibs");
+	voallowed.push_back("IBS");
+  voallowed.push_back("abs");
+	voallowed.push_back("ABS");
   voallowed.push_back("activity");
   voallowed.push_back("neighbor");
   voallowed.push_back("mindomain");

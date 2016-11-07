@@ -9,7 +9,7 @@
   (at your option) any later version.
   
   This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  but WITHOUT ANY WARRANTY; without even the itmplied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
   
@@ -708,7 +708,7 @@ namespace Mistral {
       // std::cout << std::endl;
 
 #ifdef _ABS_VAL
-			int max_values = 10;
+			int max_values = 100;
 
 			value_weight.initialise(solver->variables.size, solver->variables.size);
 			value_visit.initialise(solver->variables.size, solver->variables.size);
@@ -914,7 +914,7 @@ namespace Mistral {
 
 		ImpactManager(Solver *s) : solver(s) {
 			
-			int max_values = 10;
+			int max_values = 100;
 
 			left = -1;
 			weight_unit = solver->parameters.activity_increment;
@@ -1560,10 +1560,14 @@ namespace Mistral {
 
     /**@name Utils*/
     //@{ 
-    double *get_variable_weight() { return manager->get_variable_weight(); }  
-    double **get_value_weight() { return manager->get_value_weight(); }
-    double *get_bound_weight() { return manager->get_bound_weight(); }
-    WeightMap *get_weight_map() { return manager; }
+    double *get_variable_weight() { 
+			return manager->get_variable_weight(); }  
+    double **get_value_weight() { 
+			return manager->get_value_weight(); }
+    double *get_bound_weight() { 
+			return manager->get_bound_weight(); }
+    WeightMap *get_weight_map() { 
+			return manager; }
 
 		Variable select()
 		{
@@ -3410,7 +3414,7 @@ namespace Mistral {
     }
     void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
 			
-			std::cout << ((int*)vw) << " " << ((int*)wm) << std::endl;
+			// std::cout << ((int*)vw) << " " << ((int*)wm) << std::endl;
 			
       weight = vw;
 			w_function = wm;
