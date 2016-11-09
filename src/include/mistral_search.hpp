@@ -746,6 +746,13 @@ namespace Mistral {
     virtual ~PruningCountManager() {
       solver->remove((SuccessListener*)this);
       //solver->remove((VariableListener*)this);
+#ifdef _ABS_VAL
+      unsigned int  __tmp= solver->variables.size;
+      for( unsigned int i = 0; i <__tmp ; ++i){
+    	  delete [] value_weight[i];
+    	  delete [] value_visit[i];
+      }
+#endif
     }
 
     double *get_variable_weight() { return variable_weight.stack_; }     
@@ -986,6 +993,13 @@ namespace Mistral {
 			solver->remove((SuccessListener*)this);
 			solver->remove((DecisionListener*)this);
 			solver->remove((BacktrackListener*)this);
+
+			unsigned int  __tmp= solver->variables.size;
+			for( unsigned int i = 0; i <__tmp ; ++i){
+				delete [] value_weight[i];
+				delete [] value_visit[i];
+			}
+
 		}
 		
 		int get_windex(const int x, const int v) {
