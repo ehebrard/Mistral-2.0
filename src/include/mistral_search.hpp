@@ -34,11 +34,12 @@
 //#include <mistral_sat.hpp>
 
 //#define _DEBUG_IMPACT true
+#define _REAL_AVG_IMPACT true
 
 //#define _DEBUG_VARORD
 
 #define _ABS_VAL true
-//#define _DEBUG_ABS true
+// #define _DEBUG_ABS 1
 
 namespace Mistral {
 
@@ -671,27 +672,41 @@ namespace Mistral {
     * Listener interface for ABS *
     * Counts the number of nodes in which at least one pruning event occurred for each variable *
   */
-  class PruningCountManager : public SuccessListener, public WeightMap // , public VariableListener
+  class PruningCountManager : public SuccessListener, public WeightMap 
+#ifdef _ABS_VAL	
+		, public BacktrackListener
+#endif
+		// , public VariableListener
   {
 
   public:
 
     Solver *solver;
     double weight_unit;
-		double threshold;
+		
+		double threshold;		
 		
 #ifdef _ABS_VAL
 		Vector<double*> value_weight;
+#ifdef _REAL_AVG_ACTIVITY
 		Vector<int*> value_visit;
+#else
+		double alpha;
+#endif
 		Vector<int> init_min;
 		Vector<int> factor;
 #endif
 		
     Vector<double> variable_weight;
+		// Vector<int> variable_visit;
 
     //PruningCountManager(Solver *s, void *a=NULL) : solver(s) {
     PruningCountManager(Solver *s) : solver(s) {
 
+#ifdef _REAL_AVG_ACTIVITY
+			alpha = 8;
+#endif 
+			
 			threshold = 1000000;
       weight_unit = solver->parameters.activity_increment;
       variable_weight.initialise(solver->variables.size, solver->variables.size);
@@ -711,7 +726,7 @@ namespace Mistral {
 			int max_values = 100;
 
 			value_weight.initialise(solver->variables.size, solver->variables.size);
-			value_visit.initialise(solver->variables.size, solver->variables.size);
+			// value_visit.initialise(solver->variables.size, solver->variables.size);
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			factor.initialise(solver->variables.size, solver->variables.size);
 			for(int i=0; i<solver->variables.size; ++i) {
@@ -722,24 +737,29 @@ namespace Mistral {
 					factor[i] = d/max_values;
 					if(d%max_values) factor[i]++;
 					value_weight[i] = new double[max_values];
-					value_visit[i] = new int[max_values];
 					std::fill(value_weight[i], value_weight[i]+max_values, solver->parameters.activity_increment);
+#ifdef _REAL_AVG_ACTIVITY
+					value_visit[i] = new int[max_values];
 					std::fill(value_visit[i], value_visit[i]+max_values, 1);
+#endif
 					// factor[i] = factor;
 				} else {
 					factor[i] = 1;
 					value_weight[i] = new double[d];
-					value_visit[i] = new int[d];
 					std::fill(value_weight[i], value_weight[i]+d, solver->parameters.activity_increment);
+#ifdef _REAL_AVG_ACTIVITY					
+					value_visit[i] = new int[d];
 					std::fill(value_visit[i], value_visit[i]+d, 1);
+#endif
 				}
 				//value_weight[i] -= init_min[i];
 	
 			}
+			
+			solver->add((BacktrackListener*)this);
 #endif
 
-
-      solver->add((SuccessListener*)this);
+			solver->add((SuccessListener*)this);
       //solver->add((VariableListener*)this);
     }
 
@@ -747,10 +767,11 @@ namespace Mistral {
       solver->remove((SuccessListener*)this);
       //solver->remove((VariableListener*)this);
 #ifdef _ABS_VAL
+			solver->remove((BacktrackListener*)this);
       unsigned int  __tmp= solver->variables.size;
       for( unsigned int i = 0; i <__tmp ; ++i){
     	  delete [] value_weight[i];
-    	  delete [] value_visit[i];
+    	  // delete [] value_visit[i];
       }
 #endif
     }
@@ -765,6 +786,7 @@ namespace Mistral {
 #endif
 		
 		virtual void notify_success();
+		virtual void notify_backtrack();
 		// virtual void notify_success() {
 		//
 		// 	//display(std::cout, false);
@@ -897,6 +919,9 @@ namespace Mistral {
 	* NB: this is a simplified version of Impact, where only the impact of left vs right branches are distinguished
 	*/
 #define INIT_IMPACT .001
+// #define INIT_IMPACT .01
+// #define INIT_IMPACT .1
+	// #define INIT_IMPACT .99
 	class ImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener, public WeightMap {
 
 	public:
@@ -906,9 +931,15 @@ namespace Mistral {
 		int left;
 		//int max_values;
 
+#ifndef _REAL_AVG_IMPACT
+		double alpha;
+#else
+		Vector<int*> value_visit;
+#endif
+		
+
 		Vector<double> variable_weight;
 		Vector<double*> value_weight;
-		Vector<int*> value_visit;
 		Vector<int> init_min;
 		Vector<int> factor;
 		Vector<double> bound_weight;
@@ -922,6 +953,10 @@ namespace Mistral {
 		ImpactManager(Solver *s) : solver(s) {
 			
 			int max_values = 100;
+			
+#ifndef _REAL_AVG_IMPACT
+			alpha = 8;
+#endif			
 
 			left = -1;
 			weight_unit = solver->parameters.activity_increment;
@@ -942,16 +977,20 @@ namespace Mistral {
 					factor[i] = d/max_values;
 					if(d%max_values) factor[i]++;
 					value_weight[i] = new double[max_values];
-					value_visit[i] = new int[max_values];
 					std::fill(value_weight[i], value_weight[i]+max_values, 0.0);
+#ifdef _REAL_AVG_IMPACT
+					value_visit[i] = new int[max_values];
 					std::fill(value_visit[i], value_visit[i]+max_values, 1);
+#endif
 					// factor[i] = factor;
 				} else {
 					factor[i] = 1;
 					value_weight[i] = new double[d];
-					value_visit[i] = new int[d];
 					std::fill(value_weight[i], value_weight[i]+d, 0.0);
+#ifdef _REAL_AVG_IMPACT	
+					value_visit[i] = new int[d];
 					std::fill(value_visit[i], value_visit[i]+d, 1);
+#endif
 				}
 				//value_weight[i] -= init_min[i];
 			}
@@ -997,7 +1036,11 @@ namespace Mistral {
 			unsigned int  __tmp= solver->variables.size;
 			for( unsigned int i = 0; i <__tmp ; ++i){
 				delete [] value_weight[i];
+				
+#ifdef _REAL_AVG_IMPACT
 				delete [] value_visit[i];
+#endif
+				
 			}
 
 		}

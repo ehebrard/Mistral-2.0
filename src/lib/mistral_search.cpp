@@ -558,9 +558,15 @@ void Mistral::ImpactManager::notify_success() {
 			std::cout << "i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
 #endif
 			
-			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]));// * solver->parameters.activity_decay);
+#ifdef _REAL_AVG_IMPACT
+			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]));
 			value_weight[dec][dec_val] += (1.0 - residual_space);
 			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
+#else
+			value_weight[dec][dec_val] *= (alpha-1);
+			value_weight[dec][dec_val] += (1.0 - residual_space);
+			value_weight[dec][dec_val] /= alpha;			
+#endif
 			
 #ifdef _DEBUG_IMPACT
 			std::cout << value_weight[dec][dec_val] << std::endl;
@@ -578,10 +584,16 @@ void Mistral::ImpactManager::notify_success() {
 #ifdef _DEBUG_IMPACT
 				std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
 #endif
-				
+			
+#ifdef _REAL_AVG_IMPACT
 				value_weight[dec][g] *= ((double)(value_visit[dec][g]));// * solver->parameters.activity_decay);
 				value_weight[dec][g] += (1.0 - residual_space);
 				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+#else
+				value_weight[dec][g] *= (alpha-1);
+				value_weight[dec][g] += (1.0 - residual_space);
+				value_weight[dec][g] /= alpha;			
+#endif
 
 #ifdef _DEBUG_IMPACT				
 				std::cout << value_weight[dec][g] << std::endl;
@@ -598,10 +610,16 @@ void Mistral::ImpactManager::notify_success() {
 				std::cout << "i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][dec_val]  << " -> ";
 #endif
 				
+#ifdef _REAL_AVG_IMPACT
 				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]));// * solver->parameters.activity_decay);
 				value_weight[dec][vali] += (1.0 - residual_space);
 				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
-
+#else
+				value_weight[dec][vali] *= (alpha-1);
+				value_weight[dec][vali] += (1.0 - residual_space);
+				value_weight[dec][vali] /= alpha;			
+#endif
+				
 #ifdef _DEBUG_IMPACT				
 				std::cout << value_weight[dec][vali] << std::endl;		
 #endif
@@ -702,9 +720,18 @@ void Mistral::ImpactManager::notify_backtrack() {
 			std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
 #endif
 			
-			value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+#ifdef _REAL_AVG_IMPACT
+			value_weight[dec][g] *= ((double)(value_visit[dec][g]));
 			value_weight[dec][g] += 1.0;
 			value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+#else
+			value_weight[dec][g] *= (alpha-1);
+			value_weight[dec][g] += 1.0;
+			value_weight[dec][g] /= alpha;			
+#endif
+			// value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+			// value_weight[dec][g] += 1.0;
+			// value_weight[dec][g] /= (double)(++value_visit[dec][g]);
 
 #ifdef _DEBUG_IMPACT			
 			std::cout << value_weight[dec][g] << std::endl;
@@ -722,9 +749,19 @@ void Mistral::ImpactManager::notify_backtrack() {
 			std::cout << "i[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
 #endif
 			
-			value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+			
+#ifdef _REAL_AVG_IMPACT
+			value_weight[dec][vali] *= ((double)(value_visit[dec][vali]));
 			value_weight[dec][vali] += 1.0;
-			value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
+			value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
+#else
+			value_weight[dec][vali] *= (alpha-1);
+			value_weight[dec][vali] += 1.0;
+			value_weight[dec][vali] /= alpha;			
+#endif
+			// value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+			// value_weight[dec][vali] += 1.0;
+			// value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
 
 #ifdef _DEBUG_IMPACT			
 			std::cout << value_weight[dec][vali] << std::endl;				
@@ -945,6 +982,109 @@ int Mistral::PruningCountManager::get_maxweight_value(const Variable x) {return 
 
 
 
+#ifdef _ABS_VAL	
+void Mistral::PruningCountManager::notify_backtrack() {
+	
+	int sz = solver->sequence.size;
+	double wu = solver->parameters.activity_increment;
+	
+	if(solver->decisions.size>0) {
+
+		Decision branch = solver->decisions.back();
+		Variable x = branch.var;
+		int dec = x.id();
+		int dec_type = branch.type();
+		int dec_val = branch.value();
+		int offset = init_min[dec];
+		int fact = factor[dec];
+		if(dec_type == Decision::ASSIGNMENT) {
+			dec_val -= offset;
+			dec_val /= fact;
+			
+#ifdef _DEBUG_ABS
+			std::cout << "(d) i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+#endif
+						
+#ifdef _REAL_AVG_ACTIVITY
+			value_weight[dec][dec_val] *= (double)(value_visit[dec][dec_val]);
+			value_weight[dec][dec_val] += wu*double(sz);
+			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
+#else
+			value_weight[dec][dec_val] *= (alpha-1);
+			value_weight[dec][dec_val] += wu*double(sz);
+			value_weight[dec][dec_val] /= alpha;
+#endif
+			
+#ifdef _DEBUG_ABS
+			std::cout << value_weight[dec][dec_val] << "(" << sz << ")" << std::endl;
+#endif
+			
+		} else if(fact!=1) {
+			int lb = x.get_min();
+			int ub = x.get_min();
+			int stag = (lb-offset)/fact;
+			int endg = (ub-offset)/fact;
+			int decg = (dec_val-offset)/fact;
+			//int numg = (endg-stag+1);
+			for(int g=stag; g<=endg; ++g) if(g!=decg) {
+				
+#ifdef _DEBUG_ABS
+				std::cout << "(dr) i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
+#endif
+				
+#ifdef _REAL_AVG_ACTIVITY
+				value_weight[dec][g] *= (double)(value_visit[dec][g]);
+				value_weight[dec][g] += wu*double(sz);
+				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+#else				
+				value_weight[dec][g] *= (alpha-1);
+				value_weight[dec][g] += wu*double(sz);
+				value_weight[dec][g] /= alpha;
+#endif				
+				
+
+#ifdef _DEBUG_ABS				
+				std::cout << value_weight[dec][g] << std::endl;
+#endif
+			}
+		} else {
+			int vali, vnxt=x.get_min();
+			// double domsize = (double)(x.get_size());
+			do {
+				vali = vnxt;
+				vnxt = x.next(vali);
+				vali -= offset;
+
+#ifdef _DEBUG_ABS				
+				std::cout << "(dr) i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][vali]  << " -> ";
+#endif
+				
+#ifdef _REAL_AVG_ACTIVITY
+				value_weight[dec][vali] *= (double)(value_visit[dec][vali]);
+				value_weight[dec][vali] += wu*double(sz);
+				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
+#else				
+				value_weight[dec][vali] *= (alpha-1);
+				value_weight[dec][vali] += wu*double(sz);
+				value_weight[dec][vali] /= alpha;
+#endif
+
+#ifdef _DEBUG_ABS				
+				std::cout << value_weight[dec][vali] << std::endl;		
+#endif
+				
+				vali += offset;
+				
+			} while(vali<vnxt);
+		}
+	}
+
+	if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
+		weight_unit /= solver->parameters.activity_decay;
+
+}
+#endif
+
 
 void Mistral::PruningCountManager::notify_success() {
 	
@@ -956,6 +1096,7 @@ void Mistral::PruningCountManager::notify_success() {
 	double max_weight = 0;
 	
 	int sz = (n-i);
+	double wu = solver->parameters.activity_increment;
 	
 	// std::cout << "increment by " << weight_unit << " weight of";
 	while(++i<n) {	
@@ -963,7 +1104,19 @@ void Mistral::PruningCountManager::notify_success() {
 		
 		// std::cout << " " << solver->variables[id];
 		
+#ifdef _DEBUG_ABS
+		if(_DEBUG_ABS>1) {
+			std::cout << solver->variables[id] << ": " << variable_weight[id]  << " -> ";
+		}
+#endif
+		
 		variable_weight[id] += weight_unit;
+		
+#ifdef _DEBUG_ABS
+		if(_DEBUG_ABS>1) {
+			std::cout << variable_weight[id] << std::endl;
+		}
+#endif
 		
 		if(variable_weight[id] > max_weight)
 			max_weight = variable_weight[id];
@@ -973,37 +1126,47 @@ void Mistral::PruningCountManager::notify_success() {
 
 	if(max_weight>threshold) {
 	
-		// std::cout << "scaling down" << std::endl;
-	
+#ifdef _DEBUG_ABS
+		std::cout << "scaling down" << std::endl;
+#endif
+		
 		double rfactor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
 		weight_unit *= rfactor;
 	
 		n = solver->variables.size;
 		for(int i=0; i<n; ++i) {
-			// std::cout << variable_weight[i] << " -> ";
-			variable_weight[i] *= rfactor;
-			// std::cout << variable_weight[i] << std::endl;
-#ifdef _ABS_VAL	
-			if(factor[i]==1) {
-				Variable x = solver->variables[i];
-				int vali, vnxt=x.get_min();
-				do {
-					vali = vnxt;
-					vnxt = x.next(vali);
-					value_weight[i][vali-init_min[i]] *= rfactor;
-				} while(vali<vnxt);
-			} else {
-				for(int j=0; j<10; ++j) {
-					value_weight[i][j] *= rfactor;
-				}
-			}
+
+#ifdef _DEBUG_ABS
+			std::cout << variable_weight[i] << " -> ";
 #endif
+
+			variable_weight[i] *= rfactor;
+
+#ifdef _DEBUG_ABS
+			std::cout << variable_weight[i] << std::endl;
+#endif
+
+			// NO DECAY FOR VALUE WEIGHTS
+// #ifdef _ABS_VAL
+// 			if(factor[i]==1) {
+// 				Variable x = solver->variables[i];
+// 				int vali, vnxt=x.get_min();
+// 				do {
+// 					vali = vnxt;
+// 					vnxt = x.next(vali);
+// 					value_weight[i][vali-init_min[i]] *= rfactor;
+// 				} while(vali<vnxt);
+// 			} else {
+// 				for(int j=0; j<10; ++j) {
+// 					value_weight[i][j] *= rfactor;
+// 				}
+// 			}
+// #endif
 		}
 	
 	}
 	
 	
-	//std::cout << 11 << std::endl;
 
 #ifdef _ABS_VAL	
 	if(solver->decisions.size>0) {
@@ -1020,12 +1183,18 @@ void Mistral::PruningCountManager::notify_success() {
 			dec_val /= fact;
 			
 #ifdef _DEBUG_ABS
-			std::cout << "i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+			std::cout << "(a) i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
 #endif
 			
-			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]) * solver->parameters.activity_decay);
-			value_weight[dec][dec_val] += weight_unit*double(sz);
+#ifdef _REAL_AVG_ACTIVITY
+			value_weight[dec][dec_val] *= (double)(value_visit[dec][dec_val]);
+			value_weight[dec][dec_val] += wu*double(sz);
 			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
+#else			
+			value_weight[dec][dec_val] *= (alpha-1);
+			value_weight[dec][dec_val] += wu*double(sz);
+			value_weight[dec][dec_val] /= alpha;
+#endif			
 			
 #ifdef _DEBUG_ABS
 			std::cout << value_weight[dec][dec_val] << std::endl;
@@ -1041,12 +1210,23 @@ void Mistral::PruningCountManager::notify_success() {
 			for(int g=stag; g<=endg; ++g) if(g!=decg) {
 				
 #ifdef _DEBUG_ABS
-				std::cout << "i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
+				std::cout << "(r) i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
 #endif
 				
-				value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
-				value_weight[dec][g] += weight_unit*double(sz);
+				// value_weight[dec][g] *= ((double)(value_visit[dec][g]) * solver->parameters.activity_decay);
+				// value_weight[dec][g] += weight_unit*double(sz);
+				// value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+				
+#ifdef _REAL_AVG_ACTIVITY
+				value_weight[dec][g] *= (double)(value_visit[dec][g]);
+				value_weight[dec][g] += wu*double(sz);
 				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+#else			
+				value_weight[dec][g] *= (alpha-1);
+				value_weight[dec][g] += wu*double(sz);
+				value_weight[dec][g] /= alpha;
+#endif				
+				
 
 #ifdef _DEBUG_ABS				
 				std::cout << value_weight[dec][g] << std::endl;
@@ -1054,18 +1234,29 @@ void Mistral::PruningCountManager::notify_success() {
 			}
 		} else {
 			int vali, vnxt=x.get_min();
+			// double domsize = (double)(x.get_size());
 			do {
 				vali = vnxt;
 				vnxt = x.next(vali);
 				vali -= offset;
 
 #ifdef _DEBUG_ABS				
-				std::cout << "i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][vali]  << " -> ";
+				std::cout << "(r) i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][vali]  << " -> ";
 #endif
 				
-				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
-				value_weight[dec][vali] += weight_unit*double(sz);
-				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
+				// value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+				// value_weight[dec][vali] += weight_unit*double(sz);
+				// value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
+				
+#ifdef _REAL_AVG_ACTIVITY
+				value_weight[dec][vali] *= (double)(value_visit[dec][vali]);
+				value_weight[dec][vali] += wu*double(sz);
+				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
+#else			
+				value_weight[dec][vali] *= (alpha-1);
+				value_weight[dec][vali] += wu*double(sz);
+				value_weight[dec][vali] /= alpha;
+#endif
 
 #ifdef _DEBUG_ABS				
 				std::cout << value_weight[dec][vali] << std::endl;		
