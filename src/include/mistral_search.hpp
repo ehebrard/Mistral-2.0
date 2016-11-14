@@ -33,8 +33,8 @@
 #include <mistral_solver.hpp>
 //#include <mistral_sat.hpp>
 
-//#define _DEBUG_IMPACT true
-#define _REAL_AVG_IMPACT true
+//#define _DEBUG_IMPACT false //(solver->statistics.num_nodes > 500)
+//#define _REAL_AVG_IMPACT true
 
 //#define _DEBUG_VARORD
 
@@ -726,7 +726,9 @@ namespace Mistral {
 			int max_values = 100;
 
 			value_weight.initialise(solver->variables.size, solver->variables.size);
-			// value_visit.initialise(solver->variables.size, solver->variables.size);
+#ifdef _REAL_AVG_ACTIVITY
+			value_visit.initialise(solver->variables.size, solver->variables.size);
+#endif
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			factor.initialise(solver->variables.size, solver->variables.size);
 			for(int i=0; i<solver->variables.size; ++i) {
@@ -947,17 +949,15 @@ namespace Mistral {
 		Vector<double> avg_branches;
 		Vector<int> num_probes;
 		Vector<int> tot_probes;
+		
+#ifdef _COUNT_BRANCHES_TEST
 		Vector<int> tot_fails;
-
+#endif
 
 		ImpactManager(Solver *s) : solver(s) {
 			
 			int max_values = 100;
 			
-#ifndef _REAL_AVG_IMPACT
-			alpha = 8;
-#endif			
-
 			left = -1;
 			weight_unit = solver->parameters.activity_increment;
       
@@ -966,7 +966,13 @@ namespace Mistral {
 			
 			// weight on values
 			value_weight.initialise(solver->variables.size, solver->variables.size);
+	
+#ifndef _REAL_AVG_IMPACT
+			alpha = 8;
+#else
 			value_visit.initialise(solver->variables.size, solver->variables.size);
+#endif			
+			
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			factor.initialise(solver->variables.size, solver->variables.size);
 			for(int i=0; i<solver->variables.size; ++i) {
@@ -1004,9 +1010,11 @@ namespace Mistral {
 			// number of probes since the last failure (on xi)
 			num_probes.initialise(solver->variables.size, solver->variables.size);
 
+#ifdef _COUNT_BRANCHES_TEST
 			// total number of failures (on xi)
 			tot_fails.initialise(solver->variables.size, solver->variables.size); 
-      
+#endif
+			      
 			// average number of branches explored (for xi)
 			avg_branches.initialise(solver->variables.size, solver->variables.size);
 
@@ -1016,7 +1024,11 @@ namespace Mistral {
 				impact[i] = INIT_IMPACT/(double)(solver->variables[i].get_degree());
 				num_probes[i] = 1;
 				tot_probes[i] = 0;
+
+#ifdef _COUNT_BRANCHES				
 				tot_fails[i] = 0;
+#endif
+				
 				variable_weight[i] = avg_branches[i] * impact[i] ;
 			}
 
@@ -1041,6 +1053,125 @@ namespace Mistral {
 				delete [] value_visit[i];
 #endif
 				
+			}
+
+		}
+		
+		int get_windex(const int x, const int v) {
+			int idx = v-init_min[x];
+			if(factor[x]!=1) idx /= factor[x];
+			return idx;
+		}
+
+		double *get_variable_weight() { return variable_weight.stack_; }   
+		double **get_value_weight() { return NULL; }
+		double *get_bound_weight() { return NULL; }
+		
+		virtual int get_minweight_value(const Variable x);
+		virtual int get_maxweight_value(const Variable x);
+
+		virtual void check_consistency() {
+		}
+
+		virtual void notify_add_var() {
+#ifdef _DEBUG_IMPACT
+			std::cout << "NEW VAR!!\n";
+#endif
+		}
+
+		virtual void notify_change(const int id) {
+#ifdef _DEBUG_IMPACT
+			std::cout << solver->variables[id] << "'s domain implementation has changed!!\n";
+#endif
+		}
+
+		virtual void notify_decision() {
+			left = 1;
+		}
+  
+		virtual void notify_success();
+  
+		virtual void notify_backtrack();
+    
+		virtual std::ostream& display(std::ostream& os, const bool all) const ;
+    
+	};
+	
+	
+	
+	
+	
+	
+	
+	class RealImpactManager : public BacktrackListener, public SuccessListener, public DecisionListener, public VariableListener, public WeightMap {
+
+	public:
+
+		Solver *solver;
+		double weight_unit;
+		int left;
+
+		double alpha;
+
+		Vector<double> variable_weight;
+		Vector<double*> value_weight;
+		Vector<int> init_min;
+		Vector<int> factor;
+		Vector<double> bound_weight;
+
+
+		RealImpactManager(Solver *s) : solver(s) {
+			
+			int max_values = 100;
+			alpha = 8;			
+			left = -1;
+			weight_unit = solver->parameters.activity_increment;
+      
+			// actual weight put on the variable (for xi)
+			variable_weight.initialise(solver->variables.size, solver->variables.size);
+			
+			// weight on values
+			value_weight.initialise(solver->variables.size, solver->variables.size);
+	
+			init_min.initialise(solver->variables.size, solver->variables.size);
+			factor.initialise(solver->variables.size, solver->variables.size);
+			for(int i=0; i<solver->variables.size; ++i) {
+				int m = solver->variables[i].get_min();
+				int d = solver->variables[i].get_max() - m + 1;
+				init_min[i] = m;
+				if(d>max_values) {
+					factor[i] = d/max_values;
+					if(d%max_values) factor[i]++;
+					value_weight[i] = new double[max_values];
+					std::fill(value_weight[i], value_weight[i]+max_values, (1.0-INIT_IMPACT) / (double)(solver->variables[i].get_degree()));
+				} else {
+					factor[i] = 1;
+					value_weight[i] = new double[d];
+					std::fill(value_weight[i], value_weight[i]+d, (1.0-INIT_IMPACT) / (double)(solver->variables[i].get_degree()));
+				}
+			}
+
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
+				//variable_weight[i] = solver->variables[i].get_size() * INIT_IMPACT/(double)(solver->variables[i].get_degree());
+				variable_weight[i] = solver->variables[i].get_size() * (1.0-INIT_IMPACT) / (double)(solver->variables[i].get_degree());
+			}
+
+			solver->add((BacktrackListener*)this);
+			solver->add((SuccessListener*)this);
+			solver->add((DecisionListener*)this);
+			solver->add((VariableListener*)this);
+		}
+
+		virtual ~RealImpactManager() {
+
+			solver->remove((VariableListener*)this);
+			solver->remove((SuccessListener*)this);
+			solver->remove((DecisionListener*)this);
+			solver->remove((BacktrackListener*)this);
+
+			unsigned int  __tmp= solver->variables.size;
+			for( unsigned int i = 0; i <__tmp ; ++i){
+				delete [] value_weight[i];
 			}
 
 		}
@@ -1345,7 +1476,7 @@ namespace Mistral {
     Solver *solver;
 
     BranchingHeuristic() {}
-    BranchingHeuristic(Solver *s) {solver = s;}
+    BranchingHeuristic(Solver *s) {	solver = s;}
     virtual ~BranchingHeuristic() {}
 
     //virtual void initialise() {}
@@ -1430,6 +1561,299 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, BranchingHeuristic* x) {
     return x->display(os);
   }
+	
+	
+	
+	
+ /**********************************************
+  * Impact Based Search
+  **********************************************/
+ /*! \class ImpactBasedSearch
+   \brief  Class ImpactBasedSearch
+
+ */
+	template< int RAND >
+	class ImpactBasedSearch : public BranchingHeuristic, public BacktrackListener, public SuccessListener, public DecisionListener {
+
+	private:
+
+		Vector<double*> value_weight;
+		Vector<int> init_min;
+
+		int left;
+		
+		Variable bestvars[RAND+1];
+		double bestweight[RAND+1];
+		int     bestvalue[RAND+1];
+
+	public:
+
+		double Alpha;
+		double init_impact;
+
+		ImpactBasedSearch(Solver *s, const double ii=.5, const double a=8) 
+		: BranchingHeuristic(s), Alpha(a), init_impact(ii) {
+			
+			std::cout << init_impact << std::endl;
+			
+		}
+
+		virtual ~ImpactBasedSearch() {
+			
+			solver->remove((SuccessListener*)this);
+			solver->remove((DecisionListener*)this);
+			solver->remove((BacktrackListener*)this);
+
+			unsigned int  __tmp= solver->variables.size;
+			for( unsigned int i = 0; i <__tmp ; ++i) {
+				value_weight[i] += init_min[i];
+				delete [] value_weight[i];
+			}
+			
+		}
+
+		virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
+			left = -1;
+			
+			
+
+			// weight on values
+			value_weight.initialise(solver->variables.size, solver->variables.size);
+	
+			init_min.initialise(solver->variables.size, solver->variables.size);
+			
+			for(int i=0; i<solver->variables.size; ++i) {				
+				int m = solver->variables[i].get_min();
+				int d = solver->variables[i].get_max()-m+1;
+				init_min[i] = m;
+				value_weight[i] = new double[d];
+				value_weight[i] -= m;
+				std::fill(value_weight[i]+m, value_weight[i]+d+m, init_impact / (double)(solver->variables[i].get_degree()));
+			}
+
+			solver->add((BacktrackListener*)this);
+			solver->add((DecisionListener*)this);
+			solver->add((SuccessListener*)this);
+
+		}
+
+		virtual Decision branch() {
+			
+#ifdef _DEBUG_IMPACT
+			if(_DEBUG_IMPACT) {
+				std::cout << "branch"<< std::endl;
+			}
+#endif
+
+			Variable *variables = solver->sequence.list_;
+			unsigned int length = solver->sequence.size;
+			unsigned int realsize=0, i, j;
+			int vali, nxt, bestval;
+			
+			double curweight, highestweight, worstbestweight = std::numeric_limits<double>::max();
+			
+			for(j=0; j<length; ++j) {
+				
+#ifdef _DEBUG_IMPACT
+				if(_DEBUG_IMPACT) {
+					std::cout << "var " << variables[j] << std::endl;
+				}
+#endif
+				
+				curweight = 0;
+				nxt = variables[j].get_min();
+				i = variables[j].id();
+				highestweight = -1;
+				do {
+					vali = nxt;
+					
+					curweight += value_weight[i][vali];
+					
+#ifdef _DEBUG_IMPACT
+					if(_DEBUG_IMPACT) {
+						std::cout << " " << vali << "(" << curweight << "/" << worstbestweight << ")" ;
+					}
+#endif
+					
+					if(highestweight < value_weight[i][vali]) {
+						bestval = vali;
+						highestweight =	value_weight[i][vali];
+					}
+						
+					nxt = variables[j].next(vali);
+				} while(nxt>vali && curweight<worstbestweight);
+				
+				i = realsize;
+				while( i && curweight < bestweight[i-1] ) {
+					bestweight[i] = bestweight[i-1];
+					bestvalue[i] = bestvalue[i-1];
+					bestvars[i] = bestvars[i-1];
+					--i;
+				}
+				
+#ifdef _DEBUG_IMPACT
+				if(_DEBUG_IMPACT) {
+					if(i<RAND)
+						std::cout << " store @ " << i << " (" << bestval << ")"<< std::endl;
+					else
+						std::cout << std::endl;
+				}
+#endif
+				
+				bestweight[i] = curweight;
+				bestvalue[i] = bestval;
+				bestvars[i] = variables[j];
+	  
+				if(realsize<RAND) ++realsize;
+				
+				worstbestweight = bestweight[realsize-1];
+			}
+	
+			i = (realsize>1 ? randint(realsize) : 0);
+			Decision d(bestvars[i], Decision::ASSIGNMENT, bestvalue[i]);
+			
+			assert(bestvars[i].contain(bestvalue[i]));
+			
+#ifdef _DEBUG_IMPACT
+			if(_DEBUG_IMPACT) {
+				std::cout << " ==> " << d << std::endl;
+			}
+#endif			
+			
+			return d;
+		} 
+		
+
+		virtual void notify_decision() { left = 1; }
+  
+		virtual void notify_success() {
+			// propagation went without wipe-out
+			// - check if it was after a left or a right branch
+			// - find out what was the decision/refutation
+			int dec;
+			int id;
+			int i, n;
+			Variable x, y;
+			double residual_space;
+			int size;
+			if(solver->decisions.size>0) {
+				
+				i = solver->trail_.back(5), n=solver->saved_vars.size;
+				residual_space = 1.0;
+				while(i<n) {	
+					id = solver->saved_vars[i];
+					y = solver->variables[id];
+	    
+					size = y.get_size();
+					residual_space *= (((double)size))/((double)(size+y.get_reduction()));
+					++i;
+				} 
+				
+				if(left) {
+					
+					// left branch
+					Decision branch = solver->decisions.back();
+					x = branch.var;
+					dec = x.id();
+					int dec_val = branch.value();
+
+	#ifdef _DEBUG_IMPACT
+					std::cout << " i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+	#endif
+			
+					value_weight[dec][dec_val] = ((Alpha-1) * value_weight[dec][dec_val] + residual_space) / Alpha;
+			
+	#ifdef _DEBUG_IMPACT
+					std::cout << value_weight[dec][dec_val] << std::endl;
+	#endif
+				} else {
+					
+					// right branch
+					x = solver->decisions.back(0).var;
+					dec = x.id();
+
+					int vali, vnxt=x.get_min();
+					do {
+						vali = vnxt;
+						vnxt = x.next(vali);
+
+			#ifdef _DEBUG_IMPACT			
+						std::cout << "    e[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
+			#endif
+
+						value_weight[dec][vali] *= ((Alpha-1) * value_weight[dec][vali] + residual_space) / Alpha;
+
+			#ifdef _DEBUG_IMPACT			
+						std::cout << value_weight[dec][vali] << std::endl;
+			#endif
+			
+					} while(vali<vnxt);
+					
+				}
+		
+			}
+      
+			left = 1;
+		}
+  
+		virtual void notify_backtrack() {
+			// propagation produced a wipe-out
+			// - check if it was after a left or a right branch
+			// - find out what was the decision/refutation
+
+			int dec;
+			Variable x;
+
+			if(left==1) {
+				// left branch
+				Decision branch = solver->decisions.back();
+				x = branch.var;
+				dec = x.id();
+				int dec_val = branch.value();
+		
+#ifdef _DEBUG_IMPACT
+				std::cout << "    d[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+#endif
+			
+				value_weight[dec][dec_val] *= ((Alpha-1) / Alpha);
+				
+#ifdef _DEBUG_IMPACT			
+				std::cout << value_weight[dec][dec_val] << std::endl;
+#endif
+				
+			} else if(left==0) {
+				// right branch
+				x = solver->decisions.back(0).var;
+				dec = x.id();
+
+				int vali, vnxt=x.get_min();
+				do {
+					vali = vnxt;
+					vnxt = x.next(vali);
+
+		#ifdef _DEBUG_IMPACT			
+					std::cout << "    f[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
+		#endif
+
+					value_weight[dec][vali] *= ((Alpha-1) / Alpha);
+
+		#ifdef _DEBUG_IMPACT			
+					std::cout << value_weight[dec][vali] << std::endl;
+		#endif
+			
+				} while(vali<vnxt);
+		
+			}
+
+			left = 0;
+		}
+ 	
+
+		virtual std::ostream& display(std::ostream& os) {
+			os << "Impact-based Search" << std::endl;
+			return os;
+		}
+	};
 
 
 

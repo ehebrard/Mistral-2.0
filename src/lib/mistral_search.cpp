@@ -481,7 +481,50 @@ int Mistral::ImpactManager::get_minweight_value(const Variable x) {
 	
 	return best_val;
 }
-int Mistral::ImpactManager::get_maxweight_value(const Variable x) {return x.get_min();}
+int Mistral::ImpactManager::get_maxweight_value(const Variable x) {
+	int best_val = 0;
+	int idx = x.id();
+	int offset = init_min[idx];
+	double *wgt = value_weight[idx];
+
+	if(factor[idx]==1) {
+		best_val = x.get_min();
+		double max_weight = wgt[best_val-offset], aux_weight;
+		int vali, vnxt=x.next(best_val);
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali-offset]; 
+			if(aux_weight > max_weight) {
+				max_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+	} else {
+		int fact = factor[idx];
+		int the_min = x.get_min();
+		int the_max = x.get_max();	
+		int best_group = (the_min-offset)/fact;
+		int group = best_group;
+		double max_weight = wgt[best_group];
+		int lb = group*fact+offset;
+		int ub = lb+fact-1;
+		while(ub < the_max) {
+			++group;
+			lb += fact;
+			ub += fact;
+		
+			if(x.intersect(lb, ub) && max_weight<wgt[group]) {
+				max_weight = wgt[group];
+				best_group = group;
+			}
+		}
+		best_val = x.next(best_group*fact+offset-1);
+	}
+
+	return best_val;
+}
+
 
 void Mistral::ImpactManager::notify_success() {
 			
@@ -776,6 +819,380 @@ void Mistral::ImpactManager::notify_backtrack() {
 
 
 std::ostream& Mistral::ImpactManager::display(std::ostream& os, const bool all) const {
+	os << "impact";
+  return os;
+}
+
+
+
+int Mistral::RealImpactManager::get_minweight_value(const Variable x) {
+	
+	int best_val = 0;
+	int idx = x.id();
+	int offset = init_min[idx];
+	double *wgt = value_weight[idx];
+	
+	if(factor[idx]==1) {
+		best_val = x.get_min();
+		double min_weight = wgt[best_val-offset], aux_weight;
+		int vali, vnxt=x.next(best_val);
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali-offset]; 
+			if(aux_weight < min_weight) {
+				min_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+	} else {
+		int fact = factor[idx];
+		int the_min = x.get_min();
+		int the_max = x.get_max();	
+		int best_group = (the_min-offset)/fact;
+		int group = best_group;
+		double min_weight = wgt[best_group];
+		int lb = group*fact+offset;
+		int ub = lb+fact-1;
+		while(ub < the_max) {
+			++group;
+			lb += fact;
+			ub += fact;
+			
+			if(x.intersect(lb, ub) && min_weight>wgt[group]) {
+				min_weight = wgt[group];
+				best_group = group;
+			}
+		}
+		best_val = x.next(best_group*fact+offset-1);
+	}
+	
+	return best_val;
+}
+int Mistral::RealImpactManager::get_maxweight_value(const Variable x) {
+	
+	int best_val = 0;
+	int idx = x.id();
+	int offset = init_min[idx];
+	double *wgt = value_weight[idx];
+	
+	if(factor[idx]==1) {
+		best_val = x.get_min();
+		double max_weight = wgt[best_val-offset], aux_weight;
+		int vali, vnxt=x.next(best_val);
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali-offset]; 
+			if(aux_weight > max_weight) {
+				max_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+	} else {
+		int fact = factor[idx];
+		int the_min = x.get_min();
+		int the_max = x.get_max();	
+		int best_group = (the_min-offset)/fact;
+		int group = best_group;
+		double max_weight = wgt[best_group];
+		int lb = group*fact+offset;
+		int ub = lb+fact-1;
+		while(ub < the_max) {
+			++group;
+			lb += fact;
+			ub += fact;
+			
+			if(x.intersect(lb, ub) && max_weight<wgt[group]) {
+				max_weight = wgt[group];
+				best_group = group;
+			}
+		}
+		best_val = x.next(best_group*fact+offset-1);
+	}
+	
+	return best_val;
+}
+
+void Mistral::RealImpactManager::notify_success() {
+			
+	// propagation went without wipe-out
+	// - check if it was after a left or a right branch
+	// - find out what was the decision/refutation
+	int dec;
+	int id;
+	int i, n;
+	Variable x, y;
+	double residual_space;
+	int size;
+	if(solver->decisions.size>0) {
+				
+		i = solver->trail_.back(5), n=solver->saved_vars.size;
+
+		// left branch
+		Decision branch = solver->decisions.back();
+		x = branch.var;
+		dec = x.id();
+		int dec_type = branch.type();
+		int dec_val = branch.value();
+
+		residual_space = 1.0;
+		while(i<n) {	
+			id = solver->saved_vars[i];
+			y = solver->variables[id];
+	    
+#ifdef _DEBUG_IMPACT2
+			std::cout << " -> " << y << y.get_domain() << " lost " << y.get_reduction() << " values (";
+#endif
+	    
+			size = y.get_size();
+			residual_space *= (((double)size))/((double)(size+y.get_reduction()));
+	    
+#ifdef _DEBUG_IMPACT2
+			std::cout << residual_space << ")\n";
+#endif
+	    
+			++i;
+		} 
+
+#ifdef _DEBUG_IMPACT
+		std::cout << " [PROP] ==> impact[" << solver->variables[dec] << "] was " << variable_weight[dec] ;
+#endif
+	  
+		
+		int offset = init_min[dec];
+		int fact = factor[dec];
+		if(dec_type == Decision::ASSIGNMENT) {
+			dec_val -= offset;
+			dec_val /= fact;
+			
+#ifdef _DEBUG_IMPACT
+			std::cout << " i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+#endif
+			
+			variable_weight[dec] -= value_weight[dec][dec_val];
+			
+#ifdef _REAL_AVG_IMPACT
+			value_weight[dec][dec_val] *= ((double)(value_visit[dec][dec_val]));
+			value_weight[dec][dec_val] += residual_space;
+			value_weight[dec][dec_val] /= (double)(++value_visit[dec][dec_val]);
+#else
+			value_weight[dec][dec_val] *= (alpha-1);
+			value_weight[dec][dec_val] += residual_space;
+			value_weight[dec][dec_val] /= alpha;			
+#endif
+			
+			variable_weight[dec] += value_weight[dec][dec_val];
+			
+#ifdef _DEBUG_IMPACT
+			std::cout << value_weight[dec][dec_val] ;
+#endif
+			
+		} else if(fact!=1) {
+			int lb = x.get_min();
+			int ub = x.get_min();
+			int stag = (lb-offset)/fact;
+			int endg = (ub-offset)/fact;
+			int decg = (dec_val-offset)/fact;
+			//int numg = (endg-stag+1);
+			for(int g=stag; g<=endg; ++g) if(g!=decg) {
+				
+#ifdef _DEBUG_IMPACT
+				std::cout << "\n    i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  ;
+#endif
+				
+				variable_weight[dec] -= value_weight[dec][g];
+			
+#ifdef _REAL_AVG_IMPACT
+				value_weight[dec][g] *= ((double)(value_visit[dec][g]));// * solver->parameters.activity_decay);
+				value_weight[dec][g] += residual_space;
+				value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+#else
+				value_weight[dec][g] *= (alpha-1);
+				value_weight[dec][g] += residual_space;
+				value_weight[dec][g] /= alpha;			
+#endif
+				
+				variable_weight[dec] += value_weight[dec][dec_val];
+
+#ifdef _DEBUG_IMPACT				
+				std::cout << " -> " << value_weight[dec][g] ;
+#endif
+			}
+			
+#ifdef _DEBUG_IMPACT
+		std::cout << std::endl;
+#endif
+
+		} else {
+			int vali, vnxt=x.get_min();
+			do {
+				vali = vnxt;
+				vnxt = x.next(vali);
+				vali -= offset;
+
+#ifdef _DEBUG_IMPACT				
+				std::cout << "\n    i[" << x << "=" << (vali+offset) << "]: " << value_weight[dec][dec_val]  ;
+#endif
+				
+				variable_weight[dec] -= value_weight[dec][vali];
+				
+#ifdef _REAL_AVG_IMPACT
+				value_weight[dec][vali] *= ((double)(value_visit[dec][vali]));// * solver->parameters.activity_decay);
+				value_weight[dec][vali] += residual_space;
+				value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);		
+#else
+				value_weight[dec][vali] *= (alpha-1);
+				value_weight[dec][vali] += residual_space;
+				value_weight[dec][vali] /= alpha;			
+#endif
+				
+				variable_weight[dec] += value_weight[dec][vali];
+				
+#ifdef _DEBUG_IMPACT				
+				std::cout << " -> " << value_weight[dec][vali] ;
+#endif
+				vali += offset;
+				
+			} while(vali<vnxt);
+
+#ifdef _DEBUG_IMPACT
+		std::cout << std::endl;
+#endif
+		
+		}
+			
+#ifdef _DEBUG_IMPACT
+		std::cout << " ---> now " << variable_weight[dec] << std::endl;
+#endif
+	
+	}
+      
+	left = 1;
+}
+
+
+void Mistral::RealImpactManager::notify_backtrack() {
+	// propagation produced a wipe-out
+	// - check if it was after a left or a right branch
+	// - find out what was the decision/refutation
+
+	int dec;
+	Variable x;
+
+	if(left==1) {
+		// left branch
+		x = solver->decisions.back().var;
+		dec = x.id();
+		
+		std::cout << "BACKTRACK FROM A LEFT BRANCH?\n";
+
+	} else if(left==0) {
+		// right branch
+		x = solver->decisions.back(0).var;
+		dec = x.id();
+		
+		std::cout << "BACKTRACK FROM A RIGHT BRANCH?\n";
+		
+	} 
+	
+#ifdef _DEBUG_IMPACT
+		std::cout << " ==> impact[" << solver->variables[dec] << "] was " << variable_weight[dec] ;
+#endif
+
+	int offset = init_min[dec];
+	int fact = factor[dec];
+	
+	if(fact!=1) {
+		int lb = x.get_min();
+		int ub = x.get_min();
+		int stag = (lb-offset)/fact;
+		int endg = (ub-offset)/fact;
+		//int decg = (dec_val-offset)/fact;
+		//int numg = (endg-stag+1);
+		for(int g=stag; g<=endg; ++g) 
+		//if(g!=decg) 
+		{
+			
+#ifdef _DEBUG_IMPACT	
+			std::cout << "\n    i[" << x << "=(" << (g*fact+offset) << ", " << ((g+1)*fact+offset-1) << ")" << "]: " << value_weight[dec][g]  << " -> ";
+#endif
+			
+			variable_weight[dec] -= value_weight[dec][g];
+			
+#ifdef _REAL_AVG_IMPACT
+			value_weight[dec][g] *= ((double)(value_visit[dec][g]));
+			// value_weight[dec][g] += 1.0;
+			value_weight[dec][g] /= (double)(++value_visit[dec][g]);
+#else
+			value_weight[dec][g] *= (alpha-1);
+			// value_weight[dec][g] += 1.0;
+			value_weight[dec][g] /= alpha;			
+#endif
+			
+			variable_weight[dec] += value_weight[dec][g];
+
+#ifdef _DEBUG_IMPACT			
+			std::cout << value_weight[dec][g] ;
+#endif
+			
+		}
+
+#ifdef _DEBUG_IMPACT
+		std::cout << std::endl;
+#endif
+		
+	} else {
+		int vali, vnxt=x.get_min();
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			vali -= offset;
+
+#ifdef _DEBUG_IMPACT			
+			std::cout << "\n    i[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
+#endif
+			
+			variable_weight[dec] -= value_weight[dec][vali];
+			
+#ifdef _REAL_AVG_IMPACT
+			value_weight[dec][vali] *= ((double)(value_visit[dec][vali]));
+			// value_weight[dec][vali] += 1.0;
+			value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
+#else
+			value_weight[dec][vali] *= (alpha-1);
+			// value_weight[dec][vali] += 1.0;
+			value_weight[dec][vali] /= alpha;			
+#endif
+			
+			variable_weight[dec] += value_weight[dec][vali];
+			
+			// value_weight[dec][vali] *= ((double)(value_visit[dec][vali]) * solver->parameters.activity_decay);
+			// value_weight[dec][vali] += 1.0;
+			// value_weight[dec][vali] /= (double)(++value_visit[dec][vali]);
+
+#ifdef _DEBUG_IMPACT			
+			std::cout << value_weight[dec][vali] ;
+#endif
+			
+		} while((vali+offset)<vnxt);
+
+#ifdef _DEBUG_IMPACT
+		std::cout << std::endl;
+#endif
+		
+	}
+	
+#ifdef _DEBUG_IMPACT
+		std::cout << " ---> now " << variable_weight[dec] << std::endl;
+#endif
+
+
+	left = 0;
+}
+
+
+std::ostream& Mistral::RealImpactManager::display(std::ostream& os, const bool all) const {
 	os << "impact";
   return os;
 }
