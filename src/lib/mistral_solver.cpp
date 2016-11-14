@@ -9720,60 +9720,26 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
   }
   if(var_ordering == "RIBS" || var_ordering == "ribs" || var_ordering == "RealImpact" || var_ordering == "realimpact" ) {	
 		
-		std::cout << branching << std::endl;
+		// std::cout << branching << std::endl;
 		
 		if( branching == "xdiv" ) {	
 			if( randomness <= 1 ) {
-				heu = new ImpactBasedSearch<1>(this, 0.001);
+				heu = new ImpactBasedSearch<1>(this, 0.00001);
 			}
 			else if( randomness <= 2 ) {
-				heu = new ImpactBasedSearch<2>(this, 0.001);
+				heu = new ImpactBasedSearch<2>(this, 0.00001);
 			}
 			else if( randomness <= 3 ) {
-				heu = new ImpactBasedSearch<3>(this, 0.001);
+				heu = new ImpactBasedSearch<3>(this, 0.00001);
 			}
 			else if( randomness <= 4 ) {
-				heu = new ImpactBasedSearch<4>(this, 0.001);
+				heu = new ImpactBasedSearch<4>(this, 0.00001);
 			}
 			else if( randomness <= 5 ) {
-				heu = new ImpactBasedSearch<5>(this, 0.001);
+				heu = new ImpactBasedSearch<5>(this, 0.00001);
 			}
 		}
 		else if( branching == "xint" ) {	
-			if( randomness <= 1 ) {
-				heu = new ImpactBasedSearch<1>(this, 0.999);
-			}
-			else if( randomness <= 2 ) {
-				heu = new ImpactBasedSearch<2>(this, 0.999);
-			}
-			else if( randomness <= 3 ) {
-				heu = new ImpactBasedSearch<3>(this, 0.999);
-			}
-			else if( randomness <= 4 ) {
-				heu = new ImpactBasedSearch<4>(this, 0.999);
-			}
-			else if( randomness <= 5 ) {
-				heu = new ImpactBasedSearch<5>(this, 0.999);
-			}
-		}
-		else if( branching == "div" ) {	
-			if( randomness <= 1 ) {
-				heu = new ImpactBasedSearch<1>(this, 0.1);
-			}
-			else if( randomness <= 2 ) {
-				heu = new ImpactBasedSearch<2>(this, 0.1);
-			}
-			else if( randomness <= 3 ) {
-				heu = new ImpactBasedSearch<3>(this, 0.1);
-			}
-			else if( randomness <= 4 ) {
-				heu = new ImpactBasedSearch<4>(this, 0.1);
-			}
-			else if( randomness <= 5 ) {
-				heu = new ImpactBasedSearch<5>(this, 0.1);
-			}
-		}
-		else if( branching == "int" ) {	
 			if( randomness <= 1 ) {
 				heu = new ImpactBasedSearch<1>(this, 0.9);
 			}
@@ -9790,21 +9756,140 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 				heu = new ImpactBasedSearch<5>(this, 0.9);
 			}
 		}
-		else {	
+		else if( branching == "div" ) {	
 			if( randomness <= 1 ) {
-				heu = new ImpactBasedSearch<1>(this, 0.5);
+				heu = new ImpactBasedSearch<1>(this, 0.001);
 			}
 			else if( randomness <= 2 ) {
-				heu = new ImpactBasedSearch<2>(this, 0.5);
+				heu = new ImpactBasedSearch<2>(this, 0.001);
 			}
 			else if( randomness <= 3 ) {
-				heu = new ImpactBasedSearch<3>(this, 0.5);
+				heu = new ImpactBasedSearch<3>(this, 0.001);
 			}
 			else if( randomness <= 4 ) {
-				heu = new ImpactBasedSearch<4>(this, 0.5);
+				heu = new ImpactBasedSearch<4>(this, 0.001);
 			}
 			else if( randomness <= 5 ) {
-				heu = new ImpactBasedSearch<5>(this, 0.5);
+				heu = new ImpactBasedSearch<5>(this, 0.001);
+			}
+		}
+		else if( branching == "int" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.3);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.3);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.3);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.3);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.3);
+			}
+		}
+		else if( branching == "xdivlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.00001, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.00001, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.00001, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.00001, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.00001, false);
+			}
+		}
+		else if( branching == "xintlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.9, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.9, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.9, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.9, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.9, false);
+			}
+		}
+		else if( branching == "divlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.001, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.001, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.001, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.001, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.001, false);
+			}
+		}
+		else if( branching == "intlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.3, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.3, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.3, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.3, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.3, false);
+			}
+		}
+		else if( branching == "lex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.1, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.1, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.1, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.1, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.1, false);
+			}
+		}
+		else {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.1);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.1);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.1);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.1);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.1);
 			}
 		}
   }
@@ -11264,6 +11349,11 @@ void Mistral::SolverCmdLine::initialise() {
 	boallowed.push_back("xint");
   boallowed.push_back("div");
 	boallowed.push_back("xdiv");
+  boallowed.push_back("intlex");
+	boallowed.push_back("xintlex");
+  boallowed.push_back("divlex");
+	boallowed.push_back("xdivlex");
+	boallowed.push_back("lex");
 
   bo_allowed = new TCLAP::ValuesConstraint<std::string>( boallowed );
   branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"minval+guided",bo_allowed);

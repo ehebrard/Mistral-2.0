@@ -1177,7 +1177,7 @@ void Mistral::RealImpactManager::notify_backtrack() {
 			
 		} while((vali+offset)<vnxt);
 
-#ifdef _DEBUG_IMPACT
+#ifdef _DEBUG_IMPACT3
 		std::cout << std::endl;
 #endif
 		

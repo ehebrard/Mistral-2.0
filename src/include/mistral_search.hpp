@@ -1590,12 +1590,12 @@ namespace Mistral {
 
 		double Alpha;
 		double init_impact;
+		bool impact_branching;
+		
+		int n_restart;
 
-		ImpactBasedSearch(Solver *s, const double ii=.5, const double a=8) 
-		: BranchingHeuristic(s), Alpha(a), init_impact(ii) {
-			
-			std::cout << init_impact << std::endl;
-			
+		ImpactBasedSearch(Solver *s, const double ii=.5, const bool br=true, const double a=8) 
+		: BranchingHeuristic(s), Alpha(a), init_impact(ii), impact_branching(br) {
 		}
 
 		virtual ~ImpactBasedSearch() {
@@ -1615,8 +1615,6 @@ namespace Mistral {
 		virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
 			left = -1;
 			
-			
-
 			// weight on values
 			value_weight.initialise(solver->variables.size, solver->variables.size);
 	
@@ -1634,6 +1632,10 @@ namespace Mistral {
 			solver->add((BacktrackListener*)this);
 			solver->add((DecisionListener*)this);
 			solver->add((SuccessListener*)this);
+			
+			n_restart = solver->statistics.num_restarts+1;
+			
+			// std::cout << n_restart << std::endl;
 
 		}
 
@@ -1710,9 +1712,9 @@ namespace Mistral {
 			}
 	
 			i = (realsize>1 ? randint(realsize) : 0);
-			Decision d(bestvars[i], Decision::ASSIGNMENT, bestvalue[i]);
+			Decision d(bestvars[i], Decision::ASSIGNMENT, (impact_branching ? bestvalue[i] : bestvars[i].get_min()));
 			
-			assert(bestvars[i].contain(bestvalue[i]));
+			// assert(bestvars[i].contain(bestvalue[i]));
 			
 #ifdef _DEBUG_IMPACT
 			if(_DEBUG_IMPACT) {
@@ -1727,6 +1729,16 @@ namespace Mistral {
 		virtual void notify_decision() { left = 1; }
   
 		virtual void notify_success() {
+			
+
+			//std::cout << n_restart << " / " << (solver->statistics.num_restarts) << std::endl;
+			
+			if(n_restart==solver->statistics.num_restarts) {
+				++n_restart;
+				return;
+			}
+
+			
 			// propagation went without wipe-out
 			// - check if it was after a left or a right branch
 			// - find out what was the decision/refutation
@@ -1736,18 +1748,23 @@ namespace Mistral {
 			Variable x, y;
 			double residual_space;
 			int size;
-			if(solver->decisions.size>0) {
+			
+			// std::cout << "residual space: ";
 				
-				i = solver->trail_.back(5), n=solver->saved_vars.size;
+				i = solver->trail_.back(5)+1, n=solver->saved_vars.size;
 				residual_space = 1.0;
 				while(i<n) {	
 					id = solver->saved_vars[i];
 					y = solver->variables[id];
+					
+					// std::cout << " " << y ;
 	    
 					size = y.get_size();
 					residual_space *= (((double)size))/((double)(size+y.get_reduction()));
 					++i;
 				} 
+				
+				// std::cout << std::endl;
 				
 				if(left) {
 					
@@ -1758,7 +1775,7 @@ namespace Mistral {
 					int dec_val = branch.value();
 
 	#ifdef _DEBUG_IMPACT
-					std::cout << " i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+					std::cout << " i[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> [" << residual_space << "] -> ";
 	#endif
 			
 					value_weight[dec][dec_val] = ((Alpha-1) * value_weight[dec][dec_val] + residual_space) / Alpha;
@@ -1778,10 +1795,10 @@ namespace Mistral {
 						vnxt = x.next(vali);
 
 			#ifdef _DEBUG_IMPACT			
-						std::cout << "    e[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
+						std::cout << "    e[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> [" << residual_space << "] -> ";
 			#endif
 
-						value_weight[dec][vali] *= ((Alpha-1) * value_weight[dec][vali] + residual_space) / Alpha;
+						value_weight[dec][vali] = ((Alpha-1) * value_weight[dec][vali] + residual_space) / Alpha;
 
 			#ifdef _DEBUG_IMPACT			
 						std::cout << value_weight[dec][vali] << std::endl;
@@ -1791,7 +1808,6 @@ namespace Mistral {
 					
 				}
 		
-			}
       
 			left = 1;
 		}
@@ -1812,7 +1828,7 @@ namespace Mistral {
 				int dec_val = branch.value();
 		
 #ifdef _DEBUG_IMPACT
-				std::cout << "    d[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> ";
+				std::cout << "    d[" << x << "=" << dec_val << "]: " << value_weight[dec][dec_val]  << " -> [" << 0 << "] -> ";
 #endif
 			
 				value_weight[dec][dec_val] *= ((Alpha-1) / Alpha);
@@ -1832,7 +1848,7 @@ namespace Mistral {
 					vnxt = x.next(vali);
 
 		#ifdef _DEBUG_IMPACT			
-					std::cout << "    f[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> ";
+					std::cout << "    f[" << x << "=" << vali << "]: " << value_weight[dec][vali]  << " -> [" << 0 << "] -> ";
 		#endif
 
 					value_weight[dec][vali] *= ((Alpha-1) / Alpha);
