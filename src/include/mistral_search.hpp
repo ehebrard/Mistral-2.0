@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <math.h> 
+#include <limits>
 
 #include <mistral_global.hpp>
 #include <mistral_structure.hpp>
