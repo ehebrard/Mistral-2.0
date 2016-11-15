@@ -39,7 +39,7 @@
 //#define _DEBUG_VARORD
 
 #define _ABS_VAL true
-// #define _DEBUG_ABS 1
+//#define _DEBUG_ABS 2
 
 namespace Mistral {
 
@@ -687,6 +687,8 @@ namespace Mistral {
 		double threshold;		
 		
 #ifdef _ABS_VAL
+		int left;
+		int n_restart;
 		Vector<double*> value_weight;
 #ifdef _REAL_AVG_ACTIVITY
 		Vector<int*> value_visit;
@@ -698,32 +700,32 @@ namespace Mistral {
 #endif
 		
     Vector<double> variable_weight;
-		// Vector<int> variable_visit;
 
-    //PruningCountManager(Solver *s, void *a=NULL) : solver(s) {
     PruningCountManager(Solver *s) : solver(s) {
 
-#ifdef _REAL_AVG_ACTIVITY
+#ifndef _REAL_AVG_ACTIVITY
 			alpha = 8;
 #endif 
+			
+			
 			
 			threshold = 1000000;
       weight_unit = solver->parameters.activity_increment;
       variable_weight.initialise(solver->variables.size, solver->variables.size);
 
 			for(unsigned int i=0; i<solver->variables.size; ++i) {
-				//variable_weight.add(weight_unit * (double)(solver->variables[i].get_degree()));
 				variable_weight[i] = (weight_unit * (double)(solver->variables[i].get_degree()));
 			}
 
-      // std::cout << variable_weight.stack_ << ":";
-      // for(unsigned int i=0; i<solver->variables.size; ++i) {
-      // 	std::cout << " " << solver->variables[i] << ": " << variable_weight[i] ;
-      // }
-      // std::cout << std::endl;
-
 #ifdef _ABS_VAL
-			int max_values = 100;
+			left = 1;
+			int max_values = 0;
+			for(int i=0; i<solver->variables.size; ++i) {
+				if(max_values < solver->variables[i].get_size()) {
+					max_values = solver->variables[i].get_size();
+				}
+			}
+			
 
 			value_weight.initialise(solver->variables.size, solver->variables.size);
 #ifdef _REAL_AVG_ACTIVITY
@@ -744,7 +746,6 @@ namespace Mistral {
 					value_visit[i] = new int[max_values];
 					std::fill(value_visit[i], value_visit[i]+max_values, 1);
 #endif
-					// factor[i] = factor;
 				} else {
 					factor[i] = 1;
 					value_weight[i] = new double[d];
@@ -754,26 +755,23 @@ namespace Mistral {
 					std::fill(value_visit[i], value_visit[i]+d, 1);
 #endif
 				}
-				//value_weight[i] -= init_min[i];
-	
 			}
+			
+			n_restart = solver->statistics.num_restarts+1;
 			
 			solver->add((BacktrackListener*)this);
 #endif
 
 			solver->add((SuccessListener*)this);
-      //solver->add((VariableListener*)this);
     }
 
     virtual ~PruningCountManager() {
       solver->remove((SuccessListener*)this);
-      //solver->remove((VariableListener*)this);
 #ifdef _ABS_VAL
 			solver->remove((BacktrackListener*)this);
       unsigned int  __tmp= solver->variables.size;
       for( unsigned int i = 0; i <__tmp ; ++i){
     	  delete [] value_weight[i];
-    	  // delete [] value_visit[i];
       }
 #endif
     }
@@ -789,58 +787,6 @@ namespace Mistral {
 		
 		virtual void notify_success();
 		virtual void notify_backtrack();
-		// virtual void notify_success() {
-		//
-		// 	//display(std::cout, false);
-		//
-		//
-		// 	int id;
-		// 	int i = solver->trail_.back(5), n=solver->saved_vars.size;
-		// 	double max_weight = 0;
-		//
-		//
-		// 	// std::cout << "increment by " << weight_unit << " weight of";
-		// 	while(++i<n) {
-		// 		id = solver->saved_vars[i];
-		//
-		// 		// std::cout << " " << solver->variables[id];
-		//
-		// 		variable_weight[id] += weight_unit;
-		//
-		// 		if(variable_weight[id] > max_weight)
-		// 			max_weight = variable_weight[id];
-		// 	}
-		//
-		// 	// std::cout << " and decay by " << solver->parameters.activity_decay << std::endl;
-		//
-		// 	if(max_weight>threshold) {
-		//
-		// 		// std::cout << "scaling down" << std::endl;
-		//
-		// 		double factor = std::min(solver->parameters.activity_increment/weight_unit, 1/max_weight);
-		// 		weight_unit *= factor;
-		//
-		// 		n = solver->variables.size;
-		// 		for(int i=0; i<n; ++i) {
-		// 			// std::cout << variable_weight[i] << " -> ";
-		// 			variable_weight[i] *= factor;
-		// 			// std::cout << variable_weight[i] << std::endl;
-		// 		}
-		//
-		// 	}
-		//
-		// 	if(solver->parameters.activity_decay<1 && solver->parameters.activity_decay>0)
-		// 		weight_unit /= solver->parameters.activity_decay;
-		//
-		//
-		//
-		// }
-
-   // virtual void notify_add_variable() {
-   //   while(variable_weight.size < solver->variables.size) {
-   //     variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
-   //   }
-   // }
 
     virtual std::ostream& display(std::ostream& os, const bool all) const ;
   };
@@ -867,47 +813,15 @@ namespace Mistral {
 
     double decay;
 
-    //LearningActivityManager(Solver *s, void *a=NULL) : solver(s) {
-    LearningActivityManager(Solver *s);//  : solver(s) {
-    //   weight_unit = solver->parameters.activity_increment;
-    //   decay = solver->parameters.activity_decay;
+    LearningActivityManager(Solver *s) ;
 
-    //   var_activity.initialise(solver->variables.size, solver->variables.size, 0);
-    //   lit_activity.initialise(2*solver->variables.size, 2*solver->variables.size, 0);
-
-    //   int i = solver->constraints.size;
-    //   Constraint *cons = solver->constraints.stack_;
-    //   while(i--) {
-    //    	cons[i].initialise_activity(lit_activity.stack_, var_activity.stack_, weight_unit);
-    //   }
-
-    //   solver->lit_activity = lit_activity.stack_;
-    //   solver->var_activity = var_activity.stack_;
-
-    //   solver->add((DecisionListener*)this);
-    // }
-
-    virtual ~LearningActivityManager();//  {
-    //   solver->remove((DecisionListener*)this);
-    //   //solver->remove((VariableListener*)this);
-    // }
+    virtual ~LearningActivityManager() ;
 
     double *get_variable_weight() { return var_activity.stack_; }     
     double *get_bound_weight() { return lit_activity.stack_; }
     double **get_value_weight() { return NULL; }
 
-    virtual void notify_backtrack() ;//{
-
-    //   //std::cout << "d " << lit_activity.stack_ << " " << lit_activity[0] << " " << lit_activity[1] << std::endl;
-
-    //   if(decay > 0 && decay < 1) {
-    // 	int i=var_activity.size;
-    // 	while(i--) var_activity[i] *= decay;
-    // 	i=lit_activity.size;
-    // 	while(i--) lit_activity[i] *= decay;
-    //   }
-
-    // }
+    virtual void notify_backtrack() ;
 
     virtual std::ostream& display(std::ostream& os, const bool all) const ;
   };
@@ -3975,6 +3889,7 @@ namespace Mistral {
   public: 
 
     double **weight;
+		WeightMap *w_function;
     
     MaxWeightValue() {}
     MaxWeightValue(Solver *s, double **vw, double *bw, WeightMap *wm) {
@@ -3982,31 +3897,33 @@ namespace Mistral {
     }
     void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {
       weight = vw;
+			w_function = wm;
     }
     //MaxWeightValue(Solver *s, void *a) { weight = (double**)a; }
     virtual ~MaxWeightValue() {};
     
-    inline Decision make(Variable x) {
-      int // id_x = x.id(),
-	best_val = x.get_min();
-      double *wgt = weight[x.id()];
-      //double min_weight = weight[id_x][best_val]// [best_val][id_x]
-      double max_weight = wgt[best_val]// [best_val][id_x]
-	, aux_weight;
-      int vali, vnxt=x.next(best_val);
-      do {
-	vali = vnxt;
-	vnxt = x.next(vali);
-	aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
-	if(aux_weight > max_weight) {
-	  max_weight = aux_weight;
-	  best_val = vali;
-	}
-      } while(vali<vnxt);
-      
-      Decision d(x, Decision::ASSIGNMENT, best_val);
-      return d;
-    }
+		Decision make(Variable x);
+		// inline Decision make(Variable x) {
+		// 	int // id_x = x.id(),
+		// 	best_val = x.get_min();
+		// 	double *wgt = weight[x.id()];
+		// 	//double min_weight = weight[id_x][best_val]// [best_val][id_x]
+		// 	double max_weight = wgt[best_val]// [best_val][id_x]
+		// 		, aux_weight;
+		// 	int vali, vnxt=x.next(best_val);
+		// 	do {
+		// 		vali = vnxt;
+		// 		vnxt = x.next(vali);
+		// 		aux_weight = wgt[vali]; //weight[id_x][vali]; //weight[vali][id_x];
+		// 		if(aux_weight > max_weight) {
+		// 			max_weight = aux_weight;
+		// 			best_val = vali;
+		// 		}
+		// 	} while(vali<vnxt);
+		//
+		// 	Decision d(x, Decision::ASSIGNMENT, best_val);
+		// 	return d;
+		// }
 
      std::ostream& display(std::ostream& os) const {
        os << "assign it to the value with minimum weight in its domain";

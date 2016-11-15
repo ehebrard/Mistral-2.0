@@ -34,7 +34,7 @@
 
 //#define _OLD_ true
 //#define _DEBUG_NOGOOD true //(statistics.num_filterings == 491)
-//#define _DEBUG_SEARCH true
+// #define _DEBUG_SEARCH true
 
 //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738) || (statistics.num_filterings == 44368) || (statistics.num_filterings == 43659))
 
@@ -7376,6 +7376,23 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	      }
 	      else if( randomness <= 5 ) {
 	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "maxweight" || branching == "MaxWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MaxWeightValue > (this);
 	      }
 	    }
 	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
