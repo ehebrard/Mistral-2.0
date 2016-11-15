@@ -1651,6 +1651,10 @@ namespace Mistral {
 				++n_restart;
 				return;
 			}
+			
+			
+			if(solver->decisions.empty())
+				left = 0;
 
 			
 			// propagation went without wipe-out
@@ -1730,6 +1734,9 @@ namespace Mistral {
 			// propagation produced a wipe-out
 			// - check if it was after a left or a right branch
 			// - find out what was the decision/refutation
+			
+			if(solver->decisions.empty())
+				left = 0;
 
 			int dec;
 			Variable x;

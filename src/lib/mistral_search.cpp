@@ -1394,7 +1394,69 @@ int Mistral::PruningCountManager::get_minweight_value(const Variable x) {
 	
 	return best_val;
 }
-int Mistral::PruningCountManager::get_maxweight_value(const Variable x) {return x.get_min();}
+int Mistral::PruningCountManager::get_maxweight_value(const Variable x) {
+	
+	int best_val = 0;
+	int idx = x.id();
+	int offset = init_min[idx];
+	double *wgt = value_weight[idx];
+	
+	// std::cout << "get min weight " << x << " in " << x.get_domain() << " " << factor[idx] << " " << offset << std::endl;
+	
+	
+	if(factor[idx]==1) {
+		best_val = x.get_min();
+		double max_weight = wgt[best_val-offset], aux_weight;
+		int vali, vnxt=x.next(best_val);
+		
+		// std::cout << "  " << best_val << " " << min_weight << std::endl;
+		
+		do {
+			vali = vnxt;
+			vnxt = x.next(vali);
+			aux_weight = wgt[vali-offset]; 
+			
+			// std::cout << "  " << vali << " " << aux_weight << std::endl;
+			
+			if(aux_weight > max_weight) {
+				max_weight = aux_weight;
+				best_val = vali;
+			}
+		} while(vali<vnxt);
+	} else {
+		int fact = factor[idx];
+		int the_min = x.get_min();
+		int the_max = x.get_max();	
+		int best_group = (the_min-offset)/fact;
+		int group = best_group;
+		double max_weight = wgt[best_group];
+		int lb = group*fact+offset;
+		int ub = lb+fact-1;
+		
+		// std::cout << "  [" << lb << "," << ub << "] " << min_weight << std::endl;
+		
+		while(ub < the_max) {
+			++group;
+			lb += fact;
+			ub += fact;
+			
+			if(x.intersect(lb, ub)) {
+				
+				// std::cout << "  [" << lb << "," << ub << "] " << wgt[group] << std::endl;
+				
+				if(max_weight < wgt[group]) {
+					max_weight = wgt[group];
+					best_group = group;
+				}
+			}
+		}
+		best_val = x.next(best_group*fact+offset-1);
+	}
+	
+	// std::cout << " return " << best_val << std::endl;
+	
+	return best_val;
+}
 #endif
 
 
@@ -1404,6 +1466,10 @@ void Mistral::PruningCountManager::notify_backtrack() {
 	
 	int sz = solver->sequence.size;
 	double wu = solver->parameters.activity_increment;
+	
+	if(solver->decisions.empty())
+		left = 0;
+	
 	
 	if(left) {
 
@@ -1636,14 +1702,17 @@ void Mistral::PruningCountManager::notify_success() {
 	
 	}
 	
-	
+
+#ifdef _ABS_VAL	
+
 	if(n_restart==solver->statistics.num_restarts) {
 		++n_restart;
 		return;
 	}
 
-#ifdef _ABS_VAL	
 
+	if(solver->decisions.empty())
+		left = 0;
 
 	if(left) {
 		Decision branch = solver->decisions.back();
