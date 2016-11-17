@@ -40,6 +40,8 @@
 //#define _DEBUG_VARORD
 
 // #define _DEBUG_COS
+//#define _DEBUG_LC (size>1)
+//#define _DEBUG_LC true
 
 #define _ABS_VAL true
 //#define _DEBUG_ABS 2
@@ -1629,6 +1631,219 @@ namespace Mistral {
 
  template < class VarSelector, class ValSelectorOption, class ValSelectorPrime >
  std::ostream& operator<<(std::ostream& os, ConflictOrderedSearch<VarSelector, ValSelectorOption, ValSelectorPrime>* x) {
+   return x->display(os);
+ }
+	
+	
+	
+ /**********************************************
+  * LC
+  **********************************************/
+ /*! \class LastConflict
+   \brief  Class LastConflict
+
+ */
+ template < class VarSelector, class ValSelectorOption, class ValSelectorPrime, int K >
+ class LastConflict : public BranchingHeuristic, public BacktrackListener {
+ public:
+
+   VarSelector default_var;
+   ValSelectorPrime default_choice;
+	 ValSelectorOption choice;
+	 
+	 Variable TestingSet[K];
+	 int size; // of the TestingSet
+
+	 int candidate;
+
+	 // to know if we backtrack from a left or a right branch
+	 int last_level;
+	 int num_sol;
+
+   LastConflict(Solver *s) 
+     : BranchingHeuristic(s) {
+
+     default_var.initialise(s);
+     default_choice = ValSelectorOption(s,
+			default_var.get_value_weight(),default_var.get_bound_weight()
+				,default_var.get_weight_map()
+				);
+     choice = ValSelectorPrime(s, NULL, NULL, NULL);
+   }
+
+   virtual ~LastConflict() {
+   	
+			solver->remove((BacktrackListener*)this);
+		
+   }
+
+
+	 virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
+		 
+		 default_var.initialise(seq);
+	 
+		 solver->add((BacktrackListener*)this);
+		
+		 candidate = -1;
+		 size = 0;
+		
+		 last_level = solver->search_root;
+		
+		 num_sol = solver->statistics.num_solutions;
+	 
+	 }
+
+	 virtual Decision branch() {
+		 
+#ifdef _DEBUG_LC
+		 if(_DEBUG_LC) {
+			 std::cout << " branch [" ;
+		 }
+#endif
+		 
+		 for(int i=0; i<size; ++i) {
+			 
+#ifdef _DEBUG_LC
+			 if(_DEBUG_LC) {
+				 std::cout << " " << TestingSet[i] ;
+			 }
+#endif
+			 
+			 if(!TestingSet[i].is_ground()) {
+				 
+#ifdef _DEBUG_LC
+				 if(_DEBUG_LC) {
+					 std::cout << " ] (" << candidate << ") -> ok!" << std::endl ;
+				 }
+#endif		 
+				 
+				 return choice.make(TestingSet[i]);
+			 }
+		 }
+		 
+#ifdef _DEBUG_LC
+		 if(_DEBUG_LC) {
+			 std::cout << "] (" << candidate << ")" ;
+		 }
+#endif	 
+		 
+		 Decision d;
+		 
+		 if(candidate >= 0 && !solver->variables[candidate].is_ground()) {
+			 				 
+			 assert(size<K);
+				 
+			 TestingSet[size] = solver->variables[candidate];
+			 // for(int i=size-1; i-->1;) {
+			 // 					 TestingSet[i] = TestingSet[i-1];
+			 // }
+			 // TestingSet[0] = solver->variables[candidate];
+			 d = choice.make(TestingSet[size]);
+			 ++size;
+				 
+				 
+#ifdef _DEBUG_LC
+			 if(_DEBUG_LC) {
+				 std::cout << " update: [" ;
+				 for(int i=0; i<size; ++i)
+					 std::cout << " " << TestingSet[i] ;
+				 std::cout << " ]";
+			 }
+#endif
+				 
+		 } else {
+			 
+#ifdef _DEBUG_LC
+			 if(_DEBUG_LC) {
+				 std::cout << " default" ;
+				 
+				 if(candidate<0) {
+					 std::cout << " (no candidate)";
+				 } else {
+					 std::cout << " (" << solver->variables[candidate] << " in " << solver->variables[candidate].get_domain() << " is ground)";
+				 }
+				 
+				 std::cout << " (erase TestingSet)" ;
+			 }
+#endif
+		 	
+			 d = default_choice.make(default_var.select());
+			 size = 0;
+			
+		 }
+		 
+		 candidate = -1;
+		 
+#ifdef _DEBUG_LC
+		 if(_DEBUG_LC) {
+			 std::cout << " (erase candidate)" << std::endl ;
+		 }
+#endif
+	
+		 return d;
+	 }
+
+	 virtual void notify_backtrack() {
+	
+		 Variable decision_variable;
+		
+#ifdef _DEBUG_LC
+		 if(_DEBUG_LC) {
+		 std::cout << " backtrack from level " << solver->level ;
+	 }
+#endif
+					
+		 if(solver->level >= last_level || num_sol < solver->statistics.num_solutions) {
+			
+#ifdef _DEBUG_LC
+			 if(_DEBUG_LC) {
+			 std::cout << " (left branch)";
+		 }
+#endif			
+			
+			 // backtrack from left branch
+			 decision_variable = solver->decisions.back().var;
+		
+			 if(candidate < 0 && size<K) {
+					
+				 int i;
+				 for(i=0; i<size; ++i) {
+					 if(TestingSet[i].id() == decision_variable.id()) break;
+				 }
+				 if(i==size) {
+					 candidate = decision_variable.id();
+					
+#ifdef _DEBUG_LC
+					 if(_DEBUG_LC) {
+					 std::cout << " new candidate: " << decision_variable;
+				 }
+#endif	
+				 }
+				
+			 }
+		 } 
+		
+		 num_sol = solver->statistics.num_solutions;
+		 last_level = solver->level;
+	
+#ifdef _DEBUG_LC
+		 if(_DEBUG_LC) {
+			 std::cout << std::endl;
+		 }
+#endif
+		
+	 }
+
+
+   virtual std::ostream& display(std::ostream& os) {
+     os << "Conflict Ordered Search " << std::endl;
+     return os;
+   }
+ };
+
+
+ template < class VarSelector, class ValSelectorOption, class ValSelectorPrime, int K >
+ std::ostream& operator<<(std::ostream& os, LastConflict<VarSelector, ValSelectorOption, ValSelectorPrime, K>* x) {
    return x->display(os);
  }
 	
