@@ -11025,6 +11025,9 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
         heu = new GenericHeuristic < GenericDVO < MinDomain >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
       }
     }
+  } else if(var_ordering == "COS") {
+  	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue > (this);
+		
   }
 }
 
@@ -11332,6 +11335,10 @@ void Mistral::SolverCmdLine::initialise() {
   voallowed.push_back("MBAmindomain");
   voallowed.push_back("MBAmaxdegree");
 	voallowed.push_back("MBAimpact");
+	
+	
+	voallowed.push_back("COS");
+	voallowed.push_back("LC");
 
   vo_allowed = new TCLAP::ValuesConstraint<std::string>( voallowed );
   orderingArg = new TCLAP::ValueArg<std::string>("c","choice","variable selection",false,"dom/gwdeg",vo_allowed);

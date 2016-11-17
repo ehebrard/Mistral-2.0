@@ -39,6 +39,8 @@
 
 //#define _DEBUG_VARORD
 
+// #define _DEBUG_COS
+
 #define _ABS_VAL true
 //#define _DEBUG_ABS 2
 
@@ -1477,6 +1479,158 @@ namespace Mistral {
     return x->display(os);
   }
 	
+	
+	
+	
+ /**********************************************
+  * COS
+  **********************************************/
+ /*! \class ConflictOrderedSearch
+   \brief  Class ConflictOrderedSearch
+
+ */
+ template < class VarSelector, class ValSelectorOption, class ValSelectorPrime >
+ class ConflictOrderedSearch : public BranchingHeuristic, public BacktrackListener {
+ public:
+
+   VarSelector default_var;
+   ValSelectorPrime default_choice;
+	 ValSelectorOption choice;
+	 
+	 int *stamp;
+	 int last_level;
+	 int num_sol;
+
+   ConflictOrderedSearch(Solver *s) 
+     : BranchingHeuristic(s) {
+
+     default_var.initialise(s);
+     default_choice = ValSelectorOption(s,
+			default_var.get_value_weight(),default_var.get_bound_weight()
+				,default_var.get_weight_map()
+				);
+     choice = ValSelectorPrime(s, NULL, NULL, NULL);
+   }
+
+   virtual ~ConflictOrderedSearch() {
+   	
+		 delete [] stamp;
+		
+			solver->remove((BacktrackListener*)this);
+		
+   }
+
+
+   virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
+		 
+		 default_var.initialise(seq);
+	 
+		 stamp = new int[solver->variables.size];
+		 
+		 std::fill(stamp, stamp+solver->variables.size, 0);
+		 
+		solver->add((BacktrackListener*)this);
+		
+		last_level = solver->search_root;
+		
+		num_sol = solver->statistics.num_solutions;
+	 
+	 }
+
+   virtual Decision branch() {
+		 
+			Variable *variables = solver->sequence.list_;
+			unsigned int length = solver->sequence.size-1;
+			Variable best = variables[length];
+			int conflict_stamp = stamp[best.id()];
+			
+#ifdef _DEBUG_COS
+				if(conflict_stamp == solver->statistics.num_failures)
+					std::cout << " *** ";
+#endif
+			
+			for(int j=length; j-- && conflict_stamp != solver->statistics.num_failures;)
+			{  
+				if(stamp[variables[j].id()] > conflict_stamp) {
+					best = variables[j];
+					conflict_stamp = stamp[best.id()];
+				}
+				
+#ifdef _DEBUG_COS
+				if(conflict_stamp == solver->statistics.num_failures)
+					std::cout << " *** ";
+#endif
+				
+			}
+			
+			if(conflict_stamp>0) {
+			
+#ifdef _DEBUG_COS
+		std::cout << " branch on " << best << " because stamp[" << best << "] = " << conflict_stamp << "/" << solver->statistics.num_failures << std::endl; ;
+#endif
+		
+		// Decision d =
+				
+			// std::cout << d << std::endl;
+				
+				return choice.make(best);
+			}
+			
+#ifdef _DEBUG_COS
+		std::cout << " default branching " << std::endl; ;
+#endif
+			
+     return default_choice.make(default_var.select());
+   }
+
+	virtual void notify_backtrack() {
+	
+		Variable decision_variable;
+		
+#ifdef _DEBUG_COS
+		std::cout << " backtrack from level " << solver->level ;
+#endif
+					
+		if(solver->level >= last_level || num_sol < solver->statistics.num_solutions) {
+			
+#ifdef _DEBUG_COS
+			std::cout << " (left branch)";
+#endif			
+			// backtrack from left branch
+			decision_variable = solver->decisions.back().var;
+		} else {
+			
+#ifdef _DEBUG_COS
+			std::cout << " (right branch)";
+#endif
+						
+			// backtrack from left branch
+			decision_variable = solver->decisions.back(0).var;
+		}
+		
+		num_sol = solver->statistics.num_solutions;
+		last_level = solver->level;
+	
+		stamp[decision_variable.id()] = solver->statistics.num_failures;
+		
+#ifdef _DEBUG_COS
+		std::cout << " stamp[" << decision_variable << "] = " << stamp[decision_variable.id()] << std::endl;
+#endif
+		
+	}
+
+
+   virtual std::ostream& display(std::ostream& os) {
+     os << "Conflict Ordered Search " << std::endl;
+     return os;
+   }
+ };
+
+
+ template < class VarSelector, class ValSelectorOption, class ValSelectorPrime >
+ std::ostream& operator<<(std::ostream& os, ConflictOrderedSearch<VarSelector, ValSelectorOption, ValSelectorPrime>* x) {
+   return x->display(os);
+ }
 	
 	
 	
