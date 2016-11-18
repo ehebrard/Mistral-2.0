@@ -49,7 +49,8 @@
 //#define _DEBUG_PREDBOOLSUM (get_solver()->statistics.num_nodes == 1072 && id == 154)
 //#define _DEBUG_ELEMENT (get_solver()->statistics.num_propagations == 143511 && id == 680)
 //#define _DEBUG_SQ true
-//et#define _DEBUG_ADD (id == 6425)
+//#define _DEBUG_ADD (id == 6425)
+
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -2496,6 +2497,9 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::rewrite() {
 
 Mistral::PropagationOutcome Mistral::PredicateEqual::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+	
+	
 
   if( scope[2].is_ground() ) {
     if( (spin + scope[2].get_min()) == 1 ) {
@@ -2522,45 +2526,61 @@ Mistral::PropagationOutcome Mistral::PredicateEqual::propagate() {
   return wiped;
 }
 
+//#define _DEBUG_PEQ (id==64)
 
 Mistral::PropagationOutcome Mistral::PredicateEqual::propagate(const int changed_idx, const Event evt) {      
-  Mistral::PropagationOutcome wiped = CONSISTENT;
-
-  if( changed_idx == 2 ) {
-    if( LB_CHANGED(evt) == spin ) {
-      // x[0] == x[1]
-      if( FAILED(scope[0].set_domain(scope[1])) ) wiped = FAILURE(0);
-      else if( FAILED(scope[1].set_domain(scope[0])) ) wiped = FAILURE(1);
-    } else {
-      // x[0] != x[1]
-      if(scope[0].is_ground() && FAILED(scope[1].remove(scope[0].get_min()))) wiped = FAILURE(1);
-      else if(scope[1].is_ground() && FAILED(scope[0].remove(scope[1].get_min()))) wiped = FAILURE(0);
-    }
-  } else {
-    if( scope[2].is_ground() ) {
-
-      // std::cout << "HERE: " << spin << " " <<  scope[2].get_min() << " " << scope[changed_idx].get_domain() << std::endl;
-
-      if( (spin != scope[2].get_min()) ) {
-	if(scope[changed_idx].is_ground() && FAILED(scope[1-changed_idx].remove(scope[changed_idx].get_min()))) 
-	  wiped = FAILURE(1-changed_idx);
-      } else {
-	if( FAILED(scope[1-changed_idx].set_domain(scope[changed_idx])) ) 
-	  wiped = FAILURE(1-changed_idx);
-      }
-    } else {
-      // check if (in)equality can be deduced
-      if( !(scope[0].intersect(scope[1])) ) {
-	if( FAILED(scope[2].remove(spin)) ) wiped = FAILURE(2);	    
-      } else { 
-	if( scope[0].is_ground() && scope[1].is_ground() ) {
-	  if( FAILED(scope[2].set_domain(spin) )) wiped = FAILURE(2);
+	Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+#ifdef _DEBUG_PEQ
+	if(_DEBUG_PEQ) {
+		std::cout << scope[2] << scope[2].get_domain() << " <=> (";
+		if(spin) std::cout << scope[0] << scope[0].get_domain() << " == " << scope[1] << scope[1].get_domain();
+		else std::cout << scope[0] << scope[0].get_domain() << " =/= " << scope[1] << scope[1].get_domain();
+		std::cout << ") -> change on " << scope[changed_idx] << " (" << event2str(evt) << ")\n";
 	}
-      }
-    }
-  }
+#endif
+	
+	if( changed_idx == 2 ) {
+		if( LB_CHANGED(evt) == spin ) {
+			// x[0] == x[1]
+			if( FAILED(scope[0].set_domain(scope[1])) ) wiped = FAILURE(0);
+			else if( FAILED(scope[1].set_domain(scope[0])) ) wiped = FAILURE(1);
+		} else {
+			// x[0] != x[1]
+			if(scope[0].is_ground() && FAILED(scope[1].remove(scope[0].get_min()))) wiped = FAILURE(1);
+			else if(scope[1].is_ground() && FAILED(scope[0].remove(scope[1].get_min()))) wiped = FAILURE(0);
+		}
+	} else {
+		if( scope[2].is_ground() ) {
+			if( (spin != scope[2].get_min()) ) {
+				if(scope[changed_idx].is_ground() && FAILED(scope[1-changed_idx].remove(scope[changed_idx].get_min()))) 
+					wiped = FAILURE(1-changed_idx);
+			} else {
+				if( FAILED(scope[1-changed_idx].set_domain(scope[changed_idx])) ) 
+					wiped = FAILURE(1-changed_idx);
+			}
+		} else {
+			// check if (in)equality can be deduced
+			if( !(scope[0].intersect(scope[1])) ) {
+				if( FAILED(scope[2].remove(spin)) ) wiped = FAILURE(2);	    
+			} else { 
+				if( scope[0].is_ground() && scope[1].is_ground() ) {
+					if( FAILED(scope[2].set_domain(spin) )) wiped = FAILURE(2);
+				}
+			}
+		}
+	}
+	
+#ifdef _DEBUG_PEQ
+	if(_DEBUG_PEQ) {
+		std::cout << scope[2] << scope[2].get_domain() << " <=> (";
+		if(spin) std::cout << scope[0] << scope[0].get_domain() << " == " << scope[1] << scope[1].get_domain();
+		else std::cout << scope[0] << scope[0].get_domain() << " =/= " << scope[1] << scope[1].get_domain();
+		std::cout << ")\n\n";
+	}
+#endif
   
-  return wiped;
+	return wiped;
 }
 
 std::ostream& Mistral::PredicateEqual::display(std::ostream& os) const {
@@ -2583,8 +2603,20 @@ void Mistral::PredicateConstantEqual::mark_domain() {
   //get_solver()->mark_non_convex(scope[0].id());
 }
 
+// #define _DEBUG_PCEQ (id==64)
+
 Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+	
+#ifdef _DEBUG_PCEQ
+	if(_DEBUG_PCEQ) {
+		std::cout << scope[1] << ":" << scope[1].get_domain() << " <=> (";
+		if(spin) std::cout << scope[0] << ":" << scope[0].get_domain() << " == " << value;
+		else std::cout << scope[0] << ":" << scope[0].get_domain() << " =/= " << value;
+		std::cout << ") init propag\n";
+	}
+#endif
 
   if( scope[1].is_ground() ) {
     if( (spin + scope[1].get_min()) == 1 ) {
@@ -2599,26 +2631,71 @@ Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate() {
       if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
+	
+#ifdef _DEBUG_PCEQ
+	if(_DEBUG_PCEQ) {
+		std::cout << scope[1] << ":" << scope[1].get_domain() << " <=> (";
+		if(spin) std::cout << scope[0] << ":" << scope[0].get_domain() << " == " << value;
+		else std::cout << scope[0] << ":" << scope[0].get_domain() << " =/= " << value;
+		std::cout << ")\n\n";
+	}
+#endif
   
   return wiped;
 }
 
 Mistral::PropagationOutcome Mistral::PredicateConstantEqual::propagate(const int changed_idx, const Event evt) {
   Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+#ifdef _DEBUG_PCEQ
+	if(_DEBUG_PCEQ) {
+		std::cout << scope[1] << ":" << scope[1].get_domain() << " <=> (";
+		if(spin) std::cout << scope[0] << ":" << scope[0].get_domain() << " == " << value;
+		else std::cout << scope[0] << ":" << scope[0].get_domain() << " =/= " << value;
+		std::cout << ") -> change on " << scope[changed_idx] << " (" << event2str(evt) << ")\n";
+	}
+#endif
 
   if( changed_idx ) {
+		
+#ifdef _DEBUG_PCEQ
+	if(_DEBUG_PCEQ) {
+		std::cout << spin << " " << (LB_CHANGED(evt)) << std::endl;
+	}
+#endif
+		
     if( (spin + LB_CHANGED(evt)) == 1 ) {
       if( FAILED(scope[0].remove(value)) ) wiped = FAILURE(0);
     } else {
       if( FAILED(scope[0].set_domain(value)) ) wiped = FAILURE(0);
     }
   } else {
+		
+#ifdef _DEBUG_PCEQ
+	if(_DEBUG_PCEQ) {
+		std::cout << spin << ", " << value << " in " << ":" << scope[0].get_domain() << ": "<< (LB_CHANGED(evt)) << std::endl;
+	}
+#endif
+		
     if( !(scope[0].contain(value)) ) {
       if( FAILED(scope[1].remove(spin)) ) wiped = FAILURE(1);	    
     } else if( scope[0].is_ground() ) {
       if( FAILED(scope[1].set_domain(spin)) ) wiped = FAILURE(1);
     }
   }
+	
+#ifdef _DEBUG_PCEQ
+	if(_DEBUG_PCEQ) {
+		if(IS_OK(wiped)) {
+			std::cout << scope[1] << ":" << scope[1].get_domain() << " <=> (";
+			if(spin) std::cout << scope[0] << ":" << scope[0].get_domain() << " == " << value;
+			else std::cout << scope[0] << ":" << scope[0].get_domain() << " =/= " << value;
+			std::cout << ")\n\n";
+		} else {
+			std::cout << "FAIL!" << std::endl;
+		}
+	}
+#endif
 
   return wiped;
 }

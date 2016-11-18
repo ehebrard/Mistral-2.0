@@ -52,6 +52,7 @@
 #define _CBSI_WC
 
 
+// #define _DEBUG_RELAX (id == 64 || id == 79)
 
 /*
 #define _PWS_WC_ALT
@@ -1992,7 +1993,7 @@ namespace Mistral {
     virtual void initialise();
     virtual bool rewritable() { return true; }
     virtual void mark_domain();
-    virtual int idempotent() { return 1;}
+    virtual int idempotent() { return 0;}
     virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateConstantEqual() {}
     //@}

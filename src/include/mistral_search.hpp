@@ -1651,7 +1651,7 @@ namespace Mistral {
    ValSelectorPrime default_choice;
 	 ValSelectorOption choice;
 	 
-	 Variable TestingSet[K];
+	 int TestingSet[K];
 	 int size; // of the TestingSet
 
 	 int candidate;
@@ -1709,7 +1709,7 @@ namespace Mistral {
 			 }
 #endif
 			 
-			 if(!TestingSet[i].is_ground()) {
+			 if(!solver->variables[TestingSet[i]].is_ground()) {
 				 
 #ifdef _DEBUG_LC
 				 if(_DEBUG_LC) {
@@ -1717,7 +1717,7 @@ namespace Mistral {
 				 }
 #endif		 
 				 
-				 return choice.make(TestingSet[i]);
+				 return choice.make(solver->variables[TestingSet[i]]);
 			 }
 		 }
 		 
@@ -1733,12 +1733,12 @@ namespace Mistral {
 			 				 
 			 assert(size<K);
 				 
-			 TestingSet[size] = solver->variables[candidate];
+			 TestingSet[size] = candidate;
 			 // for(int i=size-1; i-->1;) {
 			 // 					 TestingSet[i] = TestingSet[i-1];
 			 // }
 			 // TestingSet[0] = solver->variables[candidate];
-			 d = choice.make(TestingSet[size]);
+			 d = choice.make(solver->variables[TestingSet[size]]);
 			 ++size;
 				 
 				 
@@ -1808,7 +1808,7 @@ namespace Mistral {
 					
 				 int i;
 				 for(i=0; i<size; ++i) {
-					 if(TestingSet[i].id() == decision_variable.id()) break;
+					 if(TestingSet[i] == decision_variable.id()) break;
 				 }
 				 if(i==size) {
 					 candidate = decision_variable.id();
