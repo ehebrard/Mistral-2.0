@@ -11071,6 +11071,8 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
     }
   } else if(var_ordering == "COS") {
   	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue > (this);
+  }  else if(var_ordering == "ECOS") {
+  	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue > (this);
   } else if(var_ordering == "LC") {
   	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue, 1 > (this);
 		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
@@ -11387,6 +11389,7 @@ void Mistral::SolverCmdLine::initialise() {
 	
 	
 	voallowed.push_back("COS");
+	voallowed.push_back("ECOS");
 	voallowed.push_back("LC");
 	voallowed.push_back("ELC");
 
