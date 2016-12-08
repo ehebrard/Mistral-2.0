@@ -153,6 +153,8 @@ namespace Mistral {
   //#define _DEBUG_AMSC  ((id==2912))
   //#define _DEBUG_AC true //((statistics.num_filterings >= 177))
 
+  //gwdeg with active constraints only
+  #define _ONLY_ACTIVE true
   
 #define NORESTART 0
 #define GEOMETRIC 1

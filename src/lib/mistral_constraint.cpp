@@ -1389,7 +1389,13 @@ void Mistral::GlobalConstraint::initialise() {
   std::cout << "[" << std::setw(4) << id << "]: initialise (global)" << std::endl;
 #endif
 
-
+#ifdef _ONLY_ACTIVE
+  if (conflict_is_explained())
+  {
+	  //std::cout << " CONFLICT EXPLAINED! " << std::endl;
+	  weight_contributed.initialise(scope.size, scope.size, 0.0);
+  }
+#endif
 
   event_type = new Event[on.size];
   // self = new int[scope.size];
@@ -9079,6 +9085,16 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 					/ arity
 #endif
 						;
+
+#ifdef _ONLY_ACTIVE
+				weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+					/ arity
+#endif
+						;
+#endif
+
+
 				if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 				std::cout << " >> weight " << scope[i] << std::endl;
@@ -9100,6 +9116,15 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 					/ arity
 #endif
 						;
+
+#ifdef _ONLY_ACTIVE
+				weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+					/ arity
+#endif
+						;
+#endif
+
 				if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 				std::cout << " >> weight " << scope[i] << std::endl;
@@ -9736,6 +9761,15 @@ double Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& w
 	  / arity
 #endif
 ;
+
+#ifdef _ONLY_ACTIVE
+      weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+			/ arity
+#endif
+				;
+#endif
+
 			
 			if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
@@ -9751,6 +9785,16 @@ double Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& w
 	  / arity
 #endif
 ;
+
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+		/ arity
+#endif
+			;
+
+#endif
+
 	if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >> weight " << scope[i] << std::endl;
@@ -9772,6 +9816,14 @@ double Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& w
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+		weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+			/ arity
+#endif
+				;
+#endif
+
 			if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
       std::cout << " >> weight " << scope[i] << std::endl;
@@ -9786,6 +9838,13 @@ double Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& w
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+		/ arity
+#endif
+			;
+#endif
 	if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >> weight " << scope[i] << std::endl;
@@ -10178,14 +10237,24 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
       if(idx>=0 && scope[i].get_min() > scope[i].get_initial_min()) {
 	weights[idx] += unit
 #ifdef _DIV_WEIGHT
-	  * (double)(weight[i])/(double)(wmax) 
-#ifdef _DIV_ARITY
+	  * (double)(weight[i])/(double)(wmax)
+#elif _DIV_ARITY
 	  / arity
 #endif
-			if(the_max < weights[idx]) the_max = weights[idx];
-	  )
+	  ;
+
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_WEIGHT
+	  * (double)(weight[i])/(double)(wmax)
+#elif _DIV_ARITY
+	  / arity
 #endif
-	;
+	  ;
+#endif
+
+			if(the_max < weights[idx]) the_max = weights[idx];
+
  
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >> weight " << scope[i] << std::endl;
@@ -10195,16 +10264,22 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
     for(i=wneg; i<arity; ++i) {
       idx = scope[i].id();
       if(idx>=0 && scope[i].get_max() < scope[i].get_initial_max()) {	
-	weights[idx] += unit
+    	  double __w =unit
 #ifdef _DIV_WEIGHT
 	  * (double)(-weight[i])/(double)(wmax)
-#ifdef _DIV_ARITY
+#elif _DIV_ARITY
 	  / arity
 #endif
-			if(the_max < weights[idx]) the_max = weights[idx];
-	  )
-#endif
 ;
+
+	weights[idx] += __w;
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= __w;
+#endif
+
+	  if(the_max < weights[idx]) the_max = weights[idx];
+
+
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >> weight " << scope[i] << std::endl;
 #endif
@@ -10224,16 +10299,19 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
     for(i=0; i<wneg; ++i) {
       idx = scope[i].id();
       if(idx>=0 && scope[i].get_max() < scope[i].get_initial_max()) {
-	weights[idx] += unit
+		double __w=unit
 #ifdef _DIV_WEIGHT
 	  * (double)(weight[i])/(double)(wmax)
-#ifdef _DIV_ARITY
-	  arity
-#endif
-			if(the_max < weights[idx]) the_max = weights[idx];
-	  )
+#elif _DIV_ARITY
+	/  arity
 #endif
 	;
+    	  weights[idx] += __w ;
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= __w;
+#endif
+			if(the_max < weights[idx]) the_max = weights[idx];
+
 
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >> weight " << scope[i] << std::endl;
@@ -10249,16 +10327,20 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
     for(i=wneg; i<arity; ++i) {
       idx = scope[i].id();
       if(idx>=0 && scope[i].get_min() > scope[i].get_initial_min()) {
-	weights[idx] += unit 
+    	  double __w=  unit
 #ifdef _DIV_WEIGHT
 	  * (double)(-weight[i])/(double)(wmax)
-#ifdef _DIV_ARITY
+#elif _DIV_ARITY
 	  / arity
 #endif
-			if(the_max < weights[idx]) the_max = weights[idx];
-	  )
+	  ;
+    	  weights[idx] += __w ;
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= __w;
 #endif
-	;
+			if(the_max < weights[idx]) the_max = weights[idx];
+
+
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >> weight " << scope[i] << std::endl;
 #endif
@@ -10280,6 +10362,14 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+  	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
+
 			if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
       std::cout << " >+ weight " << scope[i] << std::endl;
@@ -10319,6 +10409,9 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
     idx = scope[i].id();
     if(idx>=0) {
       weights[idx] += unit/(double)(scope.size);
+#ifdef _ONLY_ACTIVE
+    	weight_contributed[i]+= unit/(double)(scope.size);
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -10326,6 +10419,9 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
     idx = scope[i].id();
     if(idx>=0) {
       weights[idx] += unit*((double)(weight[i]))/((double)(scope.size));
+#ifdef _ONLY_ACTIVE
+  	weight_contributed[i]+= unit*((double)(weight[i]))/((double)(scope.size));
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -10333,6 +10429,9 @@ double Mistral::PredicateWeightedSum::weight_conflict(double unit, Vector<double
     idx = scope[i].id();
     if(idx>=0) {
       weights[idx] += unit*((double)(-weight[i]))/((double)(scope.size));
+#ifdef _ONLY_ACTIVE
+      weight_contributed[i]+= unit*((double)(-weight[i]))/((double)(scope.size));
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -11107,6 +11206,14 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
 	  / arity
 #endif
 ; // * (double)(weight[i])/(double)(wmax);
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
+
 	if(the_max < weights[idx]) the_max = weights[idx];
       }
     }
@@ -11121,6 +11228,14 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
 	  / arity
 #endif
 ; // * (double)(-weight[i])/(double)(wmax);
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
+
 	if(the_max < weights[idx]) the_max = weights[idx];
       }
     }
@@ -11144,6 +11259,14 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
 	  / arity
 #endif
 ; // * (double)(weight[i])/(double)(wmax);
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
+
 	if(the_max < weights[idx]) the_max = weights[idx];
       }
     }
@@ -11158,6 +11281,13 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
 	  / arity
 #endif
 ; // * (double)(-weight[i])/(double)(wmax);
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
 	if(the_max < weights[idx]) the_max = weights[idx];
       }
     }
@@ -11175,6 +11305,13 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+	weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
 	if(the_max < weights[idx]) the_max = weights[idx];
       }
     }
@@ -11190,6 +11327,13 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+		weight_contributed[i]+= unit
+	#ifdef _DIV_ARITY
+		  / arity
+	#endif
+	;
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
 	}
       }
@@ -11211,6 +11355,9 @@ double  Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit,
     idx = scope[i].id();
     if(idx>=0) {
 			weights[idx] += unit/(double)(scope.size);
+#ifdef _ONLY_ACTIVE
+			weight_contributed[i]+= unit/(double)(scope.size);
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -11218,6 +11365,9 @@ double  Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit,
     idx = scope[i].id();
     if(idx>=0) {
 			weights[idx] += unit*((double)(weight[i]))/((double)(scope.size));
+#ifdef _ONLY_ACTIVE
+			weight_contributed[i]+=  unit*((double)(weight[i]))/((double)(scope.size));
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -11225,6 +11375,9 @@ double  Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit,
     idx = scope[i].id();
     if(idx>=0) {
 			weights[idx] += unit*((double)(-weight[i]))/((double)(scope.size));
+#ifdef _ONLY_ACTIVE
+			weight_contributed[i]+=  unit*((double)(-weight[i]))/((double)(scope.size));
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -12115,6 +12268,9 @@ double Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(do
     idx = scope[i].id();
     if(idx>=0) {
 			weights[idx] += unit * ((double)(weight[i]>0 ? weight[i] : -weight[i])) / ((double)arity);
+#ifdef _ONLY_ACTIVE
+			weight_contributed[i]+= unit * ((double)(weight[i]>0 ? weight[i] : -weight[i])) / ((double)arity);
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
@@ -12162,6 +12318,14 @@ double Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(do
 	  / arity
 #endif
 ; // * (double)(weight[i])/(double)(wmax);
+#ifdef _ONLY_ACTIVE
+	  weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
+
 		if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	  std::cout << " >> weight " << scope[i] << std::endl;
@@ -12188,6 +12352,13 @@ double Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(do
 	  / arity
 #endif
 ; // * (double)(weight[i])/(double)(wmax);
+#ifdef _ONLY_ACTIVE
+	  weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	  std::cout << " >> weight " << scope[i] << std::endl;
@@ -12203,12 +12374,21 @@ double Mistral::ConstraintIncrementalWeightedBoolSumInterval::weight_conflict(do
 	std::cout << " >+ weight " << scope[i] << std::endl;
 #endif
 	idx = scope[i].id();
-	if(idx>=0) weights[idx] += unit
+	if(idx>=0) {
+		weights[idx] += unit
 #ifdef _DIV_ARITY
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+	  weight_contributed[i]+= unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
 	if(the_max < weights[idx]) the_max = weights[idx];
+      }
       }
   }
 		
@@ -13082,12 +13262,18 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
     idx = scope[i].id();
     if(idx>=0) {
 			weights[idx] += unit * ((double)(weight[i]>0 ? weight[i] : -weight[i])) / ((double)arity);
+#ifdef _ONLY_ACTIVE
+			  weight_contributed[i]+= unit * ((double)(weight[i]>0 ? weight[i] : -weight[i])) / ((double)arity);
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
   }
   idx = scope[arity].id();
   if(idx>=0) {
 		weights[idx] += unit / ((double)arity);
+#ifdef _ONLY_ACTIVE
+		  weight_contributed[i]+=unit / ((double)arity);
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
 	}
 	
@@ -13128,13 +13314,21 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
     //  - or variables with negative weights and whose upper bound has been pruned
 
     idx = scope[arity].id();
-    if(idx>=0 && (scope[arity].get_max() < scope[arity].get_initial_max()))
+    if(idx>=0 && (scope[arity].get_max() < scope[arity].get_initial_max())){
       weights[idx] += unit  
 #ifdef _DIV_ARITY
 	/ arity
 #endif
 	;
+#ifdef _ONLY_ACTIVE
+      weight_contributed[i] += unit
+#ifdef _DIV_ARITY
+	/ arity
+#endif
+	;
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
+  }
     for(i=0; i<arity; ++i) {
       idx = scope[i].id();
       if(idx>=0) {
@@ -13145,6 +13339,14 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
 	  / arity
 #endif
 ; // * (double)(weight[i])/(double)(arity);
+#ifdef _ONLY_ACTIVE
+	  weight_contributed[i] += unit
+#ifdef _DIV_ARITY
+	  / arity
+#endif
+;
+#endif
+
 		if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	  std::cout << " >> weight " << scope[i] << std::endl;
@@ -13163,12 +13365,22 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
     //  - or variables with positive weights and whose upper bound has been pruned
     idx = scope[arity].id();
 
-    if(idx>=0 && (scope[arity].get_min() > scope[arity].get_initial_min()))
+    if(idx>=0 && (scope[arity].get_min() > scope[arity].get_initial_min())){
       weights[idx] += unit 
 #ifdef _DIV_ARITY
 	/ arity
 #endif
 	;
+#ifdef _ONLY_ACTIVE
+      weight_contributed[i] +=unit
+#ifdef _DIV_ARITY
+	/ arity
+#endif
+	;
+#endif
+   //I added a test on the_max here
+      if(the_max < weights[idx]) the_max = weights[idx];
+  }
     for(i=0; i<arity; ++i) {
       idx = scope[i].id();
       if(idx>=0) {
@@ -13179,6 +13391,13 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
 	  / arity
 #endif
 ; // * (double)(weight[i])/(double)(arity);
+#ifdef _ONLY_ACTIVE
+	  weight_contributed[i] +=unit
+#ifdef _DIV_ARITY
+	 	/ arity
+#endif
+	 	;
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	  std::cout << " >> weight " << scope[i] << std::endl;
@@ -13197,6 +13416,14 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
 	  / arity
 #endif
 ;
+#ifdef _ONLY_ACTIVE
+	 weight_contributed[i] +=unit
+	#ifdef _DIV_ARITY
+		/ arity
+	#endif
+		;
+#endif
+
 	if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
 	std::cout << " >+ weight " << scope[i] << std::endl;
@@ -13976,11 +14203,17 @@ double Mistral::PredicateElement::weight_conflict(double unit, Vector<double>& w
   idx = scope[n].id();
   if(idx>=0) {
 		weights[idx] += w;
+#ifdef _ONLY_ACTIVE
+		weight_contributed[n] += w;
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
 	}
   idx = scope[n+1].id();
   if(idx>=0) {
 		weights[idx] += w;
+#ifdef _ONLY_ACTIVE
+		weight_contributed[n+1] += w;
+#endif
 		if(the_max < weights[idx]) the_max = weights[idx];
 	}
   
@@ -13993,6 +14226,9 @@ double Mistral::PredicateElement::weight_conflict(double unit, Vector<double>& w
     idx = scope[vali-offset].id();
     if(idx>=0) {
 			weights[idx] += w;
+#ifdef _ONLY_ACTIVE
+			weight_contributed[vali-offset] += w;
+#endif
 			if(the_max < weights[idx]) the_max = weights[idx];
 		}
 
@@ -14235,7 +14471,24 @@ double Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit, Vector<do
 	    / 2.0
 #endif
 ;
-	
+
+#ifdef _ONLY_ACTIVE
+  int id__1 = get_solver()->prev_wiped_idx;
+  int id__2 = culprit;
+
+  weight_contributed[id__1] +=unit
+#ifdef _DIV_ARITY
+	    / 2.0
+#endif
+;
+  weight_contributed[id__2] +=unit
+#ifdef _DIV_ARITY
+	    / 2.0
+#endif
+;
+
+#endif
+
 	if(weights[idx1] > weights[idx2]) return weights[idx1];
 	return weights[idx2];
   
@@ -15926,6 +16179,9 @@ double Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& 
 				idx = scope[i].id();
 				if(idx>=0) {
 					weights[idx] += w;
+#ifdef _ONLY_ACTIVE
+					weight_contributed[i] += w;
+#endif
 					if(the_max < weights[idx]) the_max = weights[idx];
 				}
 			}
@@ -15950,6 +16206,9 @@ double Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& 
 				idx = scope[i].id();
 				if(idx>=0) {
 					weights[idx] += w;
+#ifdef _ONLY_ACTIVE
+					weight_contributed[i] +=w;
+#endif
 					if(the_max < weights[idx]) the_max = weights[idx];
 				}
 			}

@@ -328,7 +328,7 @@ namespace Mistral {
 
 
 
-	/*! \class FailureCountanager
+	/*! \class FailureCountanager (wdeg)
 	\brief FailureCountManager Class
 
 	* Listener interface for weighted degree *
@@ -545,14 +545,18 @@ namespace Mistral {
 
 
 
-  /*! \class ConflictCountManager
+  /*! \class ConflictCountManager (ewdeg)
     \brief ConflictCountManager Class
 
     * Listener interface for a kind of weighted degree *
     * Failed constraints weight variables with an aribtrary policy *
   */
   //template< float DECAY > 
-	class ConflictCountManager : public BacktrackListener, public WeightMap {
+#ifdef	_ONLY_ACTIVE
+	class ConflictCountManager : public BacktrackListener, public ConstraintListener, public WeightMap {
+#else
+		class ConflictCountManager : public BacktrackListener, public WeightMap {
+#endif
 
 	public:
 
@@ -562,7 +566,10 @@ namespace Mistral {
 
 
 		/*\ TODO: make it a variable listener \*/
-		//Vector<double> constraint_weight;
+
+#ifdef _ONLY_ACTIVE
+		Vector<double> constraint_weight;
+#endif
 		Vector<double> variable_weight;
 
 		//ConflictCountManager(Solver *s, void *a=NULL) : solver(s) {// }
@@ -583,6 +590,9 @@ namespace Mistral {
 			Variable *scope;
 			int arity, j;
 			for(unsigned int i=0; i<solver->constraints.size; ++i) {
+#ifdef _ONLY_ACTIVE
+				constraint_weight.add(weight_unit);
+#endif
 				arity = solver->constraints[i].arity();
 				scope = solver->constraints[i].get_scope();
 				for(j=0; j<arity; ++j) if(!scope[j].is_ground()) {
@@ -608,6 +618,12 @@ namespace Mistral {
 			int i;
 			Constraint con = solver->culprit;
 
+#ifdef _ONLY_ACTIVE
+			if(!con.empty() ){
+				constraint_weight[con.id()] += weight_unit;
+			}
+#endif
+
 			double max_weight = con.weight_conflict(weight_unit, variable_weight);
 			
 			
@@ -627,6 +643,68 @@ namespace Mistral {
 				weight_unit /= solver->parameters.activity_decay;
 
 		}
+
+
+#ifdef _ONLY_ACTIVE
+
+
+		virtual void notify_post(Constraint con) {
+			int i = con.num_active(), idx;
+
+			bool ewdeg_used =  con.global() && ((GlobalConstraint*) con.propagator)->conflict_is_explained();
+
+			if (!ewdeg_used){
+			Variable *scope = con.get_scope();
+			while(i--) {
+				idx = scope[con.get_active(i)].id();
+				if(idx>=0) variable_weight[idx] += constraint_weight[con.id()];
+			}
+			}
+			else
+			{
+				//std::cout << " c Conflict explained " << std::endl ;
+				Variable *scope = con.get_scope();
+				while(i--) {
+					idx = scope[con.get_active(i)].id();
+					if(idx>=0) variable_weight[idx] += ((GlobalConstraint*) con.propagator)->weight_contribution(con.get_active(i) );
+				}
+			}
+		}
+
+		virtual void notify_relax(Constraint con) {
+			int i = con.num_active(), idx;
+			Variable *scope = con.get_scope();
+			bool ewdeg_used =  con.global() && ((GlobalConstraint*) con.propagator)->conflict_is_explained();
+
+			if (!ewdeg_used){
+
+			while(i--) {
+				idx = scope[con.get_active(i)].id();
+				if(idx>=0) variable_weight[idx] -= constraint_weight[con.id()];
+			}
+			}
+			else
+			{
+				//std::cout << " c Conflict explained " << std::endl ;
+
+				while(i--) {
+					idx = scope[con.get_active(i)].id();
+					if(idx>=0) variable_weight[idx] -= ((GlobalConstraint*) con.propagator)->weight_contribution(con.get_active(i) );
+				}
+			}
+		}
+
+		//Do we actually need that? Isn't the initialisation enough??
+		virtual void notify_add_con(Constraint con) {
+			while(constraint_weight.size < solver->constraints.size) {
+				constraint_weight.add(weight_unit);
+			}
+
+			while(variable_weight.size < solver->variables.size) {
+				variable_weight.add(weight_unit*solver->variables[variable_weight.size].get_degree());
+			}
+		}
+#endif
 
 		virtual std::ostream& display(std::ostream& os, const bool all) const ;
 		// {

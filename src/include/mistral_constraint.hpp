@@ -42,6 +42,7 @@
 #define _CNE_WC
 
 
+
 //#define _DIV_WEIGHT
 
 #define _PWBS_WC
@@ -1798,7 +1799,13 @@ namespace Mistral {
 			return the_max;
 		}
 
-
+		// returns true iff the constraint explains the conflict. That is, weight_conflict is overwritten
+		virtual bool conflict_is_explained() {return false;}
+#ifdef _ONLY_ACTIVE
+		//How mush did the constraint contributed to the weight of the variable
+	    Vector<double> weight_contributed;
+	    double weight_contribution(int idx){return weight_contributed[idx];}
+#endif
 		std::ostream& display(std::ostream& os) const;  
 	};
 
@@ -4068,6 +4075,7 @@ namespace Mistral {
     virtual ~ConstraintBoolSumInterval();
 #ifdef _CBSI_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     //@}
 
@@ -4150,9 +4158,11 @@ namespace Mistral {
     virtual ~ConstraintWeightedBoolSumInterval();
 #ifdef _CWBSI_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _CWBSI_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 
     //@}
@@ -4236,9 +4246,11 @@ namespace Mistral {
 
 #ifdef _CIWBSI_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _CIWBSI_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
     virtual void initialise_activity(double *lact, double *vact, double norm);
@@ -4316,9 +4328,11 @@ namespace Mistral {
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 #ifdef _PWBS_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _PWBS_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 
     /**@name Solving*/
@@ -4378,6 +4392,7 @@ namespace Mistral {
 
 #ifdef _PBS_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
@@ -4449,9 +4464,11 @@ namespace Mistral {
     virtual void mark_domain();
 #ifdef _PWS_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _PWS_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 //@}
 
@@ -4861,6 +4878,7 @@ namespace Mistral {
     virtual void mark_domain();
 #ifdef _ELT_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     //@}
 
@@ -4968,6 +4986,7 @@ namespace Mistral {
     //@}
 #ifdef _CNE_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     //   std::cout << std::endl;
     //   for(int i=0; i<scope.size; ++i) {
@@ -5074,6 +5093,7 @@ namespace Mistral {
 
 #ifdef _ALLDIFF_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
   };
 
