@@ -13321,7 +13321,7 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
 #endif
 	;
 #ifdef _ONLY_ACTIVE
-      weight_contributed[i] += unit
+      weight_contributed[arity] += unit
 #ifdef _DIV_ARITY
 	/ arity
 #endif
@@ -13372,7 +13372,7 @@ double Mistral::PredicateWeightedBoolSum::weight_conflict(double unit, Vector<do
 #endif
 	;
 #ifdef _ONLY_ACTIVE
-      weight_contributed[i] +=unit
+      weight_contributed[arity] +=unit
 #ifdef _DIV_ARITY
 	/ arity
 #endif
