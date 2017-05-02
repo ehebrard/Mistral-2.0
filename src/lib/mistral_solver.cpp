@@ -3251,425 +3251,425 @@ bool Mistral::Solver::rewrite()
 
 
 Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c, 
-						       const bool force_trigger,
-						       const bool trigger_self) {
+const bool force_trigger,
+const bool trigger_self) {
 
-  // std::cout << "solver.cpp: specific propagate(" << c << ")" << std::endl;
+	// std::cout << "solver.cpp: specific propagate(" << c << ")" << std::endl;
 
-  // std::cout << active_variables << std::endl
-  // 	    << active_constraints << std::endl;
+	// std::cout << active_variables << std::endl
+	// 	    << active_constraints << std::endl;
 
-  int trig, cons;
-  bool fix_point;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
+	int trig, cons;
+	bool fix_point;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
 
-  //wiped_idx = CONSISTENT;
-  if(force_trigger) 
-    c.trigger();
+	//wiped_idx = CONSISTENT;
+	if(force_trigger) 
+		c.trigger();
   
-  fix_point = (active_variables.empty() && active_constraints.empty());
+	fix_point = (active_variables.empty() && active_constraints.empty());
 
-  // std::cout << IS_OK(wiped_idx) << " & " << fix_point << std::endl;
+	// std::cout << IS_OK(wiped_idx) << " & " << fix_point << std::endl;
 
-  // std::cout << active_variables << std::endl;
+	// std::cout << active_variables << std::endl;
 
-  // std::cout << active_constraints << std::endl;
+	// std::cout << active_constraints << std::endl;
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
 
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      var_evt = active_variables.pop_front();
+			var_evt = active_variables.pop_front();
 
-      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+			if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 
-	sequence.remove(variables[var_evt.first]);
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[var_evt.first] = level;
-	assignment_order[var_evt.first] = assignment_rank;
-	++assignment_rank;
-      }
+				sequence.remove(variables[var_evt.first]);
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[var_evt.first] = level;
+				assignment_order[var_evt.first] = assignment_rank;
+				++assignment_rank;
+			}
 
 
    
-      // std::cout << var_evt << " " 
-      // 		<< variables[var_evt.first] << " \n0 " 
-      // 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
-      // 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
-      // 		<< constraint_graph[var_evt.first].on[2] << "\n"
-      // 		<< c.propagator << std::endl;
+			// std::cout << var_evt << " " 
+			// 		<< variables[var_evt.first] << " \n0 " 
+			// 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
+			// 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
+			// 		<< constraint_graph[var_evt.first].on[2] << "\n"
+			// 		<< c.propagator << std::endl;
 
      
-      if(trigger_self || var_evt.third != c.propagator) {
+			if(trigger_self || var_evt.third != c.propagator) {
 
-	// for each triggered constraint
-	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	      trig<3; ++trig) {
+				// for each triggered constraint
+				for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+				trig<3; ++trig) {
 
-	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
-		--cons>=0;) {
+					for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+					--cons>=0;) {
 
-	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+						culprit = constraint_graph[var_evt.first].on[trig][cons];
 	    
-	    if( culprit == c ) {
+						if( culprit == c ) {
 
-	      // if the constraints asked to be pushed on the constraint stack we do that
-	      if(culprit.pushed()) {
-		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					   culprit.index(), var_evt.second);
-	      }
+							// if the constraints asked to be pushed on the constraint stack we do that
+							if(culprit.pushed()) {
+								active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+								culprit.index(), var_evt.second);
+							}
 
-	      // if the constraint is not postponed, we propagate it
-	      if(!culprit.postponed()) {
-		++statistics.num_propagations;  
-		taboo_constraint = culprit.freeze();
-		wiped_idx = culprit.propagate(var_evt.second); 
-		taboo_constraint = culprit.defrost();
-	      }
-	    } 
-	  }
+							// if the constraint is not postponed, we propagate it
+							if(!culprit.postponed()) {
+								++statistics.num_propagations;  
+								taboo_constraint = culprit.freeze();
+								wiped_idx = culprit.propagate(var_evt.second); 
+								taboo_constraint = culprit.defrost();
+							}
+						} 
+					}
+				}
+			}
+		}
+
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+			// propagate postponed constraint
+			++statistics.num_propagations;  
+			culprit = active_constraints.select(constraints);
+			taboo_constraint = culprit.freeze();
+			wiped_idx = culprit.propagate(); 
+			taboo_constraint = culprit.defrost();
+		} else if(active_variables.empty()) fix_point = true;
 	}
-      }
-    }
-
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
-      // propagate postponed constraint
-      ++statistics.num_propagations;  
-      culprit = active_constraints.select(constraints);
-      taboo_constraint = culprit.freeze();
-      wiped_idx = culprit.propagate(); 
-      taboo_constraint = culprit.defrost();
-    } else if(active_variables.empty()) fix_point = true;
-  }
     
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  active_variables.clear();
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	active_variables.clear();
 
-  // std::cout << wiped_idx << std::endl;
-  PropagationOutcome consistent = wiped_idx;
-  wiped_idx = CONSISTENT;
-  return consistent;
+	// std::cout << wiped_idx << std::endl;
+	PropagationOutcome consistent = wiped_idx;
+	wiped_idx = CONSISTENT;
+	return consistent;
 }
 
 Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c, 
-							       const bool force_trigger,
-							       const bool trigger_self) {
-  int trig, cons;
-  bool fix_point;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
+const bool force_trigger,
+const bool trigger_self) {
+	int trig, cons;
+	bool fix_point;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
 
 
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    std::cout << "c start (checker) propagation" << std::endl;
-  }
+	if(_DEBUG_AC) {
+		std::cout << "c start (checker) propagation" << std::endl;
+	}
 #endif
 
 
-  //wiped_idx = CONSISTENT;
-  if(force_trigger) 
-    c.trigger();
+	//wiped_idx = CONSISTENT;
+	if(force_trigger) 
+		c.trigger();
   
-  fix_point = (active_variables.empty() && active_constraints.empty());
+	fix_point = (active_variables.empty() && active_constraints.empty());
 
 
 #ifdef _DEBUG_AC
-  int iteration = 0;
-  if(_DEBUG_AC) {
-    std::cout << std::endl;
-  }
+	int iteration = 0;
+	if(_DEBUG_AC) {
+		std::cout << std::endl;
+	}
 #endif
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
 
 #ifdef _DEBUG_AC
-    if(_DEBUG_AC) {
-      std::cout << "c "; 
-      std::cout << "var stack: " << active_variables << std::endl;
-      ++iteration;
-    }
+		if(_DEBUG_AC) {
+			std::cout << "c "; 
+			std::cout << "var stack: " << active_variables << std::endl;
+			++iteration;
+		}
 #endif
 
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      var_evt = active_variables.pop_front();
+			var_evt = active_variables.pop_front();
 
 #ifdef _DEBUG_AC
-      if(_DEBUG_AC) {
-	std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	std::cout << "react to " << event2str(var_evt.second) << " on " << variables[var_evt.first] 
-		  << " in " << variables[var_evt.first].get_domain() ;
-	if(var_evt.third)
-	  std::cout << " because of " << var_evt.third ;
-	std::cout << ". var stack: " << active_variables << std::endl;
-      }
+			if(_DEBUG_AC) {
+				std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+				std::cout << "react to " << event2str(var_evt.second) << " on " << variables[var_evt.first] 
+					<< " in " << variables[var_evt.first].get_domain() ;
+				if(var_evt.third)
+					std::cout << " because of " << var_evt.third ;
+				std::cout << ". var stack: " << active_variables << std::endl;
+			}
 #endif 
 
-      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
-	sequence.remove(variables[var_evt.first]);
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[var_evt.first] = level;
-	assignment_order[var_evt.first] = assignment_rank;
-	++assignment_rank;
-      }
+			if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+				sequence.remove(variables[var_evt.first]);
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[var_evt.first] = level;
+				assignment_order[var_evt.first] = assignment_rank;
+				++assignment_rank;
+			}
      
-      //std::cout << var_evt.third << " <-> " << c.propagator << std::endl;
+			//std::cout << var_evt.third << " <-> " << c.propagator << std::endl;
 
-      if(trigger_self || var_evt.third != c.propagator) {
+			if(trigger_self || var_evt.third != c.propagator) {
 
-	// std::cout << "cons list of " << variables[var_evt.first] << " = " 
-	// 	  << constraint_graph[var_evt.first].on << std::endl;
+				// std::cout << "cons list of " << variables[var_evt.first] << " = " 
+				// 	  << constraint_graph[var_evt.first].on << std::endl;
 
-	// for each triggered constraint
-	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	      trig<3; ++trig) {
+				// for each triggered constraint
+				for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+				trig<3; ++trig) {
 
-	  //std::cout << " trig[" << trig << "] = " << constraint_graph[var_evt.first].on[trig] << std::endl;
+					//std::cout << " trig[" << trig << "] = " << constraint_graph[var_evt.first].on[trig] << std::endl;
 
-	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
-		--cons>=0;) {
+					for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+					--cons>=0;) {
 
-	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+						culprit = constraint_graph[var_evt.first].on[trig][cons];
 
 
-	    // if(ASSIGNED(var_evt.second)) {
-	    //   culprit.notify_assignment();
-	    // }
+						// if(ASSIGNED(var_evt.second)) {
+						//   culprit.notify_assignment();
+						// }
 
 
 #ifdef _DEBUG_AC
-	    if(_DEBUG_AC) {
-	      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	      std::cout << "  -awake " << culprit << ": "; 
-	      std::cout.flush();
-	    }
+						if(_DEBUG_AC) {
+							std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+							std::cout << "  -awake " << culprit << ": "; 
+							std::cout.flush();
+						}
 #endif
 
 	    
-	    if( culprit == c ) {
+						if( culprit == c ) {
 
-	      // if the constraint asks to be pushed on the constraint stack we do that
-	      if(culprit.pushed()) {
+							// if the constraint asks to be pushed on the constraint stack we do that
+							if(culprit.pushed()) {
 #ifdef _DEBUG_AC
-		if(_DEBUG_AC) {
-		  std::cout << "pushed on the stack" ;
-		}
+								if(_DEBUG_AC) {
+									std::cout << "pushed on the stack" ;
+								}
 #endif
-		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					   culprit.index(), var_evt.second);
-	      }
+								active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+								culprit.index(), var_evt.second);
+							}
 
-	      // if the constraint is not postponed, we propagate it
-	      if(!culprit.postponed()) {
+							// if the constraint is not postponed, we propagate it
+							if(!culprit.postponed()) {
 #ifdef _DEBUG_AC
-		if(_DEBUG_AC) {
-		  if(IS_OK(wiped_idx)) {
-		    Variable *scp = culprit.get_scope();
-		    int arity = culprit.arity();
-		    for(int i=0; i<arity; ++i)
-		      std::cout << scp[i].get_domain() << " ";
-		    std::cout << "ok";
-		  } else std::cout << "fail";
-		}
+								if(_DEBUG_AC) {
+									if(IS_OK(wiped_idx)) {
+										Variable *scp = culprit.get_scope();
+										int arity = culprit.arity();
+										for(int i=0; i<arity; ++i)
+											std::cout << scp[i].get_domain() << " ";
+										std::cout << "ok";
+									} else std::cout << "fail";
+								}
 #endif
-		++statistics.num_propagations;  
-		taboo_constraint = culprit.freeze();
+								++statistics.num_propagations;  
+								taboo_constraint = culprit.freeze();
 
-		//std::cout << "taboo: " << taboo_constraint << std::endl;
+								//std::cout << "taboo: " << taboo_constraint << std::endl;
 
-		wiped_idx = culprit.checker_propagate(var_evt.second); 
-		taboo_constraint = culprit.defrost();
-	      }
-	    }
+								wiped_idx = culprit.checker_propagate(var_evt.second); 
+								taboo_constraint = culprit.defrost();
+							}
+						}
 #ifdef _DEBUG_AC
-	    else {
-	      if(_DEBUG_AC) {
-		std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-		std::cout << "  -does not propagate " << culprit << " (we propagate " << c << ")" ;
-	      }
-	    }
-	    if(_DEBUG_AC) {
-	      std::cout << std::endl; 
-	    }
+						else {
+							if(_DEBUG_AC) {
+								std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+								std::cout << "  -does not propagate " << culprit << " (we propagate " << c << ")" ;
+							}
+						}
+						if(_DEBUG_AC) {
+							std::cout << std::endl; 
+						}
 #endif    
 
-	  }
-	}
-      }
+					}
+				}
+			}
 #ifdef _DEBUG_AC
-      else {
+			else {
+				if(_DEBUG_AC) {
+					std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+					std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
+				}
+			}
+#endif
+		}
+    
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+			// propagate postponed constraint
+			culprit = active_constraints.select(constraints);
+			taboo_constraint = culprit.freeze();
+
+			// if(taboo_constraint)
+			// 	std::cout << "[constraint]" << std::endl;
+			// else
+			// 	std::cout << "[nill]" << std::endl;
+
+			wiped_idx = culprit.checker_propagate(); 
+			taboo_constraint = culprit.defrost();
+		} else if(active_variables.empty()) fix_point = true;
+	}
+    
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	active_variables.clear();
+
+
+#ifdef _DEBUG_AC
 	if(_DEBUG_AC) {
-	  std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	  std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
+		std::cout << "c end (checker) propagation\n" << std::endl;
 	}
-      }
-#endif
-    }
-    
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
-      // propagate postponed constraint
-      culprit = active_constraints.select(constraints);
-      taboo_constraint = culprit.freeze();
-
-      // if(taboo_constraint)
-      // 	std::cout << "[constraint]" << std::endl;
-      // else
-      // 	std::cout << "[nill]" << std::endl;
-
-      wiped_idx = culprit.checker_propagate(); 
-      taboo_constraint = culprit.defrost();
-    } else if(active_variables.empty()) fix_point = true;
-  }
-    
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  active_variables.clear();
-
-
-#ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    std::cout << "c end (checker) propagation\n" << std::endl;
-  }
 #endif
 
     
-  //return wiped_idx;
-  PropagationOutcome consistent = wiped_idx;
-  wiped_idx = CONSISTENT;
-  return consistent;
+	//return wiped_idx;
+	PropagationOutcome consistent = wiped_idx;
+	wiped_idx = CONSISTENT;
+	return consistent;
 }
 
 Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint c, 
-								     const bool force_trigger,
-								     const bool trigger_self) {
+const bool force_trigger,
+const bool trigger_self) {
 
 
-  //std::cout << "solver.cpp: bound checker propagate(" << c << ")" << std::endl;
+	//std::cout << "solver.cpp: bound checker propagate(" << c << ")" << std::endl;
 
-  // std::cout << active_variables << std::endl
-  // 	    << active_constraints << std::endl;
+	// std::cout << active_variables << std::endl
+	// 	    << active_constraints << std::endl;
 
 
-  int trig, cons;
-  bool fix_point;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
-  //VarEvent var_evt;
+	int trig, cons;
+	bool fix_point;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
+	//VarEvent var_evt;
 
-  //wiped_idx = CONSISTENT;
-  if(force_trigger) 
-    c.trigger();
+	//wiped_idx = CONSISTENT;
+	if(force_trigger) 
+		c.trigger();
 
-  fix_point =  (active_variables.empty() && active_constraints.empty());
+	fix_point =  (active_variables.empty() && active_constraints.empty());
   
-  // std::cout << active_variables << std::endl;
+	// std::cout << active_variables << std::endl;
 
-  // std::cout << active_constraints << std::endl;
+	// std::cout << active_constraints << std::endl;
 
-  // std::cout << (IS_OK(wiped_idx)) << " " << fix_point <<std::endl;
+	// std::cout << (IS_OK(wiped_idx)) << " " << fix_point <<std::endl;
 
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
 
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      var_evt = active_variables.pop_front();
+			var_evt = active_variables.pop_front();
 
-      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
-	sequence.remove(variables[var_evt.first]);
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[var_evt.first] = level;
-	assignment_order[var_evt.first] = assignment_rank;
-	++assignment_rank;
-      }
+			if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+				sequence.remove(variables[var_evt.first]);
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[var_evt.first] = level;
+				assignment_order[var_evt.first] = assignment_rank;
+				++assignment_rank;
+			}
      
-      // std::cout << var_evt << " " 
-      // 		<< variables[var_evt.first] << " \n0 " 
-      // 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
-      // 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
-      // 		<< constraint_graph[var_evt.first].on[2] << "\n"
-      // 		<< c.propagator << std::endl;
+			// std::cout << var_evt << " " 
+			// 		<< variables[var_evt.first] << " \n0 " 
+			// 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
+			// 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
+			// 		<< constraint_graph[var_evt.first].on[2] << "\n"
+			// 		<< c.propagator << std::endl;
 
-      if(trigger_self || var_evt.third != c.propagator) {
+			if(trigger_self || var_evt.third != c.propagator) {
 
-	// std::cout << " " << constraint_graph[var_evt.first].on[EVENT_TYPE(var_evt.second)] << std::endl;
+				// std::cout << " " << constraint_graph[var_evt.first].on[EVENT_TYPE(var_evt.second)] << std::endl;
 
-	// for each triggered constraint
-	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	      trig<3; ++trig) {
+				// for each triggered constraint
+				for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+				trig<3; ++trig) {
 
-	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
-		--cons>=0;) {
+					for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+					--cons>=0;) {
 
-	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+						culprit = constraint_graph[var_evt.first].on[trig][cons];
 
 
-	    //std::cout << culprit << std::endl;
+						//std::cout << culprit << std::endl;
 	    
-	    if( culprit == c ) {
+						if( culprit == c ) {
 
-	      // if the constraints asked to be pushed on the constraint stack we do that
-	      if(culprit.pushed()) {
-		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					   culprit.index(), var_evt.second);
-	      }
+							// if the constraints asked to be pushed on the constraint stack we do that
+							if(culprit.pushed()) {
+								active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+								culprit.index(), var_evt.second);
+							}
 
-	      // if the constraint is not postponed, we propagate it
-	      if(!culprit.postponed()) {
-		++statistics.num_propagations;  
-		taboo_constraint = culprit.freeze();
+							// if the constraint is not postponed, we propagate it
+							if(!culprit.postponed()) {
+								++statistics.num_propagations;  
+								taboo_constraint = culprit.freeze();
 
-		// if(taboo_constraint)
-		// 	std::cout << "[constraint]" << std::endl;
-		// else
-		// 	std::cout << "[nill]" << std::endl;
+								// if(taboo_constraint)
+								// 	std::cout << "[constraint]" << std::endl;
+								// else
+								// 	std::cout << "[nill]" << std::endl;
 
-		wiped_idx = culprit.bound_checker_propagate(var_evt.second); 
-		taboo_constraint = culprit.defrost();
-	      }
-	    } 
-	  }
+								wiped_idx = culprit.bound_checker_propagate(var_evt.second); 
+								taboo_constraint = culprit.defrost();
+							}
+						} 
+					}
+				}
+			}
+		}
+
+		// std::cout << active_constraints << std::endl;
+		// std::cout << active_constraints.empty() << std::endl;
+
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+			// propagate postponed constraint
+			culprit = active_constraints.select(constraints);
+			taboo_constraint = culprit.freeze();
+
+
+			// if(taboo_constraint)
+			// 	std::cout << "[constraint]" << std::endl;
+			// else
+			// 	std::cout << "[nill]" << std::endl;
+
+			//std::cout << "solver.cpp: bound checker prop" << std::endl;
+
+			wiped_idx = culprit.bound_checker_propagate(); 
+			taboo_constraint = culprit.defrost();
+		} else if(active_variables.empty()) fix_point = true;
 	}
-      }
-    }
-
-    // std::cout << active_constraints << std::endl;
-    // std::cout << active_constraints.empty() << std::endl;
-
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
-      // propagate postponed constraint
-      culprit = active_constraints.select(constraints);
-      taboo_constraint = culprit.freeze();
-
-
-      // if(taboo_constraint)
-      // 	std::cout << "[constraint]" << std::endl;
-      // else
-      // 	std::cout << "[nill]" << std::endl;
-
-      //std::cout << "solver.cpp: bound checker prop" << std::endl;
-
-      wiped_idx = culprit.bound_checker_propagate(); 
-      taboo_constraint = culprit.defrost();
-    } else if(active_variables.empty()) fix_point = true;
-  }
     
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  active_variables.clear();
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	active_variables.clear();
     
-  // std::cout << wiped_idx << std::endl;
+	// std::cout << wiped_idx << std::endl;
 
-  //return wiped_idx;
-  PropagationOutcome consistent = wiped_idx;
-  wiped_idx = CONSISTENT;
-  return consistent;
+	//return wiped_idx;
+	PropagationOutcome consistent = wiped_idx;
+	wiped_idx = CONSISTENT;
+	return consistent;
 }
 
 

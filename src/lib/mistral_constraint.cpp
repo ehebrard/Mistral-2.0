@@ -9064,16 +9064,22 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 	int idx, i = scope.size, arity = scope.size;
 	double the_max = 0;
 	
-	//int explanation_size = 0;
+#ifdef IMPROVED		
+	int explanation_size = 0;
+#endif
+	
 	if(min_>upper_bound) {
 #ifdef _DEBUG_WEIGHT_CONFLICT
 		std::cout << " too many 1s " << std::endl;
 #endif
 		// too many ones
-		while(i-- // && explanation_size <= upper_bound
+		while(i--
+#ifdef IMPROVED			
+			 && explanation_size <= upper_bound
+#endif
 		) {
 			idx = scope[i].id();
-			if(idx>=0 && scope[i].get_min()) {
+			if(idx>=0 && scope[i].get_min() > scope[i].get_initial_min()) {
 				weights[idx] += unit
 #ifdef _DIV_ARITY
 					/ arity
@@ -9083,7 +9089,9 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 #ifdef _DEBUG_WEIGHT_CONFLICT
 				std::cout << " >> weight " << scope[i] << std::endl;
 #endif
-				//++explanation_size;
+#ifdef IMPROVED
+				++explanation_size;
+#endif
 			}
 		}
 	} else {
@@ -9091,10 +9099,13 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 		std::cout << " too many 0s " << std::endl;
 #endif
 		// too many zeros
-		while(i-- // && explanation_size <= scope.size-lower_bound
+		while(i-- 
+#ifdef IMPROVED			
+			&& explanation_size <= scope.size-lower_bound
+#endif
 		) {
 			idx = scope[i].id();
-			if(idx && !(scope[i].get_max())) {
+			if(idx>=0 && scope[i].get_max() < scope[i].get_initial_max()) {
 				weights[idx] += unit
 #ifdef _DIV_ARITY
 					/ arity
@@ -9104,7 +9115,9 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 #ifdef _DEBUG_WEIGHT_CONFLICT
 				std::cout << " >> weight " << scope[i] << std::endl;
 #endif
-				//++explanation_size;
+#ifdef IMPROVED
+				++explanation_size;
+#endif
 			}
 		}
 	}
@@ -9697,106 +9710,145 @@ double Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& w
 {
 
 #ifdef _DEBUG_WEIGHT_CONFLICT
-  std::cout << "\nWEIGHT " << this << std::endl;
-  std::cout << "( " << scope[0] << " in " << scope[0].get_domain() << std::endl;
-  for(unsigned int i=1; i<scope.size-1; ++i) 
-    std::cout << " + " << scope[i] << " in " << scope[i].get_domain() << std::endl;
-  if(offset) std::cout << " + " << offset ;
-  std::cout << ") = " << scope[scope.size-1] << " in " << scope[scope.size-1].get_domain() << std::endl;
+	std::cout << "\nWEIGHT " << this << std::endl;
+	std::cout << "( " << scope[0] << " in " << scope[0].get_domain() << std::endl;
+	for(unsigned int i=1; i<scope.size-1; ++i) 
+		std::cout << " + " << scope[i] << " in " << scope[i].get_domain() << std::endl;
+	if(offset) std::cout << " + " << offset ;
+	std::cout << ") = " << scope[scope.size-1] << " in " << scope[scope.size-1].get_domain() << std::endl;
 #endif
 
-  //int i = scope.size-1;
-  //int explanation_size = 0;
-  int upper_bound = scope.back().get_max();
-  int lower_bound = scope.back().get_min();
+	//int i = scope.size-1;
+	//int explanation_size = 0;
+	int upper_bound = scope.back().get_max();
+	int lower_bound = scope.back().get_min();
 
-  int _min_ = offset;
-  int _max_ = offset;
-  unsigned int i, arity=scope.size-1;
-  int idx;
+	int _min_ = offset;
+	int _max_ = offset;
+	unsigned int i, arity=scope.size-1;
+	int idx;
 	
 	double the_max = 0;
 
-  for( i=0; i<arity; ++i ) {
-    _min_ += scope[i].get_min();
-    _max_ += scope[i].get_max();
-  }
+	for( i=0; i<arity; ++i ) {
+		_min_ += scope[i].get_min();
+		_max_ += scope[i].get_max();
+	}
 
-
-  i=arity;
-  if(_min_>upper_bound) {
-    // too many ones
+#ifdef IMPROVED
+	int init_lb = scope.back().get_initial_min();
+	int init_lb = scope.back().get_initial_max();
+	int explanation_size = 0;
+	
+	if(_min_>upper_bound) {
+		for(i=0; i<arity && explanation_size <= init_ub; ++i) {
+			idx = scope[i].id();
+			if(idx>=0 && scope[i].get_min() > scope[i].get_initial_min()) {
+				weights[idx] += unit;
+				if(the_max < weights[idx]) the_max = weights[idx];
+				++explanation_size;
+			}
+		} 
+		if(explanation_size <= init_ub) {
+			idx = scope[arity].id();
+			if(idx>=0 && scope[arity].get_max() < scope[arity].get_initial_max()) {
+				weights[idx] += unit;			
+				if(the_max < weights[idx]) the_max = weights[idx];
+			}
+		}
+	} else {
+		for(i=0; i<arity && explanation_size <= scope.size-init_lb; ++i) {
+			idx = scope[i].id();
+			if(idx>=0 && scope[i].get_max() < scope[i].get_initial_max()) {
+				weights[idx] += unit;
+				if(the_max < weights[idx]) the_max = weights[idx];
+				++explanation_size;
+			}
+		} 
+		if(explanation_size <= scope.size-init_lb) {
+			idx = scope[arity].id();
+			if(idx>=0 && scope[arity].get_min() > scope[arity].get_initial_min()) {
+				weights[idx] += unit;			
+				if(the_max < weights[idx]) the_max = weights[idx];
+			}
+		}
+	}
+#else
+	i=arity;
+	if(_min_>upper_bound) {
+		// too many ones
 #ifdef _DEBUG_WEIGHT_CONFLICT
-    std::cout << " too many 1s\n";
+		std::cout << " too many 1s\n";
 #endif
-    idx = scope[i].id();
-    if(idx>=0 && scope[i].get_max() < scope[i].get_initial_max()) {
-      weights[idx] += unit
+		idx = scope[i].id();
+		if(idx>=0 && scope[i].get_max() < scope[i].get_initial_max()) {
+			weights[idx] += unit
 #ifdef _DIV_ARITY
-	  / arity
+				/ arity
 #endif
-;
+					;
 			
 			if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
-      std::cout << " >> weight " << scope[i] << std::endl;
+			std::cout << " >> weight " << scope[i] << std::endl;
 #endif
-    }
-    while(i-- // && explanation_size <= upper_bound
-	  ) {
-      idx = scope[i].id();
-      if(idx>=0 && scope[i].get_min()) {
-	weights[idx] += unit
+		}
+		while(i-- // && explanation_size <= upper_bound
+		) {
+			idx = scope[i].id();
+			if(idx>=0 && scope[i].get_min()) {
+				weights[idx] += unit
 #ifdef _DIV_ARITY
-	  / arity
+					/ arity
 #endif
-;
-	if(the_max < weights[idx]) the_max = weights[idx];
+						;
+				if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
-	std::cout << " >> weight " << scope[i] << std::endl;
+				std::cout << " >> weight " << scope[i] << std::endl;
 #endif
-	//++explanation_size;
-      }//  else {
-      // 	std::cout << scope[i].get_min() << std::endl;
-      // }
-    }
-  } else {
-    // too many zeros
+				//++explanation_size;
+			}//  else {
+				// 	std::cout << scope[i].get_min() << std::endl;
+				// }
+			}
+		} else {
+			// too many zeros
 #ifdef _DEBUG_WEIGHT_CONFLICT
-    std::cout << " too many 0s\n";
+			std::cout << " too many 0s\n";
 #endif
-    idx = scope[i].id();
-    if(idx>=0 && scope[i].get_min() > scope[i].get_initial_min()) {
-      weights[idx] += unit
+			idx = scope[i].id();
+			if(idx>=0 && scope[i].get_min() > scope[i].get_initial_min()) {
+				weights[idx] += unit
 #ifdef _DIV_ARITY
-	  / arity
+					/ arity
 #endif
-;
-			if(the_max < weights[idx]) the_max = weights[idx];
+						;
+				if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
-      std::cout << " >> weight " << scope[i] << std::endl;
+				std::cout << " >> weight " << scope[i] << std::endl;
 #endif
-    }
-    while(i-- // && explanation_size <= scope.size-lower_bound
-	  ) {
-      idx = scope[i].id();
-      if(idx>=0 && !(scope[i].get_max())) {
-	weights[idx] += unit
+			}
+			while(i-- // && explanation_size <= scope.size-lower_bound
+			) {
+				idx = scope[i].id();
+				if(idx>=0 && !(scope[i].get_max())) {
+					weights[idx] += unit
 #ifdef _DIV_ARITY
-	  / arity
+						/ arity
 #endif
-;
-	if(the_max < weights[idx]) the_max = weights[idx];
+							;
+					if(the_max < weights[idx]) the_max = weights[idx];
 #ifdef _DEBUG_WEIGHT_CONFLICT
-	std::cout << " >> weight " << scope[i] << std::endl;
+					std::cout << " >> weight " << scope[i] << std::endl;
 #endif
-	//++explanation_size;
-      }
-    }
-  }
+					//++explanation_size;
+				}
+			}
+		}
+#endif
 	
-	return the_max;
-}
+		return the_max;
+	}
 #endif
 
 
@@ -9951,96 +10003,96 @@ Mistral::PredicateWeightedSum::PredicateWeightedSum(std::vector< Variable >& scp
 
 void Mistral::PredicateWeightedSum::initialise() {
 
-  ConstraintImplementation::initialise();
-  //set_idempotent(true);
-  //set_idempotent(false);
+	ConstraintImplementation::initialise();
+	//set_idempotent(true);
+	//set_idempotent(false);
 
-  wpos = 0;
-  wneg = weight.size;
+	wpos = 0;
+	wneg = weight.size;
 
-  // display(std::cout);
-  // std::cout << std::endl;
+	// display(std::cout);
+	// std::cout << std::endl;
 
   
-  int aux_i;
-  Variable aux_v;
+	int aux_i;
+	Variable aux_v;
 
-  for(int i=0; i<wneg; ++i) {
+	for(int i=0; i<wneg; ++i) {
 
-    // std::cout << weight << std::endl;
+		// std::cout << weight << std::endl;
 
-    if(weight[i] == 1) { // swap i with wpos and increment wpos
-      if(i>wpos) {
-	weight[i] = weight[wpos];
-	weight[wpos] = 1;
+		if(weight[i] == 1) { // swap i with wpos and increment wpos
+			if(i>wpos) {
+				weight[i] = weight[wpos];
+				weight[wpos] = 1;
 	
-	aux_v = scope[i];
-	scope[i] = scope[wpos];
-	scope[wpos] = aux_v;
+				aux_v = scope[i];
+				scope[i] = scope[wpos];
+				scope[wpos] = aux_v;
 
-	--i;
-      }
-      ++wpos;
-    } else if(weight[i] < 0) { // decrement wneg and swap i with wneg 
-      --wneg;
+				--i;
+			}
+			++wpos;
+		} else if(weight[i] < 0) { // decrement wneg and swap i with wneg 
+			--wneg;
 
-      aux_i = weight[i];
-      weight[i] = weight[wneg];
-      weight[wneg] = aux_i;
+			aux_i = weight[i];
+			weight[i] = weight[wneg];
+			weight[wneg] = aux_i;
 
-      aux_v = scope[i];
-      scope[i] = scope[wneg];
-      scope[wneg] = aux_v;
+			aux_v = scope[i];
+			scope[i] = scope[wneg];
+			scope[wneg] = aux_v;
 
-      --i;
-    }
-  }
+			--i;
+		}
+	}
 
-  for(unsigned int i=0; i<scope.size; ++i)
-    trigger_on(_RANGE_, scope[i]);
-  GlobalConstraint::initialise();
-
-
-
-  lo_bound = new int[scope.size];
-  up_bound = new int[scope.size];
-  span = new int[scope.size];
-
-  // //std::cout << (int*)env << std::endl;
-  // std::cout  << "-- " << (int*)solver << std::endl;
-
-  // exit(1);
+	for(unsigned int i=0; i<scope.size; ++i)
+		trigger_on(_RANGE_, scope[i]);
+	GlobalConstraint::initialise();
 
 
-  unknown_parity.initialise(solver, 0, scope.size-1, scope.size, true);
-  //parity.Reversible::initialise(scope[0].get_solver());
-  parity.initialise(solver, ((lower_bound%2)!=0));
+
+	lo_bound = new int[scope.size];
+	up_bound = new int[scope.size];
+	span = new int[scope.size];
+
+	// //std::cout << (int*)env << std::endl;
+	// std::cout  << "-- " << (int*)solver << std::endl;
+
+	// exit(1);
 
 
-  //std::cout << "--parity-- " << parity << std::endl;
+	unknown_parity.initialise(solver, 0, scope.size-1, scope.size, true);
+	//parity.Reversible::initialise(scope[0].get_solver());
+	parity.initialise(solver, ((lower_bound%2)!=0));
 
 
-  for(int i=0; i<wpos; ++i) {
-    if( scope[i].is_ground() ) {
-      // the parity  only if the only one val is odd
-      if( scope[i].get_min()%2 ) parity = 1-parity;
-      unknown_parity.reversible_remove(i);
-    }
-  }
+	//std::cout << "--parity-- " << parity << std::endl;
 
-  for(unsigned int i=wpos; i<scope.size; ++i) {
-    if( weight[i]%2 == 0 )
-      unknown_parity.reversible_remove(i);
-    else if( scope[i].is_ground() ) {
-      unknown_parity.reversible_remove(i);
-      if( scope[i].get_min()%2 ) parity = 1-parity;
-    }
-  }
 
-   // display(std::cout);
-   // std::cout << std::endl;
+	for(int i=0; i<wpos; ++i) {
+		if( scope[i].is_ground() ) {
+			// the parity  only if the only one val is odd
+			if( scope[i].get_min()%2 ) parity = 1-parity;
+			unknown_parity.reversible_remove(i);
+		}
+	}
 
-  // exit(1);
+	for(unsigned int i=wpos; i<scope.size; ++i) {
+		if( weight[i]%2 == 0 )
+			unknown_parity.reversible_remove(i);
+		else if( scope[i].is_ground() ) {
+			unknown_parity.reversible_remove(i);
+			if( scope[i].get_min()%2 ) parity = 1-parity;
+		}
+	}
+
+	// display(std::cout);
+	// std::cout << std::endl;
+
+	// exit(1);
 
 }
 
