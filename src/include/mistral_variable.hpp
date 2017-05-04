@@ -1628,6 +1628,7 @@ namespace Mistral {
     //     Variable(Vector< int >& values, const int type=DYN_VAR);
     Variable(const int lo, const int up, const int type=EXPRESSION);
     Variable(const Vector< int >& values, const int type=EXPRESSION);
+		Variable(const std::vector< int >& values, const int type=EXPRESSION);
 	Variable(const IntStack& values, const int type=EXPRESSION);
 	Variable(const int* values, const int nvalues, const int type=EXPRESSION);
     Variable(const int lo, const int up, const Vector< int >& values, const int type=EXPRESSION);
@@ -1661,6 +1662,7 @@ namespace Mistral {
     bool is_void() const { return (domain_type != CONST_VAR && variable == NULL); }
     void initialise_domain(const int lo, const int up, const int type);
     void initialise_domain(const Vector< int >& values, const int type);
+		void initialise_domain(const std::vector< int >& values, const int type);
     void initialise_domain(const int lo, const int up, const Vector< int >& values, const int type);
     //void set_history(Variable X);
     //void set_bound_history(const int lb, const int ub, const int level);
@@ -2795,8 +2797,9 @@ namespace Mistral {
   public:
 
     int consistency_level;
+		int exception;
 
-    AllDiffExpression(Vector< Variable >& args, const int ct);
+    AllDiffExpression(Vector< Variable >& args, const int ct, const int except=INT_MIN);
     virtual ~AllDiffExpression();
 
     virtual void extract_constraint(Solver*);
@@ -2807,6 +2810,7 @@ namespace Mistral {
   };
 
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
+	Variable AllDiffExcept(Vector< Variable >& args, const int exception);
 
 
   class OccurrencesExpression : public Expression {
@@ -2962,6 +2966,7 @@ namespace Mistral {
 	  virtual const char* get_name() const;
 
   };
+	
 
 
   class TableExpression : public Expression {
@@ -2976,16 +2981,16 @@ namespace Mistral {
       Dynamic
     };
 
-
   private:
 
-    AlgorithmType    propagator;
-    Vector< const int* > tuples;
+    AlgorithmType     propagator;
+    Vector< const int* > *tuples;
 
   public:
 
     TableExpression(Vector< Variable >& args, const AlgorithmType ct=Dynamic);
     TableExpression(Vector< Variable >& args, Vector< const int* >&, const AlgorithmType ct=Dynamic);
+		TableExpression(Vector< Variable >& args, Vector< const int* >*, const AlgorithmType ct=Dynamic);
     virtual ~TableExpression();
 
     void add(int *t);
@@ -2999,6 +3004,7 @@ namespace Mistral {
 
   Variable Table(Vector< Variable >& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
   Variable Table(Vector< Variable >& args, Vector< const int* >&, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+	Variable Table(Vector< Variable >& args, Vector< const int* >*, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
   //Variable Table(VarArray& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
 
 

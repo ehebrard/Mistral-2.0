@@ -79,6 +79,10 @@ Mistral::Variable::Variable(Expression* exp) {
 
 int BOOL_DOM = 3;
 
+Mistral::Variable::Variable(const std::vector< int >& values, const int type) {
+	initialise_domain(values, type);
+}
+
 Mistral::Variable::Variable(const Vector< int >& values, const int type) {
   initialise_domain(values, type);
 }
@@ -202,6 +206,22 @@ void Mistral::Variable::initialise_domain(const Vector< int >& values, const int
   }
   
   initialise_domain(min, max, values, type);
+}
+
+void Mistral::Variable::initialise_domain(const std::vector< int >& values, const int type) {
+  int min = *begin(values);
+  int max = *begin(values);
+  
+	Vector<int> vals;
+	
+  // for(unsigned int i=1; i<values.size; ++i) {
+	for ( auto v : values ) {
+    if(v < min) min = v;
+    if(v > max) max = v;
+		vals.add(v);
+  }
+  
+  initialise_domain(min, max, vals, type);
 }
 
 void Mistral::Variable::initialise_domain(const int min, const int max, const Vector< int >& values, const int type) {
@@ -4218,8 +4238,8 @@ Mistral::Variable Mistral::Free(Variable X)
 }
 
 
-Mistral::AllDiffExpression::AllDiffExpression(Vector< Variable >& args, const int ct) 
-  : Expression(args) { consistency_level = ct; }
+Mistral::AllDiffExpression::AllDiffExpression(Vector< Variable >& args, const int ct, const int except) 
+  : Expression(args), exception(except) { consistency_level = ct; }
 
 Mistral::AllDiffExpression::~AllDiffExpression() {
 #ifdef _DEBUG_MEMORY
@@ -4233,7 +4253,7 @@ void Mistral::AllDiffExpression::extract_constraint(Solver *s) {
   //   return con;
   if(consistency_level == BOUND_CONSISTENCY)
     s->add(Constraint(new ConstraintAllDiff(children))); 
-  s->add(Constraint(new ConstraintCliqueNotEqual(children))); 
+  s->add(Constraint(new ConstraintCliqueNotEqual(children, exception))); 
   //   Vector< Variable > pair;
   //   for(unsigned int i=0; i<children.size-1; ++i)
   //     for(unsigned int j=i+1; j<children.size; ++j) {
@@ -4260,6 +4280,11 @@ const char* Mistral::AllDiffExpression::get_name() const {
 
 Mistral::Variable Mistral::AllDiff(Vector< Variable >& args, const int ct) {
   Variable exp(new AllDiffExpression(args,ct));
+  return exp;
+}
+
+Mistral::Variable Mistral::AllDiffExcept(Vector< Variable >& args, const int except) {
+  Variable exp(new AllDiffExpression(args,FORWARD_CHECKING,except));
   return exp;
 }
 
@@ -4314,7 +4339,7 @@ Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, const int first
 
 
 Mistral::VertexCoverExpression::VertexCoverExpression(Vector< Variable >& args, const Graph& g) 
-: _G(g), Expression(args) {
+: Expression(args), _G(g) {
 	assert(_G.size() == args.size);
 }
   
@@ -4446,12 +4471,20 @@ Mistral::Variable Mistral::MultiAtMostSeqCard(Vector< Variable >& args, const in
 
 Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>& rel, const AlgorithmType ct) 
   : Expression(args) { 
+  propagator = ct;
+	tuples = new Vector< const int* >; 
+  tuples->copy(rel);
+}
+
+Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>* rel, const AlgorithmType ct) 
+  : Expression(args), tuples(rel) { 
   propagator = ct; 
-  tuples.copy(rel);
+  // tuples.copy(rel);
 }
 
 Mistral::TableExpression::TableExpression(Vector< Variable >& args, const AlgorithmType ct) 
   : Expression(args) { 
+	tuples = new Vector< const int* >; 
   propagator = ct; 
 }
 
@@ -4460,7 +4493,7 @@ void Mistral::TableExpression::add(int* tuple)
   int n = children.size;
   int *new_tuple = new int[n];
   while(n--) new_tuple[n] = tuple[n];
-  tuples.add(new_tuple);
+  tuples->add(new_tuple);
 }
 
 Mistral::TableExpression::~TableExpression() {
@@ -4468,7 +4501,7 @@ Mistral::TableExpression::~TableExpression() {
   std::cout << "c delete table expression" << std::endl;
 #endif
 
-  tuples.neutralise();
+  // tuples.neutralise();
 }
 
 void Mistral::TableExpression::extract_constraint(Solver *s) { 
@@ -4481,7 +4514,7 @@ void Mistral::TableExpression::extract_constraint(Solver *s) {
   default: {tab = new ConstraintGAC2001(children);}
   }
  
-  tab->table.copy(tuples);
+  tab->table.copy(*tuples);
 
   s->add(Constraint(tab)); 
 }
@@ -4501,6 +4534,11 @@ const char* Mistral::TableExpression::get_name() const {
 }
 
 Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>& rel, const Mistral::TableExpression::AlgorithmType ct) {
+  Variable exp(new TableExpression(args, rel, ct));
+  return exp;
+}
+
+Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>* rel, const Mistral::TableExpression::AlgorithmType ct) {
   Variable exp(new TableExpression(args, rel, ct));
   return exp;
 }
