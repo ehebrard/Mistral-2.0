@@ -889,8 +889,52 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
     }
     cout << cond << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		vector<Variable> scope;
+		for( auto x : list ) {
+			scope.push_back( variable[x->id] );
+		}
+		
+		if(cond.operandType == VARIABLE) {
+			Variable total = variable[cond.var];
+			
+			if(cond.op == EQ) {
+				solver.add( Sum(scope, coeffs, total) );
+			} else if(cond.op == NE) {
+				solver.add( Sum(scope, coeffs) != total);
+			} else if(cond.op == LE) {
+				solver.add( Sum(scope, coeffs) <= total);
+			} else if(cond.op == LT) {
+				solver.add( Sum(scope, coeffs) < total);
+			} else if(cond.op == GE) {
+				solver.add( Sum(scope, coeffs) >= total);
+			} else if(cond.op == GT) {
+				solver.add( Sum(scope, coeffs) >  total);
+			}  
+			
+		} else if(cond.operandType == INTERVAL) {
+			assert(cond.op == IN);
+			
+			solver.add( Sum(scope, coeffs, cond.min, cond.max) );
+			
+		} else {
+			assert(cond.operandType == INTEGER);
+				
+			if(cond.op == EQ) {
+				solver.add( Sum(scope, coeffs, cond.val, cond.val) );
+			} else if(cond.op == NE) {
+				Variable cst(cond.val);
+				solver.add( Sum(scope, coeffs) != cst);
+			} else if(cond.op == LE) {
+				solver.add( Sum(scope, coeffs, -INFTY, cond.val) );
+			} else if(cond.op == LT) {
+				solver.add( Sum(scope, coeffs, -INFTY, cond.val-1) );
+			} else if(cond.op == GE) {
+				solver.add( Sum(scope, coeffs, cond.val, INFTY) );
+			} else if(cond.op == GT) {
+				solver.add( Sum(scope, coeffs, cond.val+1, INFTY) );
+			}
+		}
+		
 }
 
 
