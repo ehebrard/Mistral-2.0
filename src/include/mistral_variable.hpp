@@ -2981,7 +2981,7 @@ namespace Mistral {
       Dynamic
     };
 
-  private:
+  // private:
 
     AlgorithmType     propagator;
     Vector< const int* > *tuples;

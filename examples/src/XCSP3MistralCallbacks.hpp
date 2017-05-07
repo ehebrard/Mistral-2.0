@@ -534,7 +534,7 @@ void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *
 		Vector<const int*>* first = new Vector<const int*>;
 		Vector<const int*>* last  = new Vector<const int*>;
 		
-		for( auto t : transitions ) {
+		for( const auto& t : transitions ) {
 				int *tuple = new int[3];
 				tuple[0] = state_map[t.from];
 				tuple[1] = t.val;
@@ -585,8 +585,90 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
     if(transitions.size() > 4) cout << "...";
     cout << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+    for(unsigned int i = 0; i < transitions.size(); i++) {
+        cout << "(" << transitions[i].from << "," << transitions[i].val << "," << transitions[i].to << ") ";
+    }
+    cout << endl;
+		
+		
+		VarArray scope;
+		getVariables(list, scope);
+		
+		string root = begin(transitions)->from;
+		string final = transitions.rbegin()->to;
+		
+		map<string, int> layer_map;
+		map<string, int> node_map;
+		auto num_layers{0};
+		
+		for( const auto& t : transitions ) {
+			if( t.to == final) break;
+			auto l{0};
+			if( t.from != root ) {
+				l = layer_map[t.from]+1;
+			}
+			layer_map[t.to] = l;
+			if(l>=num_layers) num_layers = l+1;
+		}
+		
+		vector<int> layer_size;
+		layer_size.resize(num_layers, 0);
+		
+		
+		for( const auto& l : layer_map ) {
+			node_map[l.first] = layer_size[l.second]++;
+		}
+		
+		VarArray state_var;
+		for( auto m : layer_size ) {
+			state_var.add(Variable(0, m-1));
+		}
+		
+		
+		VarArray S;
+		vector<TableExpression*> tables;
+		for(int i=0; i<scope.size; ++i) {
+			if(i>0) S.add(state_var[i-1]);
+			S.add(scope[i]);
+			if(i<num_layers) S.add(state_var[i]);
+			
+			tables.push_back(new TableExpression(S));
+			S.clear();
+		}
+		
+		
+		int tuple[3];
+		for( const auto& t : transitions ) {
+			auto cons{0};
+		
+			if( t.from == root ) {
+				tuple[0] = t.val;
+				tuple[1] = node_map[t.to];
+			} else {
+				cons = layer_map[t.from]+1;
+				
+				if( t.to == final ) {
+					if(cons != num_layers) {
+						cout << "MDD TRANSITIONS TO FINAL FROM INTERNAL NOT IMPLEMENTED!" << endl;
+						exit(1);
+					}
+					tuple[0] = node_map[t.from];
+					tuple[1] = t.val;
+				} else {
+					tuple[0] = node_map[t.from];
+					tuple[1] = t.val;
+					tuple[2] = node_map[t.to];
+				}
+			}
+
+			tables[cons]->add(tuple);
+		
+		}
+	
+		for( auto tab : tables ) {
+			solver.add( Variable(tab) );
+		}
+
 }
 
 
@@ -626,8 +708,18 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentList(string id, vector <v
 
     }
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		
+		for( auto lpt1=begin(lists); lpt1!=end(lists); ++lpt1) {
+			for( auto lpt2=lpt1+1; lpt2!=end(lists); ++lpt2) {
+				assert(lpt1->size() == lpt2->size());
+				VarArray differences;
+				for(int i=0; i<lpt1->size(); ++i) {
+					differences.add(variable[(*lpt1)[i]->id] != variable[(*lpt2)[i]->id]);
+				}
+				solver.add( Sum(differences)>0 );
+			}
+		}
+
 }
 
 
@@ -637,6 +729,19 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentMatrix(string id, vector 
         cout << "        ";
         displayList(matrix[i]);
     }
+		
+		VarArray scope;
+    for(unsigned int i = 0; i < matrix.size(); i++) {
+			getVariables(matrix[i], scope);
+			solver.add(AllDiff(scope));
+			scope.clear();
+			for(unsigned int j = 0; j < matrix.size(); j++) {
+				scope.add(variable[matrix[j][i]->id]);
+			}
+			solver.add(AllDiff(scope));
+			scope.clear();
+    }
+		
 }
 
 
@@ -644,6 +749,10 @@ void XCSP3MistralCallbacks::buildConstraintAllEqual(string id, vector<XVariable 
     cout << "\n    allEqual constraint" << id << endl;
     cout << "        ";
     displayList(list);
+		
+		for(int i=1; i<list.size(); ++i) {
+			solver.add(variable[list[i-1]->id] == variable[list[i]->id]);
+		}
 }
 
 
@@ -651,6 +760,16 @@ void XCSP3MistralCallbacks::buildConstraintNotAllEqual(string id, vector<XVariab
     cout << "\n    not allEqual constraint" << id << endl;
     cout << "        ";
     displayList(list);
+		
+		VarArray differences;
+		
+		for( auto xpt=begin(list); xpt!=end(list); ++xpt ) {
+			for( auto ypt=xpt+1; ypt!=end(list); ++ypt) {
+				differences.add( variable[(*xpt)->id] != variable[(*ypt)->id] );
+			}
+		}
+		
+		solver.add( Sum(differences)>0 );
 }
 
 
@@ -689,6 +808,22 @@ void XCSP3MistralCallbacks::buildConstraintLex(string id, vector <vector<XVariab
         cout << "        ";
         displayList(lists[i], " ");
     }
+		
+		vector<VarArray> scope;
+		for( auto l=begin(lists); l!=end(lists); ++l) {
+			VarArray X;
+			getVariables(*l, X);
+			scope.push_back(X);
+		}
+		
+		for(int i=1; i<lists.size(); ++i) {
+			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
+			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
+			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
+			if(order == GE) solver.add( scope[i-1] >= scope[i] ); 
+		}
+		
+		
 }
 
 
@@ -705,6 +840,38 @@ void XCSP3MistralCallbacks::buildConstraintLexMatrix(string id, vector <vector<X
         displayList(matrix[i]);
     }
     cout << "        Order " << sep << endl;
+		
+		
+		vector<VarArray> scope;
+		for( auto l=begin(matrix); l!=end(matrix); ++l) {
+			VarArray X;
+			getVariables(*l, X);
+			scope.push_back(X);
+		}
+		
+		for(int i=1; i<scope.size(); ++i) {
+			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
+			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
+			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
+			if(order == GE) solver.add( scope[i-1] >= scope[i] ); 
+		}
+		
+		scope.clear();
+		
+		for( int i=0; i<matrix.size(); ++i) {
+			VarArray X;
+			for( int j=0; j<matrix.size(); ++j) {	
+				X.add(variable[matrix[j][i]->id]);
+			}
+			scope.push_back(X);
+		}
+		
+		for(int i=1; i<scope.size(); ++i) {
+			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
+			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
+			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
+			if(order == GE) solver.add( scope[i-1] >= scope[i] ); 
+		}
 }
 
 
@@ -721,6 +888,9 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
             cout << (coeffs.size() == 0 ? 1 : coeffs[i]) << "*" << *(list[i]) << " ";
     }
     cout << cond << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -730,6 +900,8 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
     displayList(list, "+");
     cout << cond << endl;
 
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -747,6 +919,8 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
     }
     cout << cond << endl;
 
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -772,6 +946,9 @@ void XCSP3MistralCallbacks::buildConstraintAtLeast(string id, vector<XVariable *
     cout << "\n    Atleast constraint: val=" << value << " k=" << k << endl;
     cout << "        ";
     displayList(list);
+
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -779,6 +956,9 @@ void XCSP3MistralCallbacks::buildConstraintExactlyK(string id, vector<XVariable 
     cout << "\n    Exactly constraint: val=" << value << " k=" << k << endl;
     cout << "        ";
     displayList(list);
+
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -789,6 +969,8 @@ void XCSP3MistralCallbacks::buildConstraintAmong(string id, vector<XVariable *> 
     cout << "        values:";
     displayList(values);
 
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -796,6 +978,9 @@ void XCSP3MistralCallbacks::buildConstraintExactlyVariable(string id, vector<XVa
     cout << "\n    Exactly Variable constraint: val=" << value << " variable=" << *x << endl;
     cout << "        ";
     displayList(list);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -807,6 +992,9 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
     cout << "        ";
     displayList(values);
     cout << "        condition: " << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -817,6 +1005,9 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
     cout << "        values: ";
     displayList(values);
     cout << "        condition: " << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -827,6 +1018,9 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
     cout << "        exceptions: ";
     displayList(except);
     cout << "        condition:" << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -835,6 +1029,9 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        condition:" << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -846,6 +1043,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(values);
     cout << "        occurs:";
     displayList(occurs);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -858,6 +1058,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(values);
     cout << "        occurs:";
     displayList(occurs);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -870,6 +1073,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(values);
     cout << "        occurs:";
     displayList(occurs);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -882,6 +1088,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(values);
     cout << "        occurs:";
     displayList(occurs);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -894,6 +1103,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(values);
     cout << "        occurs:";
     displayList(occurs);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -906,6 +1118,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(values);
     cout << "        occurs:";
     displayList(occurs);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -914,6 +1129,9 @@ void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        condition: " << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -925,7 +1143,9 @@ void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *
     cout << "        index:" << *index << endl;
     cout << "        Start index : " << startIndex << endl;
     cout << "        condition: " << xc << endl;
-
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -934,6 +1154,9 @@ void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        condition: " << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -944,6 +1167,9 @@ void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *
     cout << "        index:" << *index << endl;
     cout << "        Start index : " << startIndex << endl;
     cout << "        condition: " << xc << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -952,6 +1178,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        value: " << value << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -960,6 +1189,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        value: " << *value << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -970,6 +1202,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        value: " << value << endl;
     cout << "        Start index : " << startIndex << endl;
     cout << "        index : " << *index << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -980,6 +1215,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        value: " << *value << endl;
     cout << "        Start index : " << startIndex << endl;
     cout << "        index : " << *index << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -988,6 +1226,9 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        Start index : " << startIndex << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -998,6 +1239,9 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     displayList(list1);
     cout << "        list2 ";
     displayList(list2);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1006,6 +1250,9 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
     cout << "        value: " << *value << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1017,6 +1264,9 @@ void XCSP3MistralCallbacks::buildConstraintStretch(string id, vector<XVariable *
     displayList(values);
     cout << "        widths:";
     displayList(widths);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1032,6 +1282,9 @@ void XCSP3MistralCallbacks::buildConstraintStretch(string id, vector<XVariable *
     for(unsigned int i = 0; i < patterns.size(); i++)
         cout << "(" << patterns[i][0] << "," << patterns[i][1] << ") ";
     cout << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1041,6 +1294,9 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector<XVariable
     displayList(origins);
     cout << "        lengths";
     displayList(lengths);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1050,6 +1306,9 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector<XVariable
     displayList(origins);
     cout << "        lengths";
     displayList(lengths);
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1066,6 +1325,8 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector <vector<X
         displayList(lengths[i]);
     }
 
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1081,6 +1342,9 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector <vector<X
         cout << "        ";
         displayList(lengths[i]);
     }
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
@@ -1091,26 +1355,40 @@ void XCSP3MistralCallbacks::buildConstraintInstantiation(string id, vector<XVari
     cout << "        values:";
     displayList(values);
 
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
     cout << "\n    objective: minimize" << expr << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMaximizeExpression(string expr) {
     cout << "\n    objective: maximize" << expr << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMinimizeVariable(XVariable *x) {
     cout << "\n    objective: minimize variable " << x << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMaximizeVariable(XVariable *x) {
     cout << "\n    objective: maximize variable " << x << endl;
+		
+		cout << "NOT IMPLEMENTED!" << endl;
+		exit(1);
 }
 
 
