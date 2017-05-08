@@ -1156,27 +1156,158 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
 }
 
 
-void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *> &list, vector<int> &except, XCondition &xc) {
+void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *> &list, vector<int> &except, XCondition &cond) {
     cout << "\n    NValues with exceptions constraint" << endl;
     cout << "        ";
     displayList(list);
     cout << "        exceptions: ";
     displayList(except);
-    cout << "        condition:" << xc << endl;
+    cout << "        condition:" << cond << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		
+		int min = INFTY;
+		int max = -INFTY;
+		
+		for( auto X : scope ) {
+			if(min>X.get_min()) {
+				min = X.get_min();
+			}
+			if(max<X.get_max()) {
+				max = X.get_max();
+			}
+		}
+		
+		
+		int maxe = *max_element(begin(except), end(except));
+		int mine = *min_element(begin(except), end(except));
+		
+		BitSet exceptions(mine, maxe, BitSet::empt);
+		
+		for( auto e : except ) {
+			exceptions.add(e);
+		}
+		
+		VarArray used;
+		for(int i=min; i<=max; ++i) {
+			if(!exceptions.contain(i))
+				used.add( Occurrence(scope, i) );
+		}
+		
+		
+		if(cond.operandType == VARIABLE) {
+			Variable nval = variable[cond.var];
+			
+				if(cond.op == EQ) {
+					solver.add( BoolSum(used) == nval );
+				} else if(cond.op == NE) {
+					solver.add( BoolSum(used) != nval );
+				} else if(cond.op == LE) {
+					solver.add( BoolSum(used) <= nval );
+				} else if(cond.op == LT) {
+					solver.add( BoolSum(used) <  nval );
+				} else if(cond.op == GE) {
+					solver.add( BoolSum(used) >= nval );
+				} else if(cond.op == GT) {
+					solver.add( BoolSum(used) >  nval );
+				}  
+			
+		} else if(cond.operandType == INTERVAL) {
+			assert(cond.op == IN);
+			
+			solver.add( BoolSum(used, cond.min, cond.max) );
+		} else {
+			assert(cond.operandType == INTEGER);
+				
+				if(cond.op == EQ) {
+					solver.add( BoolSum(used, cond.val, cond.val) );
+				} else if(cond.op == NE) {
+					Variable cst(cond.val);
+					solver.add( BoolSum(used) != cst);
+				} else if(cond.op == LE) {
+					solver.add( BoolSum(used, -INFTY, cond.val) );
+				} else if(cond.op == LT) {
+					solver.add( BoolSum(used, -INFTY, cond.val-1) );
+				} else if(cond.op == GE) {
+					solver.add( BoolSum(used, cond.val, INFTY) );
+				} else if(cond.op == GT) {
+					solver.add( BoolSum(used, cond.val+1, INFTY) );
+				}
+				
+		}
+		
 }
 
 
-void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &xc) {
+void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *> &list, XCondition &cond) {
     cout << "\n    NValues  constraint" << endl;
     cout << "        ";
     displayList(list);
-    cout << "        condition:" << xc << endl;
+    cout << "        condition:" << cond << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		
+		int min = INFTY;
+		int max = -INFTY;
+		
+		for( auto X : scope ) {
+			if(min>X.get_min()) {
+				min = X.get_min();
+			}
+			if(max<X.get_max()) {
+				max = X.get_max();
+			}
+		}
+	
+		
+		VarArray used;
+		for(int i=min; i<=max; ++i) {
+			used.add( Occurrence(scope, i) );
+		}
+		
+		
+		if(cond.operandType == VARIABLE) {
+			Variable nval = variable[cond.var];
+			
+				if(cond.op == EQ) {
+					solver.add( BoolSum(used) == nval );
+				} else if(cond.op == NE) {
+					solver.add( BoolSum(used) != nval );
+				} else if(cond.op == LE) {
+					solver.add( BoolSum(used) <= nval );
+				} else if(cond.op == LT) {
+					solver.add( BoolSum(used) <  nval );
+				} else if(cond.op == GE) {
+					solver.add( BoolSum(used) >= nval );
+				} else if(cond.op == GT) {
+					solver.add( BoolSum(used) >  nval );
+				}  
+			
+		} else if(cond.operandType == INTERVAL) {
+			assert(cond.op == IN);
+			
+			solver.add( BoolSum(used, cond.min, cond.max) );
+		} else {
+			assert(cond.operandType == INTEGER);
+				
+				if(cond.op == EQ) {
+					solver.add( BoolSum(used, cond.val, cond.val) );
+				} else if(cond.op == NE) {
+					Variable cst(cond.val);
+					solver.add( BoolSum(used) != cst);
+				} else if(cond.op == LE) {
+					solver.add( BoolSum(used, -INFTY, cond.val) );
+				} else if(cond.op == LT) {
+					solver.add( BoolSum(used, -INFTY, cond.val-1) );
+				} else if(cond.op == GE) {
+					solver.add( BoolSum(used, cond.val, INFTY) );
+				} else if(cond.op == GT) {
+					solver.add( BoolSum(used, cond.val+1, INFTY) );
+				}
+				
+		}
 }
 
 
