@@ -9067,7 +9067,7 @@ double Mistral::ConstraintBoolSumInterval::weight_conflict(double unit, Vector<d
 #endif
 
 
-	int idx, i = scope.size, arity = scope.size;
+	int idx, i = scope.size;
 	double the_max = 0;
 	
 #ifdef IMPROVED		
@@ -9746,7 +9746,6 @@ double Mistral::PredicateBoolSum::weight_conflict(double unit, Vector<double>& w
 	//int i = scope.size-1;
 	//int explanation_size = 0;
 	int upper_bound = scope.back().get_max();
-	int lower_bound = scope.back().get_min();
 
 	int _min_ = offset;
 	int _max_ = offset;
@@ -11224,7 +11223,7 @@ double Mistral::ConstraintWeightedBoolSumInterval::weight_conflict(double unit, 
   std::cout << ") in [" << lower_bound << ".." << upper_bound << "]" << std::endl;
 #endif
   
-  int i, j;
+  int i;
   int smin=0, smax=0, arity=scope.size;
   //int wmin=INFTY;
   int wmax=1, idx;
@@ -16311,7 +16310,7 @@ void Mistral::ConstraintAllDiff::print_structs() {
 //#define _DEBUG_VERTEXCOVER 0
 
 Mistral::PredicateVertexCover::PredicateVertexCover(Mistral::Vector< Variable >& scp, Graph& g) 
-: _G(g), GlobalConstraint(scp) { 	
+: GlobalConstraint(scp), _G(g) { 	
 	priority = 1; 
 }
 
@@ -16371,11 +16370,12 @@ int Mistral::PredicateVertexCover::check( const int* sol ) const {
 Mistral::PropagationOutcome Mistral::PredicateVertexCover::propagate() {
 
   PropagationOutcome wiped = CONSISTENT;
-  int var;
-  Event evt;
 
 
 #ifdef _DEBUG_VERTEXCOVER
+	
+  int var;
+  Event evt;
   
   for(int i=0; i<changes.size; ++i) {
     var = changes[i];
@@ -16487,7 +16487,7 @@ int Mistral::PredicateFootrule::check( const int* sol ) const {
 #endif
 		
 
-	int manhattan_distance = 0, repeat=false;
+	int manhattan_distance = 0;
 	std::fill(values, values+N, 0);
 	
 	for(int i=0;

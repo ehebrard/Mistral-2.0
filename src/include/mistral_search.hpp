@@ -615,7 +615,6 @@ namespace Mistral {
   
 
 		virtual void notify_backtrack() {
-			int i;
 			Constraint con = solver->culprit;
 
 #ifdef _ONLY_ACTIVE

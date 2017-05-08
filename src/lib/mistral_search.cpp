@@ -689,7 +689,7 @@ void Mistral::ImpactManager::notify_backtrack() {
 	// - check if it was after a left or a right branch
 	// - find out what was the decision/refutation
 
-	int dec;
+	int dec{0};
 	Variable x;
 
 	//if(!solver->decisions.empty()) {
@@ -1077,7 +1077,7 @@ void Mistral::RealImpactManager::notify_backtrack() {
 	// - check if it was after a left or a right branch
 	// - find out what was the decision/refutation
 
-	int dec;
+	int dec{0};
 	Variable x;
 
 	if(left==1) {
@@ -1998,7 +1998,6 @@ void Mistral::LearningActivityManager::notify_backtrack() {
 
   int i;
   Literal q;
-  Atom a;
 
   weight_unit /= decay;
   if(max_weight - weight_unit <= max_activity) {
