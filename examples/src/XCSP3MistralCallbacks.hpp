@@ -991,8 +991,13 @@ void XCSP3MistralCallbacks::buildConstraintAtLeast(string id, vector<XVariable *
     cout << "        ";
     displayList(list);
 
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		XCondition cond;
+		cond.operandType = INTEGER;
+		cond.op = GE;
+		cond.val = k;
+		vector<int> values;
+		values.push_back(value);
+		return buildConstraintCount(id, list, values, cond);
 }
 
 
@@ -1001,8 +1006,13 @@ void XCSP3MistralCallbacks::buildConstraintExactlyK(string id, vector<XVariable 
     cout << "        ";
     displayList(list);
 
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		XCondition cond;
+		cond.operandType = INTEGER;
+		cond.op = EQ;
+		cond.val = k;
+		vector<int> values;
+		values.push_back(value);
+		return buildConstraintCount(id, list, values, cond);
 }
 
 
@@ -1012,9 +1022,12 @@ void XCSP3MistralCallbacks::buildConstraintAmong(string id, vector<XVariable *> 
     displayList(list);
     cout << "        values:";
     displayList(values);
-
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		
+		XCondition cond;
+		cond.operandType = INTEGER;
+		cond.op = EQ;
+		cond.val = k;
+		return buildConstraintCount(id, list, values, cond);
 }
 
 
@@ -1023,22 +1036,110 @@ void XCSP3MistralCallbacks::buildConstraintExactlyVariable(string id, vector<XVa
     cout << "        ";
     displayList(list);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		XCondition cond;
+		cond.operandType = VARIABLE;
+		cond.op = EQ;
+		cond.var = x->id;
+		vector<int> values;
+		values.push_back(value);
+		return buildConstraintCount(id, list, values, cond);
 }
 
 
-void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> &list, vector<int> &values, XCondition &xc) {
+void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> &list, vector<int> &values, XCondition &cond) {
     cout << "\n    count constraint" << endl;
     cout << "        ";
     displayList(list);
     cout << "        values: ";
     cout << "        ";
     displayList(values);
-    cout << "        condition: " << xc << endl;
+    cout << "        condition: " << cond << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		
+		if(cond.operandType == VARIABLE) {
+			Variable nocc = variable[cond.var];
+			
+			if(values.size() == 1) {
+				int val = *begin(values);
+				if(cond.op == EQ) {
+					solver.add( Occurrence(scope, val) == nocc );
+				} else if(cond.op == NE) {
+					solver.add( Occurrence(scope, val) != nocc );
+				} else if(cond.op == LE) {
+					solver.add( Occurrence(scope, val) <= nocc );
+				} else if(cond.op == LT) {
+					solver.add( Occurrence(scope, val) <  nocc );
+				} else if(cond.op == GE) {
+					solver.add( Occurrence(scope, val) >= nocc );
+				} else if(cond.op == GT) {
+					solver.add( Occurrence(scope, val) >  nocc );
+				}  
+			} else {
+				if(cond.op == EQ) {
+					solver.add( Occurrence(scope, values) == nocc );
+				} else if(cond.op == NE) {
+					solver.add( Occurrence(scope, values) != nocc );
+				} else if(cond.op == LE) {
+					solver.add( Occurrence(scope, values) <= nocc );
+				} else if(cond.op == LT) {
+					solver.add( Occurrence(scope, values) <  nocc );
+				} else if(cond.op == GE) {
+					solver.add( Occurrence(scope, values) >= nocc );
+				} else if(cond.op == GT) {
+					solver.add( Occurrence(scope, values) >  nocc );
+				}  
+			}
+			
+		} else if(cond.operandType == INTERVAL) {
+			assert(cond.op == IN);
+			
+			if(values.size() == 1) {
+				solver.add( Occurrence(scope, *begin(values), cond.min, cond.max) );
+			} else {
+				solver.add( Occurrence(scope, values, cond.min, cond.max) );
+			}
+			
+		} else {
+			assert(cond.operandType == INTEGER);
+				
+			if(values.size() == 1) {
+				int val = *begin(values);
+				
+				if(cond.op == EQ) {
+					solver.add( Occurrence(scope, val, cond.val, cond.val) );
+				} else if(cond.op == NE) {
+					Variable cst(cond.val);
+					solver.add( Occurrence(scope, val) != cst);
+				} else if(cond.op == LE) {
+					solver.add( Occurrence(scope, val, -INFTY, cond.val) );
+				} else if(cond.op == LT) {
+					solver.add( Occurrence(scope, val, -INFTY, cond.val-1) );
+				} else if(cond.op == GE) {
+					solver.add( Occurrence(scope, val, cond.val, INFTY) );
+				} else if(cond.op == GT) {
+					solver.add( Occurrence(scope, val, cond.val+1, INFTY) );
+				}
+			} else {
+				if(cond.op == EQ) {
+					solver.add( Occurrence(scope, values, cond.val, cond.val) );
+				} else if(cond.op == NE) {
+					Variable cst(cond.val);
+					solver.add( Occurrence(scope, values) != cst);
+				} else if(cond.op == LE) {
+					solver.add( Occurrence(scope, values, -INFTY, cond.val) );
+				} else if(cond.op == LT) {
+					solver.add( Occurrence(scope, values, -INFTY, cond.val-1) );
+				} else if(cond.op == GE) {
+					solver.add( Occurrence(scope, values, cond.val, INFTY) );
+				} else if(cond.op == GT) {
+					solver.add( Occurrence(scope, values, cond.val+1, INFTY) );
+				}
+			}
+				
+		}
+		
 }
 
 
