@@ -57,6 +57,8 @@ namespace XCSP3Core {
 			vector<Mistral::VarArray> v_array;
 			vector<Mistral::Variable> v_variable;
 			
+			Mistral::Variable last_var;
+			
 			
 			
 			
@@ -1320,8 +1322,17 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     cout << "        occurs:";
     displayList(occurs);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		assert(values.size() == occurs.size());
+		
+		VarArray scope;
+		getVariables(list, scope);
+		
+		if(closed)
+			for( auto X : scope )
+				solver.add( Member(X, values) );
+		
+		solver.add( Occurrences(scope, values, occurs, occurs) );
+	
 }
 
 
@@ -1335,8 +1346,24 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     cout << "        occurs:";
     displayList(occurs);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		assert(values.size() == occurs.size());
+		
+		VarArray scope;
+		getVariables(list, scope);
+		VarArray count;
+		getVariables(occurs, count);
+	
+	
+		for(int i=0; i<values.size(); ++i) {
+			solver.add( Occurrence(scope, values[i]) == count[i] );
+		}
+		
+		if(closed) {
+			solver.add( Sum(count, scope.size, scope.size) );
+			for( auto X : scope )
+				solver.add( Member(X, values) );
+		}
+
 }
 
 
@@ -1350,8 +1377,41 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     cout << "        occurs:";
     displayList(occurs);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		assert(values.size() == occurs.size());
+		
+		VarArray scope;
+		getVariables(list, scope);
+		
+		vector<int> lb;
+		vector<int> ub;
+		
+		
+		int total_lb=0;
+		int total_ub=0;
+		for( auto I : occurs ) {
+			total_lb += I.min;
+			total_ub += I.max;
+			
+			lb.push_back(I.min);
+			ub.push_back(I.max);
+		}
+		
+		if(total_lb > scope.size) {
+			solver.fail();
+		}
+		
+		
+		if(closed) {
+			if(total_ub < scope.size) {
+				solver.fail();
+			}
+			for( auto X : scope )
+				solver.add( Member(X, values) );
+		}
+		
+		solver.add( Occurrences(scope, values, lb, ub) );
+		
+
 }
 
 
@@ -1365,8 +1425,41 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     cout << "        occurs:";
     displayList(occurs);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+			
+		assert(values.size() == occurs.size());
+		
+		
+		VarArray scope;
+		getVariables(list, scope);
+		VarArray vals;
+		getVariables(values, vals);
+		
+		solver.add(AllDiff(vals));
+		
+		int total=0;
+		for(int i=0; i<values.size(); ++i) {
+			total += occurs[i];
+			solver.add( Occurrence(scope, vals[i]) == occurs[i] );
+		}
+		
+		if(total > scope.size) {
+			solver.fail();
+		}
+		
+		// assert(total <= scope.size);
+		
+		if(closed || total==scope.size)
+			for( auto X : scope ) {
+				VarArray M;
+				for( auto V : vals ) 
+					M.add( Member(X, V) );
+				solver.add( Sum(M)>0 );
+			}
+		else {
+			//TODO: set the number of occurrences of values not in values to scope.size - total
+		}
+	
+
 }
 
 
@@ -1380,8 +1473,30 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     cout << "        occurs:";
     displayList(occurs);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		assert(values.size() == occurs.size());
+		
+		VarArray scope;
+		getVariables(list, scope);
+		VarArray count;
+		getVariables(occurs, count);
+		VarArray vals;
+		getVariables(values, vals);
+	
+		for(int i=0; i<values.size(); ++i) {
+			solver.add( Occurrence(scope, vals[i]) == count[i] );
+		}
+		
+		solver.add(AllDiff(vals));
+		
+		if(closed) {
+			solver.add( Sum(count, scope.size, scope.size) );
+			for( auto X : scope ) {
+				VarArray M;
+				for( auto V : vals ) 
+					M.add( Member(X, V) );
+				solver.add( Sum(M)>0 );
+			}
+		}
 }
 
 
@@ -1395,19 +1510,101 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     cout << "        occurs:";
     displayList(occurs);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		VarArray vals;
+		getVariables(values, vals);
+		
+		solver.add(AllDiff(vals));
+		
+		vector<int> lb;
+		vector<int> ub;
+		
+		for( auto I : occurs ) {
+			lb.push_back(I.min);
+			ub.push_back(I.max);
+		}
+		
+		if(closed) 
+			for( auto X : scope ) {
+				VarArray M;
+				for( auto V : vals ) 
+					M.add( Member(X, V) );
+				solver.add( Sum(M)>0 );
+			}
+			
+		for(int i=0; i<values.size(); ++i) {
+			solver.add( Occurrence(scope, vals[i], lb[i], ub[i]) );
+		}
+
 }
 
 
-void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &xc) {
+void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *> &list, XCondition &cond) {
     cout << "\n    minimum  constraint" << endl;
     cout << "        ";
     displayList(list);
-    cout << "        condition: " << xc << endl;
+    cout << "        condition: " << cond << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		
+		Variable MinVar = Min(scope);
+		
+		if(cond.operandType == VARIABLE) {
+			Variable minv = variable[cond.var];
+			
+			
+				if(cond.op == EQ) {
+					solver.add( MinVar == minv );
+				} else if(cond.op == NE) {
+					solver.add( MinVar != minv );
+				} else if(cond.op == LE) {
+					solver.add( MinVar <= minv );
+				} else if(cond.op == LT) {
+					solver.add( MinVar <  minv );
+				} else if(cond.op == GE) {
+					for( auto X : scope ) {
+						solver.add( X >= minv );
+					}
+				} else if(cond.op == GT) {
+					for( auto X : scope ) {
+						solver.add( X > minv );
+					}
+				}  
+			
+		} else if(cond.operandType == INTERVAL) {
+			assert(cond.op == IN);
+			
+			Variable MV(cond.min, cond.max);
+			
+			solver.add( MinVar == MV );
+		} else {
+			assert(cond.operandType == INTEGER);
+				
+				if(cond.op == EQ) {
+					solver.add( MinVar == cond.val );
+				} else if(cond.op == NE) {
+					Variable cst(cond.val);
+					solver.add( MinVar != cst);
+				} else if(cond.op == LE) {
+					solver.add( MinVar <= cond.val );
+				} else if(cond.op == LT) {
+					solver.add( MinVar < cond.val );
+				} else if(cond.op == GE) {
+					for( auto X : scope ) {
+						solver.add( X >= cond.val );
+					}
+				} else if(cond.op == GT) {
+					for( auto X : scope ) {
+						solver.add( X > cond.val );
+					}
+				}
+				
+		}
+		
+		last_var = MinVar;
+
 }
 
 
@@ -1420,19 +1617,76 @@ void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *
     cout << "        Start index : " << startIndex << endl;
     cout << "        condition: " << xc << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		buildConstraintMinimum(id, list, xc);
+		solver.add( scope[variable[index->id]] == last_var );
 }
 
 
-void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &xc) {
+void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *> &list, XCondition &cond) {
     cout << "\n    maximum  constraint" << endl;
     cout << "        ";
     displayList(list);
-    cout << "        condition: " << xc << endl;
+    cout << "        condition: " << cond << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		
+		Variable MaxVar = Max(scope);
+		
+		if(cond.operandType == VARIABLE) {
+			Variable maxv = variable[cond.var];
+			
+				if(cond.op == EQ) {
+					solver.add( MaxVar == maxv );
+				} else if(cond.op == NE) {
+					solver.add( MaxVar != maxv );
+				} else if(cond.op == GE) {
+					solver.add( MaxVar >= maxv );
+				} else if(cond.op == GT) {
+					solver.add( MaxVar >  maxv );
+				} else if(cond.op == LE) {
+					for( auto X : scope ) {
+						solver.add( X <= maxv );
+					}
+				} else if(cond.op == LT) {
+					for( auto X : scope ) {
+						solver.add( X < maxv );
+					}
+				}  
+			
+		} else if(cond.operandType == INTERVAL) {
+			assert(cond.op == IN);
+			
+			Variable MV(cond.max, cond.max);
+			
+			solver.add( MaxVar == MV );
+		} else {
+			assert(cond.operandType == INTEGER);
+				
+				if(cond.op == EQ) {
+					solver.add( MaxVar == cond.val );
+				} else if(cond.op == NE) {
+					Variable cst(cond.val);
+					solver.add( MaxVar != cst);
+				} else if(cond.op == GE) {
+					solver.add( MaxVar >= cond.val );
+				} else if(cond.op == GT) {
+					solver.add( MaxVar > cond.val );
+				} else if(cond.op == LE) {
+					for( auto X : scope ) {
+						solver.add( X <= cond.val );
+					}
+				} else if(cond.op == LT) {
+					for( auto X : scope ) {
+						solver.add( X < cond.val );
+					}
+				}
+				
+		}
+		
+		last_var = MaxVar;
 }
 
 
@@ -1444,8 +1698,10 @@ void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *
     cout << "        Start index : " << startIndex << endl;
     cout << "        condition: " << xc << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		buildConstraintMaximum(id, list, xc);
+		solver.add( scope[variable[index->id]] == last_var );
 }
 
 
@@ -1455,8 +1711,12 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     displayList(list);
     cout << "        value: " << value << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray equalities;
+		for( auto x : list ) {
+			equalities.add( variable[x->id] == value );
+		}
+		solver.add( BoolSum(equalities) > 0 );
+
 }
 
 
@@ -1466,8 +1726,11 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     displayList(list);
     cout << "        value: " << *value << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray equalities;
+		for( auto x : list ) {
+			equalities.add( variable[x->id] == variable[value->id] );
+		}
+		solver.add( BoolSum(equalities) > 0 );
 }
 
 
@@ -1479,9 +1742,14 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        Start index : " << startIndex << endl;
     cout << "        index : " << *index << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
-}
+		assert(rank == ANY);
+		
+		// cout << variable[index->id].get_domain() << endl;
+		
+		VarArray scope;
+		getVariables(list, scope);
+		solver.add( Element(scope,variable[index->id],startIndex) == value );
+	}
 
 
 void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) {
@@ -1492,8 +1760,11 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        Start index : " << startIndex << endl;
     cout << "        index : " << *index << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		assert(rank == ANY);
+		
+		VarArray scope;
+		getVariables(list, scope);
+		solver.add( Element(scope,variable[index->id],startIndex) == variable[value->id] );
 }
 
 
@@ -1503,8 +1774,15 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     displayList(list);
     cout << "        Start index : " << startIndex << endl;
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		VarArray scope;
+		getVariables(list, scope);
+		solver.add(AllDiff(scope));
+		for(int i=0; i<scope.size; ++i) {
+			for(int j=i+1; j<scope.size; ++j) {
+				solver.add( (scope[i] == j) == (scope[j] == i) );
+			}
+		}
+
 }
 
 
@@ -1516,8 +1794,19 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     cout << "        list2 ";
     displayList(list2);
 		
-		cout << "NOT IMPLEMENTED!" << endl;
-		exit(1);
+		
+		VarArray scope1;
+		getVariables(list1, scope1);
+		VarArray scope2;
+		getVariables(list2, scope2);
+		solver.add(AllDiff(scope1));
+		solver.add(AllDiff(scope2));
+		for(int i=0; i<scope1.size; ++i) {
+			for(int j=0; j<scope2.size; ++j) {
+				solver.add( (scope1[i] == j) == (scope2[j] == i) );
+			}
+		}
+
 }
 
 

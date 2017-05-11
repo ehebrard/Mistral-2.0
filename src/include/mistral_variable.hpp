@@ -2835,6 +2835,7 @@ namespace Mistral {
   };
 
   Variable Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct=BOUND_CONSISTENCY);
+	Variable Occurrences(Vector< Variable >& args, std::vector<int>& values, std::vector<int>& lbs, std::vector<int>& ubs, const int ct=BOUND_CONSISTENCY);
 
 
 

@@ -21,7 +21,7 @@
 
 
 #include <math.h>
-
+#include <algorithm>
 
 #include <assert.h>
 
@@ -4337,6 +4337,27 @@ Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, const int first
 }
 
 
+Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, std::vector<int>& values, std::vector<int>& lbs, std::vector<int>& ubs, const int ct) {
+	int first = *std::min_element(begin(values), end(values));
+	int last = *std::max_element(begin(values), end(values));
+	
+	int *lb = new int[last-first+1];
+	int *ub = new int[last-first+1];
+	
+	std::fill(lb, lb+last-first+1, -INFTY);
+	std::fill(ub, ub+last-first+1,  INFTY);
+	
+	for(int i=0; i<values.size(); ++i) {
+		lb[values[i]-first] = lbs[i];
+		ub[values[i]-first] = ubs[i];
+	}
+	
+  Variable exp(new OccurrencesExpression(args, first, last, lb, ub, ct));
+  return exp;
+}
+
+
+
 
 Mistral::VertexCoverExpression::VertexCoverExpression(Vector< Variable >& args, const Graph& g) 
 : Expression(args), _G(g) {
@@ -5369,7 +5390,7 @@ Variable X, int ofs)
 		
 	// std::cout << args << " [" << offset << "] [" << (X.get_min()-offset) << ".." << X.get_max()-offset << "]" << std::endl;
 
-	for(unsigned int i=0; i<args.size; ++i) {
+	for(int i=0; i<args.size; ++i) {
 		if(i<(X.get_min()-offset)) {
 			
 			// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " < " << (X.get_min()-offset) << std::endl;
@@ -5386,10 +5407,10 @@ Variable X, int ofs)
 	offset+=rmd;
 
 	// std::cout << children << " [" << offset << "]" << std::endl;
-	
-	// for(unsigned int i=0; i<args.size; ++i) {
-	// 		children.add(args[i]);
-	// }
+
+	for(unsigned int i=0; i<args.size; ++i) {
+			children.add(args[i]);
+	}
 	
 	children.add(X);
 	
