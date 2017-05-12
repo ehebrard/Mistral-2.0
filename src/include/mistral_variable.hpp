@@ -3154,6 +3154,34 @@ namespace Mistral {
 
   Variable Element(const Vector<Variable>& X, Variable selector, int offset=0);
   Variable Element(const VarArray& X, Variable selector, int offset=0);
+	
+	
+  class StretchExpression : public Expression {
+
+  public:
+
+	 	std::vector<int>& stype;
+	 	std::vector<int>& slb;
+	 	std::vector<int>& sub;
+		std::vector<int>& trans;
+ 
+
+    StretchExpression(const Vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+		StretchExpression(const std::vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+    virtual ~StretchExpression();
+    void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    // virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Stretch(const Vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& t);
+  Variable Stretch(const std::vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& t);
+  Variable Stretch(const Vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub);
+  Variable Stretch(const std::vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub);
 
 
   class MinExpression : public Expression {

@@ -4490,6 +4490,59 @@ Mistral::Variable Mistral::MultiAtMostSeqCard(Vector< Variable >& args, const in
 
 
 
+
+Mistral::StretchExpression::StretchExpression(const Vector< Variable >& args, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& t)
+  : Expression(args), stype(typ), slb(lb), sub(ub), trans(t) {  
+}
+
+Mistral::StretchExpression::StretchExpression(const std::vector< Variable >& args, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& t)
+  : Expression(args), stype(typ), slb(lb), sub(ub), trans(t) {  
+}
+
+Mistral::StretchExpression::~StretchExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete stretch expression" << std::endl;
+#endif
+}
+
+void Mistral::StretchExpression::extract_constraint(Solver *s) { 
+  s->add(Constraint(new ConstraintStretch(children, stype, slb, sub, trans))); 
+}
+
+void Mistral::StretchExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: Stretch constraint can't yet be used as a predicate" << std::endl;
+  exit(0);
+}
+
+const char* Mistral::StretchExpression::get_name() const {
+  return "stretch";
+}
+
+Mistral::Variable Mistral::Stretch(const Vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t) {
+  Variable exp(new StretchExpression(args,stype,slb,sub,t));
+  return exp;
+}
+
+Mistral::Variable Mistral::Stretch(const std::vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t) {
+  Variable exp(new StretchExpression(args,stype,slb,sub,t));
+  return exp;
+}
+
+Mistral::Variable Mistral::Stretch(const Vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub) {
+	std::vector<int> t;
+  Variable exp(new StretchExpression(args,stype,slb,sub,t));
+  return exp;
+}
+
+Mistral::Variable Mistral::Stretch(const std::vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub) {
+	std::vector<int> t;
+  Variable exp(new StretchExpression(args,stype,slb,sub, t));
+  return exp;
+}
+
+
+
+
 Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>& rel, const AlgorithmType ct) 
   : Expression(args) { 
   propagator = ct;
@@ -4522,7 +4575,7 @@ Mistral::TableExpression::~TableExpression() {
   std::cout << "c delete table expression" << std::endl;
 #endif
 
-  // tuples.neutralise();
+  // tuples->neutralise();
 }
 
 void Mistral::TableExpression::extract_constraint(Solver *s) { 

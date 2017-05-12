@@ -833,6 +833,8 @@ namespace Mistral {
     void set_time_limit(const double limit);
     void set_learning_on();
     void close_propagation();
+		
+		void set_goal(Goal* g);
 
 
     /*!@name Printing*/
@@ -853,7 +855,7 @@ namespace Mistral {
 
   private:
     
-    TCLAP::ValueArg<std::string> *fileArg;
+    TCLAP::UnlabeledValueArg<std::string> *fileArg;
     TCLAP::ValueArg<int>         *seedArg;
     TCLAP::ValueArg<double>      *timeArg;
     //TCLAP::MultiArg<std::string> *printArg;

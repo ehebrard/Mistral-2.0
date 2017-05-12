@@ -4567,8 +4567,8 @@ namespace Mistral {
     Vector<Literal> explanation;
     //we need this for the explanation to check if the maximum cardinality of all subsequences at position i is equal to p.
     Vector< bool> max_equal_to_p ;
-	//Vector<int> sequence_image;
-	Vector<int> left_right_intersection;
+		//Vector<int> sequence_image;
+		Vector<int> left_right_intersection;
     //@}
 
     /**@name Constructors*/
@@ -4600,7 +4600,7 @@ namespace Mistral {
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bsum=k"; }
+    virtual std::string name() const { return "amsc"; }
     //@}
   };
 
@@ -4648,6 +4648,71 @@ namespace Mistral {
   	  virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
   	  void simple_greedy_assign_for_explanation(Vector<Variable>& X, int __rank, int index_a);
     };
+		
+		
+   /**********************************************
+    * Stretch Constraint
+    **********************************************/
+   //  
+   /// 
+   class ConstraintStretch : public GlobalConstraint {
+ 
+   public:
+     /**@name Parameters*/
+     //@{
+		 std::vector<int> stype;
+		 std::vector<int> slb;
+		 std::vector<int> sub;
+		 std::vector<int> transition_list;
+     //@}
+		 
+		 int** forward;
+		 int** backward;
+		 int** runlength;
+		 
+		 bool** transition;
+		 
+		 std::vector<int> var_queue;
+		 std::vector<int>::iterator front;
+		 std::vector<int> interval;
+		 
+		 int* sindex;
+		 int _min;
+		 int _max;
+		 
+
+     /**@name Constructors*/
+     //@{
+     ConstraintStretch();
+     ConstraintStretch(std::vector< Variable >& scp, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+		 ConstraintStretch(Vector< Variable >& scp, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+     virtual Constraint clone() { return Constraint(new ConstraintStretch(scope, stype, slb, sub, transition_list)); }
+		 void init_struct(std::vector<int>& type, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& T);
+     virtual void initialise();
+     virtual void mark_domain();
+     virtual bool explained() { return false; }
+     virtual int idempotent() { return 1;}
+     virtual int postponed() { return 1;}
+     virtual int pushed() { return 1;}
+     virtual ~ConstraintStretch();
+     //@}
+    
+		 void compute_forward();
+		 void compute_backward();
+		 PropagationOutcome prune();
+		
+      /**@name Solving*/
+     //@{
+ 		 virtual int check( const int* sol ) const ;
+     virtual PropagationOutcome propagate();
+     //@}
+  
+     /**@name Miscellaneous*/
+     //@{  
+     virtual std::ostream& display(std::ostream&) const ;
+     virtual std::string name() const { return "stretch"; }
+     //@}
+   };
 
 
    /**********************************************

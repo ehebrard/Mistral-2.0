@@ -14578,12 +14578,6 @@ void Mistral::ConstraintMultiAtMostSeqCard::initialise_struct(const int k, const
     memcpy(_q, q, _k*sizeof(int));
   }
 
-  // std::cout << "initilialise structures of atmostseqcard(" << _k <<"):";
-  // for(int i=0; i<_k; ++i) {
-  //   std::cout << " " << _p[i] << "/" << _q[i] ;
-  // }
-  // std::cout << std::endl;
-
   
   wl = NULL; 
   wr = NULL; 
@@ -15798,6 +15792,279 @@ std::ostream& Mistral::ConstraintMultiAtMostSeqCard::display(std::ostream& os) c
   return os;
 }
 
+
+
+
+
+/**********************************************
+ * Stretch Constraint 
+ **********************************************/
+
+
+Mistral::ConstraintStretch::ConstraintStretch()
+  : GlobalConstraint() { 
+}
+
+Mistral::ConstraintStretch::ConstraintStretch(Vector< Variable >& scp, std::vector<int>& type, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& transitions)
+  : GlobalConstraint(scp) { 
+		init_struct(type, lb, ub, transitions);
+}
+
+Mistral::ConstraintStretch::ConstraintStretch(std::vector< Variable >& scp, std::vector<int>& type, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& transitions)
+  : GlobalConstraint(scp) { 
+		init_struct(type, lb, ub, transitions);
+}
+
+void Mistral::ConstraintStretch::init_struct(std::vector<int>& type, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& T) {
+		assert(type.size() == lb.size());
+		assert(ub.size() == lb.size());
+		
+		stype.reserve(type.size());
+		slb.reserve(type.size());
+		sub.reserve(type.size());
+		transition_list.reserve(T.size());
+		
+		for(auto t : type) stype.push_back(t);
+		for(auto b : lb) slb.push_back(b);
+		for(auto b : ub) sub.push_back(b);
+		for(auto t : T) transition_list.push_back(t);
+		
+		forward   = new int*[scope.size+2];
+		backward  = new int*[scope.size+2];
+		runlength = new int*[scope.size+2];
+		
+		transition = new bool*[stype.size()];
+		for(int j=0; j<stype.size(); ++j) {
+			transition[j] = new bool[stype.size()];
+			std::fill(transition[j], transition[j]+stype.size(), T.empty());
+		}
+		for(int i=0; i<T.size(); i+=2) {
+			transition[T[i]][T[i+1]] = true;
+		}
+	
+
+		for(int i=0; i<scope.size; ++i) {
+			forward[i]   = new int[stype.size()];
+			backward[i]  = new int[stype.size()];
+			runlength[i] = new int[stype.size()];
+		}
+
+		_min =  INFTY;
+		_max = -INFTY;
+		for(int j=0; j<stype.size(); ++j) {
+			if(_min > stype[j]) {
+				_min = stype[j];
+			}
+			if(_max < stype[j]) {
+				_max = stype[j];
+			}
+		}
+	
+		sindex = new int[_max - _min + 1];
+		std::fill(sindex, sindex+_max-_min+1, INFTY);
+		sindex -= _min;
+	
+		for(int j=0; j<stype.size(); ++j) {
+			sindex[stype[j]] = j;
+		}
+}
+
+void Mistral::ConstraintStretch::initialise() {
+	priority = 0;  
+	
+  ConstraintImplementation::initialise();
+  for(unsigned int i=0; i<scope.size; ++i)
+    trigger_on(_DOMAIN_, scope[i]);
+  
+  GlobalConstraint::initialise();
+}
+
+void Mistral::ConstraintStretch::mark_domain() {
+  // for(int i=scope.size; i;)
+  //   get_solver()->forbid(scope[--i].id(), LIST_VAR);
+}
+
+Mistral::ConstraintStretch::~ConstraintStretch() 
+{
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete stretch constraint" << std::endl;
+#endif
+	
+	for(int i=0; i<=scope.size; ++i) {
+		delete forward[i];
+		delete backward[i];
+		delete runlength[i];
+	}
+	
+	for(int j=0; j<stype.size(); ++j) {
+		delete transition[j];
+	}
+	
+	delete forward;
+	delete backward;
+	delete runlength;
+	delete transition;
+	
+	sindex += _min;
+	delete sindex;
+
+}
+
+void Mistral::ConstraintStretch::compute_forward() 
+{
+	for(int i=0; i<2; ++i)
+		std::fill(forward[i], forward[i]+stype.size(), i);
+	for(int i=0; i<=scope.size; ++i)
+		std::fill(runlength[i], runlength[i]+stype.size(), 0);
+	for(int j=0; j<stype.size(); ++j) {
+		for(int i=1; i<=scope.size; ++i) {
+			if(scope[i-1].contain(stype[j]))
+				runlength[i][j] = runlength[i-1][j]+1;
+		}
+	}
+	for(int i=1; i<=scope.size; ++i) {
+		for(int j=0; j<stype.size(); ++j) {
+			forward[i+1][j] = forward[i][j];
+		}	
+		for(int j=0; j<stype.size(); ++j) {
+			int hi = i-slb[j];
+			int lo = i-std::min(sub[j], runlength[i][j]);
+			if(hi >= lo && forward[hi+1][j] - forward[lo][j] > 0) {
+				for(int k=0; k<stype.size(); ++k) {
+					if(transition[j][k])
+						forward[i+1][k] = forward[i][k]+1;
+				}
+			}
+		}
+	}
+}
+
+void Mistral::ConstraintStretch::compute_backward() 
+{
+	for(int i=0; i<2; ++i)
+		std::fill(backward[scope.size-i], backward[scope.size-i]+stype.size(), i);
+	for(int i=0; i<=scope.size+1; ++i)
+		std::fill(runlength[i], runlength[i]+stype.size(), 0);
+	for(int j=0; j<stype.size(); ++j) {
+		for(int i=scope.size; i>=1; --i) {
+			if(scope[i+1].contain(stype[j]))
+				runlength[i][j] = runlength[i+1][j]+1;
+		}
+	}
+	for(int i=scope.size; i>=1; --i) {
+		for(int j=0; j<stype.size(); ++j) {
+			backward[i-1][j] = backward[i][j];
+		}	
+		for(int j=0; j<stype.size(); ++j) {
+			int hi = i+slb[j];
+			int lo = i+std::min(sub[j], runlength[i][j]);
+			if(hi >= lo && backward[lo-1][j] - backward[hi][j] > 0) {
+				for(int k=0; k<stype.size(); ++k) {
+					if(transition[k][j])
+						backward[i-1][k] = backward[i][k]+1;
+				}
+			}
+		}
+	}
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintStretch::prune() {
+	PropagationOutcome wiped = CONSISTENT;
+	
+	for(int i=0; i<=scope.size; ++i)
+		std::fill(runlength[i], runlength[i]+stype.size(), 0);
+	for(int j=0; j<stype.size(); ++j) {
+		for(int i=1; i<=scope.size; ++i) {
+			if(scope[i-1].contain(stype[j]))
+				runlength[i][j] = runlength[i-1][j]+1;
+		}
+	}
+	for(int j=0; IS_OK(wiped) && j<stype.size(); ++j) {
+		interval.clear();
+		var_queue.clear();
+		front = begin(var_queue);
+		for(int i=scope.size; i>=0; --i) {
+			if(i>0 && backward[i][j]-backward[i+1][j]>0)
+				var_queue.push_back(i);
+			if(forward[i+1][j]-forward[i][j]==0) continue;
+			while(front != end(var_queue)) {
+				int e = *front;
+				bool _remove_ = (sub[j] <= e-i) || (runlength[i][e] <= e-i);
+				if(_remove_) ++front;
+				else break;
+			}
+			if(front != end(var_queue)) {
+				int e = *front;
+				if(e-i+1 >= slb[j]) {
+					if(interval.empty() || interval.back()<i) {
+						interval.push_back(i);
+						interval.push_back(e);
+					} else {
+						interval.pop_back();
+						interval.push_back(e);
+					}
+				}
+			}
+		}
+		while(IS_OK(wiped) && !interval.empty()) {
+			int e = interval.back();
+			interval.pop_back();
+			int s = interval.back();
+			interval.pop_back();
+			
+			for(int i=s; i<=e; ++i) {
+				if(FAILED(scope[i].remove(stype[j]))) {
+				  wiped = FAILURE(i);
+				} 
+			}
+		}
+	}
+	
+	return wiped;
+} 
+
+
+Mistral::PropagationOutcome Mistral::ConstraintStretch::propagate() 
+{
+  compute_forward();
+	compute_backward();
+
+  return prune();
+}
+
+int Mistral::ConstraintStretch::check( const int* s ) const 
+{
+	bool ok=true;
+	
+	int cur_val=s[0];
+	int cur_span=1;
+	
+	for(int i=1; ok && i<scope.size; ++i) {
+		if(s[i] != cur_val) {
+			// nouveau stretch de cur_val de longueur cur_span
+			if(sindex[cur_val] == INFTY || slb[sindex[cur_val]] > cur_span || sub[sindex[cur_val]] < cur_span)
+				ok = false;
+			else {
+				cur_val = s[i];
+				cur_span = 1;
+			}
+		} else {
+			++cur_span;
+		}
+	}
+
+  return !ok;
+}
+
+std::ostream& Mistral::ConstraintStretch::display(std::ostream& os) const {
+  os << "Stretch(" << scope[0]/*.get_var()*/ ;
+  for(unsigned int i=1; i<scope.size; ++i) 
+    os << " " << scope[i]/*.get_var()*/;
+  os << ")" ;
+  for(int i=0; i<stype.size(); ++i) 
+    os << ", <" << stype[i] << ":" << slb[i] << "-" << sub[i] << ">";
+  return os;
+}
 
 
 

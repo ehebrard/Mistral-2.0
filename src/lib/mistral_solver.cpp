@@ -11121,6 +11121,16 @@ void Mistral::Solver::set_time_limit(const double limit) {
   }
 }
 
+void Mistral::Solver::set_goal(Goal *g) {
+	if(g) {
+  	objective = g;
+  
+  	if(g->is_optimization()) {
+   	 consolidate_manager->id_obj = g->objective.id();
+  	}
+	}
+}
+
 
 void Mistral::Solver::check_constraint_graph_integrity() {
   // for each constraint, check if the set of active variables corresponds to unbound vars
@@ -11233,8 +11243,9 @@ Mistral::SolverCmdLine::~SolverCmdLine() {
 
 void Mistral::SolverCmdLine::initialise() {
 
+
   // INPUT FILE
-  fileArg = new TCLAP::ValueArg<std::string>("f","file","instance file",true,"data/example.opb","string");
+  fileArg = new TCLAP::UnlabeledValueArg<std::string>("file", "instance file", true, "", "string");
   add( *fileArg );
 
   // COMMENT INDICATOR
