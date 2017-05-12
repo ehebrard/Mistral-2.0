@@ -4613,22 +4613,22 @@ template < int N, class T >
     /*!
       Maximum element in the set [O(N/8)]. 
     */
-    inline int max() const
-    { 
-      WORD_TYPE tab;
-      int i=pos_words, j, k;
+		inline int max() const
+		{ 
+			WORD_TYPE tab;
+			int i=pos_words, j, k;
     
-      while( i-- > neg_words )
-	if( (tab = table[i]) ) {
-	  j = size_word_byte;
-	  while( j-- ) {
-	    if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 ) 
-	      return ( (i<<EXP)+(j<<3)+k );	
-	    tab = (tab << 8);
-	  }
-	}
-      return NOVAL;
-    }
+			while( i-- > neg_words )
+			if( (tab = table[i]) ) {
+				j = size_word_byte;
+				while( j-- ) {
+					if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 ) 
+						return ( (i<<EXP)+(j<<3)+k );	
+					tab = (tab << 8);
+				}
+			}
+			return NOVAL;
+		}
 
     inline void  remove(const int elt) 
     {
@@ -4649,21 +4649,22 @@ template < int N, class T >
     }
 
 
-   inline int next(const int elt) const {
-      int idx = ((elt+1) >> EXP);
-      if(idx >= pos_words) return elt;
-      WORD_TYPE v = (table[idx] & (full << ((elt+1) & CACHE)));
-      while(v == 0) {
-	if(++idx >= pos_words) return elt;
-	v = table[idx];
-      }
+		inline int next(const int elt) const {
+			int idx = ((elt+1) >> EXP);
+			if(idx >= pos_words) return elt;
+			if(idx < neg_words) return min();
+			WORD_TYPE v = (table[idx] & (full << ((elt+1) & CACHE)));
+			while(v == 0) {
+				if(++idx >= pos_words) return elt;
+				v = table[idx];
+			}
       
 #ifdef _VALGRIND_
 			return lsb_mantissa(v) + (idx * size_word_bit);
 #else
 			return lsb_gcc(v) + (idx * size_word_bit);
 #endif
-    }
+		}
 
 
     /*
@@ -4677,33 +4678,35 @@ template < int N, class T >
 
     inline int prev(const int elt) const {
 
-      WORD_TYPE tab;
-      int i = ((elt-1) >> EXP);
-      int SHFT = size_word_byte;
+			WORD_TYPE tab;
+			int i = ((elt-1) >> EXP);
+			if(i>=pos_words) return max();
+			
+			int SHFT = size_word_byte;
 
-      if( i >= neg_words ) {
-	int e = ((elt-1) & CACHE), k;
-	int j = 1+(e >> 3);
+			if( i >= neg_words ) {
+				int e = ((elt-1) & CACHE), k;
+				int j = 1+(e >> 3);
 
-	if( (tab = ((table[i] & (full >> (CACHE - e))) << ((SHFT-j) << 3))) ) 
-	  while( j-- ) {
-	    if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 )
-	      return ( (i<<EXP)+(j<<3)+k );
-	    tab = (tab << 8);
-	  }
-	while( i-- > neg_words ) 
-	  if( (tab = table[i]) ) {
-	    j = size_word_byte;
-	    while( j-- ) {
-	      if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 )
-		return ( (i<<EXP)+(j<<3)+k );
-	      tab = (tab << 8);
-	    }
-	  }
-      }
+				if( (tab = ((table[i] & (full >> (CACHE - e))) << ((SHFT-j) << 3))) ) 
+				while( j-- ) {
+					if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 )
+						return ( (i<<EXP)+(j<<3)+k );
+					tab = (tab << 8);
+				}
+				while( i-- > neg_words ) 
+				if( (tab = table[i]) ) {
+					j = size_word_byte;
+					while( j-- ) {
+						if( (k = getlast[(tab & mask_last_char) >> LASTCHAR]) >= 0 )
+							return ( (i<<EXP)+(j<<3)+k );
+						tab = (tab << 8);
+					}
+				}
+			}
 
-      return elt;
-    }
+			return elt;
+		}
 
     inline void xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
     {
@@ -5057,6 +5060,8 @@ template < int N, class T >
 		{
 			int neg_int = lb >> EXP;
 			int pos_int = ub >> EXP;
+			if(neg_int<neg_words || pos_int>pos_words) return false;
+			
 			int k = pos_int-1;
 			unsigned int u, l;
 			while( k > neg_int ) {
