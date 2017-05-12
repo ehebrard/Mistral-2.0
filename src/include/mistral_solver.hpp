@@ -174,6 +174,8 @@ namespace Mistral {
     /// Objective value (ub for minimization, lb for maximization, -1 otherwise)
     long int objective_value;
 
+    // best_time is the time needed to find the best solution for optimisation
+    double best_time;
     /// maximum length of a partial solution
     unsigned long int max_depth;
 
@@ -831,6 +833,8 @@ namespace Mistral {
     void set_time_limit(const double limit);
     void set_learning_on();
     void close_propagation();
+		
+		void set_goal(Goal* g);
 
 
     /*!@name Printing*/
