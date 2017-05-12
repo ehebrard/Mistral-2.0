@@ -42,6 +42,7 @@
 #define _CNE_WC
 
 
+
 //#define _DIV_WEIGHT
 
 #define _PWBS_WC
@@ -52,6 +53,7 @@
 #define _CBSI_WC
 
 
+// #define _DEBUG_RELAX (id == 64 || id == 79)
 
 /*
 #define _PWS_WC_ALT
@@ -1111,166 +1113,166 @@ namespace Mistral {
     }
 
 
-    void restore(const int rtype) {
+		void restore(const int rtype) {
       
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-            std::cout << "c ";
-      int lvl=solver->level;
-      while(--lvl>=0) std::cout << " ";
-std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std::endl;
-  }
+			if(_DEBUG_BACKTRACK) {
+				std::cout << "c ";
+				int lvl=solver->level;
+				while(--lvl>=0) std::cout << " ";
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std::endl;
+			}
 #endif
       
-      // //if(id==36) {
-      // //std::cout << std::endl;
+			// //if(id==36) {
+			// //std::cout << std::endl;
       
-      // // std::cout << scope[0] << " " << on[0] << std::endl;
-      // // std::cout << scope[1] << " " << on[1] << std::endl;
-      // // std::cout << scope[2] << " " << on[2] << std::endl;
-      // print_active();
-      // std::cout << " restore " ;
-      // //}
+			// // std::cout << scope[0] << " " << on[0] << std::endl;
+			// // std::cout << scope[1] << " " << on[1] << std::endl;
+			// // std::cout << scope[2] << " " << on[2] << std::endl;
+			// print_active();
+			// std::cout << " restore " ;
+			// //}
 
-      if(rtype&ACTIVITY) active >>= 3;	
+			if(rtype&ACTIVITY) active >>= 3;	
       
-      if(rtype&RELAXED) {
-	int var = rtype&CTYPE;
+			if(rtype&RELAXED) {
+				int var = rtype&CTYPE;
 	
-	// if(index[var]>=0) {
+				// if(index[var]>=0) {
 	  
-	//   std::cout << "SHOULD NOT REPOST TWICE!" << std::endl;
-	//   exit(1);
+				//   std::cout << "SHOULD NOT REPOST TWICE!" << std::endl;
+				//   exit(1);
 
-	// }
-	// std::cout << on[var] << " repost " ;
-	// display(std::cout);
-	// //std::cout << std::endl; 
+				// }
+				// std::cout << on[var] << " repost " ;
+				// display(std::cout);
+				// //std::cout << std::endl; 
 	
-	if(index[var] < 0) {
+				if(index[var] < 0) {
 
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-	  std::cout << "c ";
-	  lvl=solver->level;
-	  while(--lvl>=0) std::cout << " ";
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
-  }
+					if(_DEBUG_BACKTRACK) {
+						std::cout << "c ";
+						lvl=solver->level;
+						while(--lvl>=0) std::cout << " ";
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+					}
 #endif
 	
-	  un_relax_from(var);
-	}
-      }
+					un_relax_from(var);
+				}
+			}
       
       
-      if(rtype&POSTED) {
+			if(rtype&POSTED) {
 	
-	int var = rtype&CTYPE;
+				int var = rtype&CTYPE;
 	
-	// if(index[var]<0) {
+				// if(index[var]<0) {
 	  
-	//   std::cout << "SHOULD NOT RELAX TWICE!" << std::endl;
-	//   exit(1);
+				//   std::cout << "SHOULD NOT RELAX TWICE!" << std::endl;
+				//   exit(1);
 
-	// }
+				// }
 	
-	if(index[var] >= 0) {
+				if(index[var] >= 0) {
 
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-	  std::cout << "c ";
-	  int lvl=solver->level;
-	  while(--lvl>=0) std::cout << " ";
-	  std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
-  }
+					if(_DEBUG_BACKTRACK) {
+						std::cout << "c ";
+						int lvl=solver->level;
+						while(--lvl>=0) std::cout << " ";
+						std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+					}
 #endif
 	  
-	  un_post_from(var);
-	}
-      }
+					un_post_from(var);
+				}
+			}
       
-      //       else {
-      //       int var = rtype&CTYPE;
+			//       else {
+			//       int var = rtype&CTYPE;
       
-  //       //std::cout << var << " " << index[var] << " ";
+			//       //std::cout << var << " " << index[var] << " ";
   
   
-  //       if(index[var]<0) {
+			//       if(index[var]<0) {
   
-  // 	// std::cout << on[var] << " repost " ;
-  // 	// display(std::cout);
-  // 	// //std::cout << std::endl; 
+			// 	// std::cout << on[var] << " repost " ;
+			// 	// display(std::cout);
+			// 	// //std::cout << std::endl; 
   
-  // #ifdef _DEBUG_RELAX
-  //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
-  // #endif
+			// #ifdef _DEBUG_RELAX
+			//        std::cout << "[" << std::setw(4) << id << "](" << name() << "): repost on " << scope[var] << std::endl;
+			// #endif
   
-  // 	un_relax_from(var);
+			// 	un_relax_from(var);
   
-  // 	// std::cout << " " << on[var] << " ";
+			// 	// std::cout << " " << on[var] << " ";
 
-  //       } else {
+			//       } else {
   
   
-  // #ifdef _DEBUG_RELAX
-  //        std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
-  // #endif
+			// #ifdef _DEBUG_RELAX
+			//        std::cout << "[" << std::setw(4) << id << "](" << name() << "): relax from " << scope[var] << std::endl;
+			// #endif
   
-  // 	un_post_from(var);
-  //       }
-  //       }
-  // //if(id==36) {
-  // print_active();
-  // std::cout << std::endl ;
+			// 	un_post_from(var);
+			//       }
+			//       }
+			// //if(id==36) {
+			// print_active();
+			// std::cout << std::endl ;
   
-  // // std::cout << scope[0] << " " << on[0] << std::endl;
-  // // std::cout << scope[1] << " " << on[1] << std::endl;
-  // // std::cout << scope[2] << " " << on[2] << std::endl;
-  // std::cout << std::endl;
+			// // std::cout << scope[0] << " " << on[0] << std::endl;
+			// // std::cout << scope[1] << " " << on[1] << std::endl;
+			// // std::cout << scope[2] << " " << on[2] << std::endl;
+			// std::cout << std::endl;
   
-  // //}
+			// //}
   
 #ifdef _DEBUG_BACKTRACK
-      if(_DEBUG_BACKTRACK) {
-      std::cout << "c ";
-      lvl=solver->level;
-      while(--lvl>=0) std::cout << " ";
-  std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
-  print_active();
-  std::cout << std::endl;
-  }
+			if(_DEBUG_BACKTRACK) {
+				std::cout << "c ";
+				lvl=solver->level;
+				while(--lvl>=0) std::cout << " ";
+				std::cout << "[" << std::setw(4) << id << "](" << name() << "): reset active: " ;
+				print_active();
+				std::cout << std::endl;
+			}
 #endif
    
-}
+		}
 
-    void update(const int changed_idx, const Event evt) {
+		void update(const int changed_idx, const Event evt) {
 
-      if(ASSIGNED(evt) && assign(changed_idx)) {
+			if(ASSIGNED(evt) && assign(changed_idx)) {
 
 	
 #ifdef _DEBUG_RELAX
-  if(_DEBUG_RELAX) {
-     std::cout << "[" << std::setw(4) << id << "](" << name() << "): ff notify assignment of " << scope[changed_idx] << std::endl;
-  }
+				if(_DEBUG_RELAX) {
+					std::cout << "[" << std::setw(4) << id << "](" << name() << "): ff notify assignment of " << scope[changed_idx] << std::endl;
+				}
 #endif
 
-	// std::cout << " (" << ((active&7)/2) << ") ";
-	// std::cout.flush();
-	// std::cout << on[((active&7)/2)] << " relax " ;
-	// display(std::cout) ;
-	// std::cout.flush();
+				// std::cout << " (" << ((active&7)/2) << ") ";
+				// std::cout.flush();
+				// std::cout << on[((active&7)/2)] << " relax " ;
+				// display(std::cout) ;
+				// std::cout.flush();
 
 
-	relax_from((active&7)/2);
+				relax_from((active&7)/2);
 
-	// std::cout << " from " << scope[((active&7)/2)] 
-	// 	  << on[((active&7)/2)] << std::endl;
+				// std::cout << " from " << scope[((active&7)/2)] 
+				// 	  << on[((active&7)/2)] << std::endl;
 
-      }
-    }
+			}
+		}
     
-    void trigger();
-  };
+		void trigger();
+	};
 
 
   // class Contradiction : public ConstraintImplementation {
@@ -1797,7 +1799,13 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 			return the_max;
 		}
 
-
+		// returns true iff the constraint explains the conflict. That is, weight_conflict is overwritten
+		virtual bool conflict_is_explained() {return false;}
+#ifdef _ONLY_ACTIVE
+		//How mush did the constraint contributed to the weight of the variable
+	    Vector<double> weight_contributed;
+	    double weight_contribution(int idx){return weight_contributed[idx];}
+#endif
 		std::ostream& display(std::ostream& os) const;  
 	};
 
@@ -1992,7 +2000,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual void initialise();
     virtual bool rewritable() { return true; }
     virtual void mark_domain();
-    virtual int idempotent() { return 1;}
+    virtual int idempotent() { return 0;}
     virtual bool absorb_negation(const int var) { return var==1; }
     virtual ~PredicateConstantEqual() {}
     //@}
@@ -4067,6 +4075,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~ConstraintBoolSumInterval();
 #ifdef _CBSI_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     //@}
 
@@ -4149,9 +4158,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual ~ConstraintWeightedBoolSumInterval();
 #ifdef _CWBSI_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _CWBSI_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 
     //@}
@@ -4235,9 +4246,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 #ifdef _CIWBSI_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _CIWBSI_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
     virtual void initialise_activity(double *lact, double *vact, double norm);
@@ -4315,9 +4328,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 #ifdef _PWBS_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _PWBS_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 
     /**@name Solving*/
@@ -4377,6 +4392,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 #ifdef _PBS_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
 
@@ -4448,9 +4464,11 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual void mark_domain();
 #ifdef _PWS_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 #ifdef _PWS_WC_ALT
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
 //@}
 
@@ -4549,8 +4567,8 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     Vector<Literal> explanation;
     //we need this for the explanation to check if the maximum cardinality of all subsequences at position i is equal to p.
     Vector< bool> max_equal_to_p ;
-	//Vector<int> sequence_image;
-	Vector<int> left_right_intersection;
+		//Vector<int> sequence_image;
+		Vector<int> left_right_intersection;
     //@}
 
     /**@name Constructors*/
@@ -4582,7 +4600,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     /**@name Miscellaneous*/
     //@{  
     virtual std::ostream& display(std::ostream&) const ;
-    virtual std::string name() const { return "bsum=k"; }
+    virtual std::string name() const { return "amsc"; }
     //@}
   };
 
@@ -4630,6 +4648,71 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
   	  virtual iterator get_reason_for(const Atom a, const int lvl, iterator& end);
   	  void simple_greedy_assign_for_explanation(Vector<Variable>& X, int __rank, int index_a);
     };
+		
+		
+   /**********************************************
+    * Stretch Constraint
+    **********************************************/
+   //  
+   /// 
+   class ConstraintStretch : public GlobalConstraint {
+ 
+   public:
+     /**@name Parameters*/
+     //@{
+		 std::vector<int> stype;
+		 std::vector<int> slb;
+		 std::vector<int> sub;
+		 std::vector<int> transition_list;
+     //@}
+		 
+		 int** forward;
+		 int** backward;
+		 int** runlength;
+		 
+		 bool** transition;
+		 
+		 std::vector<int> var_queue;
+		 std::vector<int>::iterator front;
+		 std::vector<int> interval;
+		 
+		 int* sindex;
+		 int _min;
+		 int _max;
+		 
+
+     /**@name Constructors*/
+     //@{
+     ConstraintStretch();
+     ConstraintStretch(std::vector< Variable >& scp, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+		 ConstraintStretch(Vector< Variable >& scp, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+     virtual Constraint clone() { return Constraint(new ConstraintStretch(scope, stype, slb, sub, transition_list)); }
+		 void init_struct(std::vector<int>& type, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& T);
+     virtual void initialise();
+     virtual void mark_domain();
+     virtual bool explained() { return false; }
+     virtual int idempotent() { return 1;}
+     virtual int postponed() { return 1;}
+     virtual int pushed() { return 1;}
+     virtual ~ConstraintStretch();
+     //@}
+    
+		 void compute_forward();
+		 void compute_backward();
+		 PropagationOutcome prune();
+		
+      /**@name Solving*/
+     //@{
+ 		 virtual int check( const int* sol ) const ;
+     virtual PropagationOutcome propagate();
+     //@}
+  
+     /**@name Miscellaneous*/
+     //@{  
+     virtual std::ostream& display(std::ostream&) const ;
+     virtual std::string name() const { return "stretch"; }
+     //@}
+   };
 
 
    /**********************************************
@@ -4860,6 +4943,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     virtual void mark_domain();
 #ifdef _ELT_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     //@}
 
@@ -4935,12 +5019,13 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
     //Vector<int> assigned;
     int culprit;
+		int exception;
     
     /**@name Constructors*/
     //@{
     ConstraintCliqueNotEqual() : GlobalConstraint() { priority = 2; }
-    ConstraintCliqueNotEqual(Vector< Variable >& scp);
-    ConstraintCliqueNotEqual(std::vector< Variable >& scp);
+    ConstraintCliqueNotEqual(Vector< Variable >& scp, const int except=INT_MIN);
+    ConstraintCliqueNotEqual(std::vector< Variable >& scp, const int except=INT_MIN);
     ConstraintCliqueNotEqual(Variable* scp, const int n);
     virtual Constraint clone() { return Constraint(new ConstraintCliqueNotEqual(scope)// , type
 						   ); }
@@ -4967,6 +5052,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
     //@}
 #ifdef _CNE_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
     //   std::cout << std::endl;
     //   for(int i=0; i<scope.size; ++i) {
@@ -5073,6 +5159,7 @@ std::cout << "[" << std::setw(4) << id << "](" << name() << "): restore" << std:
 
 #ifdef _ALLDIFF_WC
     double weight_conflict(double unit, Vector<double>& weights);//  {
+    virtual bool conflict_is_explained() {return true;}
 #endif
   };
 

@@ -3,7 +3,9 @@ MAINDIR ?= .
 
 COPTIMIZE ?= -O3
 
-CCC = g++ 
+CCC = g++
+
+XCSP3PDIR=$(MAINDIR)/XCSP3-CPP-Parser
 
 BIN=$(MAINDIR)/bin
 SRC=$(MAINDIR)/src/lib
@@ -12,9 +14,9 @@ OBJ=$(MAINDIR)/src/obj
 INC=$(MAINDIR)/src/include
 DOC=$(MAINDIR)/doc
 TCL=$(MAINDIR)/tools/tclap/include
+XINC=$(XCSP3PDIR)/include
+XOBJ=$(XCSP3PDIR)/obj
 
-CFLAGS = -I$(INC) -I$(TCL) #-Wall -ffloat-store 
-LFLAGS = -L$(OBJ)
 
 
 MODELS = $(wildcard $(MOD)/src/*.cpp)
@@ -25,6 +27,11 @@ PINCSRC = $(wildcard $(INC)/*.hpp)
 PLIBSRC = $(wildcard $(SRC)/*.cpp)
 PLIBAUX = $(PLIBSRC:.cpp=.o)
 PLIBOBJ = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
+XLIBOBJ = $(wildcard $(XOBJ)/*.o)
+
+
+CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(XINC) `xml2-config --cflags`
+LFLAGS = -L$(OBJ)
 
 
 ## Compile options
@@ -63,14 +70,14 @@ $(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
 # The examples
 $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<
-	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $@
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $(XLIBOBJ) $< -lm -o $@
 
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
 	$(CCC) $(CFLAGS) -c $< -o $@ 
 
 # Examples, one at a time
-%: $(MOD)/obj/%.o $(PLIBOBJ)
+%: $(MOD)/obj/%.o $(PLIBOBJ) $(XLIBOBJ)
 	@echo 'link '$<	
-	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $(XLIBOBJ) `xml2-config --libs` $< -lm -o $(BIN)/$@ 
 

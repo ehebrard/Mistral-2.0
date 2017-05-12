@@ -4561,13 +4561,13 @@ template < int N, class T >
       return b - float_offset;
     }
 
-    inline int lsb_gcc(const WORD_TYPE v) const {
-      return __builtin_ctz(v);
-    }
-
-    inline int msb_gcc(const WORD_TYPE v) const {
-      return __builtin_clz(v);
-    }
+#ifdef _BIT64
+    inline int lsb_gcc(const WORD_TYPE v) const { return __builtin_ctzl(v); }
+    inline int msb_gcc(const WORD_TYPE v) const { return __builtin_clzl(v); }
+#else
+    inline int lsb_gcc(const WORD_TYPE v) const { return __builtin_ctz(v); }
+    inline int msb_gcc(const WORD_TYPE v) const { return __builtin_clz(v); }
+#endif
 
       
 		inline int minimum_element(int idx, WORD_TYPE v, const int def=NOVAL) const
@@ -4630,13 +4630,13 @@ template < int N, class T >
 			return NOVAL;
 		}
 
-    inline void  remove(const int elt) 
-    {
-      int i = (elt >> EXP);
-      if( (i >= neg_words) && 
-	  (i <  pos_words) )
-	table[i] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
-    }
+		inline void  remove(const int elt) 
+		{
+			int i = (elt >> EXP);
+			if( (i >= neg_words) && 
+				(i <  pos_words) )
+					table[i] &= (full ^ ((WORD_TYPE)1 << (elt & CACHE)));
+		}
 
     inline void  fast_remove(const int elt) 
     {
@@ -4708,40 +4708,43 @@ template < int N, class T >
 			return elt;
 		}
 
-    inline void xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
-      int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
-      while( i-- > j )
-	s.table[i] ^= table[i];
-    }
+		inline void xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
+			int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
+			while( i-- > j )
+				s.table[i] ^= table[i];
+		}
 
-    inline void fast_xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = pos_words;
-      while( i-- > neg_words )
-	s.table[i] ^= table[i];
-    }
+		inline void fast_xor_to(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = pos_words;
+			while( i-- > neg_words )
+				s.table[i] ^= table[i];
+		}
 
-    inline void xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
-      int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
-      while( i-- > j )
-	table[i] ^= s.table[i];
-    }
+		inline void xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = (pos_words > s.pos_words ? s.pos_words : pos_words);
+			int j = (neg_words < s.neg_words ? s.neg_words : neg_words);
+			while( i-- > j )
+				table[i] ^= s.table[i];
+		}
 
-    inline void fast_xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
-    {
-      int i = pos_words;
-      while( i-- > neg_words )
-	table[i] ^= s.table[i];
-    }
+		inline void fast_xor_with(const Bitset<WORD_TYPE,FLOAT_TYPE>& s) 
+		{
+			int i = pos_words;
+			while( i-- > neg_words )
+				table[i] ^= s.table[i];
+		}
 		
 		inline void xor_with(const int lb, const int ub) 
 		{
 			int wlb = (lb >> EXP), i;
 			int wub = (ub >> EXP), j;
+			
+			if(wlb<neg_words) wlb=neg_words;
+			if(wub>=pos_words) wub=pos_words-1;
 			
 			if(wlb==wub) {
 				table[wlb] ^= ((full << (lb & CACHE)) & (full >> (size_word_bit-1-(ub & CACHE))));
@@ -5058,25 +5061,23 @@ template < int N, class T >
 
 		inline bool includes(const int lb, const int ub) const
 		{
-			int neg_int = lb >> EXP;
-			int pos_int = ub >> EXP;
-			if(neg_int<neg_words || pos_int>pos_words) return false;
-			
-			int k = pos_int-1;
-			unsigned int u, l;
-			while( k > neg_int ) {
-				if( table[k] != full ) return false;
-				--k;
-			}
-			if(neg_int == pos_int) {
-				u = ((full << (lb & CACHE)) & (full >> (CACHE - (ub & CACHE))));
-				return (u & table[neg_int]) == u;
-			} else {
-				u = (full >> (CACHE - (ub & CACHE)));
-				l = (full << (lb & CACHE));
-				return (((l & table[neg_int]) == l) &&
-					((u & table[pos_int]) == u));
-			}
+      int neg_int = lb >> EXP;
+      int pos_int = ub >> EXP;
+      int k = pos_int - 1;
+      unsigned int u, l;
+      while (k > neg_int) {
+          if (table[k] != full)
+              return false;
+          --k;
+      }
+      if (neg_int == pos_int) {
+          u = ((full << (lb & CACHE)) & (full >> (CACHE - (ub & CACHE))));
+          return (u & table[neg_int]) == u;
+      } else {
+          u = (full >> (CACHE - (ub & CACHE)));
+          l = (full << (lb & CACHE));
+          return (((l & table[neg_int]) == l) && ((u & table[pos_int]) == u));
+      }
 		}
 
 
@@ -5090,7 +5091,11 @@ template < int N, class T >
      */
     inline unsigned int word_size(WORD_TYPE v) const 
     {
-      return __builtin_popcount(v);
+#ifdef _BIT32
+        return __builtin_popcount(v);
+#else
+				return __builtin_popcountl(v);
+#endif
       /*
       v = v - ((v >> 1) & (WORD_TYPE)~(WORD_TYPE)0/3);                           // temp
       v = (v & (WORD_TYPE)~(WORD_TYPE)0/15*3) + ((v >> 2) & (WORD_TYPE)~(WORD_TYPE)0/15*3);      // temp
@@ -8607,7 +8612,7 @@ public:
 			}
 
 			// first, compute a minimal explanation for the last fail
-			int i, j, x, y, z, u, e;
+			int i, j, x, y, z, u;
 			_explanation.quick_clear();
 			
 			
@@ -9304,7 +9309,7 @@ public:
 		
 		int min_clique_cover_bitset()
 		{
-			int d, j, i, x, y;
+			int d, j, i, x;
 			clear_cliques();
 			for(d=min_degree; d<=max_degree; ++d) {
 				for(j=node_of_degree[d].size; --j>=0;) {
@@ -9355,7 +9360,7 @@ public:
 		// stupi implementation of dsatur, just as a witness that it does not seem to help
 		int min_clique_cover_bitset_sat(const int limit=-1)
 		{
-			int d, i, j, x, y, n;
+			int i, x, y;
 	
 			for(i=0; i<num_cliques; ++i) {
 				candidates[i].fill();
@@ -9532,7 +9537,7 @@ public:
 #endif
 			
 			
-			int d, i, j, x, y, n=size(), reason, ds, k, w1, w2;
+			int d, j, x, reason, w1, w2;
 			bool fix_point = false;
 			bool reduction = false;
 			while(num_edges && !fix_point) {
@@ -9663,7 +9668,7 @@ public:
 		
 		
 		bool kernelize_cliques_incremental(VCAlgo<ReversibleCompactGraph>& algo) {
-			int i, x, y, z, t, w1, w2, ixz, iut, reason, reduction=false; 
+			int x, y, w1, w2, reason, reduction=false; 
 			
 #ifdef _VERIF_WATCHERS
 					verify_watchers("start incr");
@@ -10034,7 +10039,7 @@ public:
 		
 		
 		bool kernelize_cliques_incremental_old(VCAlgo<ReversibleCompactGraph>& algo) {
-			int i, x, y, z, t, w1, w2, ixz, iut, reason, reduction=false; 
+			int x, y, z, t, w1, w2, ixz, iut, reason, reduction=false; 
 			
 #ifdef _DEBUG_KERNCLIQUEINCR			
 			if(_DEBUG_KERNCLIQUEINCR) {
@@ -11494,7 +11499,7 @@ public:
 		
 		bool kernelize_cliques()
 		{
-			int d, i, j, x, y, n=_graph.size(), reason, ds, k;
+			int d, i, j, x, y, reason, ds, k;
 			bool fix_point = false;
 			bool reduction = false;
 			while(_graph.num_edges && !fix_point) {
@@ -11863,7 +11868,7 @@ public:
 		int cliques_lower_bound(const int limit=-1)
 		{
 			int lb=0;
-			int d, j, i, x, y, n=_graph.size(), best;
+			int d, j, i, x, best;
 	
 
 			for(i=0; i<num_cliques; ++i) {
@@ -11914,8 +11919,7 @@ public:
 		int cliques_dual_bound(const int limit=-1)
 		{
 	
-			int lb=0;
-			int d, j, i, x, y, n=_graph.size(), best;
+			int i, x;
 	
 			for(i=0; i<num_cliques; ++i) {
 				candidates[i].fill();
@@ -12125,7 +12129,7 @@ public:
 			}
 
 			// first, compute a minimal explanation for the last fail
-			int i, j, x, y, z, u, e;
+			int i, j, x, y, z, u;
 			_explanation.quick_clear();
 			
 			

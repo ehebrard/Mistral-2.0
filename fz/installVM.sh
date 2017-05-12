@@ -1,13 +1,23 @@
 #echo "This script should be placed in the directory ~/entry_data in the Virtual Machine provided by the challenge organizers"
 
-cd /home/user/entry_data
-echo "You should probably change the keyboard layout with \n dpkg-reconfigure keyboard-configuration (then restart)" 
-echo "g++ and git should be installed before this step"
+echo "You should probably change the keyboard layout with \n dpkg-reconfigure keyboard-configuration (then restart) \n" 
+echo "g++, python, and make should be installed before this step"
 
-read -p "Press [Enter] key to start installation"
+#read -p "Press [Enter] key to start installation of g++"
 
-#apt-get install g++
+#sudo apt install g++
+#read -p "Press [Enter] key to start installation of python"
+#sudo apt install python
+
+#read -p "Press [Enter] key to start installation of make"
+#sudo apt install make
+
+ 
 #apt-get install git
+
+read -p "Press [Enter] key to start installation of Mistral-2.0"
+
+
 
 git clone https://github.com/ehebrard/Mistral-2.0.git
 cd Mistral-2.0
@@ -16,6 +26,8 @@ cd fz
 make clean
 cd ..
 make 
+
+#To build the parallel version, remove the following comments: 
 mv fz/mistral-fzn ../
 make clean 
 cd fz 
@@ -35,7 +47,7 @@ echo "PATH=/home/user/entry_data/Mistral-2.0/fz:$PATH" >> /home/user/.bashrc
 
 cp Mistral-2.0/fz/mznlib/* mzn-lib/
 echo "Mistral-2.0 Installed. You need to logout then login to complete installation"
-echo "Please edit ~/bin/challenge_env.sh to support only free and parallel search"
+echo "Please edit ~/bin/challenge_env.sh to support only free (and parallel search?)”
 
 #read -p "Press [Enter] key to start test"
 #nano fzn-exec

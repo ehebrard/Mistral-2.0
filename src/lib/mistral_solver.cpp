@@ -34,7 +34,9 @@
 
 //#define _OLD_ true
 //#define _DEBUG_NOGOOD true //(statistics.num_filterings == 491)
-//#define _DEBUG_SEARCH true
+
+// #define _DEBUG_SEARCH true
+// #define _DEBUG_AC (!decisions.empty() && decisions.back().var.id() == 137)
 
 //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738) || (statistics.num_filterings == 44368) || (statistics.num_filterings == 43659))
 
@@ -261,6 +263,7 @@ void Mistral::SolverStatistics::initialise(Solver *s) {
   creation_time = get_run_time();
   end_time = -1.0;
   start_time = end_time;
+  best_time = 0.0;
 
   outcome = UNKNOWN;
 
@@ -445,6 +448,9 @@ std::ostream& Mistral::SolverStatistics::print_full(std::ostream& os) const {
       os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OBJECTIVE"
 	 << std::right << std::setw(46) << objective_value  << std::endl;
 
+      os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  BESTTIME"
+	 << std::right << std::setw(46) << best_time  << std::endl;
+
       if (outcome ==  OPT)
          os << std::left << " " << solver->parameters.prefix_statistics << std::setw(44-lps) << "  OPT"
        	<< std::right << std::setw(46) << 1  << std::endl;
@@ -551,6 +557,7 @@ Mistral::SolverStatistics::SolverStatistics(const SolverStatistics& sp) {
 }
 void Mistral::SolverStatistics::copy(const SolverStatistics& sp) {
   objective_value = sp.objective_value;
+  best_time = sp.best_time;
   num_variables = sp.num_variables;
   num_constraints = sp.num_constraints; 
   num_values = sp.num_values; 
@@ -567,6 +574,7 @@ void Mistral::SolverStatistics::copy(const SolverStatistics& sp) {
 }
 void Mistral::SolverStatistics::update(const SolverStatistics& sp) {
   objective_value = sp.objective_value;
+  best_time = sp.best_time;
 
   num_nodes += sp.num_nodes; 
 	num_decisions += sp.num_decisions; 
@@ -2217,6 +2225,10 @@ Mistral::Solver::~Solver() {
 
   //std::cout << "delete variables" << std::endl;
   for(unsigned int i=0; i<variables.size; ++i) {
+		
+		// std::cout << "free var " << i << std::endl;
+		// std::cout << variables[i] << " in " << variables[i].get_domain() << std::endl;
+		//
     //std::cout << removed_variables[0] << std::endl;
     variables[i].free_object();
     //std::cout << removed_variables[0] << std::endl;
@@ -2622,7 +2634,9 @@ void Mistral::Solver::make_non_convex(const int idx)
 {
 
   // std::cout << variables << std::endl;
-  // std::cout << "\nmake " << variables[idx] << " non convex\n"; 
+	
+	// if(idx==33)
+	//   std::cout << "\nmake " << variables[idx] << " non convex\n";
 
   if(variables[idx].domain_type == RANGE_VAR) {
     Variable r = variables[idx];
@@ -2640,22 +2654,37 @@ void Mistral::Solver::make_non_convex(const int idx)
     //   }
     //   x.expression->self = X;
 
+		// if(idx==17) {
+		// 	int ids = sequence.index(idx);
+		// 	std::cout << "change " << variables[idx] << " <- " << X << " (" << sequence.list_[ids] << ")" << std::endl;
+		// }
+
+
     // } else {
-    variables[idx] = X;
+    variables[idx] = X; //.get_var();
 
-    // int ids = sequence.index(idx);
 
-    // if(ids>=0) sequence.list_[ids] = X;
+    
+
+
+
+    //if(ids>=0) sequence.list_[ids] = X;
 
     // for(int i=0; i<3; ++i) {
     //   for(int j=constraint_graph[idx].on[i].size-1; j>=0; --j)
     // 	constraint_graph[idx].on[i][j].consolidate();
     // }
 
-    //std::cout << "MAKE " << variables[idx] << " NON CONVEX: NOTIFY CHANGE" << std::endl; 
+    // std::cout << "MADE " << variables[idx] << " IN " << variables[idx].get_domain() << " NON CONVEX: NOTIFY CHANGE" << std::endl;
 
     notify_change_variable(idx);
     // }
+		
+		
+		// if(idx==17) {
+		// 	int ids = sequence.index(idx);
+		// 	std::cout << "res: " << variables[idx] << " (" << sequence.list_[ids] << ")" << std::endl;
+		// }
 
     // std::cout << parameters.prefix_comment << std::endl;
     // unsigned int k=0;
@@ -3222,425 +3251,425 @@ bool Mistral::Solver::rewrite()
 
 
 Mistral::PropagationOutcome Mistral::Solver::propagate(Constraint c, 
-						       const bool force_trigger,
-						       const bool trigger_self) {
+const bool force_trigger,
+const bool trigger_self) {
 
-  // std::cout << "solver.cpp: specific propagate(" << c << ")" << std::endl;
+	// std::cout << "solver.cpp: specific propagate(" << c << ")" << std::endl;
 
-  // std::cout << active_variables << std::endl
-  // 	    << active_constraints << std::endl;
+	// std::cout << active_variables << std::endl
+	// 	    << active_constraints << std::endl;
 
-  int trig, cons;
-  bool fix_point;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
+	int trig, cons;
+	bool fix_point;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
 
-  //wiped_idx = CONSISTENT;
-  if(force_trigger) 
-    c.trigger();
+	//wiped_idx = CONSISTENT;
+	if(force_trigger) 
+		c.trigger();
   
-  fix_point = (active_variables.empty() && active_constraints.empty());
+	fix_point = (active_variables.empty() && active_constraints.empty());
 
-  // std::cout << IS_OK(wiped_idx) << " & " << fix_point << std::endl;
+	// std::cout << IS_OK(wiped_idx) << " & " << fix_point << std::endl;
 
-  // std::cout << active_variables << std::endl;
+	// std::cout << active_variables << std::endl;
 
-  // std::cout << active_constraints << std::endl;
+	// std::cout << active_constraints << std::endl;
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
 
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      var_evt = active_variables.pop_front();
+			var_evt = active_variables.pop_front();
 
-      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+			if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
 
-	sequence.remove(variables[var_evt.first]);
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[var_evt.first] = level;
-	assignment_order[var_evt.first] = assignment_rank;
-	++assignment_rank;
-      }
+				sequence.remove(variables[var_evt.first]);
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[var_evt.first] = level;
+				assignment_order[var_evt.first] = assignment_rank;
+				++assignment_rank;
+			}
 
 
    
-      // std::cout << var_evt << " " 
-      // 		<< variables[var_evt.first] << " \n0 " 
-      // 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
-      // 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
-      // 		<< constraint_graph[var_evt.first].on[2] << "\n"
-      // 		<< c.propagator << std::endl;
+			// std::cout << var_evt << " " 
+			// 		<< variables[var_evt.first] << " \n0 " 
+			// 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
+			// 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
+			// 		<< constraint_graph[var_evt.first].on[2] << "\n"
+			// 		<< c.propagator << std::endl;
 
      
-      if(trigger_self || var_evt.third != c.propagator) {
+			if(trigger_self || var_evt.third != c.propagator) {
 
-	// for each triggered constraint
-	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	      trig<3; ++trig) {
+				// for each triggered constraint
+				for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+				trig<3; ++trig) {
 
-	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
-		--cons>=0;) {
+					for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+					--cons>=0;) {
 
-	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+						culprit = constraint_graph[var_evt.first].on[trig][cons];
 	    
-	    if( culprit == c ) {
+						if( culprit == c ) {
 
-	      // if the constraints asked to be pushed on the constraint stack we do that
-	      if(culprit.pushed()) {
-		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					   culprit.index(), var_evt.second);
-	      }
+							// if the constraints asked to be pushed on the constraint stack we do that
+							if(culprit.pushed()) {
+								active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+								culprit.index(), var_evt.second);
+							}
 
-	      // if the constraint is not postponed, we propagate it
-	      if(!culprit.postponed()) {
-		++statistics.num_propagations;  
-		taboo_constraint = culprit.freeze();
-		wiped_idx = culprit.propagate(var_evt.second); 
-		taboo_constraint = culprit.defrost();
-	      }
-	    } 
-	  }
+							// if the constraint is not postponed, we propagate it
+							if(!culprit.postponed()) {
+								++statistics.num_propagations;  
+								taboo_constraint = culprit.freeze();
+								wiped_idx = culprit.propagate(var_evt.second); 
+								taboo_constraint = culprit.defrost();
+							}
+						} 
+					}
+				}
+			}
+		}
+
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+			// propagate postponed constraint
+			++statistics.num_propagations;  
+			culprit = active_constraints.select(constraints);
+			taboo_constraint = culprit.freeze();
+			wiped_idx = culprit.propagate(); 
+			taboo_constraint = culprit.defrost();
+		} else if(active_variables.empty()) fix_point = true;
 	}
-      }
-    }
-
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
-      // propagate postponed constraint
-      ++statistics.num_propagations;  
-      culprit = active_constraints.select(constraints);
-      taboo_constraint = culprit.freeze();
-      wiped_idx = culprit.propagate(); 
-      taboo_constraint = culprit.defrost();
-    } else if(active_variables.empty()) fix_point = true;
-  }
     
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  active_variables.clear();
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	active_variables.clear();
 
-  // std::cout << wiped_idx << std::endl;
-  PropagationOutcome consistent = wiped_idx;
-  wiped_idx = CONSISTENT;
-  return consistent;
+	// std::cout << wiped_idx << std::endl;
+	PropagationOutcome consistent = wiped_idx;
+	wiped_idx = CONSISTENT;
+	return consistent;
 }
 
 Mistral::PropagationOutcome Mistral::Solver::checker_propagate(Constraint c, 
-							       const bool force_trigger,
-							       const bool trigger_self) {
-  int trig, cons;
-  bool fix_point;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
+const bool force_trigger,
+const bool trigger_self) {
+	int trig, cons;
+	bool fix_point;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
 
 
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    std::cout << "c start (checker) propagation" << std::endl;
-  }
+	if(_DEBUG_AC) {
+		std::cout << "c start (checker) propagation" << std::endl;
+	}
 #endif
 
 
-  //wiped_idx = CONSISTENT;
-  if(force_trigger) 
-    c.trigger();
+	//wiped_idx = CONSISTENT;
+	if(force_trigger) 
+		c.trigger();
   
-  fix_point = (active_variables.empty() && active_constraints.empty());
+	fix_point = (active_variables.empty() && active_constraints.empty());
 
 
 #ifdef _DEBUG_AC
-  int iteration = 0;
-  if(_DEBUG_AC) {
-    std::cout << std::endl;
-  }
+	int iteration = 0;
+	if(_DEBUG_AC) {
+		std::cout << std::endl;
+	}
 #endif
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
 
 #ifdef _DEBUG_AC
-    if(_DEBUG_AC) {
-      std::cout << "c "; 
-      std::cout << "var stack: " << active_variables << std::endl;
-      ++iteration;
-    }
+		if(_DEBUG_AC) {
+			std::cout << "c "; 
+			std::cout << "var stack: " << active_variables << std::endl;
+			++iteration;
+		}
 #endif
 
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      var_evt = active_variables.pop_front();
+			var_evt = active_variables.pop_front();
 
 #ifdef _DEBUG_AC
-      if(_DEBUG_AC) {
-	std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	std::cout << "react to " << event2str(var_evt.second) << " on " << variables[var_evt.first] 
-		  << " in " << variables[var_evt.first].get_domain() ;
-	if(var_evt.third)
-	  std::cout << " because of " << var_evt.third ;
-	std::cout << ". var stack: " << active_variables << std::endl;
-      }
+			if(_DEBUG_AC) {
+				std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+				std::cout << "react to " << event2str(var_evt.second) << " on " << variables[var_evt.first] 
+					<< " in " << variables[var_evt.first].get_domain() ;
+				if(var_evt.third)
+					std::cout << " because of " << var_evt.third ;
+				std::cout << ". var stack: " << active_variables << std::endl;
+			}
 #endif 
 
-      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
-	sequence.remove(variables[var_evt.first]);
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[var_evt.first] = level;
-	assignment_order[var_evt.first] = assignment_rank;
-	++assignment_rank;
-      }
+			if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+				sequence.remove(variables[var_evt.first]);
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[var_evt.first] = level;
+				assignment_order[var_evt.first] = assignment_rank;
+				++assignment_rank;
+			}
      
-      //std::cout << var_evt.third << " <-> " << c.propagator << std::endl;
+			//std::cout << var_evt.third << " <-> " << c.propagator << std::endl;
 
-      if(trigger_self || var_evt.third != c.propagator) {
+			if(trigger_self || var_evt.third != c.propagator) {
 
-	// std::cout << "cons list of " << variables[var_evt.first] << " = " 
-	// 	  << constraint_graph[var_evt.first].on << std::endl;
+				// std::cout << "cons list of " << variables[var_evt.first] << " = " 
+				// 	  << constraint_graph[var_evt.first].on << std::endl;
 
-	// for each triggered constraint
-	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	      trig<3; ++trig) {
+				// for each triggered constraint
+				for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+				trig<3; ++trig) {
 
-	  //std::cout << " trig[" << trig << "] = " << constraint_graph[var_evt.first].on[trig] << std::endl;
+					//std::cout << " trig[" << trig << "] = " << constraint_graph[var_evt.first].on[trig] << std::endl;
 
-	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
-		--cons>=0;) {
+					for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+					--cons>=0;) {
 
-	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+						culprit = constraint_graph[var_evt.first].on[trig][cons];
 
 
-	    // if(ASSIGNED(var_evt.second)) {
-	    //   culprit.notify_assignment();
-	    // }
+						// if(ASSIGNED(var_evt.second)) {
+						//   culprit.notify_assignment();
+						// }
 
 
 #ifdef _DEBUG_AC
-	    if(_DEBUG_AC) {
-	      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	      std::cout << "  -awake " << culprit << ": "; 
-	      std::cout.flush();
-	    }
+						if(_DEBUG_AC) {
+							std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+							std::cout << "  -awake " << culprit << ": "; 
+							std::cout.flush();
+						}
 #endif
 
 	    
-	    if( culprit == c ) {
+						if( culprit == c ) {
 
-	      // if the constraint asks to be pushed on the constraint stack we do that
-	      if(culprit.pushed()) {
+							// if the constraint asks to be pushed on the constraint stack we do that
+							if(culprit.pushed()) {
 #ifdef _DEBUG_AC
-		if(_DEBUG_AC) {
-		  std::cout << "pushed on the stack" ;
-		}
+								if(_DEBUG_AC) {
+									std::cout << "pushed on the stack" ;
+								}
 #endif
-		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					   culprit.index(), var_evt.second);
-	      }
+								active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+								culprit.index(), var_evt.second);
+							}
 
-	      // if the constraint is not postponed, we propagate it
-	      if(!culprit.postponed()) {
+							// if the constraint is not postponed, we propagate it
+							if(!culprit.postponed()) {
 #ifdef _DEBUG_AC
-		if(_DEBUG_AC) {
-		  if(IS_OK(wiped_idx)) {
-		    Variable *scp = culprit.get_scope();
-		    int arity = culprit.arity();
-		    for(int i=0; i<arity; ++i)
-		      std::cout << scp[i].get_domain() << " ";
-		    std::cout << "ok";
-		  } else std::cout << "fail";
-		}
+								if(_DEBUG_AC) {
+									if(IS_OK(wiped_idx)) {
+										Variable *scp = culprit.get_scope();
+										int arity = culprit.arity();
+										for(int i=0; i<arity; ++i)
+											std::cout << scp[i].get_domain() << " ";
+										std::cout << "ok";
+									} else std::cout << "fail";
+								}
 #endif
-		++statistics.num_propagations;  
-		taboo_constraint = culprit.freeze();
+								++statistics.num_propagations;  
+								taboo_constraint = culprit.freeze();
 
-		//std::cout << "taboo: " << taboo_constraint << std::endl;
+								//std::cout << "taboo: " << taboo_constraint << std::endl;
 
-		wiped_idx = culprit.checker_propagate(var_evt.second); 
-		taboo_constraint = culprit.defrost();
-	      }
-	    }
+								wiped_idx = culprit.checker_propagate(var_evt.second); 
+								taboo_constraint = culprit.defrost();
+							}
+						}
 #ifdef _DEBUG_AC
-	    else {
-	      if(_DEBUG_AC) {
-		std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-		std::cout << "  -does not propagate " << culprit << " (we propagate " << c << ")" ;
-	      }
-	    }
-	    if(_DEBUG_AC) {
-	      std::cout << std::endl; 
-	    }
+						else {
+							if(_DEBUG_AC) {
+								std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+								std::cout << "  -does not propagate " << culprit << " (we propagate " << c << ")" ;
+							}
+						}
+						if(_DEBUG_AC) {
+							std::cout << std::endl; 
+						}
 #endif    
 
-	  }
-	}
-      }
+					}
+				}
+			}
 #ifdef _DEBUG_AC
-      else {
+			else {
+				if(_DEBUG_AC) {
+					std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+					std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
+				}
+			}
+#endif
+		}
+    
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+			// propagate postponed constraint
+			culprit = active_constraints.select(constraints);
+			taboo_constraint = culprit.freeze();
+
+			// if(taboo_constraint)
+			// 	std::cout << "[constraint]" << std::endl;
+			// else
+			// 	std::cout << "[nill]" << std::endl;
+
+			wiped_idx = culprit.checker_propagate(); 
+			taboo_constraint = culprit.defrost();
+		} else if(active_variables.empty()) fix_point = true;
+	}
+    
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	active_variables.clear();
+
+
+#ifdef _DEBUG_AC
 	if(_DEBUG_AC) {
-	  std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	  std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
+		std::cout << "c end (checker) propagation\n" << std::endl;
 	}
-      }
-#endif
-    }
-    
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
-      // propagate postponed constraint
-      culprit = active_constraints.select(constraints);
-      taboo_constraint = culprit.freeze();
-
-      // if(taboo_constraint)
-      // 	std::cout << "[constraint]" << std::endl;
-      // else
-      // 	std::cout << "[nill]" << std::endl;
-
-      wiped_idx = culprit.checker_propagate(); 
-      taboo_constraint = culprit.defrost();
-    } else if(active_variables.empty()) fix_point = true;
-  }
-    
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  active_variables.clear();
-
-
-#ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    std::cout << "c end (checker) propagation\n" << std::endl;
-  }
 #endif
 
     
-  //return wiped_idx;
-  PropagationOutcome consistent = wiped_idx;
-  wiped_idx = CONSISTENT;
-  return consistent;
+	//return wiped_idx;
+	PropagationOutcome consistent = wiped_idx;
+	wiped_idx = CONSISTENT;
+	return consistent;
 }
 
 Mistral::PropagationOutcome Mistral::Solver::bound_checker_propagate(Constraint c, 
-								     const bool force_trigger,
-								     const bool trigger_self) {
+const bool force_trigger,
+const bool trigger_self) {
 
 
-  //std::cout << "solver.cpp: bound checker propagate(" << c << ")" << std::endl;
+	//std::cout << "solver.cpp: bound checker propagate(" << c << ")" << std::endl;
 
-  // std::cout << active_variables << std::endl
-  // 	    << active_constraints << std::endl;
+	// std::cout << active_variables << std::endl
+	// 	    << active_constraints << std::endl;
 
 
-  int trig, cons;
-  bool fix_point;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
-  //VarEvent var_evt;
+	int trig, cons;
+	bool fix_point;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
+	//VarEvent var_evt;
 
-  //wiped_idx = CONSISTENT;
-  if(force_trigger) 
-    c.trigger();
+	//wiped_idx = CONSISTENT;
+	if(force_trigger) 
+		c.trigger();
 
-  fix_point =  (active_variables.empty() && active_constraints.empty());
+	fix_point =  (active_variables.empty() && active_constraints.empty());
   
-  // std::cout << active_variables << std::endl;
+	// std::cout << active_variables << std::endl;
 
-  // std::cout << active_constraints << std::endl;
+	// std::cout << active_constraints << std::endl;
 
-  // std::cout << (IS_OK(wiped_idx)) << " " << fix_point <<std::endl;
+	// std::cout << (IS_OK(wiped_idx)) << " " << fix_point <<std::endl;
 
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
 
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      var_evt = active_variables.pop_front();
+			var_evt = active_variables.pop_front();
 
-      if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
-	sequence.remove(variables[var_evt.first]);
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[var_evt.first] = level;
-	assignment_order[var_evt.first] = assignment_rank;
-	++assignment_rank;
-      }
+			if(ASSIGNED(var_evt.second) && sequence.contain(variables[var_evt.first])) {
+				sequence.remove(variables[var_evt.first]);
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[var_evt.first] = level;
+				assignment_order[var_evt.first] = assignment_rank;
+				++assignment_rank;
+			}
      
-      // std::cout << var_evt << " " 
-      // 		<< variables[var_evt.first] << " \n0 " 
-      // 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
-      // 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
-      // 		<< constraint_graph[var_evt.first].on[2] << "\n"
-      // 		<< c.propagator << std::endl;
+			// std::cout << var_evt << " " 
+			// 		<< variables[var_evt.first] << " \n0 " 
+			// 		<< constraint_graph[var_evt.first].on[0] << "\n1 "
+			// 		<< constraint_graph[var_evt.first].on[1] << "\n2 "
+			// 		<< constraint_graph[var_evt.first].on[2] << "\n"
+			// 		<< c.propagator << std::endl;
 
-      if(trigger_self || var_evt.third != c.propagator) {
+			if(trigger_self || var_evt.third != c.propagator) {
 
-	// std::cout << " " << constraint_graph[var_evt.first].on[EVENT_TYPE(var_evt.second)] << std::endl;
+				// std::cout << " " << constraint_graph[var_evt.first].on[EVENT_TYPE(var_evt.second)] << std::endl;
 
-	// for each triggered constraint
-	for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	      trig<3; ++trig) {
+				// for each triggered constraint
+				for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+				trig<3; ++trig) {
 
-	  for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
-		--cons>=0;) {
+					for(cons = constraint_graph[var_evt.first].on[trig].size; IS_OK(wiped_idx) &&
+					--cons>=0;) {
 
-	    culprit = constraint_graph[var_evt.first].on[trig][cons];
+						culprit = constraint_graph[var_evt.first].on[trig][cons];
 
 
-	    //std::cout << culprit << std::endl;
+						//std::cout << culprit << std::endl;
 	    
-	    if( culprit == c ) {
+						if( culprit == c ) {
 
-	      // if the constraints asked to be pushed on the constraint stack we do that
-	      if(culprit.pushed()) {
-		active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					   culprit.index(), var_evt.second);
-	      }
+							// if the constraints asked to be pushed on the constraint stack we do that
+							if(culprit.pushed()) {
+								active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+								culprit.index(), var_evt.second);
+							}
 
-	      // if the constraint is not postponed, we propagate it
-	      if(!culprit.postponed()) {
-		++statistics.num_propagations;  
-		taboo_constraint = culprit.freeze();
+							// if the constraint is not postponed, we propagate it
+							if(!culprit.postponed()) {
+								++statistics.num_propagations;  
+								taboo_constraint = culprit.freeze();
 
-		// if(taboo_constraint)
-		// 	std::cout << "[constraint]" << std::endl;
-		// else
-		// 	std::cout << "[nill]" << std::endl;
+								// if(taboo_constraint)
+								// 	std::cout << "[constraint]" << std::endl;
+								// else
+								// 	std::cout << "[nill]" << std::endl;
 
-		wiped_idx = culprit.bound_checker_propagate(var_evt.second); 
-		taboo_constraint = culprit.defrost();
-	      }
-	    } 
-	  }
+								wiped_idx = culprit.bound_checker_propagate(var_evt.second); 
+								taboo_constraint = culprit.defrost();
+							}
+						} 
+					}
+				}
+			}
+		}
+
+		// std::cout << active_constraints << std::endl;
+		// std::cout << active_constraints.empty() << std::endl;
+
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+			// propagate postponed constraint
+			culprit = active_constraints.select(constraints);
+			taboo_constraint = culprit.freeze();
+
+
+			// if(taboo_constraint)
+			// 	std::cout << "[constraint]" << std::endl;
+			// else
+			// 	std::cout << "[nill]" << std::endl;
+
+			//std::cout << "solver.cpp: bound checker prop" << std::endl;
+
+			wiped_idx = culprit.bound_checker_propagate(); 
+			taboo_constraint = culprit.defrost();
+		} else if(active_variables.empty()) fix_point = true;
 	}
-      }
-    }
-
-    // std::cout << active_constraints << std::endl;
-    // std::cout << active_constraints.empty() << std::endl;
-
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
-      // propagate postponed constraint
-      culprit = active_constraints.select(constraints);
-      taboo_constraint = culprit.freeze();
-
-
-      // if(taboo_constraint)
-      // 	std::cout << "[constraint]" << std::endl;
-      // else
-      // 	std::cout << "[nill]" << std::endl;
-
-      //std::cout << "solver.cpp: bound checker prop" << std::endl;
-
-      wiped_idx = culprit.bound_checker_propagate(); 
-      taboo_constraint = culprit.defrost();
-    } else if(active_variables.empty()) fix_point = true;
-  }
     
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  active_variables.clear();
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	active_variables.clear();
     
-  // std::cout << wiped_idx << std::endl;
+	// std::cout << wiped_idx << std::endl;
 
-  //return wiped_idx;
-  PropagationOutcome consistent = wiped_idx;
-  wiped_idx = CONSISTENT;
-  return consistent;
+	//return wiped_idx;
+	PropagationOutcome consistent = wiped_idx;
+	wiped_idx = CONSISTENT;
+	return consistent;
 }
 
 
@@ -3661,328 +3690,341 @@ bool Mistral::Solver::propagate()
 
 
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    std::cout << "c start propagation" << std::endl;
-  }
+	if(_DEBUG_AC) {
+		std::cout << "c start propagation" << std::endl;
+	}
 #endif
 
 
-  bool fix_point;
-  int trig, cons, vidx;
-  Triplet < int, Event, ConstraintImplementation* > var_evt;
+	bool fix_point;
+	int trig, cons, vidx;
+	Triplet < int, Event, ConstraintImplementation* > var_evt;
 
-  //wiped_idx = CONSISTENT;
-  culprit.clear();
+	//wiped_idx = CONSISTENT;
+	culprit.clear();
 
-  ++statistics.num_filterings;  
+	++statistics.num_filterings;  
 
-  // TODO, we shouldn't have to do that
-  if(IS_OK(wiped_idx) && objective && objective->enforce()) {
-    wiped_idx = objective->objective.id();
-  }
+	// TODO, we shouldn't have to do that
+	if(IS_OK(wiped_idx) && objective && objective->enforce()) {
+		wiped_idx = objective->objective.id();
+	}
 
 
-  fix_point =  (active_variables.empty() && active_constraints.empty());
+	fix_point =  (active_variables.empty() && active_constraints.empty());
 
 
 #ifdef _DEBUG_AC
-  int iteration = 0;
-  if(_DEBUG_AC) {
-    std::cout << std::endl;
-  }
+	int iteration = 0;
+	if(_DEBUG_AC) {
+		std::cout << std::endl;
+	}
 #endif
 
-  // if(!IS_OK(wiped_idx)) {
+	// if(!IS_OK(wiped_idx)) {
 
-  //   std::cout << "FAILED WHEN ENFORCING UPPER BOUND" << std::endl;
+	//   std::cout << "FAILED WHEN ENFORCING UPPER BOUND" << std::endl;
 
-  // }
+	// }
 
 
-  while(IS_OK(wiped_idx) && !fix_point) {
+	while(IS_OK(wiped_idx) && !fix_point) {
     
 
 #ifdef _DEBUG_AC
-    if(_DEBUG_AC) {
+		if(_DEBUG_AC) {
 
-      std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-      std::cout << "var stack: " << active_variables << std::endl;
-      // std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-      // std::cout << "con stack: " << active_constraints << std::endl
-      //   ;
+			std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+			std::cout << "var stack: " << active_variables << std::endl;
+			// std::cout << "c "; for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+			// std::cout << "con stack: " << active_constraints << std::endl
+			//   ;
 
-      ++iteration;
-    }
+			++iteration;
+		}
 #endif
 
-    assigned.clear();
+		assigned.clear();
   
-    // empty the var stack first
-    while( IS_OK(wiped_idx) && 
-	   !active_variables.empty() ) {
+		// empty the var stack first
+		while( IS_OK(wiped_idx) && 
+		!active_variables.empty() ) {
     
-      // get the variable event
-      var_evt = active_variables.pop_front();
-      vidx = var_evt.first;
+			// get the variable event
+			var_evt = active_variables.pop_front();
+			vidx = var_evt.first;
     
 #ifdef _DEBUG_AC
-      if(_DEBUG_AC) {
-	std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	std::cout << "react to " << event2str(var_evt.second) << " on " << variables[vidx] 
-		  << " in " << variables[vidx].get_domain() ;
-	if(var_evt.third)
-	  std::cout << " because of " << var_evt.third ;
-	std::cout << ". var stack: " << active_variables << std::endl;
-      }
+			if(_DEBUG_AC) {
+				std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+				std::cout << "react to " << event2str(var_evt.second) << " on " << variables[vidx] 
+					<< " in " << variables[vidx].get_domain() ;
+				if(var_evt.third)
+					std::cout << " because of " << var_evt.third ;
+				std::cout << ". var stack: " << active_variables << std::endl;
+			}
 #endif      
     
     
       
     
-      if(ASSIGNED(var_evt.second)) {
+			if(ASSIGNED(var_evt.second)) {
       
-	assigned.add(vidx);
+				assigned.add(vidx);
 
 
-	//std::cout << " -remove " << variables[var_evt.first] << " in " << variables[var_evt.first].get_domain() << std::endl;
+				//std::cout << " -remove " << variables[var_evt.first] << " in " << variables[var_evt.first].get_domain() << std::endl;
       
-	if(sequence.contain(variables[vidx]))
-	  sequence.remove(variables[vidx]);
+				if(sequence.contain(variables[vidx]))
+					sequence.remove(variables[vidx]);
       
-	//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
-	assignment_level[vidx] = level;
-	assignment_order[vidx] = assignment_rank;
-	++assignment_rank;
+				//last_solution_lb[var_evt.first] = last_solution_ub[var_evt.first] = variables[var_evt.first].get_value();
+				assignment_level[vidx] = level;
+				assignment_order[vidx] = assignment_rank;
+				++assignment_rank;
       
-	reason_for[vidx] = var_evt.third; 
-      }
+				reason_for[vidx] = var_evt.third; 
+			}
     
-      // for each triggered constraint
-      for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
-	    trig<3; ++trig) {
-      
-	for(cons = constraint_graph[vidx].on[trig].size; IS_OK(wiped_idx) &&
-	      --cons>=0;) {
-	
-	  culprit = constraint_graph[vidx].on[trig][cons];
-	
-	
-	  // idempotency, if the event was triggered by itself
-	  if(var_evt.third != culprit.propagator) {
+			// for each triggered constraint
+			for(trig = EVENT_TYPE(var_evt.second); IS_OK(wiped_idx) &&
+			trig<3; ++trig) {
+				
 #ifdef _DEBUG_AC
-	    if(_DEBUG_AC) {
-	      std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	      std::cout << "  -awake " << culprit << ": "; 
-	      std::cout.flush();
-	    }
+						if(_DEBUG_AC) {
+							std::cout << "trigger type: " << trig << ": " << (constraint_graph[vidx].on[trig].size) << " constraints" << std::endl;
+						}
+#endif
+      
+				for(cons = constraint_graph[vidx].on[trig].size; IS_OK(wiped_idx) &&
+				--cons>=0;) {					
+	
+					culprit = constraint_graph[vidx].on[trig][cons];
+	
+#ifdef _DEBUG_AC
+						if(_DEBUG_AC) {
+							std::cout << " -- " << culprit << std::endl;
+						}
+#endif
+	
+	
+					// idempotency, if the event was triggered by itself
+					if(var_evt.third != culprit.propagator) {
+#ifdef _DEBUG_AC
+						if(_DEBUG_AC) {
+							std::cout << variables[86] << " in " << variables[86].get_domain() << "  " << variables[17] << " in " << variables[17].get_domain() << " ";
+							std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+							std::cout << "  -awake " << culprit << ": "; 
+							std::cout.flush();
+						}
 #endif
 
-	    // if the constraints asked to be pushed on the constraint stack we do that
-	    if(culprit.pushed()) {
+						// if the constraints asked to be pushed on the constraint stack we do that
+						if(culprit.pushed()) {
 	    
 #ifdef _DEBUG_AC
-	      if(_DEBUG_AC) {
-		std::cout << "pushed on the stack" ;
-	      }
+							if(_DEBUG_AC) {
+								std::cout << "pushed on the stack" ;
+							}
 #endif    
-	      active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
-					 culprit.index(), var_evt.second);
-	    }
+							active_constraints.trigger((GlobalConstraint*)culprit.propagator, 
+							culprit.index(), var_evt.second);
+						}
 	  
-	    // if the constraint is not postponed, we propagate it
-	    if(!culprit.postponed()) {
+						// if the constraint is not postponed, we propagate it
+						if(!culprit.postponed()) {
 	    
-	      if(ASSIGNED(var_evt.second)) {
-		culprit.notify_assignment();
-	      }
+							if(ASSIGNED(var_evt.second)) {
+								culprit.notify_assignment();
+							}
 	    
 #ifdef _DEBUG_AC
-	      if(_DEBUG_AC) {
-		if(culprit.pushed()) std::cout << ", ";
-		std::cout << "propagated: ";
-		Variable *scp = culprit.get_scope();
-		int arity = culprit.arity();
-		for(int i=0; i<arity; ++i)
-		  std::cout << scp[i].get_domain() << " ";
-		std::cout << "-> ";
-		std::cout.flush();
-	      }
+							if(_DEBUG_AC) {
+								if(culprit.pushed()) std::cout << ", ";
+								std::cout << "propagated: ";
+								Variable *scp = culprit.get_scope();
+								int arity = culprit.arity();
+								for(int i=0; i<arity; ++i)
+									std::cout << scp[i].get_domain() << " ";
+								std::cout << "-> ";
+								std::cout.flush();
+							}
 #endif
-	      ++statistics.num_propagations;  
-	      taboo_constraint = culprit.freeze();
-	      wiped_idx = culprit.propagate(var_evt.second); 
-	      taboo_constraint = culprit.defrost();
+							++statistics.num_propagations;  
+							taboo_constraint = culprit.freeze();
+							wiped_idx = culprit.propagate(var_evt.second); 
+							taboo_constraint = culprit.defrost();
 #ifdef _DEBUG_AC
-	      if(_DEBUG_AC) {
-		if(IS_OK(wiped_idx)) {
-		  Variable *scp = culprit.get_scope();
-		  int arity = culprit.arity();
-		  for(int i=0; i<arity; ++i)
-		    std::cout << scp[i].get_domain() << " ";
-		  std::cout << "ok";
-		} else std::cout << "fail";
-	      }
+							if(_DEBUG_AC) {
+								if(IS_OK(wiped_idx)) {
+									Variable *scp = culprit.get_scope();
+									int arity = culprit.arity();
+									for(int i=0; i<arity; ++i)
+										std::cout << scp[i].get_domain() << " ";
+									std::cout << "ok";
+								} else std::cout << "fail";
+							}
 #endif
-	    }
+						}
 #ifdef _DEBUG_AC
-	    if(_DEBUG_AC) {
-	      std::cout << std::endl; 
-	    }
+						if(_DEBUG_AC) {
+							std::cout << std::endl; 
+						}
 #endif    
-	  } 
+					} 
 #ifdef _DEBUG_AC
-	  else {
-	    if(_DEBUG_AC) {
-	      std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	      std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
-	    }
-	  }
+					else {
+						if(_DEBUG_AC) {
+							std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+							std::cout << "  -does not awake " << culprit << " (idempotent)" << std::endl; 
+						}
+					}
 #endif
-	}
-      }
-    }
+				}
+			}
+		}
   
 
-    if(IS_OK(wiped_idx)) {
-      while(!assigned.empty()) {
-	vidx = assigned.pop();
-	for(trig = 0; trig<3; ++trig) {
-	  for(cons = constraint_graph[vidx].on[trig].size; --cons>=0;) {
-	    culprit = constraint_graph[vidx].on[trig][cons];
-	    if(culprit.postponed()) {
-	      culprit.notify_assignment();
-	    }
-	  }
-	}
-      }
-    }
+		if(IS_OK(wiped_idx)) {
+			while(!assigned.empty()) {
+				vidx = assigned.pop();
+				for(trig = 0; trig<3; ++trig) {
+					for(cons = constraint_graph[vidx].on[trig].size; --cons>=0;) {
+						culprit = constraint_graph[vidx].on[trig][cons];
+						if(culprit.postponed()) {
+							culprit.notify_assignment();
+						}
+					}
+				}
+			}
+		}
       
-    if(IS_OK(wiped_idx) && !active_constraints.empty()) {
+		if(IS_OK(wiped_idx) && !active_constraints.empty()) {
 
 #ifdef _DEBUG_AC
-      if(_DEBUG_AC) {
-	if(level > 0) {
-	  std::cout << "\nc propagate postponed constraints: " 
-		    << active_constraints << std::endl;
-	} else {
-	  std::cout << "\nc propagate postponed constraints: "
-		    << active_constraints._set_ << std::endl;
-	}
-      }
+			if(_DEBUG_AC) {
+				if(level > 0) {
+					std::cout << "\nc propagate postponed constraints: " 
+						<< active_constraints << std::endl;
+				} else {
+					std::cout << "\nc propagate postponed constraints: "
+						<< active_constraints._set_ << std::endl;
+				}
+			}
 #endif
     
-      // propagate postponed constraint
-      culprit = active_constraints.select(constraints);
+			// propagate postponed constraint
+			culprit = active_constraints.select(constraints);
     
 #ifdef _DEBUG_AC
-      if(_DEBUG_AC) {
-	std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
-	std::cout << "  -propagate " << culprit << " (" ;
+			if(_DEBUG_AC) {
+				std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
+				std::cout << "  -propagate " << culprit << " (" ;
       
-	if(culprit.global()) {
-	  GlobalConstraint *gc = (GlobalConstraint*)(culprit.propagator);
+				if(culprit.global()) {
+					GlobalConstraint *gc = (GlobalConstraint*)(culprit.propagator);
 	
-	  std::cout << gc->events << " ";
-	  std::cout.flush();
+					std::cout << gc->events << " ";
+					std::cout.flush();
 	
-	  std::cout << event2str(gc->event_type[gc->events[0]]) << " on " << gc->scope[gc->events[0]] ;
-	  for(unsigned int i=1; i<gc->events.size; ++i) {
-	    std::cout << ", " << event2str(gc->event_type[gc->events[i]]) << " on " << gc->scope[gc->events[i]] ;
-	  }
-	}
-	std::cout << ") ";
-	Variable *scp = culprit.get_scope();
-	int arity = culprit.arity();
-	for(int i=0; i<arity; ++i)
-	  std::cout << scp[i].get_domain() << " ";
-	std::cout << "-> ";
-	std::cout.flush();
-      }
+					std::cout << event2str(gc->event_type[gc->events[0]]) << " on " << gc->scope[gc->events[0]] ;
+					for(unsigned int i=1; i<gc->events.size; ++i) {
+						std::cout << ", " << event2str(gc->event_type[gc->events[i]]) << " on " << gc->scope[gc->events[i]] ;
+					}
+				}
+				std::cout << ") ";
+				Variable *scp = culprit.get_scope();
+				int arity = culprit.arity();
+				for(int i=0; i<arity; ++i)
+					std::cout << scp[i].get_domain() << " ";
+				std::cout << "-> ";
+				std::cout.flush();
+			}
 #endif
     
-      ++statistics.num_propagations;  
-      taboo_constraint = culprit.freeze();
-      wiped_idx = culprit.propagate(); 
-      taboo_constraint = culprit.defrost();
+			++statistics.num_propagations;  
+			taboo_constraint = culprit.freeze();
+			wiped_idx = culprit.propagate(); 
+			taboo_constraint = culprit.defrost();
 
 #ifdef _DEBUG_AC
-      if(_DEBUG_AC) {
-	if(IS_OK(wiped_idx)) {
-	  Variable *scp = culprit.get_scope();
-	  int arity = culprit.arity();
-	  for(int i=0; i<arity; ++i)
-	    std::cout << scp[i].get_domain() << " ";
-	  std::cout << "ok";
-	} else std::cout << "fail";
-	std::cout << std::endl;
-      }
+			if(_DEBUG_AC) {
+				if(IS_OK(wiped_idx)) {
+					Variable *scp = culprit.get_scope();
+					int arity = culprit.arity();
+					for(int i=0; i<arity; ++i)
+						std::cout << scp[i].get_domain() << " ";
+					std::cout << "ok";
+				} else std::cout << "fail";
+				std::cout << std::endl;
+			}
 #endif	
     
-    } else if(active_variables.empty()) fix_point = true;
-  }
+		} else if(active_variables.empty()) fix_point = true;
+	}
   
-  taboo_constraint = NULL;
-  active_constraints.clear();
-  if(!parameters.backjump) {
-    active_variables.clear();
+	taboo_constraint = NULL;
+	active_constraints.clear();
+	if(!parameters.backjump) {
+		active_variables.clear();
 
-  }
+	}
 
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    if(!IS_OK(wiped_idx)) {
-      std::cout << "inconsistency found!" << std::endl;
-    } else {
-      std::cout << "done" << std::endl;
-    }
-  }
+	if(_DEBUG_AC) {
+		if(!IS_OK(wiped_idx)) {
+			std::cout << "inconsistency found!" << std::endl;
+		} else {
+			std::cout << "done" << std::endl;
+		}
+	}
 #endif 
 
 
 #ifdef _DEBUG_AC
-  if(_DEBUG_AC) {
-    std::cout << "c end propagation" << std::endl;
-  }
+	if(_DEBUG_AC) {
+		std::cout << "c end propagation" << std::endl;
+	}
 #endif
   
-  if(IS_OK(wiped_idx)) {
+	if(IS_OK(wiped_idx)) {
 #ifdef _DEBUG_SEARCH
-    if(_DEBUG_SEARCH) {
-      std::cout << parameters.prefix_comment;
-      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-      std::cout << "success! " 
+		if(_DEBUG_SEARCH) {
+			std::cout << parameters.prefix_comment;
+			for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+			std::cout << "success! " 
 				//<< sequence 
 				<< std::endl;
-    }
+		}
 #endif
-    culprit.clear();
-    notify_success();
-    return true;
-  } else {
-    ++statistics.num_failures;
+		culprit.clear();
+		notify_success();
+		return true;
+	} else {
+		++statistics.num_failures;
 
 #ifdef _DEBUG_SEARCH
-    if(_DEBUG_SEARCH) {
-      std::cout << parameters.prefix_comment;
-      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-      std::cout << "failure!" << std::endl;
-    }
+		if(_DEBUG_SEARCH) {
+			std::cout << parameters.prefix_comment;
+			for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+			std::cout << "failure!" << std::endl;
+		}
 #endif
 
 #ifdef _DEBUG_FAIL
-    std::cout << "failure of c" << culprit.id() << " " << culprit << std::endl;
+		std::cout << "failure of c" << culprit.id() << " " << culprit << std::endl;
 #endif
 
-    //std::cout << "solver: notify failure" << std::endl;
+		//std::cout << "solver: notify failure" << std::endl;
 
-    if(parameters.backjump)
-      close_propagation();
+		if(parameters.backjump)
+			close_propagation();
 
-    prev_wiped_idx = wiped_idx;
-    //notify_failure();
-    wiped_idx = CONSISTENT;
-    return false;
-  }
+		prev_wiped_idx = wiped_idx;
+		//notify_failure();
+		wiped_idx = CONSISTENT;
+		return false;
+	}
 }
 
 
@@ -5278,6 +5320,9 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   //std::cout << statistics.objective_value << std::endl;
 
 
+  statistics.best_time =  get_run_time() - statistics.start_time;
+  //std::cout << " c best_time  " <<  statistics.best_time << std::endl;
+
 
   for(i=0; i<solution_triggers.size; ++i) {
     solution_triggers[i]->notify_solution();
@@ -5393,6 +5438,21 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
 
 	int status = UNKNOWN;
 	while(status == UNKNOWN) {
+		
+#ifdef _DEBUG_SEARCH
+		bool is_there = false;
+			for(int t = 0; t<3 && !is_there; ++t) {
+				for(int c = constraint_graph[86].on[t].size; --c>=0 && !is_there;) {					
+						Constraint culprit = constraint_graph[86].on[t][c];
+						if(culprit.id() == 64) {
+							is_there = true;
+						}
+					}
+				}
+		
+		std::cout << variables[86] << " in " << variables[86].get_domain() << "  " << variables[17] << " in " << variables[17].get_domain() << " [" << is_there << "]"<< std::endl;
+#endif
+		
 
 		if(propagate()) {
 
@@ -5675,6 +5735,7 @@ Mistral::SearchMonitor& Mistral::operator<< (Mistral::SearchMonitor& os, const i
 Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_ordering, std::string branching, const int randomness) {
 
   BranchingHeuristic *heu = NULL;
+	
 
 	
 	if(var_ordering.find("MBA") == 0) {
@@ -6796,229 +6857,452 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	      }
 	    }
 	  }
-	  if(var_ordering == "IBS" || var_ordering == "ibs" || var_ordering == "Impact Based Search" || var_ordering == "impact based search" ) {
+	  if(var_ordering == "RIBS" || var_ordering == "ribs" || var_ordering == "RealImpact" || var_ordering == "realimpact" ) {
 	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, AnyValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, AnyValue > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, AnyValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, AnyValue > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, AnyValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, AnyValue > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, AnyValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, AnyValue > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, AnyValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, AnyValue > (this);
 	      }
 	    }
 	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, MinValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, MinValue > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, MinValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, MinValue > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, MinValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, MinValue > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, MinValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, MinValue > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, MinValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, MinValue > (this);
 	      }
 	    }
 	    if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, MaxValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, MaxValue > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, MaxValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, MaxValue > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, MaxValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, MaxValue > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, MaxValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, MaxValue > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, MaxValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, MaxValue > (this);
 	      }
 	    }
 	    if( branching == "HalfSplit" || branching == "halfsplit" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, HalfSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, HalfSplit > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, HalfSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, HalfSplit > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, HalfSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, HalfSplit > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, HalfSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, HalfSplit > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, HalfSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, HalfSplit > (this);
 	      }
 	    }
 	    if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, RandomSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, RandomSplit > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, RandomSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, RandomSplit > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, RandomSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, RandomSplit > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, RandomSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, RandomSplit > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, RandomSplit > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, RandomSplit > (this);
 	      }
 	    }
 	    if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, RandomMinMax > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, RandomMinMax > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, RandomMinMax > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, RandomMinMax > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, RandomMinMax > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, RandomMinMax > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, RandomMinMax > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, RandomMinMax > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, RandomMinMax > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, RandomMinMax > (this);
 	      }
 	    }
 	    if( branching == "minweight" || branching == "MinWeight" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, MinWeightValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, MinWeightValue > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, MinWeightValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, MinWeightValue > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, MinWeightValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, MinWeightValue > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, MinWeightValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, MinWeightValue > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, MinWeightValue > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, MinWeightValue > (this);
 	      }
 	    }
 	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MinValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, Guided< MinValue > > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MinValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, Guided< MinValue > > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MinValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, Guided< MinValue > > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MinValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, Guided< MinValue > > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MinValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, Guided< MinValue > > (this);
 	      }
 	    }
 	    if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MaxValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, Guided< MaxValue > > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MaxValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, Guided< MaxValue > > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MaxValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, Guided< MaxValue > > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MaxValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, Guided< MaxValue > > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MaxValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, Guided< MaxValue > > (this);
 	      }
 	    }
 	    if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MinWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, Guided< MinWeightValue > > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MinWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, Guided< MinWeightValue > > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MinWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, Guided< MinWeightValue > > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MinWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, Guided< MinWeightValue > > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MinWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, Guided< MinWeightValue > > (this);
 	      }
 	    }
 	    if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< MaxWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, Guided< MaxWeightValue > > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< MaxWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, Guided< MaxWeightValue > > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< MaxWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, Guided< MaxWeightValue > > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< MaxWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, Guided< MaxWeightValue > > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< MaxWeightValue > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, Guided< MaxWeightValue > > (this);
 	      }
 	    }
 	    if( branching == "Random+Guided" || branching == "random+guided" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, Guided< RandomMinMax > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, Guided< RandomMinMax > > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, Guided< RandomMinMax > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, Guided< RandomMinMax > > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, Guided< RandomMinMax > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, Guided< RandomMinMax > > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, Guided< RandomMinMax > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, Guided< RandomMinMax > > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, Guided< RandomMinMax > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, Guided< RandomMinMax > > (this);
 	      }
 	    }
 	    if( branching == "Adpated" || branching == "adapted" ) {
 	      if( randomness <= 1 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 1, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
 	      }
 	      else if( randomness <= 2 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 2, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
 	      }
 	      else if( randomness <= 3 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 3, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
 	      }
 	      else if( randomness <= 4 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 4, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
 	      }
 	      else if( randomness <= 5 ) {
-	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinWeight >, 5, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
 	      }
 	    }
 	  }
+	  // if(var_ordering == "IBS" || var_ordering == "ibs" || var_ordering == "Impact" || var_ordering == "impact" ) {
+	  //   if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, AnyValue > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, AnyValue > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, AnyValue > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, AnyValue > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, AnyValue > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, MinValue > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, MinValue > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, MinValue > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, MinValue > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, MinValue > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "AntiLex" || branching == "antilex" || branching == "maxvalue" || branching == "max value" || branching == "MaxValue" || branching == "Max Value" || branching == "antilexicographic" || branching == "Antilexicographic" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, MaxValue > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, MaxValue > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, MaxValue > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, MaxValue > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, MaxValue > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "HalfSplit" || branching == "halfsplit" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, HalfSplit > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, HalfSplit > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, HalfSplit > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, HalfSplit > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, HalfSplit > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "RandomSplit" || branching == "RandSplit" || branching == "randomsplit" || branching == "randsplit" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, RandomSplit > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, RandomSplit > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, RandomSplit > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, RandomSplit > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, RandomSplit > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "RandomMinMax" || branching == "randomminmax" || branching == "RandMinMax" || branching == "randminmax" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, RandomMinMax > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, RandomMinMax > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, RandomMinMax > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, RandomMinMax > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, RandomMinMax > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "minweight" || branching == "MinWeight" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, MinWeightValue > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, MinWeightValue > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, MinWeightValue > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, MinWeightValue > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, MinWeightValue > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, Guided< MinValue > > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, Guided< MinValue > > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, Guided< MinValue > > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, Guided< MinValue > > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, Guided< MinValue > > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "MaxVal+Guided" || branching == "maxval+guided" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, Guided< MaxValue > > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, Guided< MaxValue > > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, Guided< MaxValue > > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, Guided< MaxValue > > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, Guided< MaxValue > > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "MinWeight+Guided" || branching == "minweight+guided" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, Guided< MinWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, Guided< MinWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, Guided< MinWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, Guided< MinWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, Guided< MinWeightValue > > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "MaxWeightVal+Guided" || branching == "maxweightval+guided" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, Guided< MaxWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, Guided< MaxWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, Guided< MaxWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, Guided< MaxWeightValue > > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, Guided< MaxWeightValue > > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "Random+Guided" || branching == "random+guided" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, Guided< RandomMinMax > > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, Guided< RandomMinMax > > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, Guided< RandomMinMax > > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, Guided< RandomMinMax > > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, Guided< RandomMinMax > > (this);
+	  //     }
+	  //   }
+	  //   if( branching == "Adpated" || branching == "adapted" ) {
+	  //     if( randomness <= 1 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 1, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	  //     }
+	  //     else if( randomness <= 2 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 2, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	  //     }
+	  //     else if( randomness <= 3 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 3, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	  //     }
+	  //     else if( randomness <= 4 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 4, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	  //     }
+	  //     else if( randomness <= 5 ) {
+	  //       heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainTimesWeight >, 5, RealImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
+	  //     }
+	  //   }
+	  // }
 	  if(var_ordering == "ABS" || var_ordering == "abs" || var_ordering == "activity based search" || var_ordering == "Activity Based Search" || var_ordering == "dom/activity" ) {
 	    if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
 	      if( randomness <= 1 ) {
@@ -7137,6 +7421,23 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	      }
 	      else if( randomness <= 5 ) {
 	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MinWeightValue > (this);
+	      }
+	    }
+	    if( branching == "maxweight" || branching == "MaxWeight" ) {
+	      if( randomness <= 1 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 1, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 2 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 2, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 3 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 3, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 4 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 4, PruningCountManager >, MaxWeightValue > (this);
+	      }
+	      else if( randomness <= 5 ) {
+	        heu = new GenericHeuristic < GenericDVO < MultiArmedBandit< MinDomainOverWeight >, 5, PruningCountManager >, MaxWeightValue > (this);
 	      }
 	    }
 	    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
@@ -8136,7 +8437,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	  }
 	
 	
-		//ICI
+		// MBA ICI
 	} else {
 	
 	
@@ -9256,7 +9557,7 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       }
     }
   }
-  if(var_ordering == "IBS" || var_ordering == "ibs" || var_ordering == "Impact Based Search" || var_ordering == "impact based search" ) {
+  if(var_ordering == "IBS" || var_ordering == "ibs" || var_ordering == "Impact" || var_ordering == "impact" ) {
     if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
       if( randomness <= 1 ) {
         heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 1, ImpactManager >, AnyValue > (this);
@@ -9478,6 +9779,181 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
         heu = new GenericHeuristic < GenericDVO < MinDomainTimesWeight, 5, ImpactManager >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
       }
     }
+  }
+  if(var_ordering == "RIBS" || var_ordering == "ribs" || var_ordering == "RealImpact" || var_ordering == "realimpact" ) {	
+		
+		// std::cout << branching << std::endl;
+		
+		if( branching == "xdiv" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.00001);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.00001);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.00001);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.00001);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.00001);
+			}
+		}
+		else if( branching == "xint" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.9);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.9);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.9);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.9);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.9);
+			}
+		}
+		else if( branching == "div" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.001);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.001);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.001);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.001);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.001);
+			}
+		}
+		else if( branching == "int" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.3);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.3);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.3);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.3);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.3);
+			}
+		}
+		else if( branching == "xdivlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.00001, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.00001, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.00001, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.00001, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.00001, false);
+			}
+		}
+		else if( branching == "xintlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.9, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.9, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.9, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.9, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.9, false);
+			}
+		}
+		else if( branching == "divlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.001, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.001, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.001, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.001, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.001, false);
+			}
+		}
+		else if( branching == "intlex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.3, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.3, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.3, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.3, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.3, false);
+			}
+		}
+		else if( branching == "lex" ) {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.1, false);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.1, false);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.1, false);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.1, false);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.1, false);
+			}
+		}
+		else {	
+			if( randomness <= 1 ) {
+				heu = new ImpactBasedSearch<1>(this, 0.1);
+			}
+			else if( randomness <= 2 ) {
+				heu = new ImpactBasedSearch<2>(this, 0.1);
+			}
+			else if( randomness <= 3 ) {
+				heu = new ImpactBasedSearch<3>(this, 0.1);
+			}
+			else if( randomness <= 4 ) {
+				heu = new ImpactBasedSearch<4>(this, 0.1);
+			}
+			else if( randomness <= 5 ) {
+				heu = new ImpactBasedSearch<5>(this, 0.1);
+			}
+		}
   }
   if(var_ordering == "ABS" || var_ordering == "abs" || var_ordering == "activity based search" || var_ordering == "Activity Based Search" || var_ordering == "dom/activity" ) {
     if( branching == "No" || branching == "no" || branching == "Any" || branching == "any" ) {
@@ -10593,12 +11069,23 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
         heu = new GenericHeuristic < GenericDVO < MinDomain >, ConditionalOnSize< GuidedSplit< HalfSplit >, Guided< MinValue > > > (this);
       }
     }
+  } else if(var_ordering == "COS") {
+  	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue > (this);
+  }  else if(var_ordering == "ECOS") {
+  	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue > (this);
+  } else if(var_ordering == "LC") {
+  	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue, 1 > (this);
+		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
+  } else if(var_ordering == "ELC") {
+  	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue, 1 > (this);
+		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
   }
 }
 
   if(!heu) {
     std::cout << " " << parameters.prefix_comment << " Warning, there is no known heuristic \"" << var_ordering << "/" << branching << "\"" << std::endl;
   }
+	
 					
   return heu;
 }
@@ -10632,6 +11119,16 @@ void Mistral::Solver::set_time_limit(const double limit) {
     parameters.limit = 1;
     parameters.time_limit = limit;
   }
+}
+
+void Mistral::Solver::set_goal(Goal *g) {
+	if(g) {
+  	objective = g;
+  
+  	if(g->is_optimization()) {
+   	 consolidate_manager->id_obj = g->objective.id();
+  	}
+	}
 }
 
 
@@ -10746,8 +11243,9 @@ Mistral::SolverCmdLine::~SolverCmdLine() {
 
 void Mistral::SolverCmdLine::initialise() {
 
+
   // INPUT FILE
-  fileArg = new TCLAP::ValueArg<std::string>("f","file","instance file",true,"data/example.opb","string");
+  fileArg = new TCLAP::UnlabeledValueArg<std::string>("file", "instance file", true, "", "string");
   add( *fileArg );
 
   // COMMENT INDICATOR
@@ -10865,6 +11363,15 @@ void Mistral::SolverCmdLine::initialise() {
   voallowed.push_back("dom/pruning");
   voallowed.push_back("dom/activity");
   voallowed.push_back("ibs");
+	voallowed.push_back("IBS");
+  voallowed.push_back("ribs");
+	voallowed.push_back("RIBS");
+  voallowed.push_back("impact");
+	voallowed.push_back("Impact");
+  voallowed.push_back("realimpact");
+	voallowed.push_back("RealImpact");
+  voallowed.push_back("abs");
+	voallowed.push_back("ABS");
   voallowed.push_back("activity");
   voallowed.push_back("neighbor");
   voallowed.push_back("mindomain");
@@ -10890,6 +11397,12 @@ void Mistral::SolverCmdLine::initialise() {
   voallowed.push_back("MBAmindomain");
   voallowed.push_back("MBAmaxdegree");
 	voallowed.push_back("MBAimpact");
+	
+	
+	voallowed.push_back("COS");
+	voallowed.push_back("ECOS");
+	voallowed.push_back("LC");
+	voallowed.push_back("ELC");
 
   vo_allowed = new TCLAP::ValuesConstraint<std::string>( voallowed );
   orderingArg = new TCLAP::ValueArg<std::string>("c","choice","variable selection",false,"dom/gwdeg",vo_allowed);
@@ -10920,6 +11433,16 @@ void Mistral::SolverCmdLine::initialise() {
   boallowed.push_back("indomain_split");
   boallowed.push_back("indomain_reverse_split");
   boallowed.push_back("indomain_interval");
+	
+  boallowed.push_back("int");
+	boallowed.push_back("xint");
+  boallowed.push_back("div");
+	boallowed.push_back("xdiv");
+  boallowed.push_back("intlex");
+	boallowed.push_back("xintlex");
+  boallowed.push_back("divlex");
+	boallowed.push_back("xdivlex");
+	boallowed.push_back("lex");
 
   bo_allowed = new TCLAP::ValuesConstraint<std::string>( boallowed );
   branchingArg = new TCLAP::ValueArg<std::string>("b","branching","value ordering",false,"minval+guided",bo_allowed);

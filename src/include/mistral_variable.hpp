@@ -305,6 +305,7 @@ namespace Mistral {
 			delete [] level_;
 			level_ = NULL;
 
+
 			if(domain.values.table) {
 				domain.values.table += domain.values.neg_words;
 				delete [] domain.values.table;
@@ -312,6 +313,7 @@ namespace Mistral {
 			} else {
 				domain.values.neg_words = 0;
 			}
+
 		}
 
 		void set_bound_history(const int lb, const int ub, const int level) {
@@ -1618,6 +1620,7 @@ namespace Mistral {
     //     Variable(Vector< int >& values, const int type=DYN_VAR);
     Variable(const int lo, const int up, const int type=EXPRESSION);
     Variable(const Vector< int >& values, const int type=EXPRESSION);
+		Variable(const std::vector< int >& values, const int type=EXPRESSION);
 	Variable(const IntStack& values, const int type=EXPRESSION);
 	Variable(const int* values, const int nvalues, const int type=EXPRESSION);
     Variable(const int lo, const int up, const Vector< int >& values, const int type=EXPRESSION);
@@ -1651,6 +1654,7 @@ namespace Mistral {
     bool is_void() const { return (domain_type != CONST_VAR && variable == NULL); }
     void initialise_domain(const int lo, const int up, const int type);
     void initialise_domain(const Vector< int >& values, const int type);
+		void initialise_domain(const std::vector< int >& values, const int type);
     void initialise_domain(const int lo, const int up, const Vector< int >& values, const int type);
     //void set_history(Variable X);
     //void set_bound_history(const int lb, const int ub, const int level);
@@ -2785,8 +2789,9 @@ namespace Mistral {
   public:
 
     int consistency_level;
+		int exception;
 
-    AllDiffExpression(Vector< Variable >& args, const int ct);
+    AllDiffExpression(Vector< Variable >& args, const int ct, const int except=INT_MIN);
     virtual ~AllDiffExpression();
 
     virtual void extract_constraint(Solver*);
@@ -2797,6 +2802,7 @@ namespace Mistral {
   };
 
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
+	Variable AllDiffExcept(Vector< Variable >& args, const int exception);
 
 
   class OccurrencesExpression : public Expression {
@@ -2821,6 +2827,7 @@ namespace Mistral {
   };
 
   Variable Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct=BOUND_CONSISTENCY);
+	Variable Occurrences(Vector< Variable >& args, std::vector<int>& values, std::vector<int>& lbs, std::vector<int>& ubs, const int ct=BOUND_CONSISTENCY);
 
 
 
@@ -2952,6 +2959,7 @@ namespace Mistral {
 	  virtual const char* get_name() const;
 
   };
+	
 
 
   class TableExpression : public Expression {
@@ -2966,16 +2974,16 @@ namespace Mistral {
       Dynamic
     };
 
+  // private:
 
-  private:
-
-    AlgorithmType    propagator;
-    Vector< const int* > tuples;
+    AlgorithmType     propagator;
+    Vector< const int* > *tuples;
 
   public:
 
     TableExpression(Vector< Variable >& args, const AlgorithmType ct=Dynamic);
     TableExpression(Vector< Variable >& args, Vector< const int* >&, const AlgorithmType ct=Dynamic);
+		TableExpression(Vector< Variable >& args, Vector< const int* >*, const AlgorithmType ct=Dynamic);
     virtual ~TableExpression();
 
     void add(int *t);
@@ -2989,6 +2997,7 @@ namespace Mistral {
 
   Variable Table(Vector< Variable >& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
   Variable Table(Vector< Variable >& args, Vector< const int* >&, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+	Variable Table(Vector< Variable >& args, Vector< const int* >*, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
   //Variable Table(VarArray& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
 
 
@@ -3137,6 +3146,34 @@ namespace Mistral {
 
   Variable Element(const Vector<Variable>& X, Variable selector, int offset=0);
   Variable Element(const VarArray& X, Variable selector, int offset=0);
+	
+	
+  class StretchExpression : public Expression {
+
+  public:
+
+	 	std::vector<int>& stype;
+	 	std::vector<int>& slb;
+	 	std::vector<int>& sub;
+		std::vector<int>& trans;
+ 
+
+    StretchExpression(const Vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+		StretchExpression(const std::vector< Variable >& args, std::vector<int>& stype, std::vector<int>& slb, std::vector<int>& sub, std::vector<int>& t);
+    virtual ~StretchExpression();
+    void initialise_domain();
+
+    virtual void extract_constraint(Solver*);
+    virtual void extract_variable(Solver*);
+    // virtual void extract_predicate(Solver*);
+    virtual const char* get_name() const;
+
+  };
+
+  Variable Stretch(const Vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& t);
+  Variable Stretch(const std::vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub, std::vector<int>& t);
+  Variable Stretch(const Vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub);
+  Variable Stretch(const std::vector< Variable >& X, std::vector<int>& typ, std::vector<int>& lb, std::vector<int>& ub);
 
 
   class MinExpression : public Expression {

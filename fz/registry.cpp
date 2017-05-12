@@ -1610,8 +1610,33 @@ inline Variable duplicate_variable(Variable var, Solver * s){
                          const ConExpr& ce, AST::Node* ann) {
       Vector< Variable > iv = arg2intvarargs(s, m, ce[0]);
 
-      if(iv.size)
-        s.add( AllDiff(iv) );
+      Vector<Variable> posted;
+      unsigned int size= iv.size;
+
+      for (unsigned int i=0; i< size; ++i){
+    	  if (iv[i].is_ground()) {
+    		  int value =iv[i].get_min();
+    		  for (int j=(i+1); j< size; ++j){
+
+    			  if (iv[j].is_ground() ){
+    				  if (iv[j].get_min() == value )
+    					  s.fail();
+    			  }
+    			  else
+    				  s.add (iv[j]!=value);
+    		  }
+    	  }
+    	  else {
+    		  posted.add(iv[i]);
+    		  for (int j=(i+1); j< size; ++j){
+    			  if (iv[j].is_ground() )
+    				  s.add (iv[i] != iv[j].get_min());
+    		  }
+    	  }
+      }
+
+      if(posted.size >1)
+        s.add( AllDiff(posted) );
     }
 
     /*
@@ -2083,7 +2108,6 @@ inline Variable duplicate_variable(Variable var, Solver * s){
 
 
     /* cumulative */
-    //#define _DEBUG_CUMULATIVE
     
     Vector<Variable> demand;
 
@@ -2345,7 +2369,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       int        process_time;
       int               total;
       int             min_req;
-      int             Boolean;
+      int           isBoolean;
       // post a sum constraint for each time point
       for(int t=0; t<=horizon; ++t) {
         //std::cout << " - time=" << t << ":" ; //<< std::endl;
@@ -2353,7 +2377,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
         demand.clear();
         scope.clear();
         total = 0;
-        Boolean = true;
+        isBoolean = true;
         min_req = Mistral::INFTY;
         for(int i=0; i<start.size; ++i) {
           if(start[i].get_min() <= t && start[i].get_max()+dur[i].get_max() >= t) {
@@ -2407,7 +2431,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
               scope.add((in_process * req[i]));
               demand.add(1);
               if(req[i].get_max()>1) {
-                Boolean = false;
+                isBoolean = false;
               }
             }
           } else {
@@ -2416,11 +2440,11 @@ inline Variable duplicate_variable(Variable var, Solver * s){
         }
         
         //std::cout << scope.size << " / " << start.size << std::endl;
-        //std::cout << scope.size << " > 1 AND " << total << " >? " << cap.get_min() << " " << Boolean << std::endl;
+        //std::cout << scope.size << " > 1 AND " << total << " >? " << cap.get_min() << " " << isBoolean << std::endl;
 
         if(scope.size>1 && total>cap.get_min()) {
           if(cap.is_ground()) {
-            if(Boolean) {
+            if(isBoolean) {
               // check if this is in fact a clause
               if(2*min_req > cap.get_max()) {
                 s.add(BoolSum(scope,-Mistral::INFTY,1));
@@ -2477,9 +2501,9 @@ inline Variable duplicate_variable(Variable var, Solver * s){
           var_req = true;
         if(!dur[i].is_ground())
           var_dur = true;
-        if(req[i].get_max() > 1)
+        if(req[i].get_max() > 1 || req[i].get_min() < 1)
           unit_req = false;
-        if(dur[i].get_max() > 1)
+        if(dur[i].get_max() > 1 || dur[i].get_min() < 1)
           unit_dur = false;
         if(same_dur && (!dur[i].is_ground() || (i && dur[i-1].get_min() != dur[i].get_min())))
           same_dur = false;
@@ -2530,6 +2554,9 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       //exit(1);
 #endif
 
+
+      delete [] order ;
+
       int size_discretization = horizon*start.size;
       int size_flow = start.size*start.size*cap.get_max();
 
@@ -2554,6 +2581,9 @@ inline Variable duplicate_variable(Variable var, Solver * s){
           ub[i-orig] = cap.get_max();
         }
         s.add(Occurrences(start, orig, horizon-1, lb, ub));
+        delete [] lb;
+        delete [] ub;
+
       } else if(disjunctive && !var_dur) {
 
 #ifdef _DEBUG_CUMULATIVE
@@ -2590,6 +2620,9 @@ inline Variable duplicate_variable(Variable var, Solver * s){
 
 
       }
+			
+			
+
 
     }
 
