@@ -46,6 +46,14 @@
 
 // #define _VERBOSE_
 
+#ifdef _VERBOSE_
+#define _ID_(e) e
+#else
+#define _ID_(e) " "
+#endif
+
+
+
 namespace XCSP3Core {
 
     class XCSP3MistralCallbacks : public XCSP3CoreCallbacks {
@@ -482,7 +490,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 #endif
 		
 		if(!support) {
-			cout << " s UNSUPPORTED\n";
+			cout << " s UNSUPPORTED" << _ID_(": ext non-support") << "\n";
 			exit(1);
 		}
 				
@@ -509,7 +517,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var, 
 #endif
 		
 		if(!support) {
-			cout << " s UNSUPPORTED\n";
+			cout << " s UNSUPPORTED" << _ID_(": ext non-support") << "\n";
 			exit(1);
 		}
 				
@@ -532,7 +540,7 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id, vector<XVariab
 #endif
 		
 		if(!support) {
-			cout << " s UNSUPPORTED\n";
+			cout << " s UNSUPPORTED" << _ID_(": ext non-support") << "\n";
 			exit(1);
 		}
 				
@@ -579,7 +587,7 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 		else if(op == GT)
 			solver.add( (X + k) > Y );
 		else if(op == IN) {
-			cout << " s UNSUPPORTED\n";
+			cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 			exit(1);
 		}
 		else if(op == EQ)
@@ -750,7 +758,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 				
 				if( t.to == final ) {
 					if(cons != num_layers) {
-						cout << " s UNSUPPORTED\n";
+						cout << " s UNSUPPORTED" << _ID_(": MDD internal-to-final transition") << "\n";
 						exit(1);
 					}
 					tuple[0] = node_map[t.from];
@@ -797,7 +805,7 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentExcept(string id, vector<
 #endif
 						
 		if(except.size()>1) {
-			cout << " s UNSUPPORTED\n";
+			cout << " s UNSUPPORTED" << _ID_(": AllDiff except SET") << "\n";
 			exit(1);
 		}
 		
@@ -1035,7 +1043,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1094,7 +1102,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1160,7 +1168,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1324,7 +1332,7 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1385,7 +1393,7 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
     cout << "        condition: " << xc << endl;
 #endif
 				
-		cout << " s UNSUPPORTED\n";
+		cout << " s UNSUPPORTED" << _ID_(": Occurrence of list of variables") << "\n";
 		exit(1);
 }
 
@@ -1451,7 +1459,7 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1527,7 +1535,7 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1822,7 +1830,7 @@ void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1911,7 +1919,7 @@ void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED\n";
+					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -2006,7 +2014,7 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 #endif
 				
 		if(rank != ANY) {
-				cout << " s UNSUPPORTED\n";
+				cout << " s UNSUPPORTED" << _ID_(": Element rank != Any") << "\n";
 				exit(1);
 		}
 		
@@ -2029,7 +2037,7 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 #endif
 				
 		if(rank != ANY) {
-				cout << " s UNSUPPORTED\n";
+				cout << " s UNSUPPORTED" << _ID_(": Element rank != Any") << "\n";
 				exit(1);
 		}
 		
