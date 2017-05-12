@@ -1376,6 +1376,7 @@ Mistral::GlobalConstraint::~GlobalConstraint() {
 #endif
   if(changes.list_ == events.list_)
     events.list_ = NULL;
+	
   delete [] event_type;
   delete [] solution;
   //delete [] scope;

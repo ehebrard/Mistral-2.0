@@ -44,7 +44,7 @@
  *
  */
 
-#define _VERBOSE_
+// #define _VERBOSE_
 
 namespace XCSP3Core {
 
@@ -57,6 +57,8 @@ namespace XCSP3Core {
 				map<string, Mistral::Variable> variable;
 			
 				Mistral::VarArray variables;
+				std::vector<string> var_ids;
+				std::vector<string> declared_var_ids;
 						
 				Mistral::Variable last_var;
 				Mistral::Vector< const int* >* last_table;
@@ -332,6 +334,18 @@ void XCSP3MistralCallbacks::endInstance() {
 #ifdef _VERBOSE_
     cout << "End SAX parsing " << endl;
 #endif
+	
+		for( auto id : declared_var_ids ) {
+			Variable X = variable[id];
+			
+			if(X.id()>=0) {
+				
+				variables.add(X);
+				var_ids.push_back(id);
+			}
+		}
+		
+	
 }
 
 
@@ -365,6 +379,8 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int ma
 		
 		Variable X(minValue, maxValue);	
 		variable[id] = X;
+		// variables.add(X);
+		declared_var_ids.push_back(id);
 }
 
 
@@ -377,7 +393,8 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, vector<int> &values)
 
 		Variable X(values);	
 		variable[id] = X;
-		variables.add(X);
+		// variables.add(X);
+		declared_var_ids.push_back(id);
 }
 
 
@@ -463,6 +480,11 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
     cout << "        ";
     displayList(list);
 #endif
+		
+		if(!support) {
+			cout << " s UNSUPPORTED\n";
+			exit(1);
+		}
 				
 		VarArray scope;
 		getVariables(list, scope);
@@ -485,6 +507,11 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var, 
     cout << "        " << (support ? "support" : "conflict") << " nb tuples: " << tuples.size() << " star: " << hasStar << endl;
     cout << (*var) << endl;
 #endif
+		
+		if(!support) {
+			cout << " s UNSUPPORTED\n";
+			exit(1);
+		}
 				
 		auto the_min = *std::min_element(begin(tuples), end(tuples));
 		auto the_max = *std::max_element(begin(tuples), end(tuples));
@@ -503,11 +530,20 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id, vector<XVariab
 #ifdef _VERBOSE_
     cout << "\n    extension constraint similar as previous one: " << id << endl;
 #endif
+		
+		if(!support) {
+			cout << " s UNSUPPORTED\n";
+			exit(1);
+		}
 				
 		VarArray scope;
 		getVariables(list, scope);
 		
-		TableExpression* tab = new TableExpression(scope, last_table);
+		TableExpression* tab = new TableExpression(scope);
+		for( auto t : *last_table ) {
+			tab->add(t);
+		}
+		
 		
 		solver.add( Variable(tab) );
 }
@@ -543,8 +579,8 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 		else if(op == GT)
 			solver.add( (X + k) > Y );
 		else if(op == IN) {
-			cout << "NOT IMPLEMENTED!" << endl;
-			exit(1);	
+			cout << " s UNSUPPORTED\n";
+			exit(1);
 		}
 		else if(op == EQ)
 			solver.add( (X + k) == Y );
@@ -714,7 +750,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 				
 				if( t.to == final ) {
 					if(cons != num_layers) {
-						cout << "MDD TRANSITIONS TO FINAL FROM INTERNAL NOT IMPLEMENTED!" << endl;
+						cout << " s UNSUPPORTED\n";
 						exit(1);
 					}
 					tuple[0] = node_map[t.from];
@@ -759,8 +795,11 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentExcept(string id, vector<
     cout << "        Exceptions:";
     displayList(except);
 #endif
-				
-		assert(except.size()==1);
+						
+		if(except.size()>1) {
+			cout << " s UNSUPPORTED\n";
+			exit(1);
+		}
 		
 		VarArray scope;
 		getVariables(list, scope);
@@ -781,7 +820,7 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentList(string id, vector <v
 		
 		for( auto lpt1=begin(lists); lpt1!=end(lists); ++lpt1) {
 			for( auto lpt2=lpt1+1; lpt2!=end(lists); ++lpt2) {
-				assert(lpt1->size() == lpt2->size());
+				// assert(lpt1->size() == lpt2->size());
 				VarArray differences;
 				for(int i=0; i<lpt1->size(); ++i) {
 					differences.add(variable[(*lpt1)[i]->id] != variable[(*lpt2)[i]->id]);
@@ -995,12 +1034,14 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			solver.add( Sum(scope, coeffs, cond.min, cond.max) );
 			
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 			if(cond.op == EQ) {
 				solver.add( Sum(scope, coeffs, cond.val, cond.val) );
@@ -1052,12 +1093,14 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			solver.add( Sum(scope, cond.min, cond.max) );
 			
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 			if(cond.op == EQ) {
 				solver.add( Sum(scope, cond.val, cond.val) );
@@ -1116,12 +1159,14 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			solver.add( Sum(scope, cond.min, cond.max) );
 			
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 			if(cond.op == EQ) {
 				solver.add( Sum(scope, cond.val, cond.val) );
@@ -1278,7 +1323,10 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
 			}
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			if(values.size() == 1) {
 				solver.add( Occurrence(scope, *begin(values), cond.min, cond.max) );
@@ -1287,7 +1335,6 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
 			}
 			
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 			if(values.size() == 1) {
 				int val = *begin(values);
@@ -1338,7 +1385,7 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
     cout << "        condition: " << xc << endl;
 #endif
 				
-		cout << "NOT IMPLEMENTED!" << endl;
+		cout << " s UNSUPPORTED\n";
 		exit(1);
 }
 
@@ -1403,11 +1450,13 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
 				}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			solver.add( BoolSum(used, cond.min, cond.max) );
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 				if(cond.op == EQ) {
 					solver.add( BoolSum(used, cond.val, cond.val) );
@@ -1477,11 +1526,13 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
 				}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			solver.add( BoolSum(used, cond.min, cond.max) );
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 				if(cond.op == EQ) {
 					solver.add( BoolSum(used, cond.val, cond.val) );
@@ -1513,7 +1564,6 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(occurs);
 #endif
 				
-		assert(values.size() == occurs.size());
 		
 		VarArray scope;
 		getVariables(list, scope);
@@ -1539,7 +1589,6 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(occurs);
 #endif
 				
-		assert(values.size() == occurs.size());
 		
 		VarArray scope;
 		getVariables(list, scope);
@@ -1572,7 +1621,6 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(occurs);
 #endif
 				
-		assert(values.size() == occurs.size());
 		
 		VarArray scope;
 		getVariables(list, scope);
@@ -1622,7 +1670,6 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(occurs);
 #endif		
 			
-		assert(values.size() == occurs.size());
 		
 		
 		VarArray scope;
@@ -1642,7 +1689,6 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 			solver.fail();
 		}
 		
-		// assert(total <= scope.size);
 		
 		if(closed || total==scope.size)
 			for( auto X : scope ) {
@@ -1671,7 +1717,6 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
     displayList(occurs);
 #endif
 				
-		assert(values.size() == occurs.size());
 		
 		VarArray scope;
 		getVariables(list, scope);
@@ -1776,13 +1821,15 @@ void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *
 				}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			Variable MV(cond.min, cond.max);
 			
 			solver.add( MinVar == MV );
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 				if(cond.op == EQ) {
 					solver.add( MinVar == cond.val );
@@ -1863,13 +1910,15 @@ void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *
 				}  
 			
 		} else if(cond.operandType == INTERVAL) {
-			assert(cond.op == IN);
+			if(cond.op != IN) {
+					cout << " s UNSUPPORTED\n";
+					exit(1);
+			}
 			
 			Variable MV(cond.max, cond.max);
 			
 			solver.add( MaxVar == MV );
 		} else {
-			assert(cond.operandType == INTEGER);
 				
 				if(cond.op == EQ) {
 					solver.add( MaxVar == cond.val );
@@ -1956,7 +2005,10 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        index : " << *index << endl;
 #endif
 				
-		assert(rank == ANY);
+		if(rank != ANY) {
+				cout << " s UNSUPPORTED\n";
+				exit(1);
+		}
 		
 		// cout << variable[index->id].get_domain() << endl;
 		
@@ -1976,7 +2028,10 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        index : " << *index << endl;
 #endif
 				
-		assert(rank == ANY);
+		if(rank != ANY) {
+				cout << " s UNSUPPORTED\n";
+				exit(1);
+		}
 		
 		VarArray scope;
 		getVariables(list, scope);
@@ -2236,7 +2291,7 @@ void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
 #endif
 		
     Tree tree(expr);
-    goal = new Goal(Goal::MINIMIZATION, postExpression(tree.root, true));
+    goal = new Goal(Goal::MINIMIZATION, postExpression(tree.root, true).get_var());
     tree.dispose();
 
 }
@@ -2248,14 +2303,14 @@ void XCSP3MistralCallbacks::buildObjectiveMaximizeExpression(string expr) {
 #endif
 		
     Tree tree(expr);
-    goal = new Goal(Goal::MAXIMIZATION, postExpression(tree.root, true));
+    goal = new Goal(Goal::MAXIMIZATION, postExpression(tree.root, true).get_var());
     tree.dispose();
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMinimizeVariable(XVariable *x) {
 #ifdef _VERBOSE_
-    cout << "\n    objective: minimize variable " << x << endl;
+    cout << "\n    objective: minimize variable " << x->id << endl;
 #endif
 		
     goal = new Goal(Goal::MINIMIZATION, variable[x->id]);
@@ -2264,10 +2319,10 @@ void XCSP3MistralCallbacks::buildObjectiveMinimizeVariable(XVariable *x) {
 
 void XCSP3MistralCallbacks::buildObjectiveMaximizeVariable(XVariable *x) {
 #ifdef _VERBOSE_
-    cout << "\n    objective: maximize variable " << x << endl;
+    cout << "\n    objective: maximize variable " << x->id << endl;
 #endif
 		
-		goal = new Goal(Goal::MAXIMIZATION, variable[x->id]);
+		goal = new Goal(Goal::MAXIMIZATION, variable[x->id].get_var());
 }
 
 

@@ -1664,8 +1664,10 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
 						     Goal *goal,
 						     bool _restore_) 
 {
-  //std::cout << "\nINIT LEVEL = " << level << std::endl;
+  // std::cout << "\nINIT LEVEL = " << level << std::endl;
   initialise_search(seq, heu, pol, goal);
+	
+	// std::cout << "SEARCH\n" ;
 
   statistics.start_time = get_run_time();
 	
@@ -1908,6 +1910,7 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
   Outcome satisfiability = UNKNOWN;
 
   statistics.objective_value = objective->value();
+	
   statistics.num_variables = sequence.size;  
 
   double last_target = get_current_target();
@@ -1953,13 +1956,13 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
     ++statistics.num_restarts;
 
 
-    //std::cout << " c notify restart" << std::endl;
+    // std::cout << " c notify restart" << std::endl;
     notify_restart(progress_i);
 
 
     // std::cout << "seq: [";
     // for(int i=sequence.size; i<variables.size; ++i) {
-    //   std::cout << (sequence[i].get_value() ? " +" : " -") << sequence[i]; 
+    //   std::cout << (sequence[i].get_value() ? " +" : " -") << sequence[i];
     // }
     // std::cout << "]\n";
 
@@ -1976,7 +1979,7 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
       policy->reset(parameters.restart_limit);
     
       if(!limits_expired()) {
-	satisfiability = UNKNOWN;
+				satisfiability = UNKNOWN;
       }
     }
 
@@ -2060,8 +2063,6 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   
 
 
-  //consolidate();
-
   if(level < 0) save();
 
   active_solver = this;
@@ -2089,10 +2090,6 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
     objective = goal;}
   else if(!objective) objective = new Goal(Goal::SATISFACTION);
 
-  // std::cout << (int*)heu << " " << (int*)heuristic << std::endl;
-  // std::cout << heuristic << std::endl;
-  // heuristic->display(std::cout);
-  // std::cout << std::endl << sequence << std::endl;
 
   heuristic->initialise(sequence);
 
@@ -2109,23 +2106,7 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
     if(arity > statistics.max_arity) statistics.max_arity = arity;
   }
 
-  /*
-  std::cout << sequence << std::endl;
-  monitor_list << variables[29];
-  monitor_list << " ";
-  monitor_list << variables[30];
-  monitor_list << " ";
-  monitor_list << variables[31];
-  monitor_list << " ";
-  monitor_list << variables[32];
-  monitor_list << " ";
-  monitor_list << variables[33];
-  monitor_list << " ";
-  monitor_list << variables[34];
-  monitor_list << " ";
-  monitor_list << variables[35];
-  monitor_list << "\n";
-  */
+
   
 }
 
@@ -2209,18 +2190,22 @@ Mistral::Solver::~Solver() {
   //std::cout << "delete constraints" << std::endl;
   for(unsigned int i=0; i<constraints.size; ++i) {
 
-    //std::cout << "  delete " << constraints[i] << std::endl;
+    // std::cout << " delete cons " << constraints[i] << std::endl;
 
     delete constraints[i].propagator;
+		
+		// std::cout << " ok delete\n" ;
   }
 
   //std::cout << "delete expressions" << std::endl;
   for(unsigned int i=expression_store.size; i;) {
 
     // Variable x(expression_store[i]);
-    //std::cout << "delete " << expression_store[i-1] << std::endl;
+    // std::cout << " delete exp " << expression_store[i-1] << std::endl;
 
     delete expression_store[--i];
+		
+		// std::cout << " ok delete\n" ;
   }
 
   //std::cout << "delete variables" << std::endl;
@@ -5422,10 +5407,6 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
 {
 	search_root = _root;
 
-
-
-	//std::cout << sequence << std::endl;
-
 #ifdef _OUTPUT_TIKZ
 	int tikz_level = 0;
 	Vector<int> deficit;
@@ -5438,21 +5419,6 @@ Mistral::Outcome Mistral::Solver::chronological_dfs(const int _root)
 
 	int status = UNKNOWN;
 	while(status == UNKNOWN) {
-		
-#ifdef _DEBUG_SEARCH
-		bool is_there = false;
-			for(int t = 0; t<3 && !is_there; ++t) {
-				for(int c = constraint_graph[86].on[t].size; --c>=0 && !is_there;) {					
-						Constraint culprit = constraint_graph[86].on[t][c];
-						if(culprit.id() == 64) {
-							is_there = true;
-						}
-					}
-				}
-		
-		std::cout << variables[86] << " in " << variables[86].get_domain() << "  " << variables[17] << " in " << variables[17].get_domain() << " [" << is_there << "]"<< std::endl;
-#endif
-		
 
 		if(propagate()) {
 

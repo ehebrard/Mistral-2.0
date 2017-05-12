@@ -4570,6 +4570,14 @@ void Mistral::TableExpression::add(int* tuple)
   tuples->add(new_tuple);
 }
 
+void Mistral::TableExpression::add(const int* tuple) 
+{
+  int n = children.size;
+  int *new_tuple = new int[n];
+  while(n--) new_tuple[n] = tuple[n];
+  tuples->add(new_tuple);
+}
+
 Mistral::TableExpression::~TableExpression() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete table expression" << std::endl;

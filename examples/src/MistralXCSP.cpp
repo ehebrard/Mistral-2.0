@@ -22,7 +22,52 @@ void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
 	
 	cb.solver.consolidate();
 	
-	// cb.solver.set_goal(cb.goal);
+	cb.solver.set_goal(cb.goal);
+}
+
+
+void print_outcome(XCSP3MistralCallbacks& cb, std::ostream& os) {
+	Outcome result = cb.solver.statistics.outcome;
+	
+  switch(result) {
+  case SAT: 
+    os << " s SATISFIABLE\n" ;
+    break;
+  case OPT: 
+    os << " s OPTIMUM FOUND\n" ;
+    break;
+  case UNSAT: 
+    os << " s UNSATISFIABLE\n" ;
+    break;
+  case UNKNOWN: 
+    os << " s UNKNOWN\n" ;
+    break;
+  case LIMITOUT: 
+    if(cb.solver.statistics.num_solutions > 0) 
+      os << " s SATISFIABLE\n" ;
+    else 
+      os << " s UNKNOWN\n" ;
+  }
+}
+
+
+void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os) {
+	if(cb.solver.statistics.num_solutions > 0) {
+		os << " v <instantiation type=\"";
+		if(cb.solver.statistics.outcome == OPT)
+			os << "optimum\" cost=\"" << cb.solver.statistics.objective_value << "\">\n";
+		else
+			os << "\"solution\">\n"; 
+		os << " v   <list>";
+		for( auto id : cb.var_ids ) {
+			os << " " << id;
+		}
+		os << " <list>\n v   <values>";
+		for( auto var : cb.variables ) {
+			os << " " << cb.solver.last_solution_lb[var.id()];
+		}
+		os << " <values>\n v </instantiation>\n";
+	}
 }
 
 
@@ -54,18 +99,18 @@ int main(int argc,char **argv) {
 	parse(cb, cmd.get_filename().c_str());
 	
 	
-	// cout << solver << endl;
-	
+	std::cout << " c parsetime " << (get_run_time() - cpu_time) << std::endl;
+		
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
 	
-	Outcome result = UNKNOWN;
 	if(branchOnaux.getValue())
-		result = solver.depth_first_search(solver.variables, heuristic, restart, cb.goal);
+		solver.depth_first_search(solver.variables, heuristic, restart);
 	else
-		result = solver.depth_first_search(cb.variables, heuristic, restart, cb.goal);
+		solver.depth_first_search(cb.variables, heuristic, restart);
 	
-	cout << result << endl;
+	print_outcome(cb, std::cout);
+	print_solution(cb, std::cout);
 
   return 0;
 }

@@ -2987,6 +2987,7 @@ namespace Mistral {
     virtual ~TableExpression();
 
     void add(int *t);
+		void add(const int *t);
 
     virtual void extract_constraint(Solver*);
     virtual void extract_variable(Solver*);
