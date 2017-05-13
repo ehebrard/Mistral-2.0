@@ -52,6 +52,7 @@
 //#define _DEBUG_ADD (id == 6425)
 
 
+
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
 }
@@ -7691,7 +7692,7 @@ void Mistral::ConstraintGAC4::initialise() {
   list_pruning = new Vector<int>[n];
 #endif
 
-#ifdef _DEBUG_TABLE
+#ifdef _DEBUG_TABLEGAC4
   init_support_size = new int[n];
 #endif
 
@@ -7755,7 +7756,7 @@ void Mistral::ConstraintGAC4::initialise() {
     }
   }
 
-#ifdef _DEBUG_TABLE
+#ifdef _DEBUG_TABLEGAC4
   for(int i=0; i<n; ++i) {
     init_support_size[i] = support_lists[i].size;
   }
@@ -7859,8 +7860,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
   int asgn;
 #endif
 
-#ifdef _DEBUG_TABLE
-  if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+  if(_DEBUG_TABLEGAC4) {
   std::cout << "propagate " << id << " " << *this << std::endl;
   //display_supports(std::cout);
   }
@@ -7868,16 +7869,16 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
 
   while(!changes.empty()) {
 
-#ifdef _DEBUG_TABLE
-    if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+    if(_DEBUG_TABLEGAC4) {
     std::cout << "modified variables: " << changes << std::endl;
     }
 #endif
 
     xi = changes.pop();
 
-#ifdef _DEBUG_TABLE
-    if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+    if(_DEBUG_TABLEGAC4) {
     std::cout << "  changes on " << scope[xi] << ":\n";
     }
 #endif
@@ -7886,8 +7887,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
     for(xit = value_delta[xi].end(); --xit>=xstop; ) {
       vali = *xit;
 
-#ifdef _DEBUG_TABLE
-      if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+      if(_DEBUG_TABLEGAC4) {
 	std::cout << "    lost " << vali << ": " << std::endl;
       }
 #endif
@@ -7923,8 +7924,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
 	++xit;
       }
 
-#ifdef _DEBUG_TABLE
-    if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+    if(_DEBUG_TABLEGAC4) {
       std::cout << " " << pruned_lists << std::endl;
     }
 #endif
@@ -7936,8 +7937,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
   for(sk=pruned_lists.size; --sk>=0;) {
     tk = pruned_lists[sk];
     
-#ifdef _DEBUG_TABLE
-    if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+    if(_DEBUG_TABLEGAC4) {
     std::cout << "support[" << scope[var_map[tk]] << "][" << val_map[tk] << "] = " 
 	      << support_lists[tk] << "\n            - " 
 	      << list_pruning[tk] << std::endl;
@@ -7947,8 +7948,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
     support_lists[tk].reversible_remove(list_pruning[tk]);
     if(support_lists[tk].empty()) {
 
-#ifdef _DEBUG_TABLE
-      if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+      if(_DEBUG_TABLEGAC4) {
       std::cout << "support[" << scope[var_map[tk]] << "][" << val_map[tk] << "] is emptied -> pruning!\n";  
       }
 #endif
@@ -7975,8 +7976,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
   pruned_lists.clear();
 #endif
 
-#ifdef _DEBUG_TABLE
-  if(_DEBUG_TABLE) {
+#ifdef _DEBUG_TABLEGAC4
+  if(_DEBUG_TABLEGAC4) {
     display_supports(std::cout);
   }
 #endif
@@ -7984,7 +7985,7 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC4::propagate()
   return wiped;
 }
 
-#ifdef _DEBUG_TABLE
+#ifdef _DEBUG_TABLEGAC4
 bool Mistral::ConstraintGAC4::check_integrity( ) const 
 {
   bool ok = true;
@@ -8314,8 +8315,12 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC2001::propagate()
 
 #ifdef _DEBUG_TABLE
   if(_DEBUG_TABLE) {
-  std::cout << "\npropagate " << *this << std::endl;
-  std::cout << active << std::endl;
+  	std::cout << "\npropagate " << *this << " " << get_solver()->statistics.num_propagations << std::endl;
+  	std::cout << active << std::endl;
+		for( auto X : scope ) {
+			std::cout << X << " in " << X.get_domain() << " ";
+		}
+		std::cout << std::endl;
   }
 #endif
 
@@ -8331,107 +8336,111 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC2001::propagate()
 
 
 
-  while(IS_OK(wiped) && !changes.empty()) {
+	while(IS_OK(wiped) && !changes.empty()) {
 
 #ifdef _DEBUG_TABLE
-    if(_DEBUG_TABLE) {
-    std::cout << "modified variables: " << changes << std::endl;
-    }
+		if(_DEBUG_TABLE) {
+			std::cout << "modified variables: " << changes << std::endl;
+		}
 #endif
 
-    changedIdx = changes.pop();
+		changedIdx = changes.pop();
 
 
 #ifdef _DEBUG_TABLE
-    if(_DEBUG_TABLE) {
-    std::cout << "  changes on " << scope[changedIdx] << ":\n";
-    }
+		if(_DEBUG_TABLE) {
+			std::cout << "  changes on " << scope[changedIdx] << ":\n";
+		}
 #endif
 
     
-    for( i=0; IS_OK(wiped) && i<arity; ++i ) {
-      oi = order[i];
-      if( oi != changedIdx && active.contain(oi) ) 
-	{
+		for( i=0; IS_OK(wiped) && i<arity; ++i ) {
+			oi = order[i];
+			if( oi != changedIdx && (changes.contain(oi) || active.contain(oi)) ) 
+			{
 	  
 #ifdef _DEBUG_TABLE
-	  if(_DEBUG_TABLE) {
-	  std::cout << "    revise " << scope[oi] << " in " << scope[oi].get_domain() << ":\n";
-	  }
+				if(_DEBUG_TABLE) {
+					std::cout << "    revise " << scope[oi] << " in " << scope[oi].get_domain() << ":\n";
+				}
 #endif
 
-	  Domain dom_xi(scope[oi]);
+				Domain dom_xi(scope[oi]);
 	  
-	  Domain::iterator xit = dom_xi.end();
-	  Domain::iterator xend = dom_xi.begin();
+				Domain::iterator xit = dom_xi.end();
+				Domain::iterator xend = dom_xi.begin();
 
-	  while(xit != xend && IS_OK(wiped)) {
-	    j = dom_xi.get_value(--xit);
+				while(xit != xend && IS_OK(wiped)) {
+					j = dom_xi.get_value(--xit);
 
-	    n = supportList[oi][j].size;
-	    supports_X = supportList[oi][j].stack_; // init the list of supports
+					n = supportList[oi][j].size;
+					supports_X = supportList[oi][j].stack_; // init the list of supports
 
 #ifdef _DEBUG_TABLE
-	    if(_DEBUG_TABLE) {
-	    std::cout << "      = " << j << ": " ;
-	    }
+					if(_DEBUG_TABLE) {
+						std::cout << "      = " << j << ": " ;
+					}
 #endif
 	    
-	    valid = false;
-	    for(index=firstSupport[oi][j]; !valid && index<n; ++index) {
+					valid = false;
+					for(index=firstSupport[oi][j]; !valid && index<n; ++index) {
 
 
 #ifdef _DEBUG_TABLE
-	      if(_DEBUG_TABLE) {
-	    std::cout << "<" << supports_X[index][0];
-	    for(k=1; k<arity; ++k)
-	      std::cout << " " << supports_X[index][k];
-	    std::cout << ">" ;
-	      }
+						if(_DEBUG_TABLE) {
+							std::cout << "<" << supports_X[index][0];
+							for(k=1; k<arity; ++k)
+								std::cout << " " << supports_X[index][k];
+							std::cout << ">" ;
+						}
 #endif
 
-	      valid = true;
-	      for(k=0; valid && k<arity; ++k) {
-		ok = order[k];
-		valid = ( oi == ok || scope[ok].contain( supports_X[index][ok] ) );
-	      }
-	    }
-	    if( valid ) firstSupport[oi][j] = index-1;
-	    else {
-// #ifdef _DEBUG_TABLE
-// 	      if(_DEBUG_TABLE) {
-// 		std::cout << "remove " << j << " from " << scope[oi].get_domain() << std::endl;
+						valid = true;
+						for(k=0; valid && k<arity; ++k) {
+							ok = order[k];
+							valid = ( oi == ok || scope[ok].contain( supports_X[index][ok] ) );
+						}
+					}
+					if( valid ) firstSupport[oi][j] = index-1;
+					else {
+						// #ifdef _DEBUG_TABLE
+						// 	      if(_DEBUG_TABLE) {
+						// 		std::cout << "remove " << j << " from " << scope[oi].get_domain() << std::endl;
 	      
-		if(FAILED(scope[oi].remove( j ))) wiped = FAILURE(oi);
+						if(FAILED(scope[oi].remove( j ))) wiped = FAILURE(oi);
 		
-		//std::cout << wiped << std::endl;
-	    }
+						//std::cout << wiped << std::endl;
+					}
 
 #ifdef _DEBUG_TABLE
-	    if(_DEBUG_TABLE) {
-	    if( valid ) {
-	      std::cout << " ok!";
-	    } else {
-	      std::cout << " empty!" ;
-	    }
-	    std::cout << std::endl;
-	    }
+					if(_DEBUG_TABLE) {
+						if( valid ) {
+							std::cout << " ok!";
+						} else {
+							std::cout << " empty!" ;
+						}
+						std::cout << std::endl;
+					}
 #endif
 	    
-	    //--xit;
-	  }
+					//--xit;
+				}
 
 #ifdef _DEBUG_TABLE
-	    if(_DEBUG_TABLE) {
-	      std::cout << "    revised " << scope[oi] << " in " << scope[oi].get_domain() << ":\n\n";
-	    }
+				if(_DEBUG_TABLE) {
+					std::cout << "    revised " << scope[oi] << " in " << scope[oi].get_domain() << ":\n\n";
+				}
 #endif
+			}
+		}
 	}
-    }
-  }
 
 #ifdef _DEBUG_TABLE
   if(_DEBUG_TABLE) {
+		for( auto X : scope ) {
+			std::cout << X << " in " << X.get_domain() << " ";
+		}
+		std::cout << std::endl;
     std::cout << "return " << (IS_OK(wiped) ? "consistent\n" : "failure\n");
   }
 #endif
@@ -8544,9 +8553,9 @@ int Mistral::ConstraintGAC3::getpos(const int *sol) const
 
 //ConstraintGAC3::ConstraintGAC3() : ConstraintTable() {}
 
-Mistral::ConstraintGAC3::ConstraintGAC3(Vector< Variable >& scp) : ConstraintTable(scp) {}
+Mistral::ConstraintGAC3::ConstraintGAC3(Vector< Variable >& scp, const bool support) : ConstraintTable(scp), spin(support) {}
 
-Mistral::ConstraintGAC3::ConstraintGAC3(std::vector< Variable >& scp) : ConstraintTable(scp) {}
+Mistral::ConstraintGAC3::ConstraintGAC3(std::vector< Variable >& scp, const bool support) : ConstraintTable(scp), spin(support) {}
 
 bool Mistral::ConstraintGAC3::isValid(const int *tuple) const
 {
@@ -8579,21 +8588,21 @@ void Mistral::ConstraintGAC3::initialise() {
     
   matrix.initialise(matrixmin, matrixmax, BitSet::empt);
     
-  //if( spin ) {
+  if( spin ) {
     matrix.fill();
     i=table.size;
     while( i-- ) {
       if(isValid(table[i]))
-	matrix.remove(getpos(table[i]));
+				matrix.remove(getpos(table[i]));
     }
     
-  // } else {
-  //   matrix.clear();
-  //   i=tuples.size;
-  //   while( i-- )
-  //     if(isValid(tuples[i]))
-  // 	matrix.insert(getpos(tuples[i]));
-  // }
+	} else {
+    matrix.clear();
+    i=table.size;
+    while( i-- )
+      if(isValid(table[i]))
+  			matrix.add(getpos(table[i]));
+  }
   
   GlobalConstraint::initialise();
 

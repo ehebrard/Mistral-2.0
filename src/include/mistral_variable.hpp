@@ -2976,14 +2976,15 @@ namespace Mistral {
 
   // private:
 
+		bool                 support;
     AlgorithmType     propagator;
     Vector< const int* > *tuples;
 
   public:
 
-    TableExpression(Vector< Variable >& args, const AlgorithmType ct=Dynamic);
-    TableExpression(Vector< Variable >& args, Vector< const int* >&, const AlgorithmType ct=Dynamic);
-		TableExpression(Vector< Variable >& args, Vector< const int* >*, const AlgorithmType ct=Dynamic);
+    TableExpression(Vector< Variable >& args, const bool support=true, const AlgorithmType ct=Dynamic);
+    TableExpression(Vector< Variable >& args, Vector< const int* >&, const bool support=true, const AlgorithmType ct=Dynamic);
+		TableExpression(Vector< Variable >& args, Vector< const int* >*, const bool support=true, const AlgorithmType ct=Dynamic);
     virtual ~TableExpression();
 
     void add(int *t);
@@ -2996,9 +2997,9 @@ namespace Mistral {
 
   };
 
-  Variable Table(Vector< Variable >& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
-  Variable Table(Vector< Variable >& args, Vector< const int* >&, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
-	Variable Table(Vector< Variable >& args, Vector< const int* >*, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+  Variable Table(Vector< Variable >& args, const bool support=true, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+  Variable Table(Vector< Variable >& args, Vector< const int* >&, const bool support=true, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
+	Variable Table(Vector< Variable >& args, Vector< const int* >*, const bool support=true, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
   //Variable Table(VarArray& args, const TableExpression::AlgorithmType ct=TableExpression::Dynamic);
 
 

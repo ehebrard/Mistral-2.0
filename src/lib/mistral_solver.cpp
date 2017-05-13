@@ -5252,11 +5252,12 @@ Mistral::Outcome Mistral::Solver::satisfied() {
       if(!consistent)
 	{
 	
+	std::cerr << "\n@ p" << statistics.num_propagations ;
 	  if(tmp_sol.size < k) {
-	    std::cerr << "\nError: solution does not satisfy c" << C.id() << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
+	    std::cerr << ", Error: solution does not satisfy c" << C.id() << ": " << C << tmp_sol << " (backtracking)"<< std::endl;
 	    exit(0);
 	  } else {
-	    std::cerr << "\nError: solution does not satisfy c" << C.id() << ": " << C ;
+	    std::cerr << ", Error: solution does not satisfy c" << C.id() << ": " << C ;
 	    for(j=0; j<k; ++j) {
 	      std::cerr << " " << scope[j].get_domain();
 	    }

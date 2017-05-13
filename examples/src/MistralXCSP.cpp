@@ -57,16 +57,16 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os) {
 		if(cb.solver.statistics.outcome == OPT)
 			os << "optimum\" cost=\"" << cb.solver.statistics.objective_value << "\">\n";
 		else
-			os << "\"solution\">\n"; 
+			os << "solution\">\n"; 
 		os << " v   <list>";
 		for( auto id : cb.var_ids ) {
 			os << " " << id;
 		}
-		os << " <list>\n v   <values>";
+		os << " </list>\n v   <values>";
 		for( auto var : cb.variables ) {
 			os << " " << cb.solver.last_solution_lb[var.id()];
 		}
-		os << " <values>\n v </instantiation>\n";
+		os << " </values>\n v </instantiation>\n";
 	}
 }
 

@@ -36,6 +36,7 @@
 #define __CONSTRAINT_HPP
 
 
+// #define _DEBUG_TABLE (id==309 && get_solver()->statistics.num_propagations >= 1649862)
 
 #define _ALLDIFF_WC
 #define _ELT_WC
@@ -53,7 +54,7 @@
 #define _CBSI_WC
 
 
-// #define _DEBUG_RELAX (id == 64 || id == 79)
+//#define _DEBUG_RELAX (id == 64 || id == 79)
 
 /*
 #define _PWS_WC_ALT
@@ -3822,7 +3823,7 @@ namespace Mistral {
 
     //@}
 
-#ifdef _DEBUG_TABLE
+#ifdef _DEBUG_TABLEGAC4
     int* init_support_size;
 #endif
 
@@ -3849,7 +3850,7 @@ namespace Mistral {
     //virtual RewritingOutcome rewrite();
     //@}
 
-#ifdef _DEBUG_TABLE
+#ifdef _DEBUG_TABLEGAC4
     bool check_integrity( ) const ;
 #endif
   
@@ -3939,6 +3940,7 @@ namespace Mistral {
     //@{ 
     int *var_sizes; // NOTE: this has arity-1 elements
     BitSet matrix;
+		bool spin;
     //bool isClone;
     //@}
 
@@ -3947,8 +3949,8 @@ namespace Mistral {
     /**@name Constructors*/
     //@{
     ConstraintGAC3() : ConstraintTable() {}
-    ConstraintGAC3(Vector< Variable >& scp);
-    ConstraintGAC3(std::vector< Variable >& scp);
+    ConstraintGAC3(Vector< Variable >& scp, const bool support=true);
+    ConstraintGAC3(std::vector< Variable >& scp, const bool support=true);
     virtual Constraint clone() { return Constraint(new ConstraintGAC3(scope)); }
     virtual void initialise();
     //virtual int idempotent() { return 1;}

@@ -4543,23 +4543,19 @@ Mistral::Variable Mistral::Stretch(const std::vector< Variable >& args, std::vec
 
 
 
-Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>& rel, const AlgorithmType ct) 
-  : Expression(args) { 
-  propagator = ct;
+Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>& rel, const bool sup, const AlgorithmType ct) 
+  : Expression(args), support(sup), propagator(ct) { 
 	tuples = new Vector< const int* >; 
   tuples->copy(rel);
 }
 
-Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>* rel, const AlgorithmType ct) 
-  : Expression(args), tuples(rel) { 
-  propagator = ct; 
-  // tuples.copy(rel);
+Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const int*>* rel, const bool sup, const AlgorithmType ct) 
+  : Expression(args), support(sup), propagator(ct), tuples(rel) { 
 }
 
-Mistral::TableExpression::TableExpression(Vector< Variable >& args, const AlgorithmType ct) 
-  : Expression(args) { 
+Mistral::TableExpression::TableExpression(Vector< Variable >& args, const bool sup, const AlgorithmType ct) 
+  : Expression(args), support(sup), propagator(ct) { 
 	tuples = new Vector< const int* >; 
-  propagator = ct; 
 }
 
 void Mistral::TableExpression::add(int* tuple) 
@@ -4589,11 +4585,16 @@ Mistral::TableExpression::~TableExpression() {
 void Mistral::TableExpression::extract_constraint(Solver *s) { 
   ConstraintTable *tab;
   switch(propagator) {
-  case GAC2001: {tab = new ConstraintGAC2001(children);} break;
-  case GAC3: {tab = new ConstraintGAC3(children);} break;
-    //case AC3: {tab = new ConstraintAC3(children);} break;
-  case GAC4: {tab = new ConstraintGAC4(children);} break;
-  default: {tab = new ConstraintGAC2001(children);}
+	  case GAC2001: {tab = new ConstraintGAC2001(children);} break;
+	  case GAC3: {tab = new ConstraintGAC3(children);} break;
+	    //case AC3: {tab = new ConstraintAC3(children);} break;
+	  case GAC4: {tab = new ConstraintGAC4(children);} break;
+	  default: {
+			if(support)
+				tab = new ConstraintGAC2001(children);
+			else
+				tab = new ConstraintGAC3(children, support);
+		}
   }
  
   tab->table.copy(*tuples);
@@ -4615,13 +4616,13 @@ const char* Mistral::TableExpression::get_name() const {
   return "alldiff";
 }
 
-Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>& rel, const Mistral::TableExpression::AlgorithmType ct) {
-  Variable exp(new TableExpression(args, rel, ct));
+Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>& rel, const bool sup, const Mistral::TableExpression::AlgorithmType ct) {
+  Variable exp(new TableExpression(args, rel, sup, ct));
   return exp;
 }
 
-Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>* rel, const Mistral::TableExpression::AlgorithmType ct) {
-  Variable exp(new TableExpression(args, rel, ct));
+Mistral::Variable Mistral::Table(Vector< Variable >& args, Vector<const int*>* rel, const bool sup, const Mistral::TableExpression::AlgorithmType ct) {
+  Variable exp(new TableExpression(args, rel, sup, ct));
   return exp;
 }
 // Mistral::Variable Mistral::Table(VarArray& args, const Mistral::TableExpression::AlgorithmType ct) {

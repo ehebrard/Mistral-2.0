@@ -488,16 +488,11 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
     cout << "        ";
     displayList(list);
 #endif
-		
-		if(!support) {
-			cout << " s UNSUPPORTED" << _ID_(": ext non-support") << "\n";
-			exit(1);
-		}
-				
+			
 		VarArray scope;
 		getVariables(list, scope);
 		
-		TableExpression* tab = new TableExpression(scope);
+		TableExpression* tab = new TableExpression(scope, support);
 		
 		for( auto pt=begin(tuples); pt!=end(tuples); ++pt ) {
 				tab->add(&((*pt)[0]));
@@ -516,21 +511,30 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var, 
     cout << (*var) << endl;
 #endif
 		
-		if(!support) {
-			cout << " s UNSUPPORTED" << _ID_(": ext non-support") << "\n";
-			exit(1);
+		if(support) {		
+			auto the_min = *std::min_element(begin(tuples), end(tuples));
+			auto the_max = *std::max_element(begin(tuples), end(tuples));
+		
+			BitSet domain(the_min, the_max, BitSet::empt);
+		
+			for( auto t : tuples ) {
+				domain.add(t);
+			}
+		
+			solver.add( Member(variable[var->id], domain) );
+	
+		} else {
+		
+			Variable X = variable[var->id];
+			BitSet domain(X.get_min(), X.get_max(), BitSet::full);
+			
+			for( auto t : tuples ) {
+				domain.remove(t);
+			}
+			
+			solver.add( Member(X, domain) );
+		
 		}
-				
-		auto the_min = *std::min_element(begin(tuples), end(tuples));
-		auto the_max = *std::max_element(begin(tuples), end(tuples));
-		
-		BitSet domain(the_min, the_max, BitSet::empt);
-		
-		for( auto t : tuples ) {
-			domain.add(t);
-		}
-		
-		solver.add( Member(variable[var->id], domain) );
 }
 
 
@@ -538,16 +542,11 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id, vector<XVariab
 #ifdef _VERBOSE_
     cout << "\n    extension constraint similar as previous one: " << id << endl;
 #endif
-		
-		if(!support) {
-			cout << " s UNSUPPORTED" << _ID_(": ext non-support") << "\n";
-			exit(1);
-		}
 				
 		VarArray scope;
 		getVariables(list, scope);
 		
-		TableExpression* tab = new TableExpression(scope);
+		TableExpression* tab = new TableExpression(scope, support);
 		for( auto t : *last_table ) {
 			tab->add(t);
 		}
