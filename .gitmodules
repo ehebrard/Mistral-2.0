@@ -1,0 +1,3 @@
+[submodule "XCSP3-CPP-Parser"]
+	path = XCSP3-CPP-Parser
+	url = https://github.com/xcsp3team/XCSP3-CPP-Parser.git

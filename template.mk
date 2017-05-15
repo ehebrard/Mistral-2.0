@@ -15,6 +15,7 @@ INC=$(MAINDIR)/src/include
 DOC=$(MAINDIR)/doc
 TCL=$(MAINDIR)/tools/tclap/include
 XINC=$(XCSP3PDIR)/include
+XSRC=$(XCSP3PDIR)/src
 XOBJ=$(XCSP3PDIR)/obj
 
 
@@ -27,7 +28,9 @@ PINCSRC = $(wildcard $(INC)/*.hpp)
 PLIBSRC = $(wildcard $(SRC)/*.cpp)
 PLIBAUX = $(PLIBSRC:.cpp=.o)
 PLIBOBJ = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
-XLIBOBJ = $(wildcard $(XOBJ)/*.o)
+XLIBSRC = $(wildcard $(XSRC)/*.cc)
+XLIBAUX = $(XLIBSRC:.cc=.o)
+XLIBOBJ = $(patsubst $(XSRC)/%, $(XOBJ)/%, $(XLIBAUX))
 
 
 CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(XINC) `xml2-config --cflags`
@@ -47,11 +50,14 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-default: flatzinc
+default: xcsp3 flatzinc MistralXCSP
 
 flatzinc:
 	cd fz; make
 	cp fz/mistral-fz ./bin/fzn-mistral
+	
+xcsp3:
+	cd $(XCSP3PDIR)/samples/; make
 
 #fz/mistral-fz: fz/mistral-fzn
 #	cp fz/mistral-fzn ./bin
