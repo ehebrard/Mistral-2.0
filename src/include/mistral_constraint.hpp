@@ -1789,7 +1789,7 @@ namespace Mistral {
 					;
 			double the_max = 0;
 
-			for(int i=0; i<scope.size; ++i) {
+			for(size_t i=0; i<scope.size; ++i) {
 				idx = scope[i].id();
 				if(idx>=0) { // constants have negative ids
 					weights[idx] += w;

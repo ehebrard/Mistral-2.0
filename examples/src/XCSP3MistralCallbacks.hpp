@@ -29,7 +29,7 @@
 #include "XCSP3CoreCallbacks.h"
 #include "XCSP3Variable.h"
 
-#include "Tree.hpp"
+#include "tree.hpp"
 
 #include "mistral_solver.hpp"
 #include <map>
@@ -268,7 +268,7 @@ XCSP3MistralCallbacks::XCSP3MistralCallbacks(Solver& s) : XCSP3CoreCallbacks(), 
 
 
 void XCSP3MistralCallbacks::getVariables(vector < XVariable* > &list, Vector<Variable>& scope) {	
-    for(int i = 0; i < list.size(); i++)
+    for(size_t i = 0; i < list.size(); i++)
 				scope.add(variable[list[i]->id]);
 }
 
@@ -284,7 +284,7 @@ void displayList(vector <T> &list, string separator = " ") {
         cout << endl;
         return;
     }
-    for(int i = 0; i < list.size(); i++)
+    for(size_t i = 0; i < list.size(); i++)
         cout << list[i] << separator;
     cout << endl;
 }
@@ -671,7 +671,7 @@ void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *
 		S.add(scope.back());
 		solver.add(Table(S, last));
 		
-		for(int i=1; i<state_var.size; ++i) {
+		for(size_t i=1; i<state_var.size; ++i) {
 			S.clear();
 			S.add(state_var[i-1]);
 			S.add(scope[i]);
@@ -735,10 +735,10 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 		
 		VarArray S;
 		vector<TableExpression*> tables;
-		for(int i=0; i<scope.size; ++i) {
+		for(size_t i=0; i<scope.size; ++i) {
 			if(i>0) S.add(state_var[i-1]);
 			S.add(scope[i]);
-			if(i<num_layers) S.add(state_var[i]);
+			if((int)i<num_layers) S.add(state_var[i]);
 			
 			tables.push_back(new TableExpression(S));
 			S.clear();
@@ -829,7 +829,7 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentList(string id, vector <v
 			for( auto lpt2=lpt1+1; lpt2!=end(lists); ++lpt2) {
 				// assert(lpt1->size() == lpt2->size());
 				VarArray differences;
-				for(int i=0; i<lpt1->size(); ++i) {
+				for(size_t i=0; i<lpt1->size(); ++i) {
 					differences.add(variable[(*lpt1)[i]->id] != variable[(*lpt2)[i]->id]);
 				}
 				solver.add( Sum(differences)>0 );
@@ -870,7 +870,7 @@ void XCSP3MistralCallbacks::buildConstraintAllEqual(string id, vector<XVariable 
     displayList(list);
 #endif
 				
-		for(int i=1; i<list.size(); ++i) {
+		for(size_t i=1; i<list.size(); ++i) {
 			solver.add(variable[list[i-1]->id] == variable[list[i]->id]);
 		}
 }
@@ -910,7 +910,7 @@ void XCSP3MistralCallbacks::buildConstraintOrdered(string id, vector<XVariable *
 		VarArray X;
 		getVariables(list, X);
 	
-		for(int i=1; i<X.size; ++i) {
+		for(size_t i=1; i<X.size; ++i) {
 				if(order == LT) solver.add( X[i-1] <  X[i] ); 
 				if(order == LE) solver.add( X[i-1] <= X[i] ); 
 				if(order == GT) solver.add( X[i-1] >  X[i] ); 
@@ -942,7 +942,7 @@ void XCSP3MistralCallbacks::buildConstraintLex(string id, vector <vector<XVariab
 			scope.push_back(X);
 		}
 		
-		for(int i=1; i<lists.size(); ++i) {
+		for(size_t i=1; i<lists.size(); ++i) {
 			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
 			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
 			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
@@ -976,7 +976,7 @@ void XCSP3MistralCallbacks::buildConstraintLexMatrix(string id, vector <vector<X
 			scope.push_back(X);
 		}
 		
-		for(int i=1; i<scope.size(); ++i) {
+		for(size_t i=1; i<scope.size(); ++i) {
 			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
 			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
 			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
@@ -985,15 +985,15 @@ void XCSP3MistralCallbacks::buildConstraintLexMatrix(string id, vector <vector<X
 		
 		scope.clear();
 		
-		for( int i=0; i<matrix.size(); ++i) {
+		for( size_t i=0; i<matrix.size(); ++i) {
 			VarArray X;
-			for( int j=0; j<matrix.size(); ++j) {	
+			for( size_t j=0; j<matrix.size(); ++j) {	
 				X.add(variable[matrix[j][i]->id]);
 			}
 			scope.push_back(X);
 		}
 		
-		for(int i=1; i<scope.size(); ++i) {
+		for(size_t i=1; i<scope.size(); ++i) {
 			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
 			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
 			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
@@ -1603,7 +1603,7 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 		getVariables(occurs, count);
 	
 	
-		for(int i=0; i<values.size(); ++i) {
+		for(size_t i=0; i<values.size(); ++i) {
 			solver.add( Occurrence(scope, values[i]) == count[i] );
 		}
 		
@@ -1646,13 +1646,13 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 			ub.push_back(I.max);
 		}
 		
-		if(total_lb > scope.size) {
+		if(total_lb > (int)(scope.size)) {
 			solver.fail();
 		}
 		
 		
 		if(closed) {
-			if(total_ub < scope.size) {
+			if(total_ub < (int)(scope.size)) {
 				solver.fail();
 			}
 			for( auto X : scope )
@@ -1687,17 +1687,17 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 		solver.add(AllDiff(vals));
 		
 		int total=0;
-		for(int i=0; i<values.size(); ++i) {
+		for(size_t i=0; i<values.size(); ++i) {
 			total += occurs[i];
 			solver.add( Occurrence(scope, vals[i]) == occurs[i] );
 		}
 		
-		if(total > scope.size) {
+		if(total > (int)(scope.size)) {
 			solver.fail();
 		}
 		
 		
-		if(closed || total==scope.size)
+		if(closed || total==(int)(scope.size))
 			for( auto X : scope ) {
 				VarArray M;
 				for( auto V : vals ) 
@@ -1732,7 +1732,7 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 		VarArray vals;
 		getVariables(values, vals);
 	
-		for(int i=0; i<values.size(); ++i) {
+		for(size_t i=0; i<values.size(); ++i) {
 			solver.add( Occurrence(scope, vals[i]) == count[i] );
 		}
 		
@@ -1785,7 +1785,7 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 				solver.add( Sum(M)>0 );
 			}
 			
-		for(int i=0; i<values.size(); ++i) {
+		for(size_t i=0; i<values.size(); ++i) {
 			solver.add( Occurrence(scope, vals[i], lb[i], ub[i]) );
 		}
 
@@ -2057,8 +2057,8 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
 		VarArray scope;
 		getVariables(list, scope);
 		solver.add(AllDiff(scope));
-		for(int i=0; i<scope.size; ++i) {
-			for(int j=i+1; j<scope.size; ++j) {
+		for(size_t i=0; i<scope.size; ++i) {
+			for(size_t j=i+1; j<scope.size; ++j) {
 				solver.add( (scope[i] == j+startIndex) == (scope[j] == i+startIndex) );
 			}
 		}
@@ -2082,8 +2082,8 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
 		getVariables(list2, scope2);
 		solver.add(AllDiff(scope1));
 		solver.add(AllDiff(scope2));
-		for(int i=0; i<scope1.size; ++i) {
-			for(int j=0; j<scope2.size; ++j) {
+		for(size_t i=0; i<scope1.size; ++i) {
+			for(size_t j=0; j<scope2.size; ++j) {
 				solver.add( (scope1[i] == j+startIndex1) == (scope2[j] == i+startIndex2) );
 			}
 		}
@@ -2181,8 +2181,8 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector<XVariable
 		VarArray tasks;
 		getVariables(origins, tasks);
 		
-		for(int i=0; i<tasks.size; ++i) {
-			for(int j=i+1; j<tasks.size; ++j) {
+		for(size_t i=0; i<tasks.size; ++i) {
+			for(size_t j=i+1; j<tasks.size; ++j) {
 				solver.add(Free(ReifiedDisjunctive(tasks[i], tasks[j], lengths[i], lengths[j])));
 			}
 		}
@@ -2203,8 +2203,8 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector<XVariable
 		VarArray durations;
 		getVariables(lengths, durations);
 		
-		for(int i=0; i<tasks.size; ++i) {
-			for(int j=i+1; j<tasks.size; ++j) {
+		for(size_t i=0; i<tasks.size; ++i) {
+			for(size_t j=i+1; j<tasks.size; ++j) {
 				solver.add((tasks[i]+durations[i] <= tasks[j]) || (tasks[j]+durations[j] <= tasks[i]));
 			}
 		}
@@ -2286,7 +2286,7 @@ void XCSP3MistralCallbacks::buildConstraintInstantiation(string id, vector<XVari
     displayList(values);
 #endif
 		
-		for(int i=0; i<list.size(); ++i) {
+		for(size_t i=0; i<list.size(); ++i) {
 			solver.add( variable[list[i]->id] == values[i] );
 		}
 }

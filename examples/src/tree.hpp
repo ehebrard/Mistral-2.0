@@ -60,7 +60,7 @@ namespace XCSP3Core {
 
         void addParameter(Node *p) {
             args.push_back(p);
-            if(maxParameters != -1 && args.size() > maxParameters)
+            if(maxParameters != -1 && (int)(args.size()) > maxParameters)
                 throw runtime_error("Too many parameters in expression");
         }
 
@@ -206,7 +206,7 @@ namespace XCSP3Core {
                 startParams--;
             startParams++;
             int nbP = 0;
-            for(int i = startParams ; i < params.size() ; i++, nbP++)
+            for(size_t i = startParams ; i < params.size() ; i++, nbP++)
                 tmp->addParameter(params[i]);
             stack.pop_back();
             params.resize(params.size() - nbP);

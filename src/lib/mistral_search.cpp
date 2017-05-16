@@ -166,7 +166,7 @@ Mistral::HeuristicPoolManager::~HeuristicPoolManager() {// }
 
 void Mistral::HeuristicPoolManager::notify_restart(const double prog) {
   //std::cout << " c notify restart (3): " << solver->statistics.num_restarts << std::endl;
-  if(heu_index<pool.size) {
+  if(heu_index<(int)(pool.size)) {
     if(prog > 0.0) {
       counter = threshold;
     } else if(--counter <= 0) {
@@ -1705,7 +1705,7 @@ void Mistral::PruningCountManager::notify_success() {
 
 #ifdef _ABS_VAL	
 
-	if(n_restart==solver->statistics.num_restarts) {
+	if(n_restart==(int)(solver->statistics.num_restarts)) {
 		++n_restart;
 		return;
 	}

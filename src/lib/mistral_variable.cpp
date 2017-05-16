@@ -97,7 +97,7 @@ Mistral::Variable::Variable(const int* values, const int nvalues, const int type
 
 Mistral::Variable::Variable(const IntStack& values, const int type) {
 	Vector<int> vals(values.size);
-	for(int i=0; i<values.size; ++i) {
+	for(unsigned int i=0; i<values.size; ++i) {
 		vals.add(values[i]);
 	}
 	initialise_domain(vals, type);
@@ -133,6 +133,13 @@ Mistral::Variable::Variable(Variable X, bool h) {
 }
 
 void Mistral::Variable::free_object() {
+  // if     (domain_type ==  BITSET_VAR) std::cout << "bitset_domain " << (int*)(bitset_domain->domain.values.table) << "\n";
+  // else if(domain_type ==    LIST_VAR) std::cout << "list_domain\n";
+  // else if(domain_type ==   RANGE_VAR) std::cout << "range_domain\n";
+  // else if(domain_type == VIRTUAL_VAR) std::cout << "virtual_domain\n";
+  // else if(domain_type ==  EXPRESSION) std::cout << "expression\n";
+  // else if(domain_type !=   CONST_VAR) std::cout << "variable\n";
+	
   if     (domain_type ==  BITSET_VAR) delete bitset_domain;
   else if(domain_type ==    LIST_VAR) delete list_domain;
   else if(domain_type ==   RANGE_VAR) delete range_domain;
@@ -4347,7 +4354,7 @@ Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, std::vector<int
 	std::fill(lb, lb+last-first+1, -INFTY);
 	std::fill(ub, ub+last-first+1,  INFTY);
 	
-	for(int i=0; i<values.size(); ++i) {
+	for(unsigned int i=0; i<values.size(); ++i) {
 		lb[values[i]-first] = lbs[i];
 		ub[values[i]-first] = ubs[i];
 	}
@@ -4361,7 +4368,7 @@ Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, std::vector<int
 
 Mistral::VertexCoverExpression::VertexCoverExpression(Vector< Variable >& args, const Graph& g) 
 : Expression(args), _G(g) {
-	assert(_G.size() == args.size);
+	assert(_G.size() == (int)(args.size));
 }
   
 Mistral::VertexCoverExpression::~VertexCoverExpression() {}
@@ -4428,7 +4435,7 @@ const char* Mistral::FootruleExpression::get_name() const {
 
 Mistral::Variable Mistral::Footrule(Vector< Variable >& arg1, Vector< Variable >& arg2) {
 	Vector<Variable> args(arg1);
-	for(int i=0; i<arg2.size; ++i) args.add(arg2[i]);
+	for(size_t i=0; i<arg2.size; ++i) args.add(arg2[i]);
 	Variable exp(new FootruleExpression(args));
 	return exp;
 }
@@ -4778,7 +4785,7 @@ void Mistral::BoolSumExpression::remove_duplicates_and_zeros() {
       while(i--) {
 	if(children[i].same_as(children[n])) {
 	  if(weight.size==0) {
-	    for(int j=0; j<children.size; ++j)
+	    for(size_t j=0; j<children.size; ++j)
 	      weight.add(1);
 	  }
 	  weight[i] += weight[n];
@@ -5452,7 +5459,7 @@ Variable X, int ofs)
 		
 	// std::cout << args << " [" << offset << "] [" << (X.get_min()-offset) << ".." << X.get_max()-offset << "]" << std::endl;
 
-	for(int i=0; i<args.size; ++i) {
+	for(int i=0; i<(int)(args.size); ++i) {
 		if(i<(X.get_min()-offset)) {
 			
 			// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " < " << (X.get_min()-offset) << std::endl;
@@ -8499,7 +8506,7 @@ void Mistral::OccExpression::extract_constraint(Solver *s) {
     if(lower_bound > (int)(scope.size) || upper_bound < 0) {
       s->fail();
     } else {
-        if ( (scope.size>upper_bound) || (lower_bound>0))
+        if ( ((int)(scope.size)>upper_bound) || (lower_bound>0))
       s->add(Constraint(new ConstraintBoolSumInterval(scope,lower_bound,upper_bound))); 
     }
   } 

@@ -1139,13 +1139,20 @@ Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate(const int
 Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate() {
   PropagationOutcome wiped = CONSISTENT;
   
-  unsigned int i, j;
+  unsigned int i;
+
+#ifdef _DEBUG_GENPROPAG
+	unsigned int j;
+#endif
 
   int vali, valmax;//, vnext;
   bool supported;
 
   while(!changes.empty()) {
-    j = changes.pop();
+#ifdef _DEBUG_GENPROPAG
+		j=
+#endif
+    changes.pop();
 
 #ifdef _DEBUG_GENPROPAG
   std::cout << " propagate " << event2str(event_type[j]) << " on " << scope[j] << std::endl;
@@ -11514,7 +11521,7 @@ in fact, only parity pruning must be stored. Otherwise, we can deduce it from th
   int a_rank = (a == NULL_ATOM ? INFTY-1 : rank[a]);
   bool direction = true;
   int bounds[2] = {0,0};
-  int val, va=INFTY;
+  int val;
 
   Vector<int> pweight;
   Vector<int> nweight;
@@ -11529,7 +11536,6 @@ in fact, only parity pruning must be stored. Otherwise, we can deduce it from th
     //std::cout << a_rank << " <> " << rank[idx] << std::endl;
 
     if((Atom)idx == a) {
-      va = i;
       // a=0 and coeff is positive or
       // a=1 and coeff is negative => 1 <=> pushed toward the lower value (positive_contributors are the reason)
 
@@ -12517,7 +12523,7 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
     for(i=weight.size; i--;) {
       idx = scope[i].id();
       if(idx == a) {
-	direction = (GET_VAL(domains[i]) == weight[i]>0);
+	direction = (GET_VAL(domains[i]) == (weight[i]>0));
 	break;
       }
     }
@@ -12573,7 +12579,7 @@ Mistral::Explanation::iterator Mistral::ConstraintIncrementalWeightedBoolSumInte
   while(i--) {
     idx = scope[i].id();
     if(idx != a && IS_GROUND(domains[i]) && rank[idx] < a_rank) {
-      if((GET_VAL(domains[i]) == weight[i]>0) != direction) {
+      if((GET_VAL(domains[i]) == (weight[i]>0)) != direction) {
 
 	// if(reason[idx] == this) {
 	//   std::cout << "!!!!" << std::endl;
@@ -15854,16 +15860,16 @@ void Mistral::ConstraintStretch::init_struct(std::vector<int>& type, std::vector
 		runlength = new int*[scope.size+2];
 		
 		transition = new bool*[stype.size()];
-		for(int j=0; j<stype.size(); ++j) {
+		for(size_t j=0; j<stype.size(); ++j) {
 			transition[j] = new bool[stype.size()];
 			std::fill(transition[j], transition[j]+stype.size(), T.empty());
 		}
-		for(int i=0; i<T.size(); i+=2) {
+		for(size_t i=0; i<T.size(); i+=2) {
 			transition[T[i]][T[i+1]] = true;
 		}
 	
 
-		for(int i=0; i<scope.size; ++i) {
+		for(size_t i=0; i<scope.size; ++i) {
 			forward[i]   = new int[stype.size()];
 			backward[i]  = new int[stype.size()];
 			runlength[i] = new int[stype.size()];
@@ -15871,7 +15877,7 @@ void Mistral::ConstraintStretch::init_struct(std::vector<int>& type, std::vector
 
 		_min =  INFTY;
 		_max = -INFTY;
-		for(int j=0; j<stype.size(); ++j) {
+		for(size_t j=0; j<stype.size(); ++j) {
 			if(_min > stype[j]) {
 				_min = stype[j];
 			}
@@ -15884,7 +15890,7 @@ void Mistral::ConstraintStretch::init_struct(std::vector<int>& type, std::vector
 		std::fill(sindex, sindex+_max-_min+1, INFTY);
 		sindex -= _min;
 	
-		for(int j=0; j<stype.size(); ++j) {
+		for(size_t j=0; j<stype.size(); ++j) {
 			sindex[stype[j]] = j;
 		}
 }
@@ -15910,13 +15916,13 @@ Mistral::ConstraintStretch::~ConstraintStretch()
   std::cout << "c delete stretch constraint" << std::endl;
 #endif
 	
-	for(int i=0; i<=scope.size; ++i) {
+	for(size_t i=0; i<=scope.size; ++i) {
 		delete forward[i];
 		delete backward[i];
 		delete runlength[i];
 	}
 	
-	for(int j=0; j<stype.size(); ++j) {
+	for(size_t j=0; j<stype.size(); ++j) {
 		delete transition[j];
 	}
 	
@@ -15934,23 +15940,23 @@ void Mistral::ConstraintStretch::compute_forward()
 {
 	for(int i=0; i<2; ++i)
 		std::fill(forward[i], forward[i]+stype.size(), i);
-	for(int i=0; i<=scope.size; ++i)
+	for(size_t i=0; i<=scope.size; ++i)
 		std::fill(runlength[i], runlength[i]+stype.size(), 0);
-	for(int j=0; j<stype.size(); ++j) {
-		for(int i=1; i<=scope.size; ++i) {
+	for(size_t j=0; j<stype.size(); ++j) {
+		for(size_t i=1; i<=scope.size; ++i) {
 			if(scope[i-1].contain(stype[j]))
 				runlength[i][j] = runlength[i-1][j]+1;
 		}
 	}
-	for(int i=1; i<=scope.size; ++i) {
-		for(int j=0; j<stype.size(); ++j) {
+	for(int i=1; i<=(int)(scope.size); ++i) {
+		for(int j=0; j<(int)(stype.size()); ++j) {
 			forward[i+1][j] = forward[i][j];
 		}	
-		for(int j=0; j<stype.size(); ++j) {
+		for(int j=0; j<(int)(stype.size()); ++j) {
 			int hi = i-slb[j];
 			int lo = i-std::min(sub[j], runlength[i][j]);
 			if(hi >= lo && forward[hi+1][j] - forward[lo][j] > 0) {
-				for(int k=0; k<stype.size(); ++k) {
+				for(int k=0; k<(int)(stype.size()); ++k) {
 					if(transition[j][k])
 						forward[i+1][k] = forward[i][k]+1;
 				}
@@ -15963,23 +15969,23 @@ void Mistral::ConstraintStretch::compute_backward()
 {
 	for(int i=0; i<2; ++i)
 		std::fill(backward[scope.size-i], backward[scope.size-i]+stype.size(), i);
-	for(int i=0; i<=scope.size+1; ++i)
+	for(size_t i=0; i<=scope.size+1; ++i)
 		std::fill(runlength[i], runlength[i]+stype.size(), 0);
-	for(int j=0; j<stype.size(); ++j) {
-		for(int i=scope.size; i>=1; --i) {
+	for(size_t j=0; j<stype.size(); ++j) {
+		for(size_t i=scope.size; i>=1; --i) {
 			if(scope[i+1].contain(stype[j]))
 				runlength[i][j] = runlength[i+1][j]+1;
 		}
 	}
-	for(int i=scope.size; i>=1; --i) {
-		for(int j=0; j<stype.size(); ++j) {
+	for(int i=(int)(scope.size); i>=1; --i) {
+		for(int j=0; j<(int)(stype.size()); ++j) {
 			backward[i-1][j] = backward[i][j];
 		}	
-		for(int j=0; j<stype.size(); ++j) {
+		for(int j=0; j<(int)(stype.size()); ++j) {
 			int hi = i+slb[j];
 			int lo = i+std::min(sub[j], runlength[i][j]);
 			if(hi >= lo && backward[lo-1][j] - backward[hi][j] > 0) {
-				for(int k=0; k<stype.size(); ++k) {
+				for(int k=0; k<(int)(stype.size()); ++k) {
 					if(transition[k][j])
 						backward[i-1][k] = backward[i][k]+1;
 				}
@@ -15991,15 +15997,15 @@ void Mistral::ConstraintStretch::compute_backward()
 Mistral::PropagationOutcome Mistral::ConstraintStretch::prune() {
 	PropagationOutcome wiped = CONSISTENT;
 	
-	for(int i=0; i<=scope.size; ++i)
+	for(size_t i=0; i<=scope.size; ++i)
 		std::fill(runlength[i], runlength[i]+stype.size(), 0);
-	for(int j=0; j<stype.size(); ++j) {
-		for(int i=1; i<=scope.size; ++i) {
+	for(size_t j=0; j<stype.size(); ++j) {
+		for(size_t i=1; i<=scope.size; ++i) {
 			if(scope[i-1].contain(stype[j]))
 				runlength[i][j] = runlength[i-1][j]+1;
 		}
 	}
-	for(int j=0; IS_OK(wiped) && j<stype.size(); ++j) {
+	for(int j=0; IS_OK(wiped) && j<(int)(stype.size()); ++j) {
 		interval.clear();
 		var_queue.clear();
 		front = begin(var_queue);
@@ -16059,7 +16065,7 @@ int Mistral::ConstraintStretch::check( const int* s ) const
 	int cur_val=s[0];
 	int cur_span=1;
 	
-	for(int i=1; ok && i<scope.size; ++i) {
+	for(size_t i=1; ok && i<scope.size; ++i) {
 		if(s[i] != cur_val) {
 			// nouveau stretch de cur_val de longueur cur_span
 			if(sindex[cur_val] == INFTY || slb[sindex[cur_val]] > cur_span || sub[sindex[cur_val]] < cur_span)
@@ -16081,7 +16087,7 @@ std::ostream& Mistral::ConstraintStretch::display(std::ostream& os) const {
   for(unsigned int i=1; i<scope.size; ++i) 
     os << " " << scope[i]/*.get_var()*/;
   os << ")" ;
-  for(int i=0; i<stype.size(); ++i) 
+  for(size_t i=0; i<stype.size(); ++i) 
     os << ", <" << stype[i] << ":" << slb[i] << "-" << sub[i] << ">";
   return os;
 }
@@ -16481,7 +16487,7 @@ double Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& 
 
 
 			l = minsorted[rank]->min;
-			for(int i=rank; i<scope.size; ++i) {
+			for(size_t i=rank; i<scope.size; ++i) {
 				other_bounds.push_back(minsorted[i]->max);
 			}
 			sort(other_bounds.begin(), other_bounds.end());
@@ -16524,7 +16530,7 @@ double Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& 
 		w /= (double)size_conflict;
 #endif
 
-		for(int i=0; i<scope.size; ++i) {
+		for(size_t i=0; i<scope.size; ++i) {
 			//std::cout << scope[i].get_domain() << std::endl;
 			if(iv[i].min>=l && iv[i].max<=u) {
 				//std::cout << " " << scope[i].id();
@@ -16553,7 +16559,7 @@ double Mistral::ConstraintAllDiff::weight_conflict(double unit, Vector<double>& 
 		w /= (double)size_conflict;
 #endif
     
-		for(int i=0; i<scope.size; ++i) {
+		for(size_t i=0; i<scope.size; ++i) {
 			if(iv[i].min<=u && iv[i].max>=l) {
 				idx = scope[i].id();
 				if(idx>=0) {
@@ -16582,7 +16588,7 @@ void Mistral::ConstraintAllDiff::print_structs() {
 
 
   std::cout << std::endl;
-  for(int i=0; i<scope.size; ++i) {
+  for(size_t i=0; i<scope.size; ++i) {
     std::cout << i << " [" 
 	      << minsorted[i]->min << ".." << minsorted[i]->max << "] ["
 	      << maxsorted[i]->min << ".." << maxsorted[i]->max << "] \n";
@@ -16834,7 +16840,7 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::prune_from_transitions(c
 		}
 #endif	
 		not_supported = true;
-		for(int j=0; not_supported && j<util_stack.size; ++j) {
+		for(size_t j=0; not_supported && j<util_stack.size; ++j) {
 			
 #ifdef _DEBUG_FRDP
 			if(_DEBUG_FRDP) {
@@ -16880,7 +16886,7 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::prune_from_transitions(c
 #endif	
 			
 			not_supported = true;
-			for(int j=0; not_supported && j<util_stack.size; ++j) {
+			for(size_t j=0; not_supported && j<util_stack.size; ++j) {
 				
 #ifdef _DEBUG_FRDP
 				if(_DEBUG_FRDP) {
@@ -17027,8 +17033,8 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::compute_DP_from_scratch(
 #endif
 
 		ns = 0;
-		for(int s=0; s<state[i].size; ++s) {
-			for(int t=0; t<distance[i].size; ++t) {
+		for(size_t s=0; s<state[i].size; ++s) {
+			for(size_t t=0; t<distance[i].size; ++t) {
 				d = state[i][s]+distance[i][t];
 				
 				if(d<=ub_md && d+max_md(N,N-i-1)>=lb_md) {
@@ -17048,7 +17054,7 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::compute_DP_from_scratch(
 						}
 					} else {
 						idx = state[N].get_index(d);
-						if(idx < state[N].size && idx >= ns) {
+						if(idx < (int)(state[N].size) && idx >= ns) {
 							if(idx>ns) state[N].set(d,ns);
 							++ns;
 						
@@ -17096,13 +17102,13 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::compute_DP_from_scratch(
 		
 		ns = 0;
 		util_stack.clear();
-		for(int t=0; t<distance[i-1].size; ++t) util_stack.add(distance[i-1][t]);
+		for(size_t t=0; t<distance[i-1].size; ++t) util_stack.add(distance[i-1][t]);
 		util_stack.clear();
-		for(int s=0; s<state[i].size; ++s) {
-			for(int t=0; t<distance[i-1].size; ++t) {
+		for(size_t s=0; s<state[i].size; ++s) {
+			for(size_t t=0; t<distance[i-1].size; ++t) {
 				d = state[i][s]-distance[i-1][t];
 				idx = state[i-1].get_index(d);
-				if(idx < state[i-1].size) {
+				if(idx < (int)(state[i-1].size)) {
 					if(!util_stack.contain(distance[i-1][t])) util_stack.add(distance[i-1][t]);
 					
 					
@@ -17208,7 +17214,7 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::propagate() {
 
 #ifdef _DEBUG_FOOTRULE
   
-  for(int i=0; i<changes.size; ++i) {
+  for(size_t i=0; i<changes.size; ++i) {
     var = changes[i];
     evt = event_type[var];
 
@@ -17252,11 +17258,11 @@ Mistral::PropagationOutcome Mistral::PredicateFootrule::propagate() {
 
 std::ostream& Mistral::PredicateFootrule::display(std::ostream& os) const {
   os << scope.back() << ":" << scope.back().get_domain() << " == |Manhattan([" << scope[0]/*.get_var()*/ << ":" << scope[0].get_domain();
-  for(unsigned int i=1; i<N; ++i) {
+  for( int i=1; i<N; ++i) {
     os << ", " << scope[i]/*.get_var()*/ << ":" << scope[i].get_domain();
   }
   os << "] vs [" << scope[N]/*.get_var()*/ << ":" << scope[N].get_domain();
-  for(unsigned int i=1; i<N; ++i) {
+  for( int i=1; i<N; ++i) {
     os << ", " << scope[i+N]/*.get_var()*/ << ":" << scope[i+N].get_domain();
   }
   os << "]) - " << uncorrelated_distance << "|";

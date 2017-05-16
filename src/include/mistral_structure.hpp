@@ -6781,7 +6781,7 @@ public:
 			for(int i=g.size(); i<g.capacity; ++i) { node.remove(g.node[i]); }
 			for(int x=0; x<capacity; ++x) {
 				matrix[x].copy(g.matrix[x]);
-				for(int i=0; i<g.neighbor[x].size; ++i) {
+				for(unsigned int i=0; i<g.neighbor[x].size; ++i) {
 					neighbor[x].add(g.neighbor[x][i]);
 				}
 			}
@@ -6894,7 +6894,7 @@ public:
 			for (int i=0; i<size(); i++) {
 				u = node[indexlist[i]];
 				if (!is_matched(u)) {
-					for (int j=0; j<neighbor[u].size; j++) {
+					for (unsigned int j=0; j<neighbor[u].size; j++) {
 						v = neighbor[u][j];
 						if (!is_matched(v)) {
 							matching[u] = v;
@@ -6912,7 +6912,7 @@ public:
 		}
 	
 		std::ostream& display(std::ostream& os) const {
-			for(int i=0; i<node.size; ++i) {
+			for(unsigned int i=0; i<node.size; ++i) {
 				os << node[i] << ": ";
 				neighbor[node[i]].display(os);
 				os << std::endl;
@@ -6959,10 +6959,10 @@ public:
 			node_set.copy(g.node_set);
 			for(int i=g.size(); i<g.capacity; ++i) { node.remove(g.node[i]); }
 			for(int x=0; x<capacity; ++x) {
-				for(int i=0; i<g.neighbor[x].size; ++i) {
+				for(unsigned int i=0; i<g.neighbor[x].size; ++i) {
 					neighbor[x].add(g.neighbor[x][i]);
 				}
-				for(int i=0; i<g.nb_index[x].size; ++i) {
+				for(unsigned int i=0; i<g.nb_index[x].size; ++i) {
 					nb_index[x].add(g.nb_index[x][i]);
 				}
 				
@@ -7104,7 +7104,7 @@ public:
 			for (int i=0; i<size(); i++) {
 				u = node[indexlist[i]];
 				if (!is_matched(u)) {
-					for (int j=0; j<neighbor[u].size; j++) {
+					for (unsigned int j=0; j<neighbor[u].size; j++) {
 						v = neighbor[u][j];
 						if (!is_matched(v)) {
 							matching[u] = v;
@@ -7122,7 +7122,7 @@ public:
 		}
 	
 		std::ostream& display(std::ostream& os) const {
-			for(int i=0; i<node.size; ++i) {
+			for(unsigned int i=0; i<node.size; ++i) {
 				int x = node[i];
 				
 				
@@ -7470,7 +7470,7 @@ public:
 			
 			node.remove(v);
 			//EH CHANGE?? for (int i=0; i<neighbor[v].size; i++) neighbor[v][i].remove(v);
-			for (int i=0; i<neighbor[v].size; i++) neighbor[neighbor[v][i]].remove(v);
+			for (unsigned int i=0; i<neighbor[v].size; i++) neighbor[neighbor[v][i]].remove(v);
 			
 			trail.add(v);
 			
@@ -7499,28 +7499,28 @@ public:
 			node.add(v);
 			isleft ? left.add(v) : right.add(v);
 			//EH CHANGE?? for (int i=0; i<neighbor[v].size; i++) neighbor[v][i].add(v);
-			for (int i=0; i<neighbor[v].size; i++) neighbor[neighbor[v][i]].add(v);
+			for (unsigned int i=0; i<neighbor[v].size; i++) neighbor[neighbor[v][i]].add(v);
 			matching_is_max = false; // Maybe we should keep track of the old matching and restore it ?
 			
 		}
 		
 		void check() {
 			int u,v;
-			for (int i=0; i<left.size; i++) {
+			for (unsigned int i=0; i<left.size; i++) {
 				u = left[i];
-				for (int j=0; j<neighbor[u].size; j++) {
+				for (unsigned int j=0; j<neighbor[u].size; j++) {
 					v = neighbor[u][j];
 					assert(right.contain(v));
 				}
 			}
-			for (int i=0; i<right.size; i++) {
+			for (unsigned int i=0; i<right.size; i++) {
 				u = right[i];
-				for (int j=0; j<neighbor[u].size; j++) {
+				for (unsigned int j=0; j<neighbor[u].size; j++) {
 					v = neighbor[u][j];
 					assert(left.contain(v));
 				}
 			}
-			for (int i=0; i<node.size; i++) {
+			for (unsigned int i=0; i<node.size; i++) {
 				assert(left.contain(node[i]) || right.contain(node[i]));
 			}
 		}
@@ -7552,7 +7552,7 @@ public:
 			int u,v;
 			
 			// Identify all vertices reacheable from an unmatched vertex via an alternating path of even length (using breadth-first search)
-    			for (int i=0; i<left.size; i++) {
+    			for (unsigned int i=0; i<left.size; i++) {
     				if (is_matched(left[i])) continue;
     				leftfrontier.push_back(left[i]);
     				leftvisited[left[i]] = true;
@@ -7561,7 +7561,7 @@ public:
     					while (!leftfrontier.empty()) {
     						u = leftfrontier.back();
     						leftfrontier.pop_back();
-    						for (int q=0; q<neighbor[u].size; q++) {
+    						for (unsigned int q=0; q<neighbor[u].size; q++) {
     							v = neighbor[u][q];
     							if (matching[u] == v) continue;
     							if (rightvisited[v]) continue;
@@ -7583,7 +7583,7 @@ public:
 				clear_visited();
 			}
 			
-			for (int i=0; i<left.size; i++) {
+			for (unsigned int i=0; i<left.size; i++) {
 				if (!leftaccessed[left[i]]) lpmatched.add(left[i]);
 			}
 		}
@@ -7593,16 +7593,16 @@ public:
 			greedy_matching();
 			find_matching();
 			matching_to_vertex_cover();
-			assert(vcover.size == nmatch);
+			assert((int)(vcover.size) == nmatch);
 		}
 		
 		void check_vertex_cover()
 		{
 			int u;
-			for (int i=0; i<left.size; i++) {
+			for (unsigned int i=0; i<left.size; i++) {
 				u = left[i];
 				if (vcover.contain(u)) continue;
-				for (int j=0; j<neighbor[u].size;j++) {
+				for (unsigned int j=0; j<neighbor[u].size;j++) {
 					assert(vcover.contain(neighbor[u][j]));
 				}
 			}
@@ -7610,7 +7610,7 @@ public:
 		
 		void check_matching()
 		{
-			for (int i=0; i<matching.size(); i++) {
+			for (int i=0; i<(int)(matching.size()); i++) {
 				if (matching[i] != -1) {
 					assert(matching[matching[i]] == i);
 				}
@@ -7619,7 +7619,7 @@ public:
 		
 		void output_matching()
 		{
-			for (int i=0; i<matching.size(); i++) {
+			for (unsigned int i=0; i<matching.size(); i++) {
 				std::cout << "[" << i << "," << matching[i] << "]" << std::endl;
 			}
 		}
@@ -7629,9 +7629,9 @@ public:
 			matching.assign(capacity,-1);
 			nmatch=0;
 			int u,v;
-  			for(int i = 0; i < left.size; i++) {
+  			for(unsigned int i = 0; i < left.size; i++) {
   				u = left[i];
-    				for(int q = 0; q < neighbor[u].size; q++) {
+    				for(unsigned int q = 0; q < neighbor[u].size; q++) {
     					v = neighbor[u][q];
       					if( !is_matched(v) ) {
         					matching[u] = v;
@@ -7646,7 +7646,7 @@ public:
 		void find_matching()
 		{
 			int u,v;
-			for (int fleft = 0; (fleft < left.size) && (nmatch < left.size) && (nmatch < right.size); fleft++) {
+			for (unsigned int fleft = 0; (fleft < left.size) && (nmatch < (int)(left.size)) && (nmatch < (int)(right.size)); fleft++) {
 				if (is_matched(left[fleft])) continue;
 				// do a bfs for an augmenting path
 				leftfrontier.push_back(left[fleft]);
@@ -7656,7 +7656,7 @@ public:
 						u = leftfrontier.back();
 						assert(u != -1);
 						leftfrontier.pop_back();
-						for (int q = 0; q < neighbor[u].size; q++) {
+						for (size_t q = 0; q < neighbor[u].size; q++) {
 							v = neighbor[u][q];
 							assert(v != -1);
 							if (matching[u] == v) continue;
@@ -7716,7 +7716,7 @@ public:
 			int u,v;
 			
 			// Identify all vertices reacheable from an unmatched vertex via an alternating path (using breadth-first search)
-    			for (int i=0; i<left.size; i++) {
+    			for (size_t i=0; i<left.size; i++) {
     				if (is_matched(left[i])) continue;
     				leftfrontier.push_back(left[i]);
     				leftvisited[left[i]] = true;
@@ -7725,7 +7725,7 @@ public:
     					while (!leftfrontier.empty()) {
     						u = leftfrontier.back();
     						leftfrontier.pop_back();
-    						for (int q=0; q<neighbor[u].size; q++) {
+    						for (size_t q=0; q<neighbor[u].size; q++) {
     							v = neighbor[u][q];
     							if (matching[u] == v) continue;
     							if (rightvisited[v]) continue;
@@ -7749,10 +7749,10 @@ public:
 			}
 			
 			// Fill the vertex cover according to Koenig's theorem
-			for (int i=0; i<left.size; i++) {
+			for (size_t i=0; i<left.size; i++) {
 				if (!leftaccessed[left[i]]) vcover.add(left[i]);
 			}
-			for (int i=0; i<right.size; i++) {
+			for (size_t i=0; i<right.size; i++) {
 				if (rightaccessed[right[i]]) vcover.add(right[i]);
 			}
 				
@@ -7837,7 +7837,7 @@ public:
 		void verify(const char* msg)
 		{
 			// check that edges are in both directions
-			for(int x=0; x<node.size; ++x) {
+			for(size_t x=0; x<node.size; ++x) {
 				int y = node[x];
 				
 #ifdef _MAINTAIN_MATRIX			
@@ -7847,7 +7847,7 @@ public:
 				}
 #endif
 				
-				for(int j=0; j<neighbor[y].size; ++j) {
+				for(size_t j=0; j<neighbor[y].size; ++j) {
 					if(!matrix[y].contain(neighbor[y][j])) {
 						std::cout << msg << ": " << "matrix[" << y << "] does not contain " << neighbor[y][j]
 							<< " (" << matrix[y] << ")" << std::endl;
@@ -7885,7 +7885,7 @@ public:
 			int lb=capacity;
 			int ub=0;
 			int ne=0;
-			for(int x=0; x<node.size; ++x) {
+			for(size_t x=0; x<node.size; ++x) {
 				int d = degree(node[x]);
 				if(d < lb) lb = d;
 				if(d > ub) ub = d;
@@ -7922,7 +7922,7 @@ public:
 			
 			// check degree ordering
 			for(int d=min_degree; d<=max_degree; ++d) {
-				for(int i=0; i<node_of_degree[d].size; ++i) {
+				for(size_t i=0; i<node_of_degree[d].size; ++i) {
 					if(degree(node_of_degree[d][i]) != d) {
 						std::cout << *this << std::endl << msg << ": degree of " << node_of_degree[d][i] << " is not " << d << std::endl;
 						exit(1);
@@ -8087,7 +8087,7 @@ public:
 			while(d >= min_degree) {
 				if(!node_of_degree[d].empty()) {
 					os << d << ": [" << node_of_degree[d][0];
-					for(int i=1; i<node_of_degree[d].size; ++i) {
+					for(size_t i=1; i<node_of_degree[d].size; ++i) {
 						os << " " << node_of_degree[d][i];
 					}
 					os << "] ";
@@ -9210,7 +9210,7 @@ public:
 		
 		
 		void verify_watchers(const char* msg) {
-			for(int i=0; i<node.size; ++i) {
+			for(size_t i=0; i<node.size; ++i) {
 				int w1 = node[i];
 				
 				if(watchers.watched_by[w1].size != watchers.watched_index[w1].size || watchers.watched_by[w1].size != watchers.watched_other[w1].size) {
@@ -9222,7 +9222,7 @@ public:
 					exit(1);
 				}
 				
-				for(int ixw1=0; ixw1<watchers.watched_by[w1].size; ++ixw1) {
+				for(size_t ixw1=0; ixw1<watchers.watched_by[w1].size; ++ixw1) {
 					int x = watchers.watched_by[w1][ixw1];
 					int w2 = watchers.watched_other[w1][ixw1];
 					int ixw2 = watchers.watched_index[w1][ixw1];
@@ -9245,7 +9245,7 @@ public:
 						exit(1);
 					}
 					
-					if(watchers.watched_index[w2][ixw2] != ixw1) {
+					if(watchers.watched_index[w2][ixw2] != (int)ixw1) {
 						std::cout << msg << ": inconsistency in the watched lists (index) of " << x << " (" << w1 << " & " << w2 << "): " << std::endl;
 						std::cout << watchers.watched_by[w1] << " / " << watchers.watched_by[w2] << std::endl;
 						std::cout << watchers.watched_index[w1] << " / " << watchers.watched_index[w2] << std::endl;
@@ -9360,10 +9360,11 @@ public:
 		// stupi implementation of dsatur, just as a witness that it does not seem to help
 		int min_clique_cover_bitset_sat(const int limit=-1)
 		{
-			int i, x, y;
+			size_t i;
+			int x, y;
 	
-			for(i=0; i<num_cliques; ++i) {
-				candidates[i].fill();
+			for(int c=0; c<num_cliques; ++c) {
+				candidates[c].fill();
 			}
 			num_cliques=0;
 			
@@ -9388,13 +9389,13 @@ public:
 				
 				util_stack.remove(x);
 
-				for(i=0; i<num_cliques; ++i) {
+				for(i=0; (int)i<num_cliques; ++i) {
 					if(candidates[i].fast_contain(x)) break;
 				}
-				if(i==num_cliques) ++num_cliques;
+				if((int)i==num_cliques) ++num_cliques;
 				candidates[i].intersect_with(matrix[x]);
 		
-				for(i=0; i<degree(x); ++i) {
+				for(i=0; (int)i<degree(x); ++i) {
 					--saturation[neighbor[x][i]];
 				}
 			}			
@@ -9485,12 +9486,12 @@ public:
 		
 		inline bool kernelize_buss(VCAlgo<ReversibleCompactGraph>& algo) {
 			bool pruning = false;
-			if(num_edges && max_degree >= (algo._upper_bound - algo._cover.size)) {
+			if(num_edges && max_degree >= (algo._upper_bound - (int)(algo._cover.size))) {
 				
 
 				
 				int* begr = algo._cover.begin();
-				int offset = std::min(algo._cover.size, (max_degree - (algo._upper_bound - algo._cover.size)));
+				int offset = std::min((int)(algo._cover.size), (max_degree - (algo._upper_bound - (int)(algo._cover.size))));
 				int* endr = algo._cover.end()-offset;
 				
 				int x, reason; 
@@ -9500,7 +9501,7 @@ public:
 					
 					util_vec.clear();
 					//for(int i=algo._cover.size-1; i>=0; --i) {
-					for(int i=0; i<algo._cover.size-offset; ++i) {
+					for(int i=0; i<(int)(algo._cover.size)-offset; ++i) {
 						if(!matrix[x].contain(algo._cover[i])) {
 							util_vec.add(algo._cover[i]);
 						}
@@ -9521,7 +9522,7 @@ public:
 					reason = (algo.use_backjump ? algo.explain_with(endr, begr) : NO_REASON);
 					algo.add_to_cover(x, reason);
 				}			
-				while(num_edges && max_degree >= (algo._upper_bound - algo._cover.size));
+				while(num_edges && max_degree >= (algo._upper_bound - (int)(algo._cover.size)));
 				pruning = true;
 			}
 			return pruning;
@@ -9583,7 +9584,7 @@ public:
 			}
 #endif
 					
-					for(j=0; j<node_of_degree[d].size;) {
+					for(j=0; j<(int)(node_of_degree[d].size);) {
 						x = node_of_degree[d][j];
 						
 #ifdef _DEBUG_KERNCLIQUE			
@@ -9686,7 +9687,7 @@ public:
 #endif
 			
 			
-			while(num_edges && algo._last_checked < algo._trail.size) {
+			while(num_edges && algo._last_checked < (int)(algo._trail.size)) {
 				
 				// first apply the low degree rule
 				while(num_edges && min_degree<=1) {
@@ -9840,19 +9841,19 @@ public:
 		bool kernelize_crowns(VCAlgo<ReversibleCompactGraph>& algo)
 		{
 			find_maximal_matching();
-			if (nmatch > algo._upper_bound-algo._cover.size) return false;
+			if (nmatch > algo._upper_bound-(int)(algo._cover.size)) return false;
 
 			BipartiteGraph *H = new BipartiteGraph(capacity);
 			int u,v;
 			bool empty_crown = true;
 			
-			for (int i=0; i<node.size; i++) {
+			for (size_t i=0; i<node.size; i++) {
 				u = node[i];
 				if (!is_matched(u)) {
 					empty_crown = false;
 					H->add_node(u);
 					H->set_right(u);
-					for (int j=0; j<neighbor[u].size; j++) {
+					for (size_t j=0; j<neighbor[u].size; j++) {
 						v = neighbor[u][j];
 						if (!H->node.contain(v)) {
 							H->add_node(v);
@@ -9870,17 +9871,17 @@ public:
 			
 			H->maximum_matching();
 			
-			if (H->nmatch > algo._upper_bound-algo._cover.size) {
+			if (H->nmatch > algo._upper_bound-(int)(algo._cover.size)) {
 				delete H;
 				return false;
 			}
 			
-			if (H->nmatch == H->left.size) {
-				for (int i=0; i<H->left.size; i++) {
+			if (H->nmatch == (int)(H->left.size)) {
+				for (size_t i=0; i<H->left.size; i++) {
 					u = H->left[i];
 					algo.add_to_cover(u, NO_REASON);
 				}
-				for (int i=0; i<H->right.size;i++) {
+				for (size_t i=0; i<H->right.size;i++) {
 					u = H->right[i];
 					algo.save(u, NO_REASON);
 					rem_and_update(u);
@@ -9889,7 +9890,7 @@ public:
 				}
 			} else {
 				IntStack *I = new IntStack(0,H->capacity-1,H->capacity,false);
-				for (int i=0; i<H->right.size; i++) {
+				for (size_t i=0; i<H->right.size; i++) {
 					u = H->right[i];
 					if (!H->is_matched(u)) I->add(u);
 				}
@@ -9903,9 +9904,9 @@ public:
 				bool updated = true;
 				while (updated) {
 					updated=false;
-					for (int i=0; i<I->size; i++) {
+					for (size_t i=0; i<I->size; i++) {
 						u = (*I)[i];
-						for (int j=0; j<H->neighbor[u].size;j++) {
+						for (size_t j=0; j<H->neighbor[u].size;j++) {
 							v = H->neighbor[u][j];
 							if (H->is_matched(v) && (!I->contain(H->matching[v]))) {
 								I->add(H->matching[v]);
@@ -9916,14 +9917,14 @@ public:
 				}
 				int ns = 0;
 				int nf = 0;
-				for (int i=0; i<I->size;i++) {
+				for (size_t i=0; i<I->size;i++) {
 					u = (*I)[i];
 					algo.save(u, NO_REASON);
 					rem_and_update(u);
 					//remove_and_save(u, NO_REASON);
 					//exclude_from_cover(u, NO_REASON);
 					ns++;
-					for (int j=0; j<H->neighbor[u].size; j++) {
+					for (size_t j=0; j<H->neighbor[u].size; j++) {
 						v = H->neighbor[u][j];
 						if (node.contain(v)) {
 							algo.add_to_cover(v, NO_REASON);
@@ -9966,14 +9967,14 @@ public:
 		  	}
 		  	
 		  	for (int i=0; i<size(); i++) {
-		  		for (int j=0; j<neighbor[node[i]].size; j++) {
+		  		for (size_t j=0; j<neighbor[node[i]].size; j++) {
 		  			H->add_undirected(node[i], neighbor[node[i]][j]+capacity);
 				}
 			}
 			
 			H->vertex_cover();
 			
-			for (int i=0; i<H->left.size; i++) {
+			for (size_t i=0; i<H->left.size; i++) {
 				v = H->left[i];
 				if ((H->vcover.contain(v)) && (H->vcover.contain(v+capacity))) {
 					//add_to_cover(H->node[i], NO_REASON);
@@ -9988,7 +9989,7 @@ public:
 			delete H;
 			
 			// check the number of vertices
-			if (size() > 2*(algo._upper_bound-algo._cover.size)) return false;
+			if (size() > 2*(algo._upper_bound-(int)(algo._cover.size))) return false;
 			
 			return true;	
 		  		
@@ -10010,14 +10011,14 @@ public:
 		  	}
 		  	
 		  	for (int i=0; i<size(); i++) {
-		  		for (int j=0; j<neighbor[node[i]].size; j++) {
+		  		for (size_t j=0; j<neighbor[node[i]].size; j++) {
 		  			H->add_undirected(node[i], neighbor[node[i]][j]+capacity);
 				}
 			}
 			
 			H->persistently_matched_left_vertices();
 		
-			for (int i=0; i<H->left.size; i++) {
+			for (size_t i=0; i<H->left.size; i++) {
 				v = H->left[i];
 				if (!H->lpmatched.contain(v)) {
 					while (neighbor[v].size != 0) {
@@ -10029,7 +10030,7 @@ public:
 			}
 			
 			// check the number of vertices
-			if (size() > 2*(algo._upper_bound-algo._cover.size)) return false;
+			if (size() > 2*(algo._upper_bound-(int)(algo._cover.size))) return false;
 			
 			delete H;
 			
@@ -10052,7 +10053,7 @@ public:
 #endif
 			
 			
-			while(num_edges && algo._last_checked < algo._trail.size) {
+			while(num_edges && algo._last_checked < (int)(algo._trail.size)) {
 				
 				// first apply the low degree rule
 				while(num_edges && min_degree<=1) {
@@ -10212,14 +10213,14 @@ public:
 					// 2/ remove its non-neighbors 
 					int num_candidates = 0;
 					//    a/ put its neighbors at the front
-					for(int i=0; i<neighbor[x].size; ++i) {
+					for(size_t i=0; i<neighbor[x].size; ++i) {
 						int y = neighbor[x][i];
 						if(node.contain(y)) {
 							node.move(y, num_candidates++);
 						}
 					}
 					//    b/ remove the other
-					while(node.size>num_candidates) {
+					while((int)(node.size)>num_candidates) {
 						rem_and_update(node.back());
 					}
 					
@@ -10229,7 +10230,7 @@ public:
 				}
 				
 				// at this point the graph is empty, undo the removals from the last clique, and remove only the vertices of the clique
-				while(node.size<saved_size) {
+				while((int)(node.size)<saved_size) {
 					add_and_update(node.next());
 				}
 				while(!clique.empty()) {
@@ -10238,7 +10239,7 @@ public:
 				
 			}
 			
-			while(node.size<size_before) {
+			while((int)(node.size)<size_before) {
 				add_and_update(node.next());
 			}
 	
@@ -10267,7 +10268,7 @@ public:
 			std::cout << "start with " << x << std::endl;
 #endif
 			
-			for(i=0; i<node.size; ++i) { saturation[node[i]] = 0; }
+			for(i=0; i<(int)(node.size); ++i) { saturation[node[i]] = 0; }
 			
 			int num_cliques = 0;
 			while(node.size) {
@@ -10280,7 +10281,7 @@ public:
 				
 #ifdef _DEBUG_CLIQUECOV
 				std::cout << "clique:";
-				for(int j=start_clique; j<node.size; ++j) {
+				for(size_t j=start_clique; j<node.size; ++j) {
 					std::cout << " " << node[j];
 				}
 				std::cout << std::endl;
@@ -10294,7 +10295,7 @@ public:
 				std::cout << "pick next node: " << x << "(" << saturation[x] << "/" << degree(x) << ")";
 #endif
 
-				for(i=1; i<node.size; ++i) { 
+				for(i=1; i<(int)(node.size); ++i) { 
 					y = node[i];
 					
 #ifdef _DEGREE_					
@@ -10350,7 +10351,9 @@ public:
 #endif
 
 			int a, b, c, d=capacity+1;
+#ifndef _DEGREE_		
 			int s=-d;
+#endif
 			bool full_clique=true; 
 
 
@@ -10379,7 +10382,9 @@ public:
 #endif
 						c = b;
 						d = degree(b);
+#ifndef _DEGREE_		
 						s = saturation[b];
+#endif
 					}
 				}
 			}
@@ -10443,8 +10448,10 @@ public:
 				// we go through a's neighbors and add them into V (i.e. put them first in [candidates])
 				start_candidates = 0;
 				d=capacity+1;
+				
+#ifndef _DEGREE_		
 				s=-d;
-						
+#endif
 						
 			
 				
@@ -10469,7 +10476,10 @@ public:
 #endif
 							c = b;
 							d = degree(b);
+
+#ifndef _DEGREE_		
 							s = saturation[b];
+#endif
 						}
 					}
 				}
@@ -10512,7 +10522,7 @@ public:
 			int start_candidates;
 			int end_candidates;
 			
-			while(algo._last_checked < algo._trail.size) {
+			while(algo._last_checked < (int)(algo._trail.size)) {
 				y = algo._trail[algo._last_checked];
 				
 				//for(i=0; i<watched_by[y].size; ++i) {
@@ -10533,7 +10543,7 @@ public:
 					
 
 					
-						for(int j=start_clique; j<node.size; ++j) {						
+						for(size_t j=start_clique; j<node.size; ++j) {						
 							util_stack.remove(node[j]);
 						}
 										 
@@ -10571,7 +10581,7 @@ public:
 					
 						watchers.watched_by[w1].add(x);
 						watchers.watched_by[w2].add(x);
-						for(int j=start_clique+2; j<node.size; ++j) {
+						for(size_t j=start_clique+2; j<node.size; ++j) {
 							if(util_stack.contain(node[j])) {
 								util_stack.remove(node[j]);
 								watchers.watched_by[w1].add(node[j]);
@@ -10591,11 +10601,6 @@ public:
 			int start_candidates;
 			int end_candidates;
 			bool reduction = false;
-			
-			bool print = false;
-			if(num_edges<4) {
-				print =true;
-			}
 
 			if(num_edges) {
 				util_stack.clear();
@@ -10631,7 +10636,7 @@ public:
 	#endif
 					
 						reduction = true;
-						for(int j=start_clique; j<node.size; ++j) {
+						for(size_t j=start_clique; j<node.size; ++j) {
 							
 							if(node[j] != x) {
 #ifdef _DEBUG_CLIQUEDOM			
@@ -10689,7 +10694,7 @@ public:
 					
 						watchers.watched_by[w1].add(x);
 						watchers.watched_by[w2].add(x);
-						for(int j=start_clique+2; j<node.size; ++j) {
+						for(size_t j=start_clique+2; j<node.size; ++j) {
 							if(util_stack.contain(node[j])) {
 								util_stack.remove(node[j]);
 								watchers.watched_by[w1].add(node[j]);
@@ -10716,9 +10721,9 @@ public:
 			}
 			
 			// check that edges are in both directions
-			for(int i=0; i<node.size; ++i) {
+			for(size_t i=0; i<node.size; ++i) {
 				int x = node[i];
-				for(int j=0; j<neighbor[x].size; ++j) {
+				for(size_t j=0; j<neighbor[x].size; ++j) {
 					int y = neighbor[x][j];			
 					if(neighbor[y][nb_index[x][j]] != x) {
 						// std::cout << std::endl;
@@ -10734,7 +10739,7 @@ public:
 			int lb=capacity;
 			int ub=0;
 			int ne=0;
-			for(int i=0; i<node.size; ++i) {
+			for(size_t i=0; i<node.size; ++i) {
 				int x = node[i];
 				int d = degree(x);
 				if(d < lb) lb = d;
@@ -10772,7 +10777,7 @@ public:
 			
 			// check degree ordering
 			for(int d=min_degree; d<=max_degree; ++d) {
-				for(int i=0; i<node_of_degree[d].size; ++i) {
+				for(size_t i=0; i<node_of_degree[d].size; ++i) {
 					if(degree(node_of_degree[d][i]) != d) {
 						std::cout << *this << std::endl << msg << ": degree of " << node_of_degree[d][i] << " is not " << d << std::endl;
 						exit(1);
@@ -11142,7 +11147,7 @@ public:
 			while(d >= min_degree) {
 				if(!node_of_degree[d].empty()) {
 					os << d << ": [" << node_of_degree[d][0];
-					for(int i=1; i<node_of_degree[d].size; ++i) {
+					for(size_t i=1; i<node_of_degree[d].size; ++i) {
 						os << " " << node_of_degree[d][i];
 					}
 					os << "] ";
@@ -11351,7 +11356,7 @@ public:
 		
 		void verify_cover() {
 			util_set.clear();
-			for(int i=0; i<_cover.size; ++i)
+			for(size_t i=0; i<_cover.size; ++i)
 				util_set.add(_cover[i]);
 			
 			int n = _graph.capacity;
@@ -11387,13 +11392,13 @@ public:
 			int *reason;
 			int rsize;
 			int dec_idx = init_level;
-			for(int i=0; i<_trail.size; ++i) {
+			for(size_t i=0; i<_trail.size; ++i) {
 				x = _trail[i];
 				
-				assert(_rank[x]==i);
+				assert(_rank[x]==(int)i);
 				if(i) assert(_level[x]>=_level[_trail[i-1]]);
 				
-				if(dec_idx<_decision.size && x==_decision[dec_idx]) {
+				if(dec_idx<(int)(_decision.size) && x==_decision[dec_idx]) {
 					assert(_reason[x]==NO_REASON);
 					if(i) assert(_level[x]==_level[_trail[i-1]]+1);
 					else assert(_level[x]<=init_level+1);
@@ -11416,19 +11421,19 @@ public:
 						
 						assert(_reason[x]>=0);
 						
-						if(_reason[x]>=_nogood.size) {
+						if(_reason[x]>=(int)(_nogood.size)) {
 							std::cout << " (" << msg << ") reason[" << x << "] = " << _reason[x] << " nogoods = " << _nogood << std::endl;
 						}
 						
-						assert(_reason[x]<_nogood.size);
+						assert(_reason[x]<(int)(_nogood.size));
 						
-						if(_reason[x]+_nogood[_reason[x]]>=_nogood.size) {
+						if(_reason[x]+_nogood[_reason[x]]>=(int)(_nogood.size)) {
 							std::cout << " (" << msg << ") reason[" << x << "] = " << _reason[x] << ", |reason[" 
 								<< x << "]| = " << _nogood[_reason[x]] << " nogoods = " << _nogood << std::endl;
 						}
 						
 						
-						assert(_reason[x]+_nogood[_reason[x]]<_nogood.size);
+						assert(_reason[x]+_nogood[_reason[x]]<(int)(_nogood.size));
 					}
 				}
 				
@@ -11450,10 +11455,10 @@ public:
 				}
 			}
 			
-			for(int i=0; i<_graph.node.size; ++i) {
+			for(size_t i=0; i<_graph.node.size; ++i) {
 				int x = _graph.node[i];
 				assert(!_cover.contain(x));
-				for(int j=0; j<_graph.neighbor[x].size; ++j) {
+				for(size_t j=0; j<_graph.neighbor[x].size; ++j) {
 					int y = _graph.neighbor[x][j];
 					
 					if(_cover.contain(y)) {
@@ -11483,13 +11488,13 @@ public:
 		bool kernelize_buss()
 		{
 			int high;
-			while (_graph.max_degree >= _upper_bound-_cover.size) {
+			while (_graph.max_degree >= (int)(_upper_bound-_cover.size)) {
 				high = _graph.node_of_degree[_graph.max_degree].back();
 				add_to_cover(high, NO_REASON);
 			}
 			
 			// check the number of edges
-			if (_graph.num_edges > _graph.max_degree*(_upper_bound-_cover.size)) {
+			if (_graph.num_edges > _graph.max_degree*(_upper_bound-(int)(_cover.size))) {
 				return false;
 			}
 			
@@ -11558,7 +11563,7 @@ public:
 						fix_point = false;
 						reduction = true;
 					}
-					for(j=0; j<_graph.node_of_degree[d].size;) {
+					for(j=0; j<(int)(_graph.node_of_degree[d].size);) {
 						x = _graph.node_of_degree[d][j];
 						util_set.copy(_graph.matrix[x]);
 						util_set.intersect_with(_graph.node_set);
@@ -11637,19 +11642,19 @@ public:
 		bool kernelize_crowns()
 		{
 			_graph.find_maximal_matching();
-			if (_graph.nmatch > _upper_bound-_cover.size) return false;
+			if (_graph.nmatch > (int)(_upper_bound-_cover.size)) return false;
 
 			BipartiteGraph *H = new BipartiteGraph(_graph.capacity);
 			int u,v;
 			bool empty_crown = true;
 			
-			for (int i=0; i<_graph.node.size; i++) {
+			for (size_t i=0; i<_graph.node.size; i++) {
 				u = _graph.node[i];
 				if (!_graph.is_matched(u)) {
 					empty_crown = false;
 					H->add_node(u);
 					H->set_right(u);
-					for (int j=0; j<_graph.neighbor[u].size; j++) {
+					for (size_t j=0; j<_graph.neighbor[u].size; j++) {
 						v = _graph.neighbor[u][j];
 						if (!H->node.contain(v)) {
 							H->add_node(v);
@@ -11667,17 +11672,17 @@ public:
 			
 			H->maximum_matching();
 			
-			if (H->nmatch > _upper_bound-_cover.size) {
+			if (H->nmatch > (int)(_upper_bound-_cover.size)) {
 				delete H;
 				return false;
 			}
 			
-			if (H->nmatch == H->left.size) {
-				for (int i=0; i<H->left.size; i++) {
+			if (H->nmatch == (int)(H->left.size)) {
+				for (size_t i=0; i<H->left.size; i++) {
 					u = H->left[i];
 					add_to_cover(u, NO_REASON);
 				}
-				for (int i=0; i<H->right.size;i++) {
+				for (size_t i=0; i<H->right.size;i++) {
 					u = H->right[i];
 					save(u, NO_REASON);
 					_graph.rem_and_update(u);
@@ -11686,7 +11691,7 @@ public:
 				}
 			} else {
 				IntStack *I = new IntStack(0,H->capacity-1,H->capacity,false);
-				for (int i=0; i<H->right.size; i++) {
+				for (size_t i=0; i<H->right.size; i++) {
 					u = H->right[i];
 					if (!H->is_matched(u)) I->add(u);
 				}
@@ -11700,9 +11705,9 @@ public:
 				bool updated = true;
 				while (updated) {
 					updated=false;
-					for (int i=0; i<I->size; i++) {
+					for (size_t i=0; i<I->size; i++) {
 						u = (*I)[i];
-						for (int j=0; j<H->neighbor[u].size;j++) {
+						for (size_t j=0; j<H->neighbor[u].size;j++) {
 							v = H->neighbor[u][j];
 							if (H->is_matched(v) && (!I->contain(H->matching[v]))) {
 								I->add(H->matching[v]);
@@ -11713,14 +11718,14 @@ public:
 				}
 				int ns = 0;
 				int nf = 0;
-				for (int i=0; i<I->size;i++) {
+				for (size_t i=0; i<I->size;i++) {
 					u = (*I)[i];
 					save(u, NO_REASON);
 					_graph.rem_and_update(u);
 					//remove_and_save(u, NO_REASON);
 					//exclude_from_cover(u, NO_REASON);
 					ns++;
-					for (int j=0; j<H->neighbor[u].size; j++) {
+					for (size_t j=0; j<H->neighbor[u].size; j++) {
 						v = H->neighbor[u][j];
 						if (_graph.node.contain(v)) {
 							add_to_cover(v, NO_REASON);
@@ -11763,14 +11768,14 @@ public:
 		  	}
 		  	
 		  	for (int i=0; i<_graph.size(); i++) {
-		  		for (int j=0; j<_graph.neighbor[_graph.node[i]].size; j++) {
+		  		for (size_t j=0; j<_graph.neighbor[_graph.node[i]].size; j++) {
 		  			H->add_undirected(_graph.node[i], _graph.neighbor[_graph.node[i]][j]+_graph.capacity);
 				}
 			}
 			
 			H->vertex_cover();
 			
-			for (int i=0; i<H->left.size; i++) {
+			for (size_t i=0; i<H->left.size; i++) {
 				v = H->left[i];
 				if ((H->vcover.contain(v)) && (H->vcover.contain(v+_graph.capacity))) {
 					//add_to_cover(H->node[i], NO_REASON);
@@ -11785,7 +11790,7 @@ public:
 			delete H;
 			
 			// check the number of vertices
-			if (_graph.size() > 2*(_upper_bound-_cover.size)) return false;
+			if (_graph.size() > 2*(_upper_bound-(int)(_cover.size))) return false;
 			
 			return true;	
 		  		
@@ -11807,14 +11812,14 @@ public:
 		  	}
 		  	
 		  	for (int i=0; i<_graph.size(); i++) {
-		  		for (int j=0; j<_graph.neighbor[_graph.node[i]].size; j++) {
+		  		for (size_t j=0; j<_graph.neighbor[_graph.node[i]].size; j++) {
 		  			H->add_undirected(_graph.node[i], _graph.neighbor[_graph.node[i]][j]+_graph.capacity);
 				}
 			}
 			
 			H->persistently_matched_left_vertices();
 		
-			for (int i=0; i<H->left.size; i++) {
+			for (size_t i=0; i<H->left.size; i++) {
 				v = H->left[i];
 				if (!H->lpmatched.contain(v)) {
 					while (_graph.neighbor[v].size != 0) {
@@ -11826,7 +11831,7 @@ public:
 			}
 			
 			// check the number of vertices
-			if (_graph.size() > 2*(_upper_bound-_cover.size)) return false;
+			if (_graph.size() > 2*(_upper_bound-(int)(_cover.size))) return false;
 			
 			delete H;
 			
@@ -11967,7 +11972,7 @@ public:
 				//util_set.intersect_with(_graph.node_set);
 				if(!candidates[i].intersect(_graph.node_set)) {
 					// possibility that a node has all its neighbors in the clique
-					for(j=0; j<clique_lst[i].size; ++j) {
+					for(j=0; j<(int)(clique_lst[i].size); ++j) {
 						x = clique_lst[i][j];
 						util_set.copy(_graph.matrix[x]);
 						util_set.intersect_with(_graph.node_set);
@@ -12089,7 +12094,7 @@ public:
 				
 			++nb_conflicts;
 
-			if(_decision.size>init_level) {
+			if((int)(_decision.size)>init_level) {
 				
 				++backjump_size;
 				
@@ -12124,7 +12129,7 @@ public:
 			
 			
 			++nb_conflicts;	
-			if(_decision.size<=init_level) {
+			if((int)(_decision.size)<=init_level) {
 				return false;
 			}
 
@@ -12415,7 +12420,7 @@ public:
 #endif
 				
 			for(int d=_graph.min_degree; d<=_graph.max_degree; ++d) {
-				for(int i=0; i<_graph.node_of_degree[d].size; ++i) {
+				for(size_t i=0; i<_graph.node_of_degree[d].size; ++i) {
 					x = _graph.node_of_degree[d][i];
 						
 #ifdef _DEBUG_COLORING								
@@ -12455,7 +12460,7 @@ public:
 							
 
 #ifdef _VERIFY_COLORING
-			for(int i=0; i<_graph.node.size; ++i) {
+			for(size_t i=0; i<_graph.node.size; ++i) {
 				x = _graph.node[i];
 				for(int j=_graph.neighbor[x].size; j<_graph.capacity-1; ++j) {
 					y = _graph.neighbor[x][j];
@@ -12471,7 +12476,7 @@ public:
 			}
 #endif					
 							
-			for(int i=0; i<_graph.node.size; ++i) {
+			for(size_t i=0; i<_graph.node.size; ++i) {
 				_coloring[_graph.node[i]] = -1;
 			}			
 								
@@ -12782,7 +12787,7 @@ public:
 #endif				
 			
 			bool pruning = false;
-			if(_graph.max_degree >= (_upper_bound - _cover.size)) {
+			if(_graph.max_degree >= (_upper_bound - (int)(_cover.size))) {
 				int x, reason = DEDUCTION;
 					
 				if(use_backjump) {
@@ -12830,7 +12835,7 @@ public:
 					}
 #endif	
 				}			
-				while(_graph.num_edges && _graph.max_degree >= (_upper_bound - _cover.size));
+				while(_graph.num_edges && _graph.max_degree >= (_upper_bound - (int)(_cover.size)));
 				
 #ifdef _DEBUG_BACKJUMPS
 				if(_DEBUG_BACKJUMPS) {	
@@ -12962,7 +12967,7 @@ public:
 			
 			//print_trail();
 			
-			while(_decision.size>init_level) {
+			while((int)(_decision.size)>init_level) {
 				x = undo();
 				
 				// print_trail();
