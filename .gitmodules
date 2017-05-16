@@ -4,3 +4,6 @@
 [submodule "rocknrun"]
 	path = rocknrun
 	url = ssh://git@redmine.laas.fr/laas/users/ehebrard/rocknrun.git
+[submodule "XCSP3-Java-Tools"]
+	path = XCSP3-Java-Tools
+	url = https://github.com/xcsp3team/XCSP3-Java-Tools.git
