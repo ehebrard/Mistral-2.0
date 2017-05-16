@@ -4438,7 +4438,7 @@ template < int N, class T >
     }
 
     void destroy() 
-    {
+    {		
       table += neg_words;
       neg_words = 0;
       delete [] table; 
@@ -4451,7 +4451,7 @@ template < int N, class T >
     }
 
     inline void swap(Bitset<WORD_TYPE,FLOAT_TYPE>& s)
-    {
+    {	
       WORD_TYPE *aux = s.table;
       s.table = table;
       table = aux;

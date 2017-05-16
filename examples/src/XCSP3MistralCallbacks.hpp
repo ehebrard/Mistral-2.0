@@ -44,7 +44,7 @@
  *
  */
 
-// #define _VERBOSE_
+#define _VERBOSE_
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
