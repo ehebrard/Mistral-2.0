@@ -1488,7 +1488,7 @@ int Mistral::Solver::declare(Variable x) {
 void Mistral::Solver::checkcg(const char* msg) {
 	
 
-	for(int i=0; i<constraints.size; ++i) {		
+	for(size_t i=0; i<constraints.size; ++i) {		
 		if(constraints[i].propagator->index) {
 			
 			int nbactive = 0;
@@ -2212,12 +2212,27 @@ Mistral::Solver::~Solver() {
   //std::cout << "delete variables" << std::endl;
   for(unsigned int i=0; i<variables.size; ++i) {
 		
-		// std::cout << "free var " << i << std::endl;
-		// std::cout << variables[i] << " in " << variables[i].get_domain() << std::endl;
+		// // if(i==139) {
+		// 	std::cout << "free var " << i << std::endl;
+		// 	std::cout << variables[i] << " in " << variables[i].get_domain() << std::endl;
+		//
+		//
+		// 	std::cout << variables[i].bitset_domain->domain.values.neg_words << " "
+		// 						<< variables[i].bitset_domain->domain.values.pos_words << " "
+		// 						<< (int*)(variables[i].bitset_domain->domain.values.table) << std::endl;
+		// // }
+		
 		//
     //std::cout << removed_variables[0] << std::endl;
     variables[i].free_object();
-    //std::cout << removed_variables[0] << std::endl;
+		
+		// std::cout << variables[i].bitset_domain->domain.values.neg_words << " "
+		// 					<< variables[i].bitset_domain->domain.values.pos_words << " "
+		// 					<< (int*)(variables[i].bitset_domain->domain.values.table) << std::endl;
+		//
+		//     //std::cout << removed_variables[0] << std::endl;
+		// std::cout << "freed\n";
+		
 
     // int domain_type = variables[i].domain_type;
     // if     (domain_type ==  BITSET_VAR) delete variables[i].bitset_domain;
@@ -2621,8 +2636,8 @@ void Mistral::Solver::make_non_convex(const int idx)
 
   // std::cout << variables << std::endl;
 	
-	// if(idx==33)
-	//   std::cout << "\nmake " << variables[idx] << " non convex\n";
+	// if(idx==139)
+	 // std::cout << "\nmake " << variables[idx] << " non convex\n";
 
   if(variables[idx].domain_type == RANGE_VAR) {
     Variable r = variables[idx];
@@ -2648,9 +2663,11 @@ void Mistral::Solver::make_non_convex(const int idx)
 
     // } else {
     variables[idx] = X; //.get_var();
-
-
-    
+		//
+		// std::cout << X.bitset_domain->domain.values.neg_words << " "
+		// 					<< X.bitset_domain->domain.values.pos_words << " "
+		// 					<< (int*)(X.bitset_domain->domain.values.table) << std::endl;
+		//
 
 
 
@@ -2695,6 +2712,9 @@ void Mistral::Solver::make_non_convex(const int idx)
     removed_variables.add(r);
 
   }
+	
+	
+	// std::cout << "done\n";
 }
 
 
@@ -4901,7 +4921,9 @@ void Mistral::Solver::learn_nogood() {
   statistics.size_learned += learnt_clause.size;
   statistics.avg_learned_size = 
     ((statistics.avg_learned_size * (double)(statistics.num_failures)) + (double)(learnt_clause.size))
-    / ((double)(++statistics.num_failures));
+    / (double)(statistics.num_failures+1);
+	
+	++statistics.num_failures;
   
 
   

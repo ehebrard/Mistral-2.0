@@ -1129,7 +1129,7 @@ void Instance::osp_readData( const char* filename ) {
 
 	DBG("Read (osp)%s\n", "");
 
-	int opt, lb, i=0, j, k, nJobs, nMachines, dur, bufsize=1000;
+	int i=0, j, k, nJobs, nMachines, dur, bufsize=1000;
 	char buf[bufsize];
 	std::ifstream infile( filename, std::ios_base::in );
 	
@@ -1139,13 +1139,13 @@ void Instance::osp_readData( const char* filename ) {
 	
 	while( buf[i] != ' ' ) ++i;
 	buf[i] = '\0';
-	lb = atoi( buf );
+	// lb = atoi( buf );
 	
 	while( buf[i] == '\0' || buf[i] == ' ' || buf[i] == '*' ) ++i;
 	j = i;
 	while( buf[i] != ' ' && buf[i] != '\n' && buf[i] != '\0' ) ++i;
 	buf[i] = '\0';
-	opt = atoi( &(buf[j]) );
+	// opt = atoi( &(buf[j]) );
 	
 	do {
 		infile.get( buf[0] );

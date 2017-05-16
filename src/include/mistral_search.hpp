@@ -802,9 +802,9 @@ namespace Mistral {
 #ifdef _ABS_VAL
 			left = 1;
 			int max_values = 0;
-			for(int i=0; i<solver->variables.size; ++i) {
-				if(max_values < solver->variables[i].get_size()) {
-					max_values = solver->variables[i].get_size();
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
+				if(max_values < (int)(solver->variables[i].get_size())) {
+					max_values = (int)(solver->variables[i].get_size());
 				}
 			}
 			
@@ -815,7 +815,7 @@ namespace Mistral {
 #endif
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			factor.initialise(solver->variables.size, solver->variables.size);
-			for(int i=0; i<solver->variables.size; ++i) {
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
 				int m = solver->variables[i].get_min();
 				int d = solver->variables[i].get_max() - m + 1;
 				init_min[i] = m;
@@ -971,7 +971,7 @@ namespace Mistral {
 			
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			factor.initialise(solver->variables.size, solver->variables.size);
-			for(int i=0; i<solver->variables.size; ++i) {
+			for(unsigned int i=0; i<solver->variables.size; ++i) {
 				int m = solver->variables[i].get_min();
 				int d = solver->variables[i].get_max() - m + 1;
 				init_min[i] = m;
@@ -1131,7 +1131,7 @@ namespace Mistral {
 	
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			factor.initialise(solver->variables.size, solver->variables.size);
-			for(int i=0; i<solver->variables.size; ++i) {
+			for(size_t i=0; i<solver->variables.size; ++i) {
 				int m = solver->variables[i].get_min();
 				int d = solver->variables[i].get_max() - m + 1;
 				init_min[i] = m;
@@ -1628,7 +1628,7 @@ namespace Mistral {
 					std::cout << " *** ";
 #endif
 			
-			for(int j=length; j-- && conflict_stamp != solver->statistics.num_failures;)
+			for(int j=length; j-- && conflict_stamp != (int)(solver->statistics.num_failures);)
 			{  
 				if(stamp[variables[j].id()] > conflict_stamp) {
 					best = variables[j];
@@ -1670,7 +1670,7 @@ namespace Mistral {
 		std::cout << " backtrack from level " << solver->level ;
 #endif
 					
-		if(solver->level >= last_level || num_sol < solver->statistics.num_solutions) {
+		if(solver->level >= last_level || num_sol < (int)(solver->statistics.num_solutions)) {
 			
 #ifdef _DEBUG_COS
 			std::cout << " (left branch)";
@@ -1870,7 +1870,7 @@ namespace Mistral {
 	 }
 #endif
 					
-		 if(solver->level >= last_level || num_sol < solver->statistics.num_solutions) {
+		 if(solver->level >= last_level || num_sol < (int)(solver->statistics.num_solutions)) {
 			
 #ifdef _DEBUG_LC
 			 if(_DEBUG_LC) {
@@ -1981,7 +1981,7 @@ namespace Mistral {
 	
 			init_min.initialise(solver->variables.size, solver->variables.size);
 			
-			for(int i=0; i<solver->variables.size; ++i) {				
+			for(size_t i=0; i<solver->variables.size; ++i) {				
 				int m = solver->variables[i].get_min();
 				int d = solver->variables[i].get_max()-m+1;
 				init_min[i] = m;
@@ -2011,7 +2011,7 @@ namespace Mistral {
 			Variable *variables = solver->sequence.list_;
 			unsigned int length = solver->sequence.size;
 			unsigned int realsize=0, i, j;
-			int vali, nxt, bestval;
+			int vali, nxt, bestval{0};
 			
 			double curweight, highestweight, worstbestweight = std::numeric_limits<double>::max();
 			
@@ -2094,7 +2094,7 @@ namespace Mistral {
 
 			//std::cout << n_restart << " / " << (solver->statistics.num_restarts) << std::endl;
 			
-			if(n_restart==solver->statistics.num_restarts) {
+			if(n_restart==(int)(solver->statistics.num_restarts)) {
 				++n_restart;
 				return;
 			}
@@ -4628,7 +4628,7 @@ namespace Mistral {
 			//std::cout << "(COS) make a decision on " << x << " in " << x.get_domain() << std::endl;
 
 			Decision d;
-			if(x.is_range() && x.get_size()>=threshold) {
+			if(x.is_range() && ((int)(x.get_size())>=threshold)) {
 
 				//std::cout << "  -> RANGE!\n";
 

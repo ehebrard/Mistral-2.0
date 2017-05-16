@@ -88,7 +88,10 @@ int Mistral::mem_read_stat(int field)
     if (in == NULL) return 0;
     int     value;
     for (; field >= 0; field--)
-        fscanf(in, "%d", &value);
+        if (fscanf(in, "%d", &value) == 0) {
+					std::cout << "not eanough fileds, aborting";
+					exit(1);
+        }
     fclose(in);
     return value;
 }

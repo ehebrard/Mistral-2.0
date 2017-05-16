@@ -305,14 +305,13 @@ namespace Mistral {
 			delete [] level_;
 			level_ = NULL;
 
-
-			if(domain.values.table) {
-				domain.values.table += domain.values.neg_words;
-				delete [] domain.values.table;
-				domain.values.table = NULL;
-			} else {
-				domain.values.neg_words = 0;
-			}
+			// if(domain.values.table) {
+			// 	domain.values.table += domain.values.neg_words;
+			// 	delete [] domain.values.table;
+			// 	domain.values.table = NULL;
+			// } else {
+			// 	domain.values.neg_words = 0;
+			// }
 
 		}
 
