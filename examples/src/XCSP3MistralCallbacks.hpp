@@ -44,7 +44,7 @@
  *
  */
 
-#define _VERBOSE_
+// #define _VERBOSE_
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -962,7 +962,8 @@ void XCSP3MistralCallbacks::buildConstraintLexMatrix(string id, vector <vector<X
     if(order == GT) sep = " > ";
     if(order == GE) sep = " >= ";
 		
-    for(unsigned int i = 0; i < (matrix.size() < 4 ? matrix.size() : 3); i++) {
+    // for(unsigned int i = 0; i < (matrix.size() < 4 ? matrix.size() : 3); i++) {
+		for(unsigned int i = 0; i < matrix.size(); i++) {
         cout << "        ";
         displayList(matrix[i]);
     }
@@ -981,23 +982,33 @@ void XCSP3MistralCallbacks::buildConstraintLexMatrix(string id, vector <vector<X
 			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
 			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
 			if(order == GE) solver.add( scope[i-1] >= scope[i] ); 
+			
+			// if(order == LT) cout << scope[i-1] << "\n<\n" <<  scope[i] << endl;
+			// if(order == LE) cout << scope[i-1] << "\n<=\n" <<  scope[i] << endl;
+			// if(order == GT) cout << scope[i-1] << "\n>\n" <<  scope[i] << endl;
+			// if(order == GE) cout << scope[i-1] << "\n>=\n" <<  scope[i] << endl;
 		}
 		
 		scope.clear();
-		
-		for( size_t i=0; i<matrix.size(); ++i) {
+
+		for( size_t i=0; i<begin(matrix)->size(); ++i) {
 			VarArray X;
-			for( size_t j=0; j<matrix.size(); ++j) {	
+			for( size_t j=0; j<matrix.size(); ++j) {
 				X.add(variable[matrix[j][i]->id]);
 			}
 			scope.push_back(X);
 		}
-		
+
 		for(size_t i=1; i<scope.size(); ++i) {
-			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
-			if(order == LE) solver.add( scope[i-1] <= scope[i] ); 
-			if(order == GT) solver.add( scope[i-1] >  scope[i] ); 
-			if(order == GE) solver.add( scope[i-1] >= scope[i] ); 
+			if(order == LT) solver.add( scope[i-1] <  scope[i] );
+			if(order == LE) solver.add( scope[i-1] <= scope[i] );
+			if(order == GT) solver.add( scope[i-1] >  scope[i] );
+			if(order == GE) solver.add( scope[i-1] >= scope[i] );
+			
+			// if(order == LT) cout << scope[i-1] << "\n<\n" <<  scope[i] << endl;
+			// if(order == LE) cout << scope[i-1] << "\n<=\n" <<  scope[i] << endl;
+			// if(order == GT) cout << scope[i-1] << "\n>\n" <<  scope[i] << endl;
+			// if(order == GE) cout << scope[i-1] << "\n>=\n" <<  scope[i] << endl;
 		}
 }
 
