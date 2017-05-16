@@ -63,9 +63,16 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os) {
 			os << " " << id;
 		}
 		os << " </list>\n v   <values>";
+		
+		// int linecount = 0;
 		for( auto var : cb.variables ) {
+			// if(linecount%50 == 0) os << endl;
+			// ++linecount;
+			
 			os << " " << cb.solver.last_solution_lb[var.id()];
 		}
+		// os << endl;
+		
 		os << " </values>\n v </instantiation>\n";
 	}
 }
@@ -100,6 +107,8 @@ int main(int argc,char **argv) {
 	
 	
 	std::cout << " c parsetime " << (get_run_time() - cpu_time) << std::endl;
+	
+	// std::cout << solver << std::endl;
 		
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
