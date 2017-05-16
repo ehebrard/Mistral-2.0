@@ -29,7 +29,7 @@
 #include "XCSP3CoreCallbacks.h"
 #include "XCSP3Variable.h"
 
-#include "Tree.hpp"
+#include "tree.hpp"
 
 #include "mistral_solver.hpp"
 #include <map>
