@@ -725,31 +725,32 @@ Mistral::ConstraintQueue::~ConstraintQueue() {
 
 void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
 {
-  // #ifdef _DEBUG_AC
-  //  if(_DEBUG_AC) {
-  //  std::cout << " initial trigger for " << cons << "(" << (cons->id) << ") "<< empty() << std::endl;
-  //  }
-  // #endif
+	// #ifdef _DEBUG_AC
+	//  if(_DEBUG_AC) {
+		// std::cout << " initial trigger for " << cons << "(" << (cons->id) << ") "<< empty() << std::endl;
+	//  }
+	// #endif
   
-  //int priority = cons->priority, cons_id = cons->id, triggered=false;
-  Event evt;
-  Variable x;
+	//int priority = cons->priority, cons_id = cons->id, triggered=false;
+	Event evt;
+	Variable x;
   
-  for(unsigned int i=0; i<cons->scope.size; ++i) {
-    x = cons->_scope[i];
+	for(unsigned int i=0; i<cons->scope.size; ++i) {
+		x = cons->_scope[i];
     
-    if(!x.is_void()) {
+		if(!x.is_void()) {
       
-      evt = (// cons->scope[i].domain_type != BOOL_VAR &&
-	     x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
+			evt = (// cons->scope[i].domain_type != BOOL_VAR &&
+				x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
       
       
-      if(cons->is_triggered_on(i, EVENT_TYPE(evt))) {
-	//std::cout << "trigger " << cons << " because " << event2str(evt) << " on "<< x << std::endl;
-	trigger(cons, i, evt);
-      }
-    }
-  }
+			if(cons->is_triggered_on(i, EVENT_TYPE(evt))) {
+				// std::cout << "trigger " << cons << " because " << event2str(evt) << " on "<< x << std::endl;
+				trigger(cons, i, evt);
+			}
+		}
+		
+	}
 }
 
 

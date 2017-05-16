@@ -36,7 +36,8 @@
 #define __CONSTRAINT_HPP
 
 
-// #define _DEBUG_TABLE (id==309 && get_solver()->statistics.num_propagations >= 1649862)
+// #define _DEBUG_TABLE (id==1) // && get_solver()->statistics.num_propagations >= 1649862)
+// #define _DEBUG_GENPROPAG (id==1)
 
 #define _ALLDIFF_WC
 #define _ELT_WC

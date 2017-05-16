@@ -180,7 +180,9 @@ void Mistral::ConstraintImplementation::trigger_on(const int t, Variable x) {
 	
 	
 	
-	if(t != _NEVER_ && !x.is_ground()) { 
+	if(t != _NEVER_
+	// && !x.is_ground()
+	) { 
 		
 #ifdef _DEBUG_RELAX
 	if(_DEBUG_RELAX) {
@@ -925,204 +927,212 @@ Mistral::Decision Mistral::GlobalConstraint::get_decision() {
 
 
 Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate(const int changed_idx, const Event evt) {
-  PropagationOutcome wiped = CONSISTENT; 
-  unsigned int i;
-  int vali, vnext;
+	PropagationOutcome wiped = CONSISTENT; 
+	unsigned int i;
+	int vali, vnext;
 
-  for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
-    if( (int)i != changed_idx ) { 
-      vnext = scope[i].get_first();
-      do {
-	vali = vnext;
-	vnext = scope[i].next(vali);
+	for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
+		if( (int)i != changed_idx ) { 
+			vnext = scope[i].get_first();
+			do {
+				vali = vnext;
+				vnext = scope[i].next(vali);
 	
 #ifdef _DEBUG_GENPROPAG
-	std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
+				std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
 #endif
 
-	if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
-	  if(FAILED(scope[i].remove(vali))) {
-	    wiped = FAILURE(i);
-	  } 
+				if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
+					if(FAILED(scope[i].remove(vali))) {
+						wiped = FAILURE(i);
+					} 
+				}
+			} while( vali < vnext );
+		}	
 	}
-      } while( vali < vnext );
-    }	
-  }
-  return wiped;
+	return wiped;
 }
 
 Mistral::PropagationOutcome Mistral::GlobalConstraint::propagate() {
-  PropagationOutcome wiped = CONSISTENT; 
-  unsigned int i, j;
-  int vali; //, vnext;
+	PropagationOutcome wiped = CONSISTENT; 
+	unsigned int i, j;
+	int vali; //, vnext;
 
 #ifdef _DEBUG_GENPROPAG
-  if(_DEBUG_GENPROPAG) {
-  std::cout << "propagate " << this << std::endl;
-  for(i=0; i<scope.size; ++i)
-    {
-      std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
-      
-      vnext = scope[i].get_first();
-      do {
-  	vali = vnext;
-  	vnext = scope[i].next(vali);
-	
-  	std::cout << " " << vali ;
-	
-      } while( vali != vnext );
-      
-      std::cout << std::endl;
-
-      Domain dom_xi(scope[i]);
-      Domain::iterator xend = dom_xi.begin();
-      Domain::iterator xit = dom_xi.end();
-      
-      while(xit != xend) {
-  	--xit;
-
-  	std::cout << " " << dom_xi.get_value(xit) ;
-      }
-
-      std::cout << std::endl << std::endl;
-
-     }
-  }
-#endif
-
-
-  while(!changes.empty()) {
-    j = changes.pop();
-    for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
-      if( i != j ) { 
-
-	// std::cout << "std: " << scope[i] << " " << scope[i].get_domain(); 
-	// vnext = scope[i].get_first();
-	// do {
-	//   vali = vnext;
-	//   vnext = scope[i].next(vali);
-
-	//   std::cout << " " << vali ;
-
-	// } while( vali != vnext );
-	// std::cout << std::endl;
-
-
-	// std::cout << "itr: " << scope[i] << " " << scope[i].get_domain(); 
-	// Domain dom_x(scope[i]);
-	// Domain::iterator xt = dom_x.end();
-	// Domain::iterator xnd = dom_x.begin();
-
-	// while(xt != xnd) {
-	//   vali = dom_x.get_value(--xt);
-
-	//   std::cout << " " << vali ;
-
-	// }
-	// std::cout << std::endl << std::endl;
-
-
-// 	vnext = scope[i].get_first();
-// 	do {
-// 	  vali = vnext;
-// 	  vnext = scope[i].next(vali);
-
-// #ifdef _DEBUG_GENPROPAG
-// 	  if(_DEBUG_GENPROPAG) {
-// 	  // if(solver->parameters.verbosity) {
-// 	  std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
-// 	  // }
-// 	  }
-// #endif
-
-// 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
-// 	    if(FAILED(scope[i].remove(vali))) {
-// 	      wiped = FAILURE(i);
-// 	    } else if(changes.list_ == events.list_) {
-// 	      if(!changes.contain(i)) changes.add(i);
-// 	    }
-// 	  }
-// 	} while( vali != vnext );
-
-
-	Domain dom_xi(scope[i]);
-	Domain::iterator xit = dom_xi.end();
-	Domain::iterator xend = dom_xi.begin();
-
-	while(xit != xend) {
-	  vali = dom_xi.get_value(--xit);
-
-#ifdef _DEBUG_GENPROPAG
-	  if(_DEBUG_GENPROPAG) {
-	    // if(solver->parameters.verbosity) {
-	    std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
-	    // }
-	  }
-#endif
-
-	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
-	    if(FAILED(scope[i].remove(vali))) {
-	      wiped = FAILURE(i);
-	    } else if(changes.list_ == events.list_) {
-	      if(!changes.contain(i)) changes.add(i);
-	    }
-	  }
+	if(_DEBUG_GENPROPAG) {
+		std::cout << "propagate " << this << " changes = " << changes << std::endl;
+		
+		// int vnext;
+		// for(i=0; i<scope.size; ++i)
+		// {
+		// 	std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+		//
+		// 	vnext = scope[i].get_first();
+		// 	do {
+		// 		vali = vnext;
+		// 		vnext = scope[i].next(vali);
+		//
+		// 		std::cout << " " << vali ;
+		//
+		// 	} while( vali != vnext );
+		//
+		// 	std::cout << std::endl;
+		//
+		// 	Domain dom_xi(scope[i]);
+		// 	Domain::iterator xend = dom_xi.begin();
+		// 	Domain::iterator xit = dom_xi.end();
+		//
+		// 	while(xit != xend) {
+		// 		--xit;
+		//
+		// 		std::cout << " " << dom_xi.get_value(xit) ;
+		// 	}
+		//
+		// 	std::cout << std::endl << std::endl;
+		//
+		// }
 	}
+#endif
 
-      }	
-    }
-  }
-  return wiped;
+
+	while(!changes.empty()) {
+		j = changes.pop();
+		for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
+			if( i != j ) { 
+				
+#ifdef _DEBUG_GENPROPAG
+					if(_DEBUG_GENPROPAG) {
+						 std::cout << "revise " << scope[i] << " in " << scope[i].get_domain() << std::endl; 
+					}
+#endif
+
+				// std::cout << "std: " << scope[i] << " " << scope[i].get_domain(); 
+				// vnext = scope[i].get_first();
+				// do {
+				//   vali = vnext;
+				//   vnext = scope[i].next(vali);
+
+				//   std::cout << " " << vali ;
+
+				// } while( vali != vnext );
+				// std::cout << std::endl;
+
+
+				// std::cout << "itr: " << scope[i] << " " << scope[i].get_domain(); 
+				// Domain dom_x(scope[i]);
+				// Domain::iterator xt = dom_x.end();
+				// Domain::iterator xnd = dom_x.begin();
+
+				// while(xt != xnd) {
+				//   vali = dom_x.get_value(--xt);
+
+				//   std::cout << " " << vali ;
+
+				// }
+				// std::cout << std::endl << std::endl;
+
+
+				// 	vnext = scope[i].get_first();
+				// 	do {
+				// 	  vali = vnext;
+				// 	  vnext = scope[i].next(vali);
+
+				// #ifdef _DEBUG_GENPROPAG
+				// 	  if(_DEBUG_GENPROPAG) {
+				// 	  // if(solver->parameters.verbosity) {
+				// 	  std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
+				// 	  // }
+				// 	  }
+				// #endif
+
+				// 	  if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
+				// 	    if(FAILED(scope[i].remove(vali))) {
+				// 	      wiped = FAILURE(i);
+				// 	    } else if(changes.list_ == events.list_) {
+				// 	      if(!changes.contain(i)) changes.add(i);
+				// 	    }
+				// 	  }
+				// 	} while( vali != vnext );
+
+
+				Domain dom_xi(scope[i]);
+				Domain::iterator xit = dom_xi.end();
+				Domain::iterator xend = dom_xi.begin();
+
+				while(xit != xend) {
+					vali = dom_xi.get_value(--xit);
+
+#ifdef _DEBUG_GENPROPAG
+					if(_DEBUG_GENPROPAG) {
+						// if(solver->parameters.verbosity) {
+						std::cout << "find a support for " << scope[i] << " = " << vali << std::endl;
+						// }
+					}
+#endif
+
+					if( ( !first_support(i, vali) && !find_support(i, vali) ) ) {
+						if(FAILED(scope[i].remove(vali))) {
+							wiped = FAILURE(i);
+						} else if(changes.list_ == events.list_) {
+							if(!changes.contain(i)) changes.add(i);
+						}
+					}
+				}
+
+			}	
+		}
+	}
+	return wiped;
 }
 
 
 Mistral::PropagationOutcome Mistral::GlobalConstraint::bound_propagate(const int changed_idx, const Event evt) {
-  PropagationOutcome wiped = CONSISTENT; 
-  unsigned int i;
+	PropagationOutcome wiped = CONSISTENT; 
+	unsigned int i;
 
 
-  int vali, valmax;//, vnext;
-  bool supported;
-  for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
-    if( (int)i != changed_idx ) { 
-      supported = false;
-      vali = scope[i].get_min();
-      valmax = scope[i].get_max();
-      while(!supported && IS_OK(wiped) && vali<=valmax) {
+	int vali, valmax;//, vnext;
+	bool supported;
+	for( i=0; IS_OK(wiped) && i<scope.size; ++i ) {
+		if( (int)i != changed_idx ) { 
+			supported = false;
+			vali = scope[i].get_min();
+			valmax = scope[i].get_max();
+			while(!supported && IS_OK(wiped) && vali<=valmax) {
 	
-	//std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
+				//std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
 	
-	if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
-	  if(FAILED(scope[i].remove(vali))) {
-	    wiped = FAILURE(i);
-	  } else if(changes.list_ == events.list_) {
-	    if(!changes.contain(i)) changes.add(i);
-	  }
-	} else supported = true;
+				if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+					if(FAILED(scope[i].remove(vali))) {
+						wiped = FAILURE(i);
+					} else if(changes.list_ == events.list_) {
+						if(!changes.contain(i)) changes.add(i);
+					}
+				} else supported = true;
 	
-	++vali;
-      }
+				++vali;
+			}
       
-      if(supported && vali<=valmax) {
-	supported = false;
-	vali = valmax;
-	while(!supported && IS_OK(wiped)) {
+			if(supported && vali<=valmax) {
+				supported = false;
+				vali = valmax;
+				while(!supported && IS_OK(wiped)) {
 	  
-	  //std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
+					//std::cout << "find support for " << scope[i] << "=" << vali << std::endl;
 	  
-	  if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
-	    if(FAILED(scope[i].remove(vali))) {
-		wiped = FAILURE(i);
-	    }  else if(changes.list_ == events.list_) {
-	      if(!changes.contain(i)) changes.add(i);
-	    }
-	  } else supported = true;
-	  --vali;
+					if( ( !first_support(i, vali) && !find_bound_support(i, vali) ) ) {
+						if(FAILED(scope[i].remove(vali))) {
+							wiped = FAILURE(i);
+						}  else if(changes.list_ == events.list_) {
+							if(!changes.contain(i)) changes.add(i);
+						}
+					} else supported = true;
+					--vali;
+				}
+			}
+		}	
 	}
-      }
-    }	
-  }
-  return wiped;
+	return wiped;
 }
 
 
