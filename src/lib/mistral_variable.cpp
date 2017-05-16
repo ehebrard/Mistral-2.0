@@ -176,19 +176,20 @@ void Mistral::Variable::initialise_domain(const int lo, const int up, const int 
   } else if(type & BITSET_VAR) {
     domain_type = BITSET_VAR;
 
-    int nwords = 1+(up >> BitSet::EXP)-(lo >> BitSet::EXP);
-#ifdef _BIT64
-    if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
-    else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
-    else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
-#else
-    if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
-    else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
-    else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
-    else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(lo, up);
-    else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(lo, up);
-#endif
-    else bitset_domain = new VariableBitmap(lo, up);
+//     int nwords = 1+(up >> BitSet::EXP)-(lo >> BitSet::EXP);
+// #ifdef _BIT64
+//     if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(lo, up);
+//     else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(lo, up);
+//     else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(lo, up);
+// #else
+//     if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(lo, up);
+//     else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(lo, up);
+//     else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(lo, up);
+//     else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(lo, up);
+//     else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(lo, up);
+// #endif
+//     else
+			bitset_domain = new VariableBitmap(lo, up);
   } else {
     domain_type = LIST_VAR;
     list_domain = new VariableList(lo, up);
@@ -249,25 +250,27 @@ void Mistral::Variable::initialise_domain(const int min, const int max, const Ve
 			expression = new Expression(min, max, values);
 		} else if(type & BITSET_VAR) {
 			domain_type = BITSET_VAR;
-			int nwords = 1+(max >> BitSet::EXP)-(min >> BitSet::EXP);
-      
-#ifdef _BIT64
-			if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(min, max, values);
-			else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(min, max, values);
-			else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(min, max, values);
-#else
-			if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(min, max, values);
-			else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(min, max, values);
-			else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(min, max, values);
-			else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(min, max, values);
-			else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(min, max, values);
-#endif
-			else {
+			
+			
+// 			int nwords = 1+(max >> BitSet::EXP)-(min >> BitSet::EXP);
+//
+// #ifdef _BIT64
+// 			if(nwords == 1) bitset_domain = new VariableWord<unsigned long long int, 1>(min, max, values);
+// 			else if(nwords == 2) bitset_domain = new VariableWord<unsigned long long int, 2>(min, max, values);
+// 			else if(nwords == 3) bitset_domain = new VariableWord<unsigned long long int, 3>(min, max, values);
+// #else
+// 			if(nwords == 1) bitset_domain = new VariableWord<unsigned int, 1>(min, max, values);
+// 			else if(nwords == 2) bitset_domain = new VariableWord<unsigned int, 2>(min, max, values);
+// 			else if(nwords == 3) bitset_domain = new VariableWord<unsigned int, 3>(min, max, values);
+// 			else if(nwords == 4) bitset_domain = new VariableWord<unsigned int, 4>(min, max, values);
+// 			else if(nwords == 5) bitset_domain = new VariableWord<unsigned int, 5>(min, max, values);
+// #endif
+// 			else {
 		  
 		  
 		  
 				bitset_domain = new VariableBitmap(min, max, values);
-			}
+			// }
 	  
 			//std::cout << "->build bitsetvar " << bitset_domain->domain << std::endl;
 	  

@@ -1066,12 +1066,13 @@ namespace Mistral {
       initialise_word(lb, ub);
       VariableBitset< WORD_TYPE >::domain.size = values.size;
       for(unsigned int i=0; i<values.size; ++i) 
-	VariableBitset< WORD_TYPE >::domain.values.add(values[i]);
+				VariableBitset< WORD_TYPE >::domain.values.add(values[i]);
       VariableBitset< WORD_TYPE >::initialise_trail();
     }
 
     virtual ~VariableWord() {
-      VariableBitset< WORD_TYPE >::domain.values.table = NULL;
+			// VariableBitset< WORD_TYPE >::domain.values.table = NULL;
+			// VariableBitset< WORD_TYPE >::domain.values.neg_words = 0;
     }
 
   };

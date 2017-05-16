@@ -4434,7 +4434,8 @@ template < int N, class T >
     virtual ~Bitset() 
     {
       table += neg_words;
-      delete [] table; 
+			// if(table)
+			delete [] table; 
     }
 
     void destroy() 
