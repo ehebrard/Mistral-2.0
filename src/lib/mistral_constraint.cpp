@@ -310,6 +310,11 @@ void Mistral::ConstraintImplementation::initial_post(Solver *s) {
 		//
 		// //exit(1);
 		
+		// for(int i=0; i<scope.size; ++i) {
+		// 	Constraint c(this, i|type);
+		//
+		// }
+		
 		self[0].trigger();
 			
 	}
