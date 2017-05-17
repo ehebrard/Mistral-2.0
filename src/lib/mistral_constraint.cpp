@@ -51,6 +51,8 @@
 //#define _DEBUG_SQ true
 //#define _DEBUG_ADD (id == 6425)
 
+#define _DEBUG_DIV true
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -6121,13 +6123,14 @@ Mistral::PropagationOutcome Mistral::PredicateDiv::filter() {
 
 #ifdef _DEBUG_DIV
   if(_DEBUG_DIV) {
-    std::cout << on[0] << std::endl
-	      << on[1] << std::endl
-	      << on[2] << std::endl
+    	std::cout 
+				// << "on[0] " << on[0] << std::endl
+				// 	      << "on[1] " << on[1] << std::endl
+				// 	      << "on[2] " << on[2] << std::endl
 	      << scope[0].get_domain() << " / " 
 	      << scope[1].get_domain() << " = " 
 	      << scope[2].get_domain() << std::endl;
-  std::cout << "filter Z = X/Y" << std::endl;
+  		std::cout << "filter Z = X/Y" << std::endl;
  }
 #endif
 

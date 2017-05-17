@@ -885,7 +885,7 @@ int Mistral::Variable::get_min_pos() const {
   else if(domain_type ==    LIST_VAR) r_min = list_domain->get_min_pos();
   else if(domain_type ==   RANGE_VAR) r_min = range_domain->get_min_pos();
   //else if(domain_type == VIRTUAL_VAR) r_min = virtual_domain->get_min_pos();
-  else if(domain_type ==   CONST_VAR) r_min = constant_value;
+  else if(domain_type ==   CONST_VAR) r_min = (constant_value > 0 ? constant_value : INFTY);
   else if(domain_type ==   EXPRESSION) r_min = expression->get_self().get_min_pos();
   else  r_min = (*bool_domain >> 1); //(!(*bool_domain & 1));
 
@@ -909,7 +909,7 @@ int Mistral::Variable::get_max_neg() const {
   else if(domain_type ==    LIST_VAR) r_max = list_domain->get_max_neg();
   else if(domain_type ==   RANGE_VAR) r_max = range_domain->get_max_neg();
   //else if(domain_type == VIRTUAL_VAR) r_max = virtual_domain->get_max_neg();
-  else if(domain_type ==   CONST_VAR) r_max = constant_value;
+  else if(domain_type ==   CONST_VAR) r_max = (constant_value < 0 ? constant_value : -INFTY);
   else if(domain_type ==   EXPRESSION) r_max = expression->get_self().get_max_neg();
   else  r_max = (!(*bool_domain & 1));
 

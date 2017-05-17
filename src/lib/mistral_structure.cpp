@@ -1089,6 +1089,9 @@ Mistral::Interval Mistral::NegativeHalfDomain::anti_div_X_neg(const int arg) {
 Mistral::Interval Mistral::NegativeHalfDomain::anti_div_Y(const Mistral::PositiveHalfDomain arg) {
   if(empty() || arg.empty()) return Interval();
 
+	// std::cout << arg << " div by " << *this << std::endl;
+	
+
   int ub = arg.min/(min-1)-1;
   int lb = arg.max/max;
 
@@ -2389,8 +2392,8 @@ Mistral::BiInterval::BiInterval() {
 }
 Mistral::BiInterval::BiInterval(const Variable x) {
 
-  // std::cout << "build a bi-interval from " << x << " in " << x.get_domain() << std::endl;
-  // std::cout << x.get_max_neg() << ".." << x.get_min_pos() << std::endl;
+  std::cout << "build a bi-interval from " << x << " in " << x.get_domain() << std::endl;
+  std::cout << x.get_max_neg() << ".." << x.get_min_pos() << std::endl;
 
   positive.min = x.get_min_pos();
   positive.max = x.get_max();
