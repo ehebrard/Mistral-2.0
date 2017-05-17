@@ -2840,7 +2840,15 @@ Mistral::NotExpression::~NotExpression() {
 }
   
 void Mistral::NotExpression::extract_constraint(Solver *s) {
-  children[0].remove(0);
+			if(children[0].set_domain(0) == FAIL_EVENT) {
+				s->fail();
+#ifdef _DEBUG_AC
+				std::cout << "fail!\n";
+			} else {
+				std::cout << "ok\n";
+#endif
+			}
+	
   // std::cerr << "Error: Not predicate can't be used as a constraint" << std::endl;
   // exit(0);
 }
@@ -3100,49 +3108,49 @@ Mistral::EqualExpression::~EqualExpression() {
 
 void Mistral::EqualExpression::extract_constraint(Solver *s) {
 
-  //std::cout << "extract constraint from expression equal" << std::endl;
+	//std::cout << "extract constraint from expression equal" << std::endl;
   
-  if(spin) {
-    if(children.size==2)
-      s->add(Constraint(new ConstraintEqual(children), (BINARY|IDEMPOTENT)));
-    else {
+	if(spin) {
+		if(children.size==2)
+			s->add(Constraint(new ConstraintEqual(children), (BINARY|IDEMPOTENT)));
+		else {
 
 #ifdef _DEBUG_AC
-      std::cout << "pre-propagte (" << children[0] << " = "
-		<< value << ") ";
+			std::cout << "pre-propagte (" << children[0] << " = "
+				<< value << ") ";
 #endif
 
-      if(children[0].set_domain(value) == FAIL_EVENT) {
-	s->fail();
+			if(children[0].set_domain(value) == FAIL_EVENT) {
+				s->fail();
 #ifdef _DEBUG_AC
-	std::cout << "fail!\n";
-      } else {
-	std::cout << "ok\n";
+				std::cout << "fail!\n";
+			} else {
+				std::cout << "ok\n";
 #endif
-      }
-    }
+			}
+		}
 
-  } else {
-    if(children.size==2) {
-      s->add(Constraint(new ConstraintNotEqual(children)));
-    } else {
+	} else {
+		if(children.size==2) {
+			s->add(Constraint(new ConstraintNotEqual(children)));
+		} else {
 
 #ifdef _DEBUG_AC
-      std::cout << "pre-propagte (" << children[0] << " != "
-		<< value << ") ";
+			std::cout << "pre-propagte (" << children[0] << " != "
+				<< value << ") ";
 #endif
       
-      if(children[0].remove(value) == FAIL_EVENT) {
+			if(children[0].remove(value) == FAIL_EVENT) {
 
-	s->fail();
+				s->fail();
 #ifdef _DEBUG_AC
-	std::cout << "fail!\n";
-      } else {
-	std::cout << "ok\n";
+				std::cout << "fail!\n";
+			} else {
+				std::cout << "ok\n";
 #endif
-      }
-    }
-  }
+			}
+		}
+	}
 }
 
 

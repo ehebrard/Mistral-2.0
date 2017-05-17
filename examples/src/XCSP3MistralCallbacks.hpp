@@ -44,7 +44,7 @@
  *
  */
 
-#define _VERBOSE_
+// #define _VERBOSE_
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -385,6 +385,8 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int ma
 		variable[id] = X;
 		// variables.add(X);
 		declared_var_ids.push_back(id);
+		
+		solver.add(X);
 }
 
 
@@ -399,6 +401,8 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, vector<int> &values)
 		variable[id] = X;
 		// variables.add(X);
 		declared_var_ids.push_back(id);
+		
+		solver.add(X);
 }
 
 
@@ -2454,7 +2458,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 		}
 
     if(fn->type == NT_NOT) {
-			
+						
 				Variable x1 = postExpression(fn->args[0]);
 				rv = ( !x1 );
 			
