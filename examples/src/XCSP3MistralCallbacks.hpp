@@ -346,11 +346,11 @@ void XCSP3MistralCallbacks::endInstance() {
 		for( auto id : declared_var_ids ) {
 			Variable X = variable[id];
 			
-			if(X.id()>=0) {
+			// if(X.id()>=0) {
 				
-				variables.add(X);
-				var_ids.push_back(id);
-			}
+			variables.add(X);
+			var_ids.push_back(id);
+			// }
 		}
 		
 	
