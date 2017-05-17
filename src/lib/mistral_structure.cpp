@@ -2392,8 +2392,9 @@ Mistral::BiInterval::BiInterval() {
 }
 Mistral::BiInterval::BiInterval(const Variable x) {
 
-  std::cout << "build a bi-interval from " << x << " in " << x.get_domain() << std::endl;
-  std::cout << x.get_max_neg() << ".." << x.get_min_pos() << std::endl;
+	//   std::cout << "build a bi-interval from " << x << " in " << x.get_domain() << std::endl;
+	//   std::cout << x.get_min() << ".." << x.get_max_neg() << std::endl;
+	// std::cout << x.get_min_pos() << ".." << x.get_max() << std::endl;
 
   positive.min = x.get_min_pos();
   positive.max = x.get_max();
@@ -2402,6 +2403,8 @@ Mistral::BiInterval::BiInterval(const Variable x) {
   negative.max = x.get_max_neg();
   
   zero = x.contain(0);
+	//
+	// std::cout << *this << std::endl;
 }
 Mistral::BiInterval::~BiInterval() {}
 

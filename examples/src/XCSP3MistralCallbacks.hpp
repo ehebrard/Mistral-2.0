@@ -2087,18 +2087,41 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     displayList(list2);
 #endif		
 		
-		assert(list1.size() == list2.size());
+		// assert(list1.size() == list2.size());
 		
 		
-		VarArray scope1;
-		getVariables(list1, scope1);
-		VarArray scope2;
-		getVariables(list2, scope2);
-		solver.add(AllDiff(scope1));
-		solver.add(AllDiff(scope2));
-		for(size_t i=0; i<scope1.size; ++i) {
-			for(size_t j=0; j<scope2.size; ++j) {
-				solver.add( (scope1[i] == j+startIndex1) == (scope2[j] == i+startIndex2) );
+		VarArray scope[2];
+		int sindex[2];
+		if(list1.size() == list2.size()) {
+			getVariables(list1, scope[0]);
+			getVariables(list2, scope[1]);
+			sindex[0] = startIndex1;
+			sindex[1] = startIndex2;
+			
+		
+			solver.add(AllDiff(scope[0]));
+			solver.add(AllDiff(scope[1]));
+			for(size_t i=0; i<scope[0].size; ++i) {
+				for(size_t j=0; j<scope[1].size; ++j) {
+					solver.add( (scope[0][i] == j+sindex[0]) == (scope[1][j] == i+sindex[1]) );
+				}
+			}
+			return;
+		} else if(list1.size() < list2.size()) {
+			getVariables(list1, scope[0]);
+			getVariables(list2, scope[1]);
+			sindex[0] = startIndex1;
+			sindex[1] = startIndex2;
+		} else {
+			getVariables(list1, scope[1]);
+			getVariables(list2, scope[0]);
+			sindex[1] = startIndex1;
+			sindex[0] = startIndex2;
+		}
+		
+		for(size_t i=0; i<scope[0].size; ++i) {
+			for(size_t j=0; j<scope[1].size; ++j) {
+				solver.add( (scope[0][i] == j+sindex[0]) <= (scope[1][j] == i+sindex[1]) );
 			}
 		}
 
