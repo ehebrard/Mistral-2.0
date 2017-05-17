@@ -2443,17 +2443,38 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     if(fn->type == NT_OR) {
 			
+			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
-    		Variable x2 = postExpression(fn->args[1]);
+				Variable x2 = postExpression(fn->args[1]);
 				rv = ( x1 || x2 );
+			} else {
+				VarArray scope;
+				for( auto x : fn->args ) {
+					scope.add( postExpression(x) );
+				}
+				rv = (Sum(scope) > 0);
+			}
+			//
+			// assert(fn->args.size() == 2);
+			// 	Variable x1 = postExpression(fn->args[0]);
+			//     		Variable x2 = postExpression(fn->args[1]);
+			// 	rv = ( x1 || x2 );
 
     }
 
     if(fn->type == NT_AND) {
 			
+			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
-  			Variable x2 = postExpression(fn->args[1]);
+				Variable x2 = postExpression(fn->args[1]);
 				rv = ( x1 && x2 );
+			} else {
+				VarArray scope;
+				for( auto x : fn->args ) {
+					scope.add( postExpression(x) );
+				}
+				rv = (Sum(scope) == scope.size);
+			}
     
 		}
 
@@ -2474,9 +2495,17 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     if(fn->type == NT_XOR) {
 			
+			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
 				rv = ( x1 != x2 );
+			} else {
+				VarArray scope;
+				for( auto x : fn->args ) {
+					scope.add( postExpression(x) );
+				}
+				rv = Parity(scope, 1);
+			}
 			
     }
 
@@ -2513,33 +2542,64 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     if(fn->type == NT_ADD) {
 			
+			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
 				rv = ( x1 + x2 );
+			} else {
+				VarArray scope;
+				for( auto x : fn->args ) {
+					scope.add( postExpression(x) );
+				}
+				rv = Sum(scope);
+			}
 			
     }
     if(fn->type == NT_MULT) {
 			
+			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
 				rv = ( x1 * x2 );
+			} else {
+				rv= postExpression(fn->args[0]);
+				for(size_t i=1; i<fn->args.size(); ++i) {
+					rv = (rv * postExpression(fn->args[i]));
+				}
+			}
 			
     }
 
     if(fn->type == NT_MIN) {
 				assert(!root);
 			
-				Variable x1 = postExpression(fn->args[0]);
-				Variable x2 = postExpression(fn->args[1]);
-				rv = Min( x1, x2 );
+				if(fn->args.size() == 2) {
+					Variable x1 = postExpression(fn->args[0]);
+					Variable x2 = postExpression(fn->args[1]);
+					rv = Min( x1, x2 );
+				} else {
+					VarArray scope;
+					for( auto x : fn->args ) {
+						scope.add( postExpression(x) );
+					}
+					rv = Min(scope);
+				}
 			
     }
     if(fn->type == NT_MAX) {
         assert(!root);
 			
-				Variable x1 = postExpression(fn->args[0]);
-				Variable x2 = postExpression(fn->args[1]);
-				rv = Min( x1, x2 );
+				if(fn->args.size() == 2) {
+					Variable x1 = postExpression(fn->args[0]);
+					Variable x2 = postExpression(fn->args[1]);
+					rv = Max( x1, x2 );
+				} else {
+					VarArray scope;
+					for( auto x : fn->args ) {
+						scope.add( postExpression(x) );
+					}
+					rv = Max(scope);
+				}
 			
     }
 
