@@ -44,7 +44,7 @@
  *
  */
 
-// #define _VERBOSE_
+#define _VERBOSE_
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -345,12 +345,8 @@ void XCSP3MistralCallbacks::endInstance() {
 	
 		for( auto id : declared_var_ids ) {
 			Variable X = variable[id];
-			
-			// if(X.id()>=0) {
-				
 			variables.add(X);
 			var_ids.push_back(id);
-			// }
 		}
 		
 	
@@ -382,7 +378,7 @@ void XCSP3MistralCallbacks::beginVariableArray(string id) {
 
 void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int maxValue) {
 #ifdef _VERBOSE_
-    cout << "    var " << id << " : " << minValue << "..." << maxValue << endl;
+    cout << "    var b " << id << " : " << minValue << "..." << maxValue << endl;
 #endif
 		
 		Variable X(minValue, maxValue);	
@@ -394,7 +390,7 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int ma
 
 void XCSP3MistralCallbacks::buildVariableInteger(string id, vector<int> &values) {
 #ifdef _VERBOSE_
-    cout << "    var " << id << " : ";
+    cout << "    var l " << id << " : ";
     cout << "        ";
     displayList(values);
 #endif

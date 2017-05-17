@@ -69,7 +69,10 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os) {
 			// if(linecount%50 == 0) os << endl;
 			// ++linecount;
 			
-			os << " " << cb.solver.last_solution_lb[var.id()];
+			if(var.id()>=0)	
+				os << " " << cb.solver.last_solution_lb[var.id()];
+			else
+				os << " " << var.get_value();
 		}
 		// os << endl;
 		
