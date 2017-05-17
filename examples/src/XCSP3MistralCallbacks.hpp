@@ -2087,6 +2087,9 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
     displayList(list2);
 #endif		
 		
+		assert(list1.size() == list2.size());
+		
+		
 		VarArray scope1;
 		getVariables(list1, scope1);
 		VarArray scope2;
@@ -2113,7 +2116,8 @@ void XCSP3MistralCallbacks::buildConstraintChannel(string id, vector<XVariable *
 		VarArray scope;
 		getVariables(list, scope);
 		
-		solver.add( Occurrence(scope, 1, 1, 1) );
+		// solver.add( Occurrence(scope, 1, 1, 1) );
+		solver.add( Sum(scope) == 1 ); // must be Boolean variables
 		solver.add( Element(scope, variable[value->id], startIndex) == 1 );
 		
 }
@@ -2555,6 +2559,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			}
 			
     }
+		
     if(fn->type == NT_MULT) {
 			
 			if(fn->args.size() == 2) {
@@ -2567,6 +2572,26 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 					rv = (rv * postExpression(fn->args[i]));
 				}
 			}
+			
+    }
+		
+    if(fn->type == NT_DIV) {
+			
+			assert(fn->args.size() == 2); 
+			
+				Variable x1 = postExpression(fn->args[0]);
+				Variable x2 = postExpression(fn->args[1]);
+				rv = ( x1 / x2 );
+			
+    }
+		
+    if(fn->type == NT_MOD) {
+			
+			assert(fn->args.size() == 2); 
+			
+				Variable x1 = postExpression(fn->args[0]);
+				Variable x2 = postExpression(fn->args[1]);
+				rv = ( x1 % x2 );
 			
     }
 
