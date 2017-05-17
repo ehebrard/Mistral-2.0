@@ -731,6 +731,7 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
 	//  }
 	// #endif
   
+
 	//int priority = cons->priority, cons_id = cons->id, triggered=false;
 	Event evt;
 	Variable x;
@@ -743,8 +744,7 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons)//;
 			evt = (// cons->scope[i].domain_type != BOOL_VAR &&
 				x.is_ground() ? VALUE_EVENT : (LB_EVENT|UB_EVENT));
       
-      
-			if(cons->is_triggered_on(i, EVENT_TYPE(evt))) {
+			if(x.is_ground() || cons->is_triggered_on(i, EVENT_TYPE(evt))) {
 				// std::cout << "trigger " << cons << " because " << event2str(evt) << " on "<< x << std::endl;
 				trigger(cons, i, evt);
 			}
@@ -809,6 +809,7 @@ void Mistral::ConstraintQueue::trigger(GlobalConstraint *cons, const int var, co
   // 	     << std::endl;
   //  }
   // #endif
+	
 
   if(cons != solver->taboo_constraint) {
     int priority = cons->priority, cons_id = cons->id;
@@ -1527,7 +1528,7 @@ void Mistral::Solver::add(Constraint c) {
 #ifdef _DEBUG_BUILD
   std::cout << "add " << c << std::endl;
 #endif
-
+	
 	
 	// checkcg("start add");
 
@@ -1575,6 +1576,8 @@ void Mistral::Solver::add(Constraint c) {
 		// checkcg("after awaken?");
     
   }
+	
+	
 
   // std::cout << "================\n" << active_constraints << "\n================" << std::endl;
   

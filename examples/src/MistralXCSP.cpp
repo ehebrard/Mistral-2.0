@@ -113,6 +113,8 @@ int main(int argc,char **argv) {
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
 	
+	// std::cout << solver.constraints[277].binary() << std::endl;
+	
 	if(branchOnaux.getValue())
 		solver.depth_first_search(solver.variables, heuristic, restart);
 	else
