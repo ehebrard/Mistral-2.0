@@ -285,7 +285,7 @@ namespace Mistral {
     bool is_active() {
       bool active = false;
       for(unsigned int i=0; !active && i<on.size; ++i) {
-	active = index[i]>=0;
+				active = index[i]>=0;
       }
       return active;
     }

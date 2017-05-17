@@ -181,7 +181,7 @@ void Mistral::ConstraintImplementation::trigger_on(const int t, Variable x) {
 	
 	
 	if(t != _NEVER_
-	// && !x.is_ground()
+		&& !x.is_ground()
 	) { 
 		
 #ifdef _DEBUG_RELAX

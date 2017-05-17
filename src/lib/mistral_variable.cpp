@@ -5132,66 +5132,84 @@ Mistral::LinearExpression::~LinearExpression() {
 
 void Mistral::LinearExpression::extract_constraint(Solver *s) {
 	
-	// std::cout << "linear exp: END extract constraint" << std::endl;
+	std::cout << "linear exp: BEG extract constraint " << bool_domains << std::endl;
 	
 	
-  // check if we can use an 'Add' or 'Sub' predicate
-  int post_add = false;
-  if(lower_bound == 0 &&
-     upper_bound == 0 && 
-     children.size == 3 && 
-     abs(weight[0]) == 1 &&
-     abs(weight[1]) == 1 &&
-     abs(weight[2]) == 1
-     ) {
-    int i=0;
-    for(; i<3; ++i)
-      if(weight[i] != weight[(i+1)%3] && weight[(i+1)%3] == weight[(i+2)%3]) {
-	Variable x = children[i];
-	children[i] = children[2];
-	children[2] = x;
-	weight[0] = weight[1] = 1;
-	weight[2] = -1;
-	break;
-      }
-    if(i<3) {
-      post_add = true;
-      s->add(Constraint(new PredicateAdd(children)));
-    }  
-  }
+	// check if we can use an 'Add' or 'Sub' predicate
+	int post_add = false;
+	if(lower_bound == 0 &&
+		upper_bound == 0 && 
+			children.size == 3 && 
+				abs(weight[0]) == 1 &&
+					abs(weight[1]) == 1 &&
+						abs(weight[2]) == 1
+	) {
+		int i=0;
+		for(; i<3; ++i)
+		if(weight[i] != weight[(i+1)%3] && weight[(i+1)%3] == weight[(i+2)%3]) {
+			Variable x = children[i];
+			children[i] = children[2];
+			children[2] = x;
+			weight[0] = weight[1] = 1;
+			weight[2] = -1;
+			break;
+		}
+		if(i<3) {
+			post_add = true;
+			s->add(Constraint(new PredicateAdd(children)));
+		}  
+	}
 
   
-  if(!post_add) {
-    if(!bool_domains) {
-      if(weighted) {
-	s->add(Constraint(new ConstraintIncrementalWeightedBoolSumInterval(children, weight, lower_bound, upper_bound)));
-      } else {
-	s->add(Constraint(new ConstraintBoolSumInterval(children, lower_bound, upper_bound)));
-      }
-    } else if(lower_bound == 0 && upper_bound == 0 && bool_domains>0 && 
-	      (weight[bool_domains-1] == 1 || weight[bool_domains-1] == -1)) {
-      int n = children.size-1;
-      Variable last = children[n];
-      int wswap = weight[n];
+	if(!post_add) {
+		if(!bool_domains) {
+			if(weighted) {
+				
+				// std::cout << "ConstraintIncrementalWeightedBoolSumInterval" << std::endl;
+				
+				s->add(Constraint(new ConstraintIncrementalWeightedBoolSumInterval(children, weight, lower_bound, upper_bound)));
+			} else {
+				
+				// std::cout << "ConstraintBoolSumInterval" << std::endl;
+				
+				s->add(Constraint(new ConstraintBoolSumInterval(children, lower_bound, upper_bound)));
+			}
+		} else if(lower_bound == 0 && upper_bound == 0 && bool_domains>0 && 
+		(weight[bool_domains-1] == 1 || weight[bool_domains-1] == -1)) {
+			int n = children.size-1;
+			Variable last = children[n];
+			int wswap = weight[n];
       
-      children[n] = children[bool_domains-1];
-      weight[n] = weight[bool_domains-1];
-      children[bool_domains-1] = last;
-      weight[bool_domains-1] = wswap;
+			children[n] = children[bool_domains-1];
+			weight[n] = weight[bool_domains-1];
+			children[bool_domains-1] = last;
+			weight[bool_domains-1] = wswap;
       
-      if(weight[n] == 1) {
-	for(int i=0; i<n; ++i)
-	  weight[i] = -weight[i];
-      }
+			if(weight[n] == 1) {
+				for(int i=0; i<n; ++i)
+					weight[i] = -weight[i];
+			}
 
-      weight.pop();
-      s->add(Constraint(new PredicateWeightedBoolSum(children, weight)));
-    } else {
-      s->add(Constraint(new PredicateWeightedSum(children, weight, lower_bound, upper_bound)));
-    }
-  }
+			weight.pop();
+			
+			// std::cout << "PredicateWeightedBoolSum" << std::endl;
+			//
+			// std::cout << children << std::endl << weight << " [" << lower_bound << ".." << upper_bound << "]\n";
+			//
+			// for( auto c : children ) {
+			// 	std::cout << c << " in " << c.get_domain() << std::endl;
+			// }
+			
+			s->add(Constraint(new PredicateWeightedBoolSum(children, weight)));
+		} else {
+			
+			// std::cout << "PredicateWeightedSum" << std::endl;
+			
+			s->add(Constraint(new PredicateWeightedSum(children, weight, lower_bound, upper_bound)));
+		}
+	}
 	
-	// std::cout << "linear exp: END extract constraint" << std::endl;
+	std::cout << "linear exp: END extract constraint" << std::endl;
 }
 
 
@@ -5260,6 +5278,15 @@ Mistral::Variable Mistral::Sum(Vector< Variable >& args, Variable T, const int o
     lexpr->weighted=-1;
   else if(lexpr->weighted==1)
     lexpr->weighted=2;
+	
+	if(!T.is_boolean()) {
+		if(lexpr->bool_domains==0) {
+			lexpr->bool_domains = args.size+1;
+		} else if(lexpr->bool_domains>0) {
+			lexpr->bool_domains = -1;
+		}
+	}
+	
   Variable exp(lexpr);
   return exp;
 }
@@ -5271,6 +5298,15 @@ Mistral::Variable Mistral::Sum(std::vector< Variable >& args, Variable T, const 
     lexpr->weighted=-1;
   else if(lexpr->weighted==1)
     lexpr->weighted=2;
+	
+	if(!T.is_boolean()) {
+		if(lexpr->bool_domains==0) {
+			lexpr->bool_domains = args.size()+1;
+		} else if(lexpr->bool_domains>0) {
+			lexpr->bool_domains = -1;
+		}
+	}
+	
   Variable exp(lexpr);
   return exp;
 }
@@ -5278,7 +5314,7 @@ Mistral::Variable Mistral::Sum(Vector< Variable >& args, const int l, const int 
 	Variable exp;
 	
 	if(args.size>0) {
-		exp = Variable( new LinearExpression(args, l, u,offset) );
+		exp = Variable( new LinearExpression(args, l, u, offset) );
 	} else {
 		exp = Variable( (l<=offset && u>=offset) );
 	}
@@ -5312,11 +5348,11 @@ Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >
   return exp;
 }
 Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, const int l, const int u, const int offset) {
-  Variable exp( new LinearExpression(args, wgts, l, u,offset) );
+  Variable exp( new LinearExpression(args, wgts, l, u, offset) );
   return exp;
 }
 Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l, const int u, const int offset) {
-  Variable exp( new LinearExpression(args, wgts, l, u,offset) );
+  Variable exp( new LinearExpression(args, wgts, l, u, offset) );
   return exp;
 }
 
