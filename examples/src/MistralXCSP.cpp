@@ -111,7 +111,8 @@ int main(int argc,char **argv) {
 	
 	std::cout << " c parsetime " << (get_run_time() - cpu_time) << std::endl;
 	
-	// std::cout << solver << std::endl;
+	if(cmd.print_model())
+		std::cout << solver << std::endl;
 		
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());

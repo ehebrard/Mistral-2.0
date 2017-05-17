@@ -163,8 +163,8 @@ namespace XCSP3Core {
             if(currentElement == "add") tmp = new NodeOperator(NT_ADD, -1);
             if(currentElement == "sub") tmp = new NodeOperator(NT_SUB);
             if(currentElement == "mul") tmp = new NodeOperator(NT_MULT, -1);
-            //if(currentElement == "div") tmp = new NodeOperator(NT_DIV);
-            //if(currentElement == "mod") tmp = new NodeOperator(NT_MOD);
+            if(currentElement == "div") tmp = new NodeOperator(NT_DIV);
+            if(currentElement == "mod") tmp = new NodeOperator(NT_MOD);
 
             //if (currentElement == "sqr") tmp = new NodeSquare(SQR);
             //if (currentElement == "pow") tmp = new NodePow(POW);
