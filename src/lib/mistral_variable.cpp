@@ -5140,9 +5140,9 @@ Mistral::LinearExpression::~LinearExpression() {
 
 void Mistral::LinearExpression::extract_constraint(Solver *s) {
 	
-	std::cout << "linear exp: BEG extract constraint " << bool_domains << std::endl;
-	
-	
+	// std::cout << "linear exp: BEG extract constraint " << bool_domains << std::endl;
+	//
+	//
 	// check if we can use an 'Add' or 'Sub' predicate
 	int post_add = false;
 	if(lower_bound == 0 &&
@@ -5216,8 +5216,8 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
 			s->add(Constraint(new PredicateWeightedSum(children, weight, lower_bound, upper_bound)));
 		}
 	}
-	
-	std::cout << "linear exp: END extract constraint" << std::endl;
+	//
+	// std::cout << "linear exp: END extract constraint" << std::endl;
 }
 
 
