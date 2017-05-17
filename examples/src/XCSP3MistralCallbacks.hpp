@@ -2458,7 +2458,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 		}
 
     if(fn->type == NT_NOT) {
-			
+						
 				Variable x1 = postExpression(fn->args[0]);
 				rv = ( !x1 );
 			
