@@ -2332,7 +2332,7 @@ void XCSP3MistralCallbacks::buildConstraintInstantiation(string id, vector<XVari
 
 void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
 #ifdef _VERBOSE_
-    cout << "\n    objective: minimize" << expr << endl;
+    cout << "\n    objective: minimize str expr" << expr << endl;
 #endif
 		
     Tree tree(expr);
@@ -2344,7 +2344,7 @@ void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
 
 void XCSP3MistralCallbacks::buildObjectiveMaximizeExpression(string expr) {
 #ifdef _VERBOSE_
-    cout << "\n    objective: maximize" << expr << endl;
+    cout << "\n    objective: maximize str expr" << expr << endl;
 #endif
 		
     Tree tree(expr);
@@ -2372,22 +2372,194 @@ void XCSP3MistralCallbacks::buildObjectiveMaximizeVariable(XVariable *x) {
 
 
 void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vector<XVariable *> &list, vector<int> &coefs) {
-    XCSP3CoreCallbacks::buildObjectiveMinimize(type, list, coefs);
+#ifdef _VERBOSE_
+    cout << "\n    objective: minimize " << (type == SUM_O ? "sum" : "unknown constraint") << endl;
+#endif
+		
+		VarArray scope;
+		getVariables(list, scope);
+		Variable objective;
+		
+	
+		if(type == EXPRESSION_O) {
+			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			exit(1);
+		} else if(type == SUM_O) {
+
+			objective = Sum(scope, coefs).get_var();
+
+		} else if(type == PRODUCT_O) {
+			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			exit(1);
+		} else if(type == MINIMUM_O) {
+			cout << " s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
+			exit(1);
+		} else if(type == MAXIMUM_O) {
+			cout << " s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
+			exit(1);
+		} else if(type == NVALUES_O) {
+			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			exit(1);
+		} else if(type == LEX_O) {
+			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			exit(1);
+		}	
+			
+		solver.add(Free(objective));
+		
+#ifdef _VERBOSE_
+		std::cout << objective << " in " << objective.get_domain() << std::endl;
+#endif
+		
+		goal = new Goal(Goal::MINIMIZATION, objective.get_var());
+
+	
+    // XCSP3CoreCallbacks::buildObjectiveMinimize(type, list, coefs);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vector<XVariable *> &list, vector<int> &coefs) {
-    XCSP3CoreCallbacks::buildObjectiveMaximize(type, list, coefs);
+#ifdef _VERBOSE_
+    cout << "\n    objective: maximize " << (type == SUM_O ? "sum" : "unknown constraint") << endl;
+#endif	
+		
+		VarArray scope;
+		getVariables(list, scope);
+		Variable objective;
+		
+	
+		if(type == EXPRESSION_O) {
+			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			exit(1);
+		} else if(type == SUM_O) {
+
+			objective = Sum(scope, coefs);
+
+		} else if(type == PRODUCT_O) {
+			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			exit(1);
+		} else if(type == MINIMUM_O) {
+			cout << " s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
+			exit(1);
+		} else if(type == MAXIMUM_O) {
+			cout << " s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
+			exit(1);
+		} else if(type == NVALUES_O) {
+			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			exit(1);
+		} else if(type == LEX_O) {
+			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			exit(1);
+		}
+		
+		
+		solver.add(Free(objective));
+		
+#ifdef _VERBOSE_
+		std::cout << objective << " in " << objective.get_domain() << std::endl;
+#endif	
+		
+		goal = new Goal(Goal::MAXIMIZATION, objective.get_var());
+		
+    // XCSP3CoreCallbacks::buildObjectiveMaximize(type, list, coefs);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vector<XVariable *> &list) {
-    XCSP3CoreCallbacks::buildObjectiveMinimize(type, list);
+#ifdef _VERBOSE_
+    cout << "\n    objective: minimize " << (type == SUM_O ? "sum" : (type == MINIMUM_O ? "min" : (type == MAXIMUM_O ? "max" : "unknown constraint"))) << endl;
+#endif
+		
+		VarArray scope;
+		getVariables(list, scope);
+		Variable objective;
+		
+	
+		if(type == EXPRESSION_O) {
+			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			exit(1);
+		} else if(type == SUM_O) {
+
+			objective = Sum(scope);
+
+		} else if(type == PRODUCT_O) {
+			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			exit(1);
+		} else if(type == MINIMUM_O) {
+			
+			objective = Min(scope);
+		
+		} else if(type == MAXIMUM_O) {
+			
+			objective = Max(scope);
+		
+		} else if(type == NVALUES_O) {
+			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			exit(1);
+		} else if(type == LEX_O) {
+			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			exit(1);
+		}
+		
+		
+		solver.add(Free(objective));
+		
+#ifdef _VERBOSE_
+		std::cout << objective << " in " << objective.get_domain() << std::endl;
+#endif
+		
+		goal = new Goal(Goal::MINIMIZATION, objective.get_var());
+		
+    // XCSP3CoreCallbacks::buildObjectiveMinimize(type, list);
 }
 
 
 void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vector<XVariable *> &list) {
-    XCSP3CoreCallbacks::buildObjectiveMaximize(type, list);
+#ifdef _VERBOSE_
+    cout << "\n    objective: maximize " << (type == SUM_O ? "sum" : (type == MINIMUM_O ? "min" : (type == MAXIMUM_O ? "max" : "unknown constraint"))) << endl;
+#endif
+		
+		VarArray scope;
+		getVariables(list, scope);
+		Variable objective;
+		
+	
+		if(type == EXPRESSION_O) {
+			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			exit(1);
+		} else if(type == SUM_O) {
+
+			objective = Sum(scope);
+
+		} else if(type == PRODUCT_O) {
+			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			exit(1);
+		} else if(type == MINIMUM_O) {
+			
+			objective = Min(scope);
+		
+		} else if(type == MAXIMUM_O) {
+			
+			objective = Max(scope);
+		
+		} else if(type == NVALUES_O) {
+			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			exit(1);
+		} else if(type == LEX_O) {
+			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			exit(1);
+		}
+		
+		
+		// solver.add(Free(objective));
+		
+#ifdef _VERBOSE_
+		std::cout << objective << std::endl;
+#endif
+		
+		goal = new Goal(Goal::MINIMIZATION, objective.get_var());
+		
+    // XCSP3CoreCallbacks::buildObjectiveMaximize(type, list);
 }
 
 Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {

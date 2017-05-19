@@ -5103,6 +5103,32 @@ Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args,
   }
 }
 
+Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 
+					    std::vector< int >& wgts, 
+					    const int l, const int u, const int o) 
+  : Expression(args) {
+  weighted = 0;
+  bool_domains = true;
+
+  lower_bound = l;
+  upper_bound = u;
+  offset = o;
+  for(unsigned int i=0; i<wgts.size(); ++i) {
+    weight.add(wgts[i]);
+    if(wgts[i]==1) {
+      if(weighted<0 || weighted>1) weighted = 2;
+      else weighted = 1;
+    } else if(wgts[i]==-1) {
+      if(weighted>0) weighted = 2;
+      else weighted = -1;
+    } else weighted = 2;
+    if(!children[i].is_boolean()) {
+      if(bool_domains==0) bool_domains = i+1;
+      else if(bool_domains>0) bool_domains = -1;
+    } 
+  }
+}
+
 Mistral::LinearExpression::LinearExpression(std::vector< Variable >& args, 
 					    const int l, const int u, const int o) 
   : Expression(args) {
@@ -5231,6 +5257,7 @@ void Mistral::LinearExpression::initialise_bounds() {
 
   int lb = children[0].get_min()*weight[0];
   int ub = children[0].get_max()*weight[0];
+	
 
   if(lb < ub) {
     tlb += lb;
@@ -5239,6 +5266,8 @@ void Mistral::LinearExpression::initialise_bounds() {
     tlb += ub;
     tub += lb;
   }
+	
+	// std::cout << weight[0] << " * ["<< children[0].get_min() << ".." << children[0].get_max() << "] -> [" << tlb << ".." << tub << "]\n";
 
   for(unsigned int i=1; i<children.size; ++i) {
     lb = children[i].get_min()*weight[i];
@@ -5251,12 +5280,14 @@ void Mistral::LinearExpression::initialise_bounds() {
       tlb += ub;
       tub += lb;
     }
+		
+		// std::cout << weight[i] << " * ["<< children[i].get_min() << ".." << children[i].get_max() << "] -> [" << tlb << ".." << tub << "]\n";
   }
 
   if(tlb > lower_bound) lower_bound = tlb;
   if(tub < upper_bound) upper_bound = tub;
 	
-	// std::cout << "linear exp: END initialise bounds" << std::endl;
+	// std::cout << "linear exp: END initialise bounds [" << lower_bound << ".." << upper_bound << "]" << std::endl;
 
 }
 
@@ -5362,6 +5393,10 @@ Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, co
   return exp;
 }
 Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >& wgts, const int l, const int u, const int offset) {
+  Variable exp( new LinearExpression(args, wgts, l, u, offset) );
+  return exp;
+}
+Mistral::Variable Mistral::Sum(Vector< Variable >& args, std::vector< int >& wgts, const int l, const int u, const int offset) {
   Variable exp( new LinearExpression(args, wgts, l, u, offset) );
   return exp;
 }
