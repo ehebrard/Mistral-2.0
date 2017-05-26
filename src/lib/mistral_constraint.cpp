@@ -51,7 +51,7 @@
 //#define _DEBUG_SQ true
 //#define _DEBUG_ADD (id == 6425)
 
-
+// #define _DEBUG_SQ (id==8)
 // #define _DEBUG_WEIGHTEDSUM (id==41)
 
 // #define _DEBUG_DIV true
@@ -3192,7 +3192,7 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 	
 #ifdef _DEBUG_SQ
   if(_DEBUG_SQ) {
-    std::cout  << scope[0].get_domain() << "^2 = " << scope[1].get_domain() << std::endl;
+    std::cout  << "prop " << scope[0].get_domain() << "^2 = " << scope[1].get_domain() << std::endl;
   }
 #endif
 	
@@ -3242,12 +3242,20 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 			
 			if( FAILED(scope[1].set_max(ub_sq)) || FAILED(scope[1].set_min(lb_sq)) ) wiped = FAILURE(1);
 			else {
+				
+#ifdef _DEBUG_SQ
+  if(_DEBUG_SQ) {
+			std::cout  << scope[0].get_domain() << "^2 = [" << scope[1].get_domain() << "]" << std::endl;
+	  }
+#endif	
+				
 				// compute the bounds of x given the bounds of x^2
 				int cur_ub_xsq = scope[1].get_max();
 				if(cur_ub_xsq < ub_sq) {
 					// there's something to prune because of x^2 upper bound
 					ub_sr = (int)(sqrt((double)(cur_ub_xsq)));
 					if( FAILED(scope[0].set_max(ub_sr)) ) wiped = FAILURE(0);
+					if( FAILED(scope[0].set_min(-ub_sr)) ) wiped = FAILURE(0);
 				}
 				if(IS_OK(wiped)) {
 					int cur_lb_xsq = scope[1].get_min();
@@ -3259,7 +3267,11 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 						// std::cout << cur_ub_xsq << " " << (sqrt((double)(cur_ub_xsq))) << " " << ceil(sqrt((double)(cur_ub_xsq))) << " " << lb_sr << std::endl;
 						// exit(1);
 						
-						if( FAILED(scope[0].set_min(lb_sr)) ) wiped = FAILURE(0);
+						if(lb_sr > 0) {
+							if( FAILED(scope[0].remove_interval(1-lb_sr, lb_sr-1)) ) wiped = FAILURE(0);
+						}
+						
+						// if( FAILED(scope[0].set_min(lb_sr)) ) wiped = FAILURE(0);
 					}
 				}
 			}
@@ -3270,7 +3282,10 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 	
 #ifdef _DEBUG_SQ
   if(_DEBUG_SQ) {
-    std::cout  << scope[0].get_domain() << "^2 = " << scope[1].get_domain() << std::endl;
+		if(IS_OK(wiped))
+			std::cout  << "  => "<< scope[0].get_domain() << "^2 = " << scope[1].get_domain() << std::endl;
+		else
+			std::cout << "fail!" << std::endl;
 		// exit(1);
   }
 #endif
