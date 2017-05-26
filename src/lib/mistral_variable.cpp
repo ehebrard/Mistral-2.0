@@ -4828,7 +4828,7 @@ void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
     if(lower_bound == (int)(children.size)) {
       
 #ifdef _DEBUG_AC
-      std::cout << "pre-propagte sum(" << children[0] ;
+      std::cout << "pre-propagate sum(" << children[0] ;
       for(unsigned int i=0; i<children.size; ++i)
 	std::cout << ", " << children[i];
       std::cout << ") = " << children.size;
@@ -5029,8 +5029,6 @@ Mistral::Variable Mistral::Parity(Vector< Variable >& args, const int p) {
   Variable exp(new ParityExpression(args,p));
   return exp;
 }
-
-
 
 
 Mistral::LinearExpression::LinearExpression(Vector< Variable >& args, 
@@ -5365,7 +5363,7 @@ Mistral::Variable Mistral::Sum(std::vector< Variable >& args, const int l, const
 	Variable exp;
 	
 	if(args.size()>0) {
-		exp = Variable( new LinearExpression(args, l, u,offset) );
+		exp = Variable( new LinearExpression(args, l, u, offset) );
 	} else {
 		exp = Variable( (l<=offset && u>=offset) );
 	}

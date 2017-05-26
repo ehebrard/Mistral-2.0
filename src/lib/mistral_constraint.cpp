@@ -51,6 +51,9 @@
 //#define _DEBUG_SQ true
 //#define _DEBUG_ADD (id == 6425)
 
+
+// #define _DEBUG_WEIGHTEDSUM (id==41)
+
 // #define _DEBUG_DIV true
 
 

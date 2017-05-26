@@ -44,7 +44,7 @@
  *
  */
 
-// #define _VERBOSE_
+// #define _VERBOSE_ true
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -63,6 +63,8 @@ namespace XCSP3Core {
 			
 				map<string, Mistral::VarArray> array;
 				map<string, Mistral::Variable> variable;
+				// map<string, int> id_map;
+				// BitSet var_set;
 			
 				Mistral::VarArray variables;
 				std::vector<string> var_ids;
@@ -279,7 +281,7 @@ void displayList(vector <T> &list, string separator = " ") {
         for(int i = 0; i < 3; i++)
             cout << list[i] << separator;
         cout << " ... ";
-        for(int i = list.size() - 4; i < list.size(); i++)
+        for(size_t i = list.size() - 4; i < list.size(); i++)
             cout << list[i] << separator;
         cout << endl;
         return;
@@ -344,11 +346,13 @@ void XCSP3MistralCallbacks::endInstance() {
 #endif
 	
 		for( auto id : declared_var_ids ) {
+			// id_map[id] = variables.size;
 			Variable X = variable[id];
 			variables.add(X);
 			var_ids.push_back(id);
 		}
 		
+		// var_set.initialise(0, variables.size, BitSet::empt);
 	
 }
 
@@ -2747,10 +2751,30 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				rv = ( x1 + x2 );
 			} else {
 				VarArray scope;
+				Vector<int> weights;
+				
+				map<int, int> id_map;
+				bool weighted = false;
 				for( auto x : fn->args ) {
-					scope.add( postExpression(x) );
+					Variable y = postExpression(x);
+					
+					if(y.id()>=0 && id_map.count( y.id() )) {
+						weights[id_map[y.id()]]++;
+						weighted = true;
+					} else {
+						id_map[y.id()] = weights.size;
+						weights.add(1);
+						scope.add( y );
+					}
 				}
-				rv = Sum(scope);
+				
+				if(weighted) {
+					rv = Sum(scope, weights);
+				} else {
+					rv = Sum(scope);
+				}
+				
+
 			}
 			
     }
