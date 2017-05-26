@@ -1808,7 +1808,6 @@ Mistral::Event Mistral::Variable::restore() {
 
 Mistral::Event Mistral::VariableRange::remove_interval(const int lo, const int up) {
   Event removal = DOMAIN_EVENT;
-
   if(lo <= min) removal = set_min(up+1);
   else if(up >= max) removal = set_max(lo-1);
   else {

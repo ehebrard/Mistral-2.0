@@ -70,6 +70,7 @@ namespace XCSP3Core {
 				std::vector<string> var_ids;
 				std::vector<string> declared_var_ids;
 						
+				Mistral::BitSet* last_domain;
 				Mistral::Variable last_var;
 				Mistral::Vector< const int* >* last_table;
 			
@@ -337,6 +338,8 @@ void XCSP3MistralCallbacks::beginInstance(InstanceType type) {
 #ifdef _VERBOSE_
     cout << "Start Instance - type=" << type << endl;
 #endif
+		
+		last_domain = NULL;
 }
 
 
@@ -518,25 +521,30 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var, 
 		if(support) {		
 			auto the_min = *std::min_element(begin(tuples), end(tuples));
 			auto the_max = *std::max_element(begin(tuples), end(tuples));
-		
-			BitSet domain(the_min, the_max, BitSet::empt);
+			
+			if(last_domain)
+				delete last_domain;
+			last_domain = new BitSet(the_min, the_max, BitSet::empt);
 		
 			for( auto t : tuples ) {
-				domain.add(t);
+				last_domain->add(t);
 			}
 		
-			solver.add( Member(variable[var->id], domain) );
+			solver.add( Member(variable[var->id], *last_domain) );
 	
 		} else {
 		
 			Variable X = variable[var->id];
-			BitSet domain(X.get_min(), X.get_max(), BitSet::full);
+			
+			if(last_domain)
+				delete last_domain;
+			last_domain = new BitSet(X.get_min(), X.get_max(), BitSet::full);
 			
 			for( auto t : tuples ) {
-				domain.remove(t);
+				last_domain->remove(t);
 			}
 			
-			solver.add( Member(X, domain) );
+			solver.add( Member(X, *last_domain) );
 		
 		}
 }
@@ -547,16 +555,23 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id, vector<XVariab
     cout << "\n    extension constraint similar as previous one: " << id << endl;
 #endif
 				
+				
+				
 		VarArray scope;
 		getVariables(list, scope);
 		
-		TableExpression* tab = new TableExpression(scope, support);
-		for( auto t : *last_table ) {
-			tab->add(t);
-		}
 		
+		if(scope.size>1) {
+			TableExpression* tab = new TableExpression(scope, support);
+			for( auto t : *last_table ) {
+				tab->add(t);
+			}
 		
-		solver.add( Variable(tab) );
+			solver.add( Variable(tab) );
+		} else {
+			
+			solver.add( Member(scope[0], *last_domain) );
+		}	
 }
 
 

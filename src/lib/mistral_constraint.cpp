@@ -51,10 +51,12 @@
 //#define _DEBUG_SQ true
 //#define _DEBUG_ADD (id == 6425)
 
-// #define _DEBUG_SQ (id==8)
+// #define _DEBUG_SQ (id==312)
 // #define _DEBUG_WEIGHTEDSUM (id==41)
 
 // #define _DEBUG_DIV true
+
+// #define _DEBUG_GENPROPAG (id==12)
 
 
 
@@ -3225,10 +3227,14 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 				} else {
 					ub_sq = ub_sr*ub_sr;
 				}
-				lb_sq = scope[0].get_min_pos();
-				val = -scope[0].get_max_neg();
-				if(lb_sq > val) {
-					lb_sq = val;
+				if(scope[0].contain(0)) {
+					lb_sq = 0;
+				} else {				
+					lb_sq = scope[0].get_min_pos();
+					val = -scope[0].get_max_neg();
+					if(lb_sq > val) {
+						lb_sq = val;
+					}
 				}
 				lb_sq *= lb_sq;
 			}
