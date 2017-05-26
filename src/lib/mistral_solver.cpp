@@ -3821,7 +3821,7 @@ bool Mistral::Solver::propagate()
 					if(var_evt.third != culprit.propagator) {
 #ifdef _DEBUG_AC
 						if(_DEBUG_AC) {
-							std::cout << variables[86] << " in " << variables[86].get_domain() << "  " << variables[17] << " in " << variables[17].get_domain() << " ";
+							// std::cout << variables[86] << " in " << variables[86].get_domain() << "  " << variables[17] << " in " << variables[17].get_domain() << " ";
 							std::cout << "c [" << culprit.id() << "]"; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
 							std::cout << "  -awake " << culprit << ": "; 
 							std::cout.flush();
@@ -5316,7 +5316,8 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   if(_DEBUG_SEARCH) {
     std::cout << parameters.prefix_comment;
     for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-    std::cout << "notify solution to goal " << objective << " " << objective->objective << " " << objective->objective.get_domain() << std::endl;
+		if(objective && !objective->objective.is_void())
+			std::cout << "notify solution to goal " << objective << " " << objective->objective << " " << objective->objective.get_domain() << std::endl;
   }
 #endif
 
