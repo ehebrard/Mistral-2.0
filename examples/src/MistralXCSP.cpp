@@ -1,8 +1,11 @@
 #include <XCSP3CoreParser.h>
 #include "XCSP3MistralCallbacks.hpp"
 
+#include <mistral_search.hpp>
 
 using namespace XCSP3Core;
+
+
 
 
 void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
@@ -51,7 +54,7 @@ void print_outcome(XCSP3MistralCallbacks& cb, std::ostream& os) {
 }
 
 
-void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os) {
+void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 	if(cb.solver.statistics.num_solutions > 0) {
 		os << " v <instantiation type=\"";
 		if(cb.solver.statistics.outcome == OPT)
@@ -79,6 +82,20 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os) {
 		os << " </values>\n v </instantiation>\n";
 	}
 }
+
+
+class ObjectivePrinter : public SolutionListener {
+
+public:
+	Solver *solver;
+	
+	ObjectivePrinter(Solver *s) : SolutionListener(), solver(s) {}
+	
+	void notify_solution() {
+		std::cout << " o " << solver->objective->value() << std::endl;
+	}
+
+};
 
 
 
@@ -116,6 +133,10 @@ int main(int argc,char **argv) {
 		
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
+	
+	if(solver.objective && solver.objective->is_optimization()) {
+		solver.add( new ObjectivePrinter(&solver) );
+	}
 	
 	// std::cout << solver.constraints[277].binary() << std::endl;
 	
