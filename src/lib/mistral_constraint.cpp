@@ -3214,7 +3214,7 @@ Mistral::PropagationOutcome Mistral::PredicateSquare::propagate() {
 				// The domain is strictly positive
 				lb_sq = lb_sr*lb_sr;
 				ub_sq = ub_sr*ub_sr;
-			} else if(ub_sq <= 0) {
+			} else if(ub_sr <= 0) {
 				// The domain is strictly negative
 				lb_sq = ub_sr*ub_sr;
 				ub_sq = lb_sr*lb_sr;
@@ -8280,8 +8280,10 @@ void Mistral::ConstraintGAC2001::initialise() {
     /// init the reversible data structure 'firstSupport'
     firstSupport[i] = new ReversibleNum<int>[nval];
     firstSupport[i] -= themins[i];
+		
+		// std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
 
-    Domain dom_xi(scope[i]);
+    Domain dom_xi(scope[i].get_var());
     Domain::iterator xit = dom_xi.begin();
     Domain::iterator xend = dom_xi.end();
 
@@ -20266,19 +20268,30 @@ Mistral::PropagationOutcome ConstraintOccurrences::propagate()
   if ((sum(l, minValue(l), minsorted[0]->min - 1) > 0) ||
       (sum(l, maxsorted[scope.size-1]->max + 1, maxValue(l)) > 0)) {
     //_vars.getManager().fail();
+				
+				// std::cout << "EARLY FAIL" << std::endl;
+				// exit(1);
 
     wiped = FAILURE(0);
     return wiped;
   }
+	
+	// std::cout << "NOPE" << std::endl;
+	// exit(1);
 
   statusLowerMax = filterLowerMax();
   if( statusLowerMax != INCONSISTENT ) {
     statusLowerMin = filterLowerMin(t, d, h,
 			stableInterval, potentialStableSets, newMin);
-  }
+  } 
+	
+
 
   if( (statusLowerMax == INCONSISTENT) || (statusLowerMin == INCONSISTENT) ) {
     //_vars.getManager().fail();
+		
+		std::cout << " FAIL HERE (2)" << std::endl;
+		exit(1);
 
     wiped = FAILURE(0);
     return wiped;

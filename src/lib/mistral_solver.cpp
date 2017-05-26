@@ -5316,7 +5316,8 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   if(_DEBUG_SEARCH) {
     std::cout << parameters.prefix_comment;
     for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-    std::cout << "notify solution to goal " << objective << " " << objective->objective << " " << objective->objective.get_domain() << std::endl;
+		if(objective && !objective->objective.is_void())
+			std::cout << "notify solution to goal " << objective << " " << objective->objective << " " << objective->objective.get_domain() << std::endl;
   }
 #endif
 
