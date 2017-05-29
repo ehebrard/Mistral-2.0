@@ -178,7 +178,7 @@ namespace XCSP3Core {
             if(currentElement == "gt") tmp = new NodeOperator(NT_GT);
 
             if(currentElement == "ne") tmp = new NodeOperator(NT_NE);
-            if(currentElement == "eq") tmp = new NodeOperator(NT_EQ);
+            if(currentElement == "eq") tmp = new NodeOperator(NT_EQ, -1);
 
             if(currentElement == "not") tmp = new NodeOperator(NT_NOT, 1);
             if(currentElement == "and") tmp = new NodeOperator(NT_AND, -1);

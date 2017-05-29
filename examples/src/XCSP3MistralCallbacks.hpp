@@ -2588,7 +2588,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
         assert(!root);
 				
         NodeVariable *nv = (NodeVariable *) n;
-        return variable[nv->var];
+        rv = variable[nv->var];
 				
     }
 
@@ -2596,7 +2596,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
         assert(!root);
 				
         NodeConstant *nc = (NodeConstant *) n;
-        return Variable(nc->val,nc->val);
+        rv = Variable(nc->val,nc->val);
 
     }
 
@@ -2604,10 +2604,23 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     if(fn->type == NT_EQ) {
 			
+			if(fn->args.size() == 2) {
         Variable x1 = postExpression(fn->args[0]);
         Variable x2 = postExpression(fn->args[1]);
 				rv = (x1 == x2);
-   
+			} else {
+				VarArray scope;
+				for( auto expr : fn->args ) {
+					scope.add( postExpression(expr) );
+				}
+				VarArray equalities;
+				for(size_t i=1; i<scope.size; ++i) {
+					equalities.add(scope[i-1] == scope[i]);
+				}
+				
+				rv = (BoolSum(equalities) == (scope.size-1));
+			}
+			
     }
 
     if(fn->type == NT_NE) {
