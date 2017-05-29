@@ -2180,26 +2180,11 @@ inline Variable duplicate_variable(Variable var, Solver * s){
                            int horizon) {
 									
 				int n = start.size;					 
-														 
-			 // std::cout << "Decompose cumulative constraint CAP=" << cap.get_max() << " (as a flow)" << std::endl;
-			 //
-			 // for(int i=0; i<n; ++i) {
-			 //
-			 // 				 std::cout << "r" << start[i].id() << " in " << start[i].get_domain() << ": p=" << dur[i].get_domain() << ", r=" << req[i].get_domain() << std::endl;
-			 //
-			 // }
-			 
-			 // std::cout << " create end variables:" << std::endl;
-			 //
 			 Vector<Variable> end;
 			 
 			 
 			 for(int i=0; i<n; ++i) {
-				 
-				 // std::cout << start[i].id() << " " << dur[i] << std::endl;
-				 
 			 				end.add(dur[i].is_ground() ? start[i] + dur[i].get_max() : start[i] + dur[i]);
-							// std::cout << end.back() << std::endl;
 			 } 
 			 
 			 // std::cout << " create flow variables:" << std::endl;

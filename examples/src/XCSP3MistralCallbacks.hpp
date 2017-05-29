@@ -45,12 +45,17 @@
  */
 
 // #define _VERBOSE_ true
+// #define _DEBUG_CUMULATIVE
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
 #else
 #define _ID_(e) " "
 #endif
+
+
+
+
 
 
 
@@ -75,6 +80,8 @@ namespace XCSP3Core {
 				Mistral::Vector< const int* >* last_table;
 			
 				Mistral::Goal *goal;
+			
+				Mistral::Vector<Mistral::Variable> _demand_;
 			
 			
         XCSP3MistralCallbacks(Mistral::Solver& s);
@@ -228,6 +235,17 @@ namespace XCSP3Core {
         virtual void buildConstraintNoOverlap(string id, vector <vector<XVariable *>> &origins, vector <vector<XVariable *>> &lengths, bool zeroIgnored) override;
 
         virtual void buildConstraintInstantiation(string id, vector<XVariable *> &list, vector<int> &values) override;
+				
+				void p_cumulative_flow(Mistral::Solver& s, Mistral::Vector<Mistral::Variable>& start, Mistral::Vector<Mistral::Variable>& dur,Mistral::Vector<Mistral::Variable>& req,Mistral::Variable cap, int horizon);
+				void p_cumulative_discretization(Mistral::Solver& s, Mistral::Vector<Mistral::Variable>& start, Mistral::Vector<Mistral::Variable>& dur,Mistral::Vector<Mistral::Variable>& req,Mistral::Variable cap, int horizon);
+				
+        virtual void buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<int> &heights, XCondition &xc) override;
+
+        virtual void buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<XVariable *> &varHeights, XCondition &xc) override;
+
+        virtual void buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<int> &heights, XCondition &xc) override;
+
+        virtual void buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<XVariable *> &heights, XCondition &xc) override;
 
         virtual void buildObjectiveMinimizeExpression(string expr) override;
 
@@ -2347,6 +2365,417 @@ void XCSP3MistralCallbacks::buildConstraintInstantiation(string id, vector<XVari
 			solver.add( variable[list[i]->id] == values[i] );
 		}
 }
+
+void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s, 
+                       Vector<Variable>& start, 
+                       Vector<Variable>& dur,
+                       Vector<Variable>& req,
+                       Variable cap, 
+                       int horizon) {
+							
+	int n = start.size;					 
+	Vector<Variable> end;
+	 
+	 
+	for(int i=0; i<n; ++i) {
+	 	end.add(dur[i].is_ground() ? start[i] + dur[i].get_max() : start[i] + dur[i]);
+	} 
+  
+  Variable **flow = new Variable*[n+1];
+  for(int i=0; i<=n; ++i) {
+    flow[i] = new Variable[n+1];
+  }
+
+  for(int i=0; i<n; ++i) {
+		
+    flow[i][n] = Variable(0, req[i].get_max());
+    flow[n][i] = Variable(0, req[i].get_max());
+		
+    for(int j=i+1; j<n; ++j) {
+      // for each pair of tasks, create a variable for the amount flow going from ti to tj
+      int mf = (req[i].get_max()>req[j].get_max() ? req[j].get_max() : req[i].get_max());
+      flow[i][j] = Variable(0, mf);
+      flow[j][i] = Variable(0, mf);
+			
+			if(mf>0) {
+				// the flow can go only in one direction 
+      	s.add((flow[i][j]<=0) || (flow[j][i]<=0));
+			}
+    }
+  }
+  
+  // flow conservation constraints
+  Vector<Variable> outflow;
+  Vector<Variable> inflow;
+  for(int i=0; i<n; ++i) {
+		
+		//std::cout << " conservation in node " << start[i].id() << std::endl;
+    for(int j=0; j<=n; ++j) {
+      if(i != j) {
+				
+				// std::cout << i << "." << j << std::endl;
+				if(flow[i][j].get_max()>0) {
+					
+					//std::cout << "  + flow to/from " << (j<n ? start[j].id() : n) << std::endl;
+					outflow.add(flow[i][j]);
+        	inflow.add(flow[j][i]);
+				}
+      }
+    }
+		
+		// std::cout << "Must be equal to: ";
+		// std::cout.flush();
+		
+    if(req[i].is_ground()) {
+			
+			//std::cout << "[" << req[i].get_min() << ", " << req[i].get_max() << "]" << std::endl;	
+			Variable sum_exp = Sum(outflow, req[i].get_min(), req[i].get_max());
+				
+			s.add(sum_exp);	
+
+      //s.add(Sum(outflow, req[i].get_min(), req[i].get_max()));
+      s.add(Sum(inflow, req[i].get_min(), req[i].get_max()));
+
+    } else {
+			
+			// std::cout << req[i].get_domain() << std::endl;	
+      s.add(Sum(outflow) == req[i]);
+      s.add(Sum(inflow) == req[i]);
+    }
+    outflow.clear();
+    inflow.clear();
+  }
+	
+	//std::cout << " post total flow constraints:" << std::endl;
+	
+  for(int j=0; j<n; ++j) {
+		if(flow[n][j].get_max()>0)
+			outflow.add(flow[n][j]);
+		if(flow[j][n].get_max()>0)
+    	inflow.add(flow[j][n]);
+  }
+
+  if(cap.is_ground()) {
+		
+		//std::cout << "fixed capacity" << std::endl;	
+    s.add(Sum(outflow, 0, cap.get_max()));
+    s.add(Sum(inflow, 0, cap.get_max()));
+  } else {
+	
+		//std::cout << "variable capacity" << std::endl;
+    s.add(Sum(outflow) == cap);
+    s.add(Sum(inflow) == cap);
+  }
+
+  // There can be a flow going from i to j only if i precedes j
+  for(int i=0; i<n; ++i) {
+    for(int j=0; j<n; ++j) {
+      if(i != j) {
+				if(flow[i][j].get_max() > 0) {
+					s.add( (flow[i][j]>0) <= (end[i] <= start[j]) );
+					s.add( (flow[j][i]>0) <= (end[j] <= start[i]) );
+				}
+      }
+    }
+  }
+
+  for(int i=0; i<=n; ++i) {
+    delete [] flow[i];
+  }
+  delete [] flow;
+}
+
+void XCSP3MistralCallbacks::p_cumulative_discretization(Solver& s, 
+                                 Vector<Variable>& start, 
+                                 Vector<Variable>& dur,
+                                 Vector<Variable>& req,
+                                 Variable cap, 
+                                 int horizon) {
+											 
+  Variable     in_process;
+  Vector<Variable>  scope;
+  Vector<int>      demand;
+  int        process_time;
+  int               total;
+  int             min_req;
+  int           isBoolean;
+
+  // post a sum constraint for each time point
+  for(int t=0; t<=horizon; ++t) {
+    demand.clear();
+    scope.clear();
+    total = 0;
+    isBoolean = true;
+    min_req = Mistral::INFTY;
+    for(int i=0; i<start.size; ++i) {
+      if(start[i].get_min() <= t && start[i].get_max()+dur[i].get_max() >= t) {
+        total += req[i].get_max();
+        if(min_req > req[i].get_min()) {
+          min_req = req[i].get_min();
+        }
+
+        // this tasks can be in process at time t
+        if(dur[i].is_ground()) {
+          process_time = dur[i].get_min();
+          // constant duration
+          if(process_time==1)
+        	  in_process = (start[i] == t);
+          else
+        	  in_process = (Member(start[i], t-process_time+1, t));
+        } else {
+          // TODO: tasks with variable durations
+					cout << " s UNSUPPORTED" << _ID_(": Discretization of Cumulative with variable durations") << "\n";
+					exit(1);
+        }
+        if(req[i].is_ground()) {
+          //std::cout << "the demand is fixed: " << req[i].get_min() << std::endl;
+          scope.add(in_process);
+          demand.add(req[i].get_min());
+        } else {
+          //std::cout << "the demand is variable: " << req[i].get_domain() << std::endl;
+          scope.add((in_process * req[i]));
+          demand.add(1);
+          if(req[i].get_max()>1) {
+            isBoolean = false;
+          }
+        }
+      } else {
+        //std::cout << "  -task t" << i << " cannot be in process\n";
+      }
+    }
+  
+    if(scope.size>1 && total>cap.get_min()) {
+      if(cap.is_ground()) {
+        if(isBoolean) {
+          // check if this is in fact a clause
+          if(2*min_req > cap.get_max()) {
+            s.add(BoolSum(scope,-Mistral::INFTY,1));
+          } else {
+            s.add(BoolSum(scope,demand,-Mistral::INFTY,cap.get_min()));
+          }
+        }
+        else
+          s.add(Sum(scope,demand,-Mistral::INFTY,cap.get_min()));
+      } else {
+        scope.add(cap);
+        demand.add(-1);
+        s.add(Sum(scope,demand,-Mistral::INFTY,0));
+      }
+    }
+  }
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<int> &heights, XCondition &cond) {
+	
+#ifdef _DEBUG_CUMULATIVE
+			std::cout << "Decompose cumulative constraint" << std::endl;
+#endif
+			
+	cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
+	exit(1);
+			
+	
+	if( cond.op != LE) {
+		cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
+		exit(1);
+	}
+	
+	Variable cap;
+	VarArray start;
+	VarArray dur;
+	VarArray req;
+	
+	getVariables(origins, start);
+	for(auto l : lengths) {
+		dur.add(Variable(l,l));
+	}
+	for(auto h : heights) {
+		dur.add(Variable(h,h));
+	}
+	if( cond.operandType == VARIABLE ) {
+		cap = variable[cond.var];
+	} else if( cond.operandType == INTEGER ) {
+		cap = Variable(cond.val, cond.val);
+	} else {
+		cout << " s UNSUPPORTED" << _ID_(": Weird Cumulative") << "\n";
+		exit(1);
+	}
+
+
+	int orig=INFTY, horizon = 0, ddate, rdate, unit_req=true, unit_dur=true, disjunctive=false, same_req=true, same_dur=true, var_dur=false, var_req=false;
+	//
+
+	for(int i=0; i<start.size; ++i) {
+		
+		std::cout << start[i].get_domain() << std::endl;
+		
+		ddate = start[i].get_max() + dur[i].get_max();
+		if(horizon<ddate) {
+			horizon = ddate;
+		}
+		rdate = start[i].get_min();
+		if(orig>rdate) {
+			orig = rdate;
+		}
+		if(!req[i].is_ground())
+			var_req = true;
+		if(!dur[i].is_ground())
+			var_dur = true;
+		if(req[i].get_max() > 1 || req[i].get_min() < 1)
+			unit_req = false;
+		if(dur[i].get_max() > 1 || dur[i].get_min() < 1)
+			unit_dur = false;
+		if(same_dur && (!dur[i].is_ground() || (i && dur[i-1].get_min() != dur[i].get_min())))
+			same_dur = false;
+		if(same_req && (!req[i].is_ground() || (i && req[i-1].get_min() != req[i].get_min())))
+			same_req = false;
+
+
+		// if(!dur[i].is_ground() || !req[i].is_ground()) {
+		//   simple = false;
+		// }
+	}
+
+      
+#ifdef _DEBUG_CUMULATIVE
+	std::cout << "\nhorizon  = " << horizon << std::endl
+		<< "capacity = " << cap << std::endl
+			<< "tasks    = " << start.size << std::endl;
+#endif
+
+	// int *order = new int[start.size];
+	// for(int i=0; i<start.size; ++i) {
+	// 	order[i] = i;
+	// }
+	std::vector<int> order;
+	for(int i=0; i<start.size; ++i) {
+		order.push_back(i);
+	}
+	
+	_demand_.copy(req);
+	
+	std::sort(begin(order), end(order),  
+	 [&](int x, int y) {
+		 
+		 std::cout << "compare " << x << "," << y << std::endl;
+		 
+	  if(_demand_[x].get_min() > _demand_[y].get_min())
+	    return 1;
+	  else if(_demand_[x].get_min() < _demand_[y].get_min())
+	    return -1;
+	  return 0;
+	}
+	);
+	_demand_.neutralise();
+
+	if(start.size>1 && req[order[0]].get_min()+req[order[1]].get_min()>cap.get_max()) {
+		disjunctive = true;
+	}
+
+
+#ifdef _DEBUG_CUMULATIVE
+	for(int i=0; i<start.size; ++i) {
+		int oi = order[i];
+		std::cout << "           [" << start[oi].get_min() <<  ".." 
+			<<  start[oi].get_max()+dur[oi].get_max() << "]";
+		if(dur[oi].is_ground())
+			std::cout << " p=" << dur[oi].get_max() ;
+		else
+			std::cout << " p=" << dur[oi].get_domain() ;
+		if(req[oi].is_ground())
+			std::cout << " r=" << req[oi].get_max() ;
+		else
+			std::cout << " r=" << req[oi].get_domain() ;
+		std::cout << std::endl;
+	}
+	//exit(1);
+#endif
+
+
+	// delete [] order ;
+
+	int size_discretization = horizon*start.size;
+	int size_flow = start.size*start.size*cap.get_max();
+
+
+#ifdef _DEBUG_CUMULATIVE
+	if(unit_dur && disjunctive) {
+
+		std::cout << "this is an alldiff, but do nothing about it!" << std::endl;
+
+		// s.add(AllDiff(start));
+	} else if(unit_dur && unit_req) {
+
+		std::cout << "this is a gcc, but do nothing about it!" << std::endl;
+
+		// int *lb = new int[horizon-orig];
+		// int *ub = new int[horizon-orig];
+		// for(int i=orig; i<horizon; ++i) {
+		// 	lb[i-orig] = 0; //cap.get_min();
+		// 	ub[i-orig] = cap.get_max();
+		// }
+		// s.add(Occurrences(start, orig, horizon-1, lb, ub));
+		// delete [] lb;
+		// delete [] ub;
+
+	} else if(disjunctive && !var_dur) {
+
+		if(same_dur) {
+			std::cout << "this is an interdistance, but do nothing about it!" << std::endl;
+		} else {
+			std::cout << "this is a disjunctive, but do nothing about it!" << std::endl;
+		}
+
+		// p_disjunctive(s, start, dur);
+	} 
+#endif
+	// else {
+        
+#ifdef _DEBUG_CUMULATIVE
+		if(same_dur && same_req) {
+			std::cout << "this is a symmetric cumulative" << std::endl;
+		} else if(same_dur) {
+			std::cout << "this is a cumulative with equal processing times" << std::endl;
+		} else if(same_req) {
+			std::cout << "this is a cumulative with equal demands" << std::endl;
+		} else {
+			std::cout << "this is a general cumulative" << std::endl;
+		}
+        
+		std::cout << "size of the time-discretization encoding = " << size_discretization << std::endl;
+		std::cout << "size of the flow encoding = " << size_flow << std::endl;
+#endif
+  
+		if(size_flow < size_discretization || var_dur) {
+			p_cumulative_flow(solver, start, dur, req, cap, horizon);
+		} else {
+			p_cumulative_discretization(solver, start, dur, req, cap, horizon);
+		}
+
+
+	// }
+	
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<XVariable *> &varHeights, XCondition &xc) {
+	cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+	exit(1);
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<int> &heights, XCondition &xc) {
+	cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+	exit(1);
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<XVariable *> &heights, XCondition &xc) {
+	cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+	exit(1);
+}
+
 
 
 void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
