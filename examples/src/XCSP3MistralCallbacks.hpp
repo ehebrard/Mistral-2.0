@@ -45,7 +45,7 @@
  */
 
 // #define _VERBOSE_ true
-// #define _DEBUG_CUMULATIVE
+#define _DEBUG_CUMULATIVE
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -2572,8 +2572,11 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 			std::cout << "Decompose cumulative constraint" << std::endl;
 #endif
 			
-	cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
-	exit(1);
+	// cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
+	// exit(1);
+			
+			
+			std::cout << origins.size() << " " << lengths.size() << " " << heights.size() << std::endl;
 			
 	
 	if( cond.op != LE) {
