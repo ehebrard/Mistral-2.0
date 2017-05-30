@@ -5208,6 +5208,13 @@ namespace Mistral {
     int *bounds;  // bounds[1..nb] hold set of min & max of the n intervals
     // while bounds[0] and bounds[nb+1] allow sentinels
     int nb;
+		
+		
+		int minvalue;
+		int maxvalue;
+		std::vector<int> dlb;
+		std::vector<int> dub;
+		
   
     partialSum* l; 
     partialSum* u;

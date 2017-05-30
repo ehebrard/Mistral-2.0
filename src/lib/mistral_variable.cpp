@@ -4363,8 +4363,11 @@ Mistral::Variable Mistral::Occurrences(Vector< Variable >& args, std::vector<int
 	int *lb = new int[last-first+1];
 	int *ub = new int[last-first+1];
 	
-	std::fill(lb, lb+last-first+1, -INFTY);
-	std::fill(ub, ub+last-first+1,  INFTY);
+	// std::fill(lb, lb+last-first+1, -INFTY);
+	// std::fill(ub, ub+last-first+1,  INFTY);
+	
+	std::fill(lb, lb+last-first+1, 0);
+	std::fill(ub, ub+last-first+1, 0);
 	
 	for(unsigned int i=0; i<values.size(); ++i) {
 		lb[values[i]-first] = lbs[i];
@@ -4575,6 +4578,7 @@ Mistral::TableExpression::TableExpression(Vector< Variable >& args, Vector<const
 Mistral::TableExpression::TableExpression(Vector< Variable >& args, const bool sup, const AlgorithmType ct) 
   : Expression(args), support(sup), propagator(ct) { 
 	tuples = new Vector< const int* >; 
+	tuples->initialise(10000);
 }
 
 void Mistral::TableExpression::add(int* tuple) 

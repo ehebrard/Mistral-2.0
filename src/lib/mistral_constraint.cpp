@@ -58,6 +58,8 @@
 
 // #define _DEBUG_GENPROPAG (id==12)
 
+ // #define _DEBUG_GCC true
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -8321,10 +8323,25 @@ void Mistral::ConstraintGAC2001::initialise() {
     /// init the list of supports for each value
     supportList[i] = new Vector<const int*> [scope[i].get_initial_max() - themins[i] + 1];
     supportList[i] -= themins[i];
+		
+		// std::cout << " [" << scope[i].get_initial_min() << ".." << scope[i].get_initial_max() << "]";
   }
+	// std::cout << std::endl;
 
   i=table.size;
   while( i-- ) {
+		
+		// std::cout << i << " add (" << (int*)(table[i]) << ")" << std::endl;
+		// for(j=0; j<arity; ++j) {
+		// 	std::cout << " " << table[i][j] << std::endl;
+		// }
+		// std::cout << std::endl;
+		//
+		// if(i==1116) {
+		// 	exit(1);
+		// }
+	
+		
     for(j=0; j<arity; ++j) 
       supportList[j][table[i][j]].add( table[i] );
   }
@@ -19798,7 +19815,7 @@ Mistral::Explanation::iterator Mistral::ConstraintSimplifiedExplanationMultiAtMo
 
 	++sol->statistics.num_amsc_explanations;
 	sol->statistics.avg_amsc_expl_size += explanation.size;
-
+	
 	end = explanation.end();
 	return explanation.begin();
 
@@ -19841,6 +19858,13 @@ ConstraintOccurrences::ConstraintOccurrences(Vector< Variable >& scp,
   int range = lastDomainValue - firstDomainValue + 1;
   l = initializePartialSum(firstDomainValue, range, minOccurrences);
   u = initializePartialSum(firstDomainValue, range, maxOccurrences);
+	
+	minvalue = firstDomainValue;
+	maxvalue = lastDomainValue;
+	for(int v=firstDomainValue; v<=lastDomainValue; ++v) {
+		dlb.push_back(minOccurrences[v-firstDomainValue]);
+		dub.push_back(maxOccurrences[v-firstDomainValue]);
+	}
   
 }
 
@@ -20216,6 +20240,52 @@ ConstraintOccurrences::filterUpperMin(int *tl, int *c,
 Mistral::PropagationOutcome ConstraintOccurrences::propagate()
 {
   PropagationOutcome wiped = CONSISTENT;
+	
+	
+#ifdef _DEBUG_GCC
+	for( auto x : scope ) {
+		std::cout << " " << x << " " << x.get_domain() ;
+	}
+	
+	int tlb=0;
+	int tub=0;
+	std::cout << std::endl;
+	for( int v=minvalue; v<=maxvalue; ++v ) {
+		if( dlb[v-minvalue] > -INFTY || dub[v-minvalue] < INFTY ) {
+			std::cout << v << ": ";
+		}
+		if( dlb[v-minvalue] > -INFTY ) {
+			std::cout << "[" << dlb[v-minvalue] ;
+		}
+		if( dlb[v-minvalue] > -INFTY || dub[v-minvalue] < INFTY ) {
+			std::cout << "..";
+		}
+		if( dub[v-minvalue] < INFTY ) {
+			std::cout << dub[v-minvalue] << "]";
+		}
+		if( dlb[v-minvalue] > -INFTY || dub[v-minvalue] < INFTY ) {
+			
+			int m=0;
+			int c=0;
+			for( int i=0; i<scope.size; ++i ) {
+				if( scope[i].contain(v) ) {
+					++c;
+					if( scope[i].is_ground() ) {
+						++m;
+					}
+				}
+			}
+			
+			tlb += dlb[v-minvalue];
+			tub += dub[v-minvalue];
+			
+			
+			std::cout << " \in (" << m << ".." << c<< ")"<< std::endl;
+		}
+	}
+	
+	std::cout << "total: " << scope.size << " \in [" << tlb << ".." << tub << "]\n";
+#endif
 
   int statusLower, statusUpper;
   int statusLowerMin=NOVAL, statusUpperMin;
@@ -20311,8 +20381,10 @@ Mistral::PropagationOutcome ConstraintOccurrences::propagate()
   if( (statusLowerMax == INCONSISTENT) || (statusLowerMin == INCONSISTENT) ) {
     //_vars.getManager().fail();
 		
+#ifdef _DEBUG_GCC
 		std::cout << " FAIL HERE (2)" << std::endl;
 		exit(1);
+#endif
 
     wiped = FAILURE(0);
     return wiped;

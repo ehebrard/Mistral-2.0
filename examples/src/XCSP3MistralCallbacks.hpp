@@ -45,7 +45,8 @@
  */
 
 // #define _VERBOSE_ true
-#define _DEBUG_CUMULATIVE
+// #define _DEBUG_CUMULATIVE
+// #define _DEBUG_MDD
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -730,52 +731,108 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
     if(transitions.size() > 4) cout << "...";
     cout << endl;
 		
-    for(unsigned int i = 0; i < transitions.size(); i++) {
-        cout << "(" << transitions[i].from << "," << transitions[i].val << "," << transitions[i].to << ") ";
-    }
-    cout << endl;
+    // for(unsigned int i = 0; i < transitions.size(); i++) {
+    //     cout << "(" << transitions[i].from << "," << transitions[i].val << "," << transitions[i].to << ") ";
+    // }
+    // cout << endl;
 #endif		
+		
+		// for( const auto t : transitions ) {
+		// 	std::cout << t.from << "-" << t.val << "-" << t.to << std::endl;
+		// }
+		
+		// for( unsigned int i = 0; i < transitions.size(); ++i ) {
+		// 	std::cout << transitions[i].from ;
+		// 	std::cout << "-" << transitions[i].val ;
+		// 	std::cout << "-" << transitions[i].to << std::endl;
+		// }
+		//
+		// exit(1);
+		
 		
 		VarArray scope;
 		getVariables(list, scope);
 		
 		string root = begin(transitions)->from;
-		string final = transitions.rbegin()->to;
+		// string final = transitions.rbegin()->to;
+		map<string, bool> is_final;
 		
 		map<string, int> layer_map;
 		map<string, int> node_map;
+		map<string, string> prev_map;
 		auto num_layers{0};
+	
 		
+		// get layer of every node
 		for( const auto& t : transitions ) {
-			if( t.to == final) break;
 			auto l{0};
 			if( t.from != root ) {
 				l = layer_map[t.from]+1;
+				is_final[t.from] = false;
 			}
+			
+			if(layer_map.count(t.to)) {
+				if(!is_final[t.to] && l != layer_map[t.to]) {
+					cout << "old trans " << prev_map[t.to] << "(" << layer_map[prev_map[t.to]] << ") -> " << t.to << std::endl;
+					cout << "new trans " << t.from << "(" << layer_map[t.from] << ") -> " << t.to << std::endl;
+					
+					cout << " s UNSUPPORTED" << _ID_(": MDD non final node on multiple layers") << " " << t.to << " " << is_final[t.to] << " " << "\n";
+					exit(1);
+				}
+			} else {
+				is_final[t.to] = true;
+			}
+			
+			prev_map[t.to] = t.from;
 			layer_map[t.to] = l;
 			if(l>=num_layers) num_layers = l+1;
 		}
+		
+	
 		
 		vector<int> layer_size;
 		layer_size.resize(num_layers, 0);
 		
 		
+		// compute the size of every layer and compute the map node -> value (from 1 to layer_size because value 0 is for the final node)
 		for( const auto& l : layer_map ) {
-			node_map[l.first] = layer_size[l.second]++;
+			if( is_final[l.first] )
+				node_map[l.first] = 0;
+			else
+				node_map[l.first] = ++layer_size[l.second];
 		}
 		
+
+		// last layer should contain only the final state
+		if(layer_size[num_layers-1] > 0) {
+			cout << " s UNSUPPORTED" << _ID_(": MDD non final node on last layer") << "\n";
+			exit(1);
+		}
+		layer_size.pop_back();
+		--num_layers;
+		
+		
+		// initialise the state variables, one value per node of the layer, plus the value 0 for final node
 		VarArray state_var;
 		for( auto m : layer_size ) {
-			state_var.add(Variable(0, m-1));
+			state_var.add(Variable(0, m));
+			// std::cout << state_var.back().get_domain() << std::endl;
 		}
 		
+#ifdef _DEBUG_MDD
+		std::cout << "MDD cons: " << scope.size << " vars, " << layer_size.size() << " layers " << std::endl;
+		// exit(1);
+#endif		
 		
+		
+		
+		// create the tables for layer transitions
 		VarArray S;
 		vector<TableExpression*> tables;
 		for(size_t i=0; i<scope.size; ++i) {
-			if(i>0) S.add(state_var[i-1]);
+			if(i>0) S.add(state_var[i-1]); // first transition is binary because it always come from the root
 			S.add(scope[i]);
-			if((int)i<num_layers) S.add(state_var[i]);
+			if((int)i<num_layers) S.add(state_var[i]); // last transition is binary because it always goes to the final node
 			
 			tables.push_back(new TableExpression(S));
 			S.clear();
@@ -783,35 +840,96 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 		
 		
 		int tuple[3];
-		for( const auto& t : transitions ) {
+		for( const auto t : transitions ) {
 			auto cons{0};
 		
 			if( t.from == root ) {
 				tuple[0] = t.val;
 				tuple[1] = node_map[t.to];
+				
+				if(tables[cons]->children.size != 2) {
+					std::cout << "ERROR ROOT" << std::endl;
+					exit(1);
+				}
+				
+				// std::cout << "add a tuple of size 2 (root)" ;
+				
 			} else {
 				cons = layer_map[t.from]+1;
 				
-				if( t.to == final ) {
-					if(cons != num_layers) {
-						cout << " s UNSUPPORTED" << _ID_(": MDD internal-to-final transition") << "\n";
+				if( cons == num_layers ) {
+					if(!is_final[t.to]) {
+						cout << " s UNSUPPORTED" << _ID_(": MDD dead-end transition") << "\n";
 						exit(1);
 					}
 					tuple[0] = node_map[t.from];
 					tuple[1] = t.val;
+					
+					// std::cout << "add a tuple of size 2 (final)" ;
+					
+					if(tables[cons]->children.size != 2) {
+						std::cout << "ERROR FINAL" << std::endl;
+						exit(1);
+					}
+					
 				} else {
 					tuple[0] = node_map[t.from];
 					tuple[1] = t.val;
 					tuple[2] = node_map[t.to];
+					
+					
+					
+					// std::cout << "add a tuple of size 3 (trans) " << t.from << "-" << t.val << "-" << t.to << " / ";
+					// std::cout.flush();
+					//
+					// std::cout << node_map[t.from] ;
+					// std::cout.flush();
+					// std::cout << "-" << t.val ;
+					// std::cout.flush();
+					// std::cout << "-" << node_map[t.to];
+					// std::cout.flush();
+								
+					if(tables[cons]->children.size != 3) {
+						std::cout << "ERROR" << std::endl;
+						exit(1);
+					}	
 				}
 			}
+			
+			// for(int i=0; i<tables[cons]->children.size; ++i) {
+			// 	std::cout << " " << tuple[i];
+			// }
+			
+			// std::cout << " to table " << cons << "(" << tables[cons]->children.size << ")\n";
 
 			tables[cons]->add(tuple);
 		
 		}
 	
 		for( auto tab : tables ) {
+			
+// #ifdef _DEBUG_MDD
+// 		std::cout << "add tab: " << tab->children << std::endl;
+//
+// 		for(int i=0; i<tab->tuples->size; ++i) {
+// 			std::cout << (int*)(tab->tuples+i) ;
+// 			for(int j=0; j<tab->children.size; ++j) {
+// 				std::cout << " " << (*(tab->tuples))[i][j] ;
+// 			}
+// 			std::cout << std::endl;
+// 		}
+//
+// #endif
+//
+		
+		
+			
 			solver.add( Variable(tab) );
+			
+			// if(tab->children.size == 3) {
+			// 	exit(1);
+			// }
+			
 		}
 
 }
@@ -1622,12 +1740,20 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 		
 		VarArray scope;
 		getVariables(list, scope);
-		
+
 		if(closed)
 			for( auto X : scope )
 				solver.add( Member(X, values) );
+
+		if(values.back()-(*begin(values))+1 == (int)(values.size()))
+			solver.add( Occurrences(scope, values, occurs, occurs) );
+		else {
+			for(size_t i=0; i<values.size(); ++i) {
+				solver.add( Occurrence(scope, values[i]) == occurs[i] );
+			}
+		}
 		
-		solver.add( Occurrences(scope, values, occurs, occurs) );
+
 	
 }
 
@@ -2507,7 +2633,7 @@ void XCSP3MistralCallbacks::p_cumulative_discretization(Solver& s,
     total = 0;
     isBoolean = true;
     min_req = Mistral::INFTY;
-    for(int i=0; i<start.size; ++i) {
+    for(size_t i=0; i<start.size; ++i) {
       if(start[i].get_min() <= t && start[i].get_max()+dur[i].get_max() >= t) {
         total += req[i].get_max();
         if(min_req > req[i].get_min()) {
@@ -2606,10 +2732,10 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	}
 
 
-	int orig=INFTY, horizon = 0, ddate, rdate, unit_req=true, unit_dur=true, disjunctive=false, same_req=true, same_dur=true, var_dur=false, var_req=false;
+	int orig=INFTY, horizon = 0, ddate, rdate, unit_req=true, unit_dur=true, disjunctive=false, same_req=true, same_dur=true, var_dur=false; //, var_req=false;
 	//
 
-	for(int i=0; i<start.size; ++i) {
+	for(size_t i=0; i<start.size; ++i) {
 		
 		std::cout << start[i].get_domain() << std::endl;
 		
@@ -2621,8 +2747,8 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 		if(orig>rdate) {
 			orig = rdate;
 		}
-		if(!req[i].is_ground())
-			var_req = true;
+		// if(!req[i].is_ground())
+		// 	var_req = true;
 		if(!dur[i].is_ground())
 			var_dur = true;
 		if(req[i].get_max() > 1 || req[i].get_min() < 1)
@@ -2652,7 +2778,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	// 	order[i] = i;
 	// }
 	std::vector<int> order;
-	for(int i=0; i<start.size; ++i) {
+	for(size_t i=0; i<start.size; ++i) {
 		order.push_back(i);
 	}
 	
@@ -2678,7 +2804,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 
 
 #ifdef _DEBUG_CUMULATIVE
-	for(int i=0; i<start.size; ++i) {
+	for(size_t i=0; i<start.size; ++i) {
 		int oi = order[i];
 		std::cout << "           [" << start[oi].get_min() <<  ".." 
 			<<  start[oi].get_max()+dur[oi].get_max() << "]";
