@@ -2737,7 +2737,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 
 	for(size_t i=0; i<start.size; ++i) {
 		
-		std::cout << start[i].get_domain() << std::endl;
+		// std::cout << start[i].get_domain() << std::endl;
 		
 		ddate = start[i].get_max() + dur[i].get_max();
 		if(horizon<ddate) {
