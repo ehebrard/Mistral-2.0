@@ -2701,10 +2701,10 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	// cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
 	// exit(1);
 			
-			
-			std::cout << origins.size() << " " << lengths.size() << " " << heights.size() << std::endl;
-			
-	
+				//
+			// std::cout << origins.size() << " " << lengths.size() << " " << heights.size() << std::endl;
+			//
+			//
 	if( cond.op != LE) {
 		cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
 		exit(1);
