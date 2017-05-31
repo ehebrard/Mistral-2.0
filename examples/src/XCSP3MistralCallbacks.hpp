@@ -2720,7 +2720,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 		dur.add(Variable(l,l));
 	}
 	for(auto h : heights) {
-		dur.add(Variable(h,h));
+		req.add(Variable(h,h));
 	}
 	if( cond.operandType == VARIABLE ) {
 		cap = variable[cond.var];
@@ -2787,7 +2787,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	std::sort(begin(order), end(order),  
 	 [&](int x, int y) {
 		 
-		 std::cout << "compare " << x << "," << y << std::endl;
+		 // std::cout << "compare " << x << "," << y << std::endl;
 		 
 	  if(_demand_[x].get_min() > _demand_[y].get_min())
 	    return 1;
