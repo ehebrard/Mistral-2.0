@@ -134,6 +134,12 @@ int main(int argc,char **argv) {
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
 	
+	
+	solver.parameters.time_limit -= get_run_time();
+	if(solver.parameters.time_limit < 0)
+		solver.set_time_limit(0.5);
+	
+	
 	if(solver.objective && solver.objective->is_optimization()) {
 		solver.add( new ObjectivePrinter(&solver) );
 	}
