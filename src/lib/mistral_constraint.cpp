@@ -60,6 +60,8 @@
 
  // #define _DEBUG_GCC true
 
+// #define _DEBUG_LEX true
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -3946,6 +3948,9 @@ void Mistral::ConstraintLex::mark_domain() {
 Mistral::PropagationOutcome Mistral::ConstraintLex::propagate() {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
   Event evt, aux;
+	
+	
+	
 
   /*
     rules:

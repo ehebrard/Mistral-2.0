@@ -44,7 +44,7 @@
  *
  */
 
-// #define _VERBOSE_ true
+#define _VERBOSE_ true
 // #define _DEBUG_CUMULATIVE
 // #define _DEBUG_MDD
 
@@ -615,23 +615,52 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 		Variable Y = variable[y->id];
 		
 		 // LT, GE, GT, IN, EQ, NE)
-		if(op == LE)
-			solver.add( (X + k) <= Y );
-		else if(op == LT)
-			solver.add( (X + k) < Y );
-		else if(op == GE)
-			solver.add( (X + k) >= Y );
-		else if(op == GT)
-			solver.add( (X + k) > Y );
-		else if(op == IN) {
+		if(op == LE) {
+			if(k==0) {
+				solver.add( X <= Y );
+			} else if(k==1) {
+				solver.add( X < Y );
+			} else {
+				solver.add( (X + k) <= Y );
+			}
+		} else if(op == LT) {
+			if(k==0) {
+				solver.add( X < Y );
+			} else if(k==-1) {
+				solver.add( X <= Y );
+			} else {
+				solver.add( (X + k) < Y );
+			}
+		} else if(op == GE) {
+			if(k==0) {
+				solver.add( X >= Y );
+			} else if(k==-1) {
+				solver.add( X > Y );
+			} else {
+				solver.add( (X + k) >= Y );
+			}
+		} else if(op == GT) {
+			if(k==0) {
+				solver.add( X > Y );
+			} else if(k==1) {
+				solver.add( X >= Y );
+			} else {
+				solver.add( (X + k) > Y );
+			}
+		} else if(op == IN) {
 			cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 			exit(1);
+		} else if(op == EQ) {
+			if(k==0)
+				solver.add( X == Y );
+			else
+				solver.add( (X + k) == Y );
+		} else if(op == NE) {
+			if(k==0)
+				solver.add( X != Y );
+			else
+				solver.add( (X + k) != Y );
 		}
-		else if(op == EQ)
-			solver.add( (X + k) == Y );
-		else if(op == NE)
-			solver.add( (X + k) != Y );
-		
 }
 
 
@@ -1066,7 +1095,7 @@ void XCSP3MistralCallbacks::buildConstraintOrdered(string id, vector<XVariable *
 		getVariables(list, X);
 	
 		for(size_t i=1; i<X.size; ++i) {
-				if(order == LT) solver.add( X[i-1] <  X[i] ); 
+				if(order == LT) solver.add( X[i-1] < X[i] ); 
 				if(order == LE) solver.add( X[i-1] <= X[i] ); 
 				if(order == GT) solver.add( X[i-1] >  X[i] ); 
 				if(order == GE) solver.add( X[i-1] >= X[i] ); 
@@ -1096,6 +1125,13 @@ void XCSP3MistralCallbacks::buildConstraintLex(string id, vector <vector<XVariab
 			getVariables(*l, X);
 			scope.push_back(X);
 		}
+		
+		// for(size_t i=1; i<lists.size(); ++i) {
+		// 	if(order == LT) solver.add( scope[i-1] <  scope[i] );
+		// 	if(order == LE) solver.add( scope[i-1] <= scope[i] );
+		// 	if(order == GT) solver.add( scope[i-1] >  scope[i] );
+		// 	if(order == GE) solver.add( scope[i-1] >= scope[i] );
+		// }
 		
 		for(size_t i=1; i<lists.size(); ++i) {
 			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
