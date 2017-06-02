@@ -44,7 +44,7 @@
  *
  */
 
-#define _VERBOSE_ true
+// #define _VERBOSE_ true
 // #define _DEBUG_CUMULATIVE
 // #define _DEBUG_MDD
 
@@ -83,6 +83,8 @@ namespace XCSP3Core {
 				Mistral::Goal *goal;
 			
 				Mistral::Vector<Mistral::Variable> _demand_;
+				
+				vector<int> util;
 			
 			
         XCSP3MistralCallbacks(Mistral::Solver& s);
@@ -1125,13 +1127,6 @@ void XCSP3MistralCallbacks::buildConstraintLex(string id, vector <vector<XVariab
 			getVariables(*l, X);
 			scope.push_back(X);
 		}
-		
-		// for(size_t i=1; i<lists.size(); ++i) {
-		// 	if(order == LT) solver.add( scope[i-1] <  scope[i] );
-		// 	if(order == LE) solver.add( scope[i-1] <= scope[i] );
-		// 	if(order == GT) solver.add( scope[i-1] >  scope[i] );
-		// 	if(order == GE) solver.add( scope[i-1] >= scope[i] );
-		// }
 		
 		for(size_t i=1; i<lists.size(); ++i) {
 			if(order == LT) solver.add( scope[i-1] <  scope[i] ); 
@@ -3036,14 +3031,34 @@ void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vec
 			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
 			exit(1);
 		} else if(type == MINIMUM_O) {
-			cout << " s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
-			exit(1);
+		
+			objective = Min(scope).get_var();
+			
 		} else if(type == MAXIMUM_O) {
-			cout << " s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
-			exit(1);
+		
+			objective = Max(scope).get_var();
+
 		} else if(type == NVALUES_O) {
-			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
-			exit(1);
+			
+			int min = INFTY;
+			int max = -INFTY;
+		
+			for( auto X : scope ) {
+				if(min>X.get_min()) {
+					min = X.get_min();
+				}
+				if(max<X.get_max()) {
+					max = X.get_max();
+				}
+			}
+		
+			VarArray used;
+			for(int i=min; i<=max; ++i) {
+				used.add( Occurrence(scope, i) );
+			}
+		
+			objective = BoolSum(used).get_var();
+			
 		} else if(type == LEX_O) {
 			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
 			exit(1);
@@ -3224,6 +3239,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
         rv = Variable(nc->val,nc->val);
 
     }
+		
 
     NodeOperator *fn = (NodeOperator *) n;
 
@@ -3510,6 +3526,32 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				rv = Element(A,x);
 
     }
+		
+    if(fn->type == NT_IN) {
+
+    		Variable x = postExpression(fn->args[0]);
+				postExpression(fn->args[1]);
+
+				rv = Member(x, util);
+
+    }
+		
+    if(fn->type == NT_SET) {
+	      assert(!root);
+	
+				vector<int>& elements(util);
+				elements.clear();
+				for( auto x : fn->args ) {
+					if(x->type == NT_CONSTANT) {
+						elements.push_back(((NodeConstant*)x)->val);
+					} else {
+						cout << " s UNSUPPORTED\n";
+						exit(1); 
+					}
+				}
+
+    }
+		
 
     return rv;
 }

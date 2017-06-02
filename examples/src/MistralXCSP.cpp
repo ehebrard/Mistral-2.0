@@ -18,8 +18,8 @@ void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
 	catch (exception &e)
 	{
 		cout.flush();
-		cerr << "\n\tUnexpected exception :\n";
-		cerr << "\t" << e.what() << endl;
+		cout << "\n c \tUnexpected exception :\n c \t" << e.what() << endl;
+		cout << " s UNSUPPORTED" << endl;
 		exit(1);
 	}
 	

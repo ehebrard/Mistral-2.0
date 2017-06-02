@@ -13,7 +13,7 @@ namespace XCSP3Core {
 
     typedef enum {
         NT_CONSTANT, NT_VARIABLE, NT_NEG, NT_ABS, NT_ADD, NT_SUB, NT_MULT, NT_DIV, NT_MOD, NT_MIN, NT_MAX, NT_LE, NT_DIST, NT_LT, NT_GE, NT_GT, NT_EQ,
-        NT_NE, NT_NOT, NT_AND, NT_OR, NT_XOR, NT_IF, NT_IFF, NT_IMP
+        NT_NE, NT_NOT, NT_AND, NT_OR, NT_XOR, NT_IF, NT_IFF, NT_IMP, NT_IN, NT_SET
     } NodeType;
 
     class Node {
@@ -47,6 +47,16 @@ namespace XCSP3Core {
 
         NodeVariable(string v) : Node(NT_VARIABLE), var(v) {}
     };
+		
+    // //-------------------------------------
+    //
+    // class NodeSet : public Node {
+    // public:
+    //     vector<int> values;
+    //
+    //
+    //     NodeSet(vector<int>& vals) : Node(NT_SET), values(vals) {}
+    // };
 
 
     //-------------------------------------
@@ -142,6 +152,7 @@ namespace XCSP3Core {
                 //cout << "Number " << nb << endl;
                 params.push_back(new NodeConstant(nb));
             } catch (invalid_argument e) {
+							
                 params.push_back(new NodeVariable(currentElement));
                 /*
                  * bool alreadyInsideList = false;
@@ -152,6 +163,7 @@ namespace XCSP3Core {
                     }
                 if (alreadyInsideList == false) listOfVariables.push(v);
                  */
+							
             }
         }
 
@@ -187,6 +199,9 @@ namespace XCSP3Core {
             if(currentElement == "imp") tmp = new NodeOperator(NT_IMP);
             if(currentElement == "if") tmp = new NodeOperator(NT_IF,3);
             if(currentElement == "iff") tmp = new NodeOperator(NT_IFF);
+						
+						if(currentElement == "in") tmp = new NodeOperator(NT_IN);
+						if(currentElement == "set") tmp = new NodeOperator(NT_SET, -1);
 
             //if (currentElement == "in")  throw runtime_error("IN not allowed in expression");
             //if (currentElement == "set") throw runtime_error("SET not allowed in expression");
