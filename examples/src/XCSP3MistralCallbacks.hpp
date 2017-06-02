@@ -537,6 +537,12 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 		TableExpression* tab = new TableExpression(scope, support);
 		
 		
+		// for ( auto x : scope ) {
+		// 	cout << x.get_domain() << endl;
+		// }
+		// cout << endl;
+		
+		
 		vector<int> stared;
 		vector<int> fact;
 		fact.resize(list.size());
@@ -554,11 +560,33 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 			}
 			// cout << endl;
 			
-			int count = 10;
+			
+			
+			// int count = 10000;
 			if(stared.size()>0) {
+				
+				int numtuples = 1;
+				for( auto j : stared ) {
+					numtuples *= scope[j].get_size();
+					if(numtuples > 100000) {
+						cout << " s UNSUPPORTED\n";
+						exit(1);
+					}
+				}
+				
 				int i = stared.size()-1;
 				bool cont = true;
 				do {
+					
+					// if(count<=0) exit(1);
+					// --count;
+					
+					// cout << " ->";
+					// for( auto v : fact ) {
+					// 	cout << " " << v;
+					// }
+					// cout << endl;
+					
 					tab->add(&(fact[0]));
 
 					int j = stared[i];
@@ -572,17 +600,20 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 							break;
 						}
 						for(size_t k=i; k<stared.size(); ++k) {
-							fact[k] = scope[stared[k]].get_min();
+							fact[stared[k]] = scope[stared[k]].get_min();
 						}
 						j = stared[--i];
 						n = scope[j].next(fact[j]);
 					}
+
+					i = stared.size()-1;
 
 					fact[j] = n;
 
 				} while(cont);
 
 				stared.clear();
+				
 
 			} else {
 				tab->add(&((*(pt))[0]));
