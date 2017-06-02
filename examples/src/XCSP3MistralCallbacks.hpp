@@ -3385,14 +3385,14 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
     if(fn->type == NT_NEG) {
 			
 				Variable x1 = postExpression(fn->args[0]);
-				rv = ( -x1 );
+				rv = -x1;
 				
     }
 
     if(fn->type == NT_ABS) {
 
 				Variable x1 = postExpression(fn->args[0]);
-				rv = ( Abs(x1) );
+				rv = Abs(x1);
 
     }
 
@@ -3408,7 +3408,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
-				rv = ( Abs(x1 - x2) );
+				rv = Abs(x1 - x2);
 			
     }
 
