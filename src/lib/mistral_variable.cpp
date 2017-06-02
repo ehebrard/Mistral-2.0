@@ -4684,12 +4684,18 @@ void Mistral::LexExpression::extract_constraint(Solver *s) {
   for(int i=0; i<arity; ++i) {
     scp.clear();
     
-    scp.add(children[i]);
-    scp.add(children[i+arity]);
-    scp.add(children[i+2*arity]);
-    scp.add(children[i+2*arity+1]);
+    // scp.add(children[i]);
+    // scp.add(children[i+arity]);
+    // scp.add(children[i+2*arity]);
+    // scp.add(children[i+2*arity+1]);
+    //
+    // s->add(Constraint(new ConstraintLex(scp)));
 
-    s->add(Constraint(new ConstraintLex(scp)));
+		s->add( (children[i+2*arity] <= children[i+2*arity+1]) );
+		s->add( (children[i+2*arity] < children[i+2*arity+1]) <= (children[i] < children[i+arity]) );
+		s->add( (children[i+2*arity] >= (children[i] > children[i+arity])) );
+		s->add( (children[i] != children[i+arity]) <= children[i+2*arity+1] );
+
   }
 
   if(FAILED(children[2*arity].set_domain(0)))

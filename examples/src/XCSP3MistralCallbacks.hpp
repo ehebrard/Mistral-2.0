@@ -83,6 +83,8 @@ namespace XCSP3Core {
 				Mistral::Goal *goal;
 			
 				Mistral::Vector<Mistral::Variable> _demand_;
+				
+				vector<int> util;
 			
 			
         XCSP3MistralCallbacks(Mistral::Solver& s);
@@ -615,23 +617,52 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 		Variable Y = variable[y->id];
 		
 		 // LT, GE, GT, IN, EQ, NE)
-		if(op == LE)
-			solver.add( (X + k) <= Y );
-		else if(op == LT)
-			solver.add( (X + k) < Y );
-		else if(op == GE)
-			solver.add( (X + k) >= Y );
-		else if(op == GT)
-			solver.add( (X + k) > Y );
-		else if(op == IN) {
+		if(op == LE) {
+			if(k==0) {
+				solver.add( X <= Y );
+			} else if(k==1) {
+				solver.add( X < Y );
+			} else {
+				solver.add( (X + k) <= Y );
+			}
+		} else if(op == LT) {
+			if(k==0) {
+				solver.add( X < Y );
+			} else if(k==-1) {
+				solver.add( X <= Y );
+			} else {
+				solver.add( (X + k) < Y );
+			}
+		} else if(op == GE) {
+			if(k==0) {
+				solver.add( X >= Y );
+			} else if(k==-1) {
+				solver.add( X > Y );
+			} else {
+				solver.add( (X + k) >= Y );
+			}
+		} else if(op == GT) {
+			if(k==0) {
+				solver.add( X > Y );
+			} else if(k==1) {
+				solver.add( X >= Y );
+			} else {
+				solver.add( (X + k) > Y );
+			}
+		} else if(op == IN) {
 			cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 			exit(1);
+		} else if(op == EQ) {
+			if(k==0)
+				solver.add( X == Y );
+			else
+				solver.add( (X + k) == Y );
+		} else if(op == NE) {
+			if(k==0)
+				solver.add( X != Y );
+			else
+				solver.add( (X + k) != Y );
 		}
-		else if(op == EQ)
-			solver.add( (X + k) == Y );
-		else if(op == NE)
-			solver.add( (X + k) != Y );
-		
 }
 
 
@@ -1066,7 +1097,7 @@ void XCSP3MistralCallbacks::buildConstraintOrdered(string id, vector<XVariable *
 		getVariables(list, X);
 	
 		for(size_t i=1; i<X.size; ++i) {
-				if(order == LT) solver.add( X[i-1] <  X[i] ); 
+				if(order == LT) solver.add( X[i-1] < X[i] ); 
 				if(order == LE) solver.add( X[i-1] <= X[i] ); 
 				if(order == GT) solver.add( X[i-1] >  X[i] ); 
 				if(order == GE) solver.add( X[i-1] >= X[i] ); 
@@ -2498,6 +2529,9 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
                        Vector<Variable>& req,
                        Variable cap, 
                        int horizon) {
+												 
+	std::cout << "CAPACITY = " << cap.get_domain() << std::endl;		 
+												 
 							
 	int n = start.size;					 
 	Vector<Variable> end;
@@ -2505,6 +2539,8 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 	 
 	for(int i=0; i<n; ++i) {
 	 	end.add(dur[i].is_ground() ? start[i] + dur[i].get_max() : start[i] + dur[i]);
+		
+		std::cout << req[i].get_domain() << std::endl;
 	} 
   
   Variable **flow = new Variable*[n+1];
@@ -2559,7 +2595,7 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 				
 			s.add(sum_exp);	
 
-      //s.add(Sum(outflow, req[i].get_min(), req[i].get_max()));
+      s.add(Sum(outflow, req[i].get_min(), req[i].get_max()));
       s.add(Sum(inflow, req[i].get_min(), req[i].get_max()));
 
     } else {
@@ -2604,6 +2640,22 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
       }
     }
   }
+	
+	s.consolidate();
+	
+	std::cout << s << std::endl;
+	
+  for(int i=0; i<n; ++i) {
+    for(int j=0; j<n; ++j) {
+			if(i != j) {
+				std::cout << " " << std::setw(3) << flow[i][j].id();
+			} else {
+				std::cout << "    ";
+			}
+		}
+		std::cout << std::endl;
+	}
+	
 
   for(int i=0; i<=n; ++i) {
     delete [] flow[i];
@@ -2693,6 +2745,17 @@ void XCSP3MistralCallbacks::p_cumulative_discretization(Solver& s,
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<int> &heights, XCondition &cond) {
+	
+#ifdef _VERBOSE_
+    cout << "\n    Cumulative constraint (int lengths, int heights) " << cond << endl;
+    cout << "        ";
+    displayList(origins);
+    cout << "        lengths:";
+    displayList(lengths);
+    cout << "        heights:";
+    displayList(heights);
+#endif
+		
 	
 #ifdef _DEBUG_CUMULATIVE
 			std::cout << "Decompose cumulative constraint" << std::endl;
@@ -2786,19 +2849,17 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	
 	std::sort(begin(order), end(order),  
 	 [&](int x, int y) {
-		 
-		 // std::cout << "compare " << x << "," << y << std::endl;
-		 
-	  if(_demand_[x].get_min() > _demand_[y].get_min())
-	    return 1;
-	  else if(_demand_[x].get_min() < _demand_[y].get_min())
-	    return -1;
-	  return 0;
+		 return _demand_[x].get_min() < _demand_[y].get_min();
 	}
 	);
 	_demand_.neutralise();
 
 	if(start.size>1 && req[order[0]].get_min()+req[order[1]].get_min()>cap.get_max()) {
+		
+#ifdef _DEBUG_CUMULATIVE
+		std::cout << "min (" << req[order[0]].get_min() << ") and next min (" << req[order[1]].get_min() << ") demands are incompatible => disjunctive" << std::endl;
+#endif
+		
 		disjunctive = true;
 	}
 
@@ -2806,7 +2867,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 #ifdef _DEBUG_CUMULATIVE
 	for(size_t i=0; i<start.size; ++i) {
 		int oi = order[i];
-		std::cout << "           [" << start[oi].get_min() <<  ".." 
+		std::cout << start[oi] << "           [" << start[oi].get_min() <<  ".." 
 			<<  start[oi].get_max()+dur[oi].get_max() << "]";
 		if(dur[oi].is_ground())
 			std::cout << " p=" << dur[oi].get_max() ;
@@ -2876,15 +2937,16 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 		std::cout << "size of the flow encoding = " << size_flow << std::endl;
 #endif
   
-		if(size_flow < size_discretization || var_dur) {
-			p_cumulative_flow(solver, start, dur, req, cap, horizon);
-		} else {
+		// if(size_flow < size_discretization || var_dur) {
+		// 	p_cumulative_flow(solver, start, dur, req, cap, horizon);
+		// } else {
 			p_cumulative_discretization(solver, start, dur, req, cap, horizon);
-		}
+		// }
 
 
 	// }
-	
+
+		// exit(1);
 }
 
 
@@ -2969,14 +3031,34 @@ void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vec
 			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
 			exit(1);
 		} else if(type == MINIMUM_O) {
-			cout << " s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
-			exit(1);
+		
+			objective = Min(scope).get_var();
+			
 		} else if(type == MAXIMUM_O) {
-			cout << " s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
-			exit(1);
+		
+			objective = Max(scope).get_var();
+
 		} else if(type == NVALUES_O) {
-			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
-			exit(1);
+			
+			int min = INFTY;
+			int max = -INFTY;
+		
+			for( auto X : scope ) {
+				if(min>X.get_min()) {
+					min = X.get_min();
+				}
+				if(max<X.get_max()) {
+					max = X.get_max();
+				}
+			}
+		
+			VarArray used;
+			for(int i=min; i<=max; ++i) {
+				used.add( Occurrence(scope, i) );
+			}
+		
+			objective = BoolSum(used).get_var();
+			
 		} else if(type == LEX_O) {
 			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
 			exit(1);
@@ -3157,6 +3239,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
         rv = Variable(nc->val,nc->val);
 
     }
+		
 
     NodeOperator *fn = (NodeOperator *) n;
 
@@ -3443,6 +3526,32 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				rv = Element(A,x);
 
     }
+		
+    if(fn->type == NT_IN) {
+
+    		Variable x = postExpression(fn->args[0]);
+				postExpression(fn->args[1]);
+
+				rv = Member(x, util);
+
+    }
+		
+    if(fn->type == NT_SET) {
+	      assert(!root);
+	
+				vector<int>& elements(util);
+				elements.clear();
+				for( auto x : fn->args ) {
+					if(x->type == NT_CONSTANT) {
+						elements.push_back(((NodeConstant*)x)->val);
+					} else {
+						cout << " s UNSUPPORTED\n";
+						exit(1); 
+					}
+				}
+
+    }
+		
 
     return rv;
 }

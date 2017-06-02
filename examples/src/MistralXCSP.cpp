@@ -18,8 +18,8 @@ void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
 	catch (exception &e)
 	{
 		cout.flush();
-		cerr << "\n\tUnexpected exception :\n";
-		cerr << "\t" << e.what() << endl;
+		cout << "\n c \tUnexpected exception :\n c \t" << e.what() << endl;
+		cout << " s UNSUPPORTED" << endl;
 		exit(1);
 	}
 	
@@ -67,16 +67,23 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 		}
 		os << " </list>\n v   <values>";
 		
-		// int linecount = 0;
 		for( auto var : cb.variables ) {
-			// if(linecount%50 == 0) os << endl;
-			// ++linecount;
-			
-			if(var.id()>=0)	
+			if(var.id()>=0)
 				os << " " << cb.solver.last_solution_lb[var.id()];
 			else
 				os << " " << var.get_value();
 		}
+		
+		// int linecount = 0;
+		// for( auto var : cb.variables ) {
+		// 	if(linecount%8 == 0) os << endl;
+		// 	++linecount;
+		//
+		// 	if(var.id()>=0)
+		// 		os << " " << cb.solver.last_solution_lb[var.id()];
+		// 	else
+		// 		os << " " << var.get_value();
+		// }
 		// os << endl;
 		
 		os << " </values>\n v </instantiation>\n";
@@ -133,6 +140,14 @@ int main(int argc,char **argv) {
 		
 	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
 	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
+	
+	
+	if(solver.parameters.time_limit > 0) {
+		solver.parameters.time_limit -= get_run_time();
+		if(solver.parameters.time_limit < 0)
+			solver.set_time_limit(0.5);
+	}
+	
 	
 	if(solver.objective && solver.objective->is_optimization()) {
 		solver.add( new ObjectivePrinter(&solver) );
