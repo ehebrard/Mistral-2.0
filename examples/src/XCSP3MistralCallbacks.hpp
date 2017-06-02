@@ -292,8 +292,21 @@ XCSP3MistralCallbacks::XCSP3MistralCallbacks(Solver& s) : XCSP3CoreCallbacks(), 
 
 
 void XCSP3MistralCallbacks::getVariables(vector < XVariable* > &list, Vector<Variable>& scope) {	
-    for(size_t i = 0; i < list.size(); i++)
-				scope.add(variable[list[i]->id]);
+  for(size_t i = 0; i < list.size(); i++) {
+		if(variable.count( list[i]->id )) {
+			scope.add(variable[list[i]->id]);
+		} else if(list[i]->domain == NULL) {
+			// std::cout << list[i]->id << " has an empty domain " << std::endl;
+			int v = stoi(list[i]->id);
+			scope.add(Variable(v,v));
+		} else if(list[i]->domain->values.size()==1) {	
+			int v = list[i]->domain->minimum();
+			scope.add(Variable(v,v));
+		} else {
+			cout << " s UNSUPPORTED\n";
+			exit(1);
+		}
+	}
 }
 
 
@@ -516,14 +529,64 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
     cout << "        ";
     displayList(list);
 #endif
+		
 			
 		VarArray scope;
 		getVariables(list, scope);
 		
 		TableExpression* tab = new TableExpression(scope, support);
 		
+		
+		vector<int> stared;
+		vector<int> fact;
+		fact.resize(list.size());
 		for( auto pt=begin(tuples); pt!=end(tuples); ++pt ) {
-				tab->add(&((*pt)[0]));
+		// for ( auto& t : tuples ) {
+						
+			for ( size_t i=0; i<pt->size(); ++i ) {
+				// cout << " " << (*(pt))[i];
+				if ( (*(pt))[i] == 2147483647 ) {
+					stared.push_back(i);
+					fact[i] = scope[i].get_min();
+				} else {
+					fact[i] = (*(pt))[i];
+				}
+			}
+			// cout << endl;
+			
+			int count = 10;
+			if(stared.size()>0) {
+				int i = stared.size()-1;
+				bool cont = true;
+				do {
+					tab->add(&(fact[0]));
+
+					int j = stared[i];
+					int n = scope[j].next(fact[j]);
+					
+					// cout << " ++t[" << j << "]: " << " " << fact[j] << " -> " << n << " (" << i << ")" << endl;
+
+					while(n==fact[j]) {
+						if(i==0) {
+							cont = false;
+							break;
+						}
+						for(size_t k=i; k<stared.size(); ++k) {
+							fact[k] = scope[stared[k]].get_min();
+						}
+						j = stared[--i];
+						n = scope[j].next(fact[j]);
+					}
+
+					fact[j] = n;
+
+				} while(cont);
+
+				stared.clear();
+
+			} else {
+				tab->add(&((*(pt))[0]));
+			}
 		}
 		
 		last_table = tab->tuples;
@@ -2245,8 +2308,32 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 				exit(1);
 		}
 		
+		// for( auto x : list ) {
+		// 	std::cout << " " << x->id ;
+		// }
+		// std::cout << std::endl;
+		//
+		// // for( auto x : list ) {
+		// // 	std::cout << " [" << x->domain->minimum() << "," << x->domain->maximum() << "]" ;
+		// // }
+		//
+		// for( auto x : list ) {
+		// 	std::cout << " " << (int*)(x->domain) ;
+		// }
+		// std::cout << std::endl;
+		
+		
 		VarArray scope;
 		getVariables(list, scope);
+		
+		// std::cout << scope << " " << variable[index->id] << " " << variable[value->id] << std::endl;
+		
+		// for( auto x : scope ) {
+		// 	std::cout << " " << x.get_value() ;
+		// }
+		// std::cout << std::endl;
+		
+		
 		solver.add( Element(scope,variable[index->id],startIndex) == variable[value->id] );
 }
 
