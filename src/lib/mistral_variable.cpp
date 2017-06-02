@@ -8359,12 +8359,26 @@ void Mistral::Domain::open() {
     _end_ptr = (int*)(uintptr_t)((get_max()+1)*4);
   } else {
     Solver *s = get_solver();
-    int n = bitset_domain->domain.size;
+    int n = bitset_domain->domain.values.size();
+		
+		//
+		// std::cout << n << " " << bitset_domain->domain.values.size() << std::endl;
+		// std::cout << bitset_domain->domain.values << std::endl;
+		//
+		// if(n !=  bitset_domain->domain.values.size()) {
+		// 	exit(1);
+		// }
+		//
+		
+		
     // if(id>=0) {
     //   s->iterator_space.release(id);
     // }
     id = s->iterator_space.reserve(n, _begin_ptr, _end_ptr);
     _begin_ptr[0] = bitset_domain->domain.min;
+		
+
+		
     bitset_domain->domain.values.iterate_into(n, _begin_ptr);
   }
 }
