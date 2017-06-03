@@ -62,6 +62,8 @@
 
 // #define _DEBUG_LEX true
 
+// #define _DEBUG_TABLE (id==27)
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -8476,13 +8478,28 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC2001::propagate()
 					}
 					if( valid ) firstSupport[oi][j] = index-1;
 					else {
-						// #ifdef _DEBUG_TABLE
-						// 	      if(_DEBUG_TABLE) {
-						// 		std::cout << "remove " << j << " from " << scope[oi].get_domain() << std::endl;
-	      
+#ifdef _DEBUG_TABLE
+			      if(_DEBUG_TABLE) {
+							std::cout << "remove " << j << " from " << scope[oi].get_domain() << " " << scope[oi].get_size() << std::endl;
+						}
+#endif
+						
+						// Event evt = scope[oi].remove( j );
+						
+// #ifdef _DEBUG_TABLE
+// 			      if(_DEBUG_TABLE) {
+// 							std::cout << event2str(evt) << std::endl;
+// 						}
+// #endif
+
 						if(FAILED(scope[oi].remove( j ))) wiped = FAILURE(oi);
 		
-						//std::cout << wiped << std::endl;
+// #ifdef _DEBUG_TABLE
+// 			      if(_DEBUG_TABLE) {
+// 							std::cout << wiped << std::endl;
+// 						}
+// #endif
+						
 					}
 
 #ifdef _DEBUG_TABLE
@@ -8596,7 +8613,8 @@ std::ostream& Mistral::ConstraintGAC2001::display(std::ostream& os) const {
     os << ", " << scope[i]/*.get_var()*/;
   os << ")";
   
-  display_supports(os);
+	// os << endl;
+	//   display_supports(os);
 
   // os << ") in " ;
   // for(unsigned int i=0; i<table.size; ++i) {

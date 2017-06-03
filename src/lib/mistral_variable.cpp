@@ -2017,12 +2017,13 @@ Mistral::BitsetDomain::BitsetDomain(const int lb, const int ub, const Vector< in
 
 void Mistral::BitsetDomain::initialise(const int lb, const int ub, const Vector< int >& vals) {
 
-  //std::cout << "HERE!! " << lb << " " << ub << " " << vals << " " << vals.size << std::endl;
+  // std::cout << "HERE!! " << lb << " " << ub << " " << vals << " " << vals.size << std::endl;
   min = lb;
   max = ub;
-  size = vals.size;
-  values.initialise(lb, ub, vals);
+  // size = vals.size;
+  values.initialise(lb, ub, vals, size);
 
+	// assert(values.size() == size);
 
   //std::cout << values << std::endl;
 
@@ -2033,7 +2034,7 @@ void Mistral::BitsetDomain::initialise(const int lb, const int ub, const Vector<
 
 void Mistral::BitsetDomain::initialise(const Vector< int >& vals) {
 
-  size = vals.size;
+  // size = vals.size;
 
   min = vals.front();
   max = vals.front();
@@ -2043,7 +2044,7 @@ void Mistral::BitsetDomain::initialise(const Vector< int >& vals) {
     if(vals[i] > max) max = vals[i];
   }
 
-  values.initialise(min, max, vals);
+  values.initialise(min, max, vals, size);
   
   //max = vals.back();
   //values.initialise(min, max, vals);

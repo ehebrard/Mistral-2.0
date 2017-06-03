@@ -4236,7 +4236,7 @@ template < int N, class T >
 	add( elt[i] );
     }
 
-    void initialise(const int lb, const int ub, const Vector< int >& elt) 
+    void initialise(const int lb, const int ub, const Vector< int >& elt, int&sz) 
     {
 
       // std::cout << "initialise bitset with " << lb << ".." << ub << ": " ;
@@ -4244,13 +4244,16 @@ template < int N, class T >
       // std::cout << std::endl; 
 
       initialise(lb,ub,empt);
+			sz = 0;
 
       // display(std::cout);
       // std::cout << std::endl;
 
       for(unsigned int i=0; i<elt.size; ++i) {
-	add( elt[i] );
-	
+				if(!contain(elt[i])) {
+					add( elt[i] );
+					++sz;
+				}
 	// display(std::cout);
 	// std::cout << std::endl;
       }

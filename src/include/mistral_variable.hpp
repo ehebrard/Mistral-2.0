@@ -217,6 +217,8 @@ namespace Mistral {
 			// std::cout << std::endl;
 
 			// exit(1);
+			
+			
 
 			initialise_trail();
 		}
@@ -283,6 +285,7 @@ namespace Mistral {
 				level_abs[i] = level_[i];
 				level_[i][0] = -1;
 			}
+			
 		}
 
 		virtual ~VariableBitset() {
