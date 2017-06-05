@@ -116,6 +116,9 @@ int main(int argc,char **argv) {
   TCLAP::SwitchArg branchOnaux("","branch_on_aux","Branching on auxiliary variables", false);
   cmd.add( branchOnaux );
 
+  TCLAP::SwitchArg annotationArg("","follow_annotations","Uses the annotations", false);
+  cmd.add( annotationArg );
+
 	
 	cmd.parse(argc, argv);
 	
@@ -156,11 +159,39 @@ int main(int argc,char **argv) {
 	// std::cout << solver.constraints[277].binary() << std::endl;
 	
 	if(branchOnaux.getValue())
-		solver.depth_first_search(solver.variables, heuristic, restart);
+	{
+		Vector<Variable> search_sequence;
+		BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
+
+		for(int k=0; k<cb.variables.size; ++k) {
+			search_vars.add(cb.variables[k].id());
+			search_sequence.add(cb.variables[k]);
+		}
+
+		for(int i=0; i<solver.variables.size; ++i) {
+			int domsize = solver.variables[i].get_size();
+
+			if(//solver.variables[i].is_boolean()
+					domsize>1 && domsize<=10
+					&& !(search_vars.contain(solver.variables[i].id()))) {
+				search_vars.add(i);
+				search_sequence.add(solver.variables[i]);
+			}
+		}
+		solver.depth_first_search(search_sequence, heuristic, restart);
+	}
 	else
-		solver.depth_first_search(cb.variables, heuristic, restart);
+		if (annotationArg.getValue())
+			solver.depth_first_search(cb.variables, heuristic, restart);
+		else
+			solver.depth_first_search(solver.variables, heuristic, restart);
 	
-	print_outcome(cb, std::cout);
+
+	if(cmd.print_statistics())
+		solver.statistics.print_full(std::cout);
+	else
+		print_outcome(cb, std::cout);
+
 	print_solution(cb, std::cout);
 
   return 0;
