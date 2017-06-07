@@ -11064,14 +11064,34 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
       }
     }
   } else if(var_ordering == "COS") {
-  	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue > (this);
+	    if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	    	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue > (this);
+	  	   }
+	  if( branching == "Adpated" || branching == "adapted" ) {
+	    	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >,  Guided< MinValue >,  Guided< MinValue > > (this);
+	  	   }
   }  else if(var_ordering == "ECOS") {
-  	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue > (this);
+	  if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	    	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue > (this);
+	  	    }
+	  if( branching == "Adpated" || branching == "adapted" ) {
+	    	heu = new ConflictOrderedSearch < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue > > (this);
+	  	    }
   } else if(var_ordering == "LC") {
-  	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue, 1 > (this);
+	  if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+	    	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >, MinValue, MinValue, 1 > (this);
+	  	  }
+	  if( branching == "Adpated" || branching == "adapted" ) {
+	    	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, FailureCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (this);
+	  	  }
 		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
   } else if(var_ordering == "ELC") {
-  	heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue, 1 > (this);
+	  if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+		  heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue, 1 > (this);
+	  }
+	  if( branching == "Adpated" || branching == "adapted" ) {
+		  heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (this);
+	  }
 		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
   }
 }
