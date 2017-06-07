@@ -218,6 +218,8 @@ namespace XCSP3Core {
 
         virtual void buildConstraintElement(string id, vector<XVariable *> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) override;
 
+        virtual void buildConstraintElement(string id, vector<int> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) override;
+
         virtual void buildConstraintChannel(string id, vector<XVariable *> &list, int startIndex) override;
 
         virtual void buildConstraintChannel(string id, vector<XVariable *> &list1, int startIndex1, vector<XVariable *> &list2,
@@ -292,20 +294,20 @@ XCSP3MistralCallbacks::XCSP3MistralCallbacks(Solver& s) : XCSP3CoreCallbacks(), 
 
 
 void XCSP3MistralCallbacks::getVariables(vector < XVariable* > &list, Vector<Variable>& scope) {	
-  for(size_t i = 0; i < list.size(); i++) {
-		if(variable.count( list[i]->id )) {
+  for(size_t i = 0; i < list.size(); i++) { //not necessary to check if the variable exists
+		// if(variable.count( list[i]->id )) {
 			scope.add(variable[list[i]->id]);
-		} else if(list[i]->domain == NULL) {
-			// std::cout << list[i]->id << " has an empty domain " << std::endl;
-			int v = stoi(list[i]->id);
-			scope.add(Variable(v,v));
-		} else if(list[i]->domain->values.size()==1) {	
-			int v = list[i]->domain->minimum();
-			scope.add(Variable(v,v));
-		} else {
-			cout << " s UNSUPPORTED\n";
-			exit(1);
-		}
+		// } else if(list[i]->domain == NULL) {
+		// 	// std::cout << list[i]->id << " has an empty domain " << std::endl;
+		// 	int v = stoi(list[i]->id);
+		// 	scope.add(Variable(v,v));
+		// } else if(list[i]->domain->values.size()==1) {
+		// 	int v = list[i]->domain->minimum();
+		// 	scope.add(Variable(v,v));
+		// } else {
+		// 	cout << " s UNSUPPORTED\n";
+		// 	exit(1);
+		// }
 	}
 }
 
@@ -2365,6 +2367,23 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 		// std::cout << std::endl;
 		
 		
+		solver.add( Element(scope,variable[index->id],startIndex) == variable[value->id] );
+}
+
+void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<int> &list, int startIndex, XVariable *index, RankType rank, XVariable *value) {
+#ifdef _VERBOSE_
+    cout << "\n    element variable with list of integers (with index) constraint" << endl;
+    cout << "        ";
+    displayList(list);
+    cout << "        value: " << *value << endl;
+    cout << "        Start index : " << startIndex << endl;
+    cout << "        index : " << *index << endl;
+#endif
+		
+		VarArray scope;
+		for( auto v : list ) {
+			scope.add(Variable(v,v));
+		}
 		solver.add( Element(scope,variable[index->id],startIndex) == variable[value->id] );
 }
 

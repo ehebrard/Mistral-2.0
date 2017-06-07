@@ -87,6 +87,7 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 		// os << endl;
 		
 		os << " </values>\n v </instantiation>\n";
+		
 	}
 }
 
