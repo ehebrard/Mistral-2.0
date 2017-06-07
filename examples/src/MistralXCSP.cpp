@@ -9,7 +9,6 @@ using namespace XCSP3Core;
 
 
 void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
-
 	try
 	{
 		XCSP3CoreParser parser(&cb);
@@ -114,11 +113,11 @@ int main(int argc,char **argv) {
   TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);
   cmd.add( simple_rewriteArg );
 
-  TCLAP::SwitchArg branchOnaux("","branch_on_aux","Branching on auxiliary variables", false);
+  TCLAP::ValueArg<int> branchOnaux("","branch_on_aux","Branching on auxiliary variables whose domain size is larger than value", false, 0, "int");
   cmd.add( branchOnaux );
 
-  TCLAP::SwitchArg annotationArg("","follow_annotations","Uses the annotations", false);
-  cmd.add( annotationArg );
+  TCLAP::ValueArg<int> countArg("","count","count solutions (up to value)", false, 1, "int");
+  cmd.add( countArg );
 
 	
 	cmd.parse(argc, argv);
@@ -159,34 +158,66 @@ int main(int argc,char **argv) {
 	
 	// std::cout << solver.constraints[277].binary() << std::endl;
 	
-	if(branchOnaux.getValue())
-	{
-		Vector<Variable> search_sequence;
-		BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
-
-		for(int k=0; k<cb.variables.size; ++k) {
-			search_vars.add(cb.variables[k].id());
-			search_sequence.add(cb.variables[k]);
-		}
-
-		for(int i=0; i<solver.variables.size; ++i) {
-			int domsize = solver.variables[i].get_size();
-
-			if(//solver.variables[i].is_boolean()
-					domsize>1 && domsize<=10
-					&& !(search_vars.contain(solver.variables[i].id()))) {
-				search_vars.add(i);
-				search_sequence.add(solver.variables[i]);
+	if(countArg.getValue()!=1) {
+		
+		int num_solutions = 0;
+		// Outcome res = solver.depth_first_search(cb.variables, heuristic, new NoRestart());
+		solver.initialise_search(cb.variables, heuristic, new NoRestart());
+		
+		while( (countArg.getValue()<1 || countArg.getValue()>num_solutions) && solver.get_next_solution() == SAT ) {
+			++num_solutions;
+			
+			cout << " numsol = " << num_solutions ;
+			
+			for( auto var : cb.variables ) {
+				if(var.id()>=0)
+					cout << " " << cb.solver.last_solution_lb[var.id()];
+				else
+					cout << " " << var.get_value();
 			}
-		}
-		solver.depth_first_search(search_sequence, heuristic, restart);
-	}
-	else
-		if (annotationArg.getValue())
-			solver.depth_first_search(cb.variables, heuristic, restart);
-		else
-			solver.depth_first_search(solver.variables, heuristic, restart);
+			cout << endl;
+			
+			ofstream solfile("sols/sol"+int2str(num_solutions)+".txt", ofstream::out);
+			solfile << " s SATISFIABLE\n";
+			print_solution(cb, solfile);
+			solfile.close();
+			
+			
+		} 
+		cout << num_solutions << endl;
+		
+		
+	} else {
 	
+		if(branchOnaux.getValue()>0)
+		{
+			Vector<Variable> search_sequence;
+			BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
+
+			for(int k=0; k<cb.variables.size; ++k) {
+				search_vars.add(cb.variables[k].id());
+				search_sequence.add(cb.variables[k]);
+			}
+
+			for(int i=0; i<solver.variables.size; ++i) {
+				int domsize = solver.variables[i].get_size();
+
+				if(//solver.variables[i].is_boolean()
+						domsize>1 && domsize<=branchOnaux.getValue()
+						&& !(search_vars.contain(solver.variables[i].id()))) {
+					search_vars.add(i);
+					search_sequence.add(solver.variables[i]);
+				}
+			}
+			solver.depth_first_search(search_sequence, heuristic, restart);
+		}
+		else {
+			// if (annotationArg.getValue())
+				solver.depth_first_search(cb.variables, heuristic, restart);
+			// else
+			// 	solver.depth_first_search(solver.variables, heuristic, restart);
+	  }	
+	}
 
 	if(cmd.print_statistics())
 		solver.statistics.print_full(std::cout);
