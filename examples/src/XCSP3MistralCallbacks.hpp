@@ -252,6 +252,12 @@ namespace XCSP3Core {
 
         virtual void buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<XVariable *> &heights, XCondition &xc) override;
 
+        virtual void buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex) override;
+
+        virtual void buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex, int size) override;
+
+        virtual void buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex, XVariable *size) override;
+				
         virtual void buildObjectiveMinimizeExpression(string expr) override;
 
         virtual void buildObjectiveMaximizeExpression(string expr) override;
@@ -3088,19 +3094,37 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<XVariable *> &varHeights, XCondition &xc) {
-	cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+	cout << " s UNSUPPORTED" << _ID_(": var demand cumulative") << "\n";
 	exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<int> &heights, XCondition &xc) {
-	cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+	cout << " s UNSUPPORTED" << _ID_(": var duration cumulative") << "\n";
 	exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<XVariable *> &heights, XCondition &xc) {
-	cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+	cout << " s UNSUPPORTED" << _ID_(": var demand & duration cumulative") << "\n";
+	exit(1);
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex) {
+	cout << " s UNSUPPORTED" << _ID_(": SubCircuit") << "\n";
+	exit(1);
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex, int size) {
+	cout << " s UNSUPPORTED" << _ID_(": Fixed-size Circuit") << "\n";
+	exit(1);
+}
+
+
+void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex, XVariable *size) {
+	cout << " s UNSUPPORTED" << _ID_(": Circuit?") << "\n";
 	exit(1);
 }
 
@@ -3667,9 +3691,13 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
     if(fn->type == NT_IN) {
 
     		Variable x = postExpression(fn->args[0]);
-				postExpression(fn->args[1]);
+				Variable y = postExpression(fn->args[1]);
 
-				rv = Member(x, util);
+
+				if(y.is_void())
+					rv = Member(x, util);
+				else
+					rv = (x==y);
 
     }
 		
@@ -3678,13 +3706,25 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 	
 				vector<int>& elements(util);
 				elements.clear();
+
 				for( auto x : fn->args ) {
 					if(x->type == NT_CONSTANT) {
 						elements.push_back(((NodeConstant*)x)->val);
 					} else {
-						cout << " s UNSUPPORTED\n";
-						exit(1); 
+						break;
 					}
+				}
+				
+				if(elements.size() != fn->args.size()) {
+					VarArray scope;
+					for( auto x : fn->args ) {	
+						scope.add( postExpression(x) );
+					}
+					
+					Variable any(0, scope.size-1);
+					rv = Element(scope, any);
+				} else {
+					rv = Variable();
 				}
 
     }
