@@ -14597,7 +14597,7 @@ int Mistral::ConstraintCliqueNotEqual::check( const int* s ) const
   while(--i) {
     j=i;
     while(j--)
-      if( s[i] == s[j] ) return 1;
+      if( s[i] == s[j] && s[i] != exception ) return 1;
   }
   return 0; 
 }
