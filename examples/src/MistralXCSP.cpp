@@ -67,7 +67,9 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 		os << " </list>\n v   <values>";
 		
 		for( auto var : cb.variables ) {
-			if(var.id()>=0)
+			if(var.get_degree()==0) {
+				os << " *";
+			} else if(var.id()>=0)
 				os << " " << cb.solver.last_solution_lb[var.id()];
 			else
 				os << " " << var.get_value();
@@ -162,7 +164,16 @@ int main(int argc,char **argv) {
 		
 		int num_solutions = 0;
 		// Outcome res = solver.depth_first_search(cb.variables, heuristic, new NoRestart());
-		solver.initialise_search(cb.variables, heuristic, new NoRestart());
+		
+		
+		VarArray sequence;
+		for( auto x : cb.variables ) {
+			if(x.get_degree()>0) {
+				sequence.add(x);
+			}
+		}
+		
+		solver.initialise_search(sequence, heuristic, new NoRestart());
 		
 		while( (countArg.getValue()<1 || countArg.getValue()>num_solutions) && solver.get_next_solution() == SAT ) {
 			++num_solutions;
@@ -212,10 +223,15 @@ int main(int argc,char **argv) {
 			solver.depth_first_search(search_sequence, heuristic, restart);
 		}
 		else {
-			// if (annotationArg.getValue())
-				solver.depth_first_search(cb.variables, heuristic, restart);
-			// else
-			// 	solver.depth_first_search(solver.variables, heuristic, restart);
+			
+			VarArray sequence;
+			for( auto x : cb.variables ) {
+				if(x.get_degree()>0) {
+					sequence.add(x);
+				}
+			}
+			solver.depth_first_search(cb.variables, heuristic, restart);
+
 	  }	
 	}
 
