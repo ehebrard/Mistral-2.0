@@ -178,20 +178,22 @@ int main(int argc,char **argv) {
 		while( (countArg.getValue()<1 || countArg.getValue()>num_solutions) && solver.get_next_solution() == SAT ) {
 			++num_solutions;
 			
-			cout << " numsol = " << num_solutions ;
+			if(num_solutions <= 1000 || (num_solutions <= 10000 && (num_solutions%100 == 0)) || (num_solutions%1000 == 0)) {
+				cout << " numsol = " << num_solutions ;
 			
-			for( auto var : cb.variables ) {
-				if(var.id()>=0)
-					cout << " " << cb.solver.last_solution_lb[var.id()];
-				else
-					cout << " " << var.get_value();
-			}
-			cout << endl;
+				for( auto var : cb.variables ) {
+					if(var.id()>=0)
+						cout << " " << cb.solver.last_solution_lb[var.id()];
+					else
+						cout << " " << var.get_value();
+				}
+				cout << endl;
 			
-			ofstream solfile("sols/sol"+int2str(num_solutions)+".txt", ofstream::out);
-			solfile << " s SATISFIABLE\n";
-			print_solution(cb, solfile);
-			solfile.close();
+				ofstream solfile("sols/sol"+int2str(num_solutions)+".txt", ofstream::out);
+				solfile << " s SATISFIABLE\n";
+				print_solution(cb, solfile);
+				solfile.close();
+			}	
 			
 			
 		} 
@@ -233,14 +235,14 @@ int main(int argc,char **argv) {
 			solver.depth_first_search(cb.variables, heuristic, restart);
 
 	  }	
+
+		if(cmd.print_statistics())
+			solver.statistics.print_full(std::cout);
+		else
+			print_outcome(cb, std::cout);
+
+		print_solution(cb, std::cout);
 	}
-
-	if(cmd.print_statistics())
-		solver.statistics.print_full(std::cout);
-	else
-		print_outcome(cb, std::cout);
-
-	print_solution(cb, std::cout);
 
   return 0;
 }
