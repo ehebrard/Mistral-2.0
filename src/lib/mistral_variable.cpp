@@ -4586,16 +4586,34 @@ void Mistral::TableExpression::add(int* tuple)
 {
   int n = children.size;
   int *new_tuple = new int[n];
-  while(n--) new_tuple[n] = tuple[n];
-  tuples->add(new_tuple);
+	// bool valid = true;
+	//   while(valid && n--) {
+		// valid = children[n].contain(tuple[n]);
+	while(n--) {
+		new_tuple[n] = tuple[n];
+	}
+	//
+	// if(valid)
+		tuples->add(new_tuple);
 }
 
 void Mistral::TableExpression::add(const int* tuple) 
 {
   int n = children.size;
   int *new_tuple = new int[n];
-  while(n--) new_tuple[n] = tuple[n];
-  tuples->add(new_tuple);
+	// bool valid = true;
+	//   while(valid && n--) {
+	// 	valid = children[n].contain(tuple[n]);
+	// 	new_tuple[n] = tuple[n];
+	// }
+	//
+	// if(valid)
+	
+  while(n--) {
+		new_tuple[n] = tuple[n];
+	}
+
+	tuples->add(new_tuple);
 }
 
 Mistral::TableExpression::~TableExpression() {
@@ -4607,23 +4625,41 @@ Mistral::TableExpression::~TableExpression() {
 }
 
 void Mistral::TableExpression::extract_constraint(Solver *s) { 
-  ConstraintTable *tab;
-  switch(propagator) {
-	  case GAC2001: {tab = new ConstraintGAC2001(children);} break;
-	  case GAC3: {tab = new ConstraintGAC3(children);} break;
-	    //case AC3: {tab = new ConstraintAC3(children);} break;
-	  case GAC4: {tab = new ConstraintGAC4(children);} break;
-	  default: {
-			if(support)
-				tab = new ConstraintGAC2001(children);
-			else
-				tab = new ConstraintGAC3(children, support);
-		}
-  }
+	if(tuples->empty())
+		s->fail();
+	else {
+	
+	  ConstraintTable *tab;
+	  switch(propagator) {
+		  case GAC2001: {tab = new ConstraintGAC2001(children);} break;
+		  case GAC3: {tab = new ConstraintGAC3(children);} break;
+		    //case AC3: {tab = new ConstraintAC3(children);} break;
+		  case GAC4: {tab = new ConstraintGAC4(children);} break;
+		  default: {
+				if(support)
+					tab = new ConstraintGAC2001(children);
+				else
+					tab = new ConstraintGAC3(children, support);
+			}
+	  }
  
-  tab->table.copy(*tuples);
+	  // tab->table.copy(*tuples);
+		for( auto t : *tuples ) {
+			bool valid = true;
+			for(size_t i=0; valid && i<children.size; ++i) {
+				valid = children[i].contain(t[i]);
+			}
+			if(valid)
+				tab->table.add(t);
+		}
 
-  s->add(Constraint(tab)); 
+
+		if(tab->table.empty()) {
+			s->fail();
+		} else {
+			s->add(Constraint(tab)); 
+		}
+	}
 }
 
 void Mistral::TableExpression::extract_variable(Solver *s) {

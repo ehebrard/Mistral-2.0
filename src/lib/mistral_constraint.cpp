@@ -8311,7 +8311,8 @@ void Mistral::ConstraintGAC2001::initialise() {
     firstSupport[i] = new ReversibleNum<int>[nval];
     firstSupport[i] -= themins[i];
 		
-		// std::cout << scope[i] << " in " << scope[i].get_domain() << std::endl;
+		// if(get_solver()->constraints.size==3)
+		// std::cout << scope[i] << " in " << scope[i].get_domain() << "[" << themins[i] << ".." << scope[i].get_initial_max() << "] = " << nval << std::endl;
 
     Domain dom_xi(scope[i].get_var());
     Domain::iterator xit = dom_xi.begin();
@@ -8319,6 +8320,10 @@ void Mistral::ConstraintGAC2001::initialise() {
 
     while(xit != xend) {
       nval = dom_xi.get_value(xit);
+			
+			// if(get_solver()->constraints.size==3)
+			// std::cout << " initialise support[" << i << "][" << nval << "]\n";
+			
       firstSupport[i][nval].initialise(solver, 0);
       ++xit;
     }
@@ -8331,6 +8336,7 @@ void Mistral::ConstraintGAC2001::initialise() {
     supportList[i] = new Vector<const int*> [scope[i].get_initial_max() - themins[i] + 1];
     supportList[i] -= themins[i];
 		
+		// if(get_solver()->constraints.size==3)
 		// std::cout << " [" << scope[i].get_initial_min() << ".." << scope[i].get_initial_max() << "]";
   }
 	// std::cout << std::endl;
@@ -8338,20 +8344,34 @@ void Mistral::ConstraintGAC2001::initialise() {
   i=table.size;
   while( i-- ) {
 		
-		// std::cout << i << " add (" << (int*)(table[i]) << ")" << std::endl;
-		// for(j=0; j<arity; ++j) {
-		// 	std::cout << " " << table[i][j] << std::endl;
+		// if(get_solver()->constraints.size==3) {
+		// 	std::cout << i << " add (" << (int*)(table[i]) << ")" << std::endl;
+		// 	for(j=0; j<arity; ++j) {
+		// 		std::cout << " " << table[i][j] << std::endl;
+		// 	}
+		// 	std::cout << std::endl;
 		// }
-		// std::cout << std::endl;
-		//
-		// if(i==1116) {
-		// 	exit(1);
-		// }
-	
 		
-    for(j=0; j<arity; ++j) 
-      supportList[j][table[i][j]].add( table[i] );
+		bool valid = true;
+		for(j=0; j<arity && valid; ++j) {
+			valid = scope[j].contain(table[i][j]);
+		}
+		
+		if(valid) {
+	    for(j=0; j<arity; ++j) {
+			
+				// if(get_solver()->constraints.size==3)
+				// 	std::cout << " -> support[" << j << "][" << table[i][j] << "]\n";
+						
+	      supportList[j][table[i][j]].add( table[i] );
+			}
+		}	
+		// else {
+		// 	invalid.add(table[i]);
+		// }
   }
+
+	// exit(1);
 
 }
 
@@ -8375,6 +8395,19 @@ Mistral::ConstraintGAC2001::~ConstraintGAC2001()
   }
   delete [] supportList;
   delete [] themins;
+
+	// std::cout << id << " ";
+	//   for(i=0; i<arity; ++i) {
+	// 	std::cout << " [" << scope[i].get_initial_min() << ".." << scope[i].get_initial_max() << "]:" ;
+	// 	std::cout << table << "-";
+	// 	std::cout << table[0] << "-";
+	// 	std::cout << table[0][i];
+	//   }
+	// std::cout << std::endl;
+	// std::cout << "table size = " << table.size << std::endl;
+	//
+	// if(id==3)
+	// 	exit(1);
 
 }
 

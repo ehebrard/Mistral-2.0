@@ -586,15 +586,6 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 				bool cont = true;
 				do {
 					
-					// if(count<=0) exit(1);
-					// --count;
-					
-					// cout << " ->";
-					// for( auto v : fact ) {
-					// 	cout << " " << v;
-					// }
-					// cout << endl;
-					
 					tab->add(&(fact[0]));
 
 					int j = stared[i];

@@ -3887,6 +3887,7 @@ namespace Mistral {
     int* themins;
     //Vector< const int* > tuples;
     //bool isClone;
+		// Vector< const int* > invalid;
     //@}
 
     /**@name Constructors*/
