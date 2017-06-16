@@ -4497,13 +4497,19 @@ namespace Mistral {
       Decision d;
       
       int val = solver->last_solution_lb[x.id()];
-      if(val != -INFTY && x.contain(val)) {
-	d = Decision(x, Decision::ASSIGNMENT, val);
-      } else
-	d = init_choice.make(x);
+			if(val == INFTY) {
+				d = init_choice.make(x);
+			} else if(x.contain(val)) {
+				d = Decision(x, Decision::ASSIGNMENT, val);
+			} else {
+	      d = Decision(x, Decision::ASSIGNMENT, (randint(2) ? x.get_min() : x.get_max()));
+			}
+				
+				//       if(val != -INFTY && x.contain(val)) {
+				// d = Decision(x, Decision::ASSIGNMENT, val);
+				//       } else
+				// d = init_choice.make(x);
  
-      //std::cout << d << std::endl;
-
       return d;
 
     }

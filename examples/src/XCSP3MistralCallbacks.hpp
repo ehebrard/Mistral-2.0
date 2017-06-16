@@ -2663,9 +2663,10 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
                        Vector<Variable>& req,
                        Variable cap, 
                        int horizon) {
-												 
+									
+#ifdef _DEBUG_CUMULATIVE			 
 	std::cout << "CAPACITY = " << cap.get_domain() << std::endl;		 
-												 
+#endif												 
 							
 	int n = start.size;					 
 	Vector<Variable> end;
@@ -2673,8 +2674,11 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 	 
 	for(int i=0; i<n; ++i) {
 	 	end.add(dur[i].is_ground() ? start[i] + dur[i].get_max() : start[i] + dur[i]);
-		
+
+#ifdef _DEBUG_CUMULATIVE
 		std::cout << req[i].get_domain() << std::endl;
+#endif
+		
 	} 
   
   Variable **flow = new Variable*[n+1];
@@ -2705,26 +2709,40 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
   Vector<Variable> inflow;
   for(int i=0; i<n; ++i) {
 		
-		//std::cout << " conservation in node " << start[i].id() << std::endl;
+#ifdef _DEBUG_CUMULATIVE
+		std::cout << " conservation in node " << start[i].id() << std::endl;
+#endif
+		
     for(int j=0; j<=n; ++j) {
       if(i != j) {
 				
-				// std::cout << i << "." << j << std::endl;
+#ifdef _DEBUG_CUMULATIVE
+				std::cout << i << "." << j << std::endl;
+#endif
+				
 				if(flow[i][j].get_max()>0) {
 					
-					//std::cout << "  + flow to/from " << (j<n ? start[j].id() : n) << std::endl;
+#ifdef _DEBUG_CUMULATIVE
+					std::cout << "  + flow to/from " << (j<n ? start[j].id() : n) << std::endl;
+#endif
+					
 					outflow.add(flow[i][j]);
         	inflow.add(flow[j][i]);
 				}
       }
     }
 		
-		// std::cout << "Must be equal to: ";
-		// std::cout.flush();
+#ifdef _DEBUG_CUMULATIVE
+		std::cout << "Must be equal to: ";
+		std::cout.flush();
+#endif
 		
     if(req[i].is_ground()) {
 			
-			//std::cout << "[" << req[i].get_min() << ", " << req[i].get_max() << "]" << std::endl;	
+#ifdef _DEBUG_CUMULATIVE
+			std::cout << "[" << req[i].get_min() << ", " << req[i].get_max() << "]" << std::endl;
+#endif
+			
 			Variable sum_exp = Sum(outflow, req[i].get_min(), req[i].get_max());
 				
 			s.add(sum_exp);	
@@ -2734,7 +2752,10 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 
     } else {
 			
-			// std::cout << req[i].get_domain() << std::endl;	
+#ifdef _DEBUG_CUMULATIVE
+			std::cout << req[i].get_domain() << std::endl;	
+#endif
+			
       s.add(Sum(outflow) == req[i]);
       s.add(Sum(inflow) == req[i]);
     }
@@ -2742,8 +2763,10 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
     inflow.clear();
   }
 	
-	//std::cout << " post total flow constraints:" << std::endl;
-	
+#ifdef _DEBUG_CUMULATIVE
+	std::cout << " post total flow constraints:" << std::endl;
+#endif
+		
   for(int j=0; j<n; ++j) {
 		if(flow[n][j].get_max()>0)
 			outflow.add(flow[n][j]);
@@ -2753,12 +2776,18 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 
   if(cap.is_ground()) {
 		
-		//std::cout << "fixed capacity" << std::endl;	
-    s.add(Sum(outflow, 0, cap.get_max()));
-    s.add(Sum(inflow, 0, cap.get_max()));
+#ifdef _DEBUG_CUMULATIVE
+		std::cout << "fixed capacity" << std::endl;	
+#endif		
+	
+    s.add(Sum(outflow, cap.get_max(), cap.get_max()));
+    s.add(Sum(inflow, cap.get_max(), cap.get_max()));
   } else {
 	
-		//std::cout << "variable capacity" << std::endl;
+#ifdef _DEBUG_CUMULATIVE
+		std::cout << "variable capacity" << std::endl;
+#endif
+		
     s.add(Sum(outflow) == cap);
     s.add(Sum(inflow) == cap);
   }
@@ -2777,8 +2806,8 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 	
 	s.consolidate();
 	
-	std::cout << s << std::endl;
-	
+#ifdef _DEBUG_CUMULATIVE
+	std::cout << s << std::endl;	
   for(int i=0; i<n; ++i) {
     for(int j=0; j<n; ++j) {
 			if(i != j) {
@@ -2789,6 +2818,7 @@ void XCSP3MistralCallbacks::p_cumulative_flow(Solver& s,
 		}
 		std::cout << std::endl;
 	}
+#endif
 	
 
   for(int i=0; i<=n; ++i) {
@@ -3071,11 +3101,13 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 		std::cout << "size of the flow encoding = " << size_flow << std::endl;
 #endif
   
-		// if(size_flow < size_discretization || var_dur) {
-		// 	p_cumulative_flow(solver, start, dur, req, cap, horizon);
-		// } else {
+		if(
+			false &&
+		(size_flow < size_discretization || var_dur)) {
+			p_cumulative_flow(solver, start, dur, req, cap, horizon);
+		} else {
 			p_cumulative_discretization(solver, start, dur, req, cap, horizon);
-		// }
+		}
 
 
 	// }
@@ -3103,6 +3135,17 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 
 
 void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex) {
+	
+	// VarArray next;
+	// getVariables(list, next);
+	//
+	// VarArray timestamp(list.size(),0,list.size()-1);
+	// for( size_t i=0; i<timestamp.size; ++i ) {
+	// 	solver.add(timestamp[i] <= timestamp[next[i]]);
+	// }
+	
+	
+	
 	cout << " s UNSUPPORTED" << _ID_(": SubCircuit") << "\n";
 	exit(1);
 }

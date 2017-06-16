@@ -1,7 +1,7 @@
 
 /*
   Mistral 2.0 is a constraint satisfaction and optimisation library
-  Copyright (C) 2009  Emmanuel Hebrard
+  Copyright (C) 2009  Emmanuel Hebrard""
   
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

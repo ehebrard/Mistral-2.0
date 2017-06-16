@@ -67,7 +67,7 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 		os << " </list>\n v   <values>";
 		
 		for( auto var : cb.variables ) {
-			if(var.get_degree()==0) {
+			if(var.get_degree()==0 && var.get_initial_min() < var.get_initial_max()) {
 				os << " *";
 			} else if(var.id()>=0)
 				os << " " << cb.solver.last_solution_lb[var.id()];

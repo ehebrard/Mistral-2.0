@@ -11086,10 +11086,11 @@ Mistral::BranchingHeuristic *Mistral::Solver::heuristic_factory(std::string var_
 	  	  }
 		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
   } else if(var_ordering == "ELC") {
-	  if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
+    if( branching == "MinVal+Guided" || branching == "minval+guided" ) {
+			heu = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (this);
+    } else if( branching == "Lex" || branching == "lex" || branching == "minvalue" || branching == "min value" || branching == "MinValue" || branching == "Min Value" || branching == "lexicographic" || branching == "Lexicographic" ) {
 		  heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, MinValue, MinValue, 1 > (this);
-	  }
-	  if( branching == "Adpated" || branching == "adapted" ) {
+	  } else if( branching == "Adpated" || branching == "adapted" ) {
 		  heu = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (this);
 	  }
 		// heu = new LastConflict < Lexicographic, MinValue, MinValue, 3 > (this);
