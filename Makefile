@@ -11,6 +11,8 @@ include ./template.mk
 DATE := $(shell date '+%y-%m-%d')
 
 clean : 
+	cd fz;	make clean;
+	cd XCSP3-CPP-Parser/samples ; make clean; 
 	rm -rf $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~ ./fzn-mistral fz/mistral-fzn
 
 archive: 
