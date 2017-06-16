@@ -143,8 +143,8 @@ int main(int argc,char **argv) {
 	if(cmd.print_model())
 		std::cout << solver << std::endl;
 		
-	BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
-	RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
+	// BranchingHeuristic *heuristic = solver.heuristic_factory(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization());
+	// RestartPolicy *restart = solver.restart_factory(cmd.get_restart_policy());
 	
 	
 	if(solver.parameters.time_limit > 0) {
@@ -154,8 +154,17 @@ int main(int argc,char **argv) {
 	}
 	
 	
+	BranchingHeuristic *heuristic;
+	RestartPolicy *restart;
 	if(solver.objective && solver.objective->is_optimization()) {
 		solver.add( new ObjectivePrinter(&solver) );
+		
+		restart	= new Luby();
+		restart->base = 128;
+		heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+	} else {
+		restart = new Geometric();
+		heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
 	}
 	
 	// std::cout << solver.constraints[277].binary() << std::endl;

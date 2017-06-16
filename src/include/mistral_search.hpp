@@ -4497,19 +4497,19 @@ namespace Mistral {
       Decision d;
       
       int val = solver->last_solution_lb[x.id()];
-			if(val == INFTY) {
-				d = init_choice.make(x);
-			} else if(x.contain(val)) {
-				d = Decision(x, Decision::ASSIGNMENT, val);
-			} else {
-	      d = Decision(x, Decision::ASSIGNMENT, (randint(2) ? x.get_min() : x.get_max()));
-			}
+			// if(val == INFTY) {
+			// 	d = init_choice.make(x);
+			// } else if(x.contain(val)) {
+			// 	d = Decision(x, Decision::ASSIGNMENT, val);
+			// } else {
+			// 	      d = Decision(x, Decision::ASSIGNMENT, (randint(2) ? x.get_min() : x.get_max()));
+			// }
 				
-				//       if(val != -INFTY && x.contain(val)) {
-				// d = Decision(x, Decision::ASSIGNMENT, val);
-				//       } else
-				// d = init_choice.make(x);
- 
+			if(val != -INFTY && x.contain(val)) {
+				d = Decision(x, Decision::ASSIGNMENT, val);
+			} else
+				d = init_choice.make(x);
+
       return d;
 
     }
@@ -4531,6 +4531,67 @@ namespace Mistral {
   std::ostream& operator<<(std::ostream& os, Guided<Default>* x) {
     return x->display(os);
   }
+	
+	
+	
+	
+/*! \class SolutionGuided
+  \brief  Class SolutionGuided
+
+  Assigns the variable to its minimum value.
+*/
+template< class Init, class Default >
+class SolutionGuided {
+  
+public: 
+  
+  Solver *solver;
+  Init init_choice;
+	Default def_choice;
+
+
+  SolutionGuided() {}
+  SolutionGuided(Solver *s, double **vw, double *bw, WeightMap *wm) { initialise(s, vw, bw, wm);}
+  void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) { solver=s, init_choice.initialise(s, vw, bw, wm); }
+  virtual ~SolutionGuided() {};
+  
+  inline Decision make(Variable x) {
+
+
+    //std::cout << "(G) make a decision on " << x << " in " << x.get_domain() << std::endl;
+
+    Decision d;
+    
+    int val = solver->last_solution_lb[x.id()];
+		if(val == INFTY) {
+			d = init_choice.make(x);
+		} else if(x.contain(val)) {
+			d = Decision(x, Decision::ASSIGNMENT, val);
+		} else {
+      d = def_choice.make(x);
+		}
+	
+    return d;
+
+  }
+  
+  std::ostream& display(std::ostream& os) const {
+    os << "assign it to the value of this variable in the last solution";
+    return os;
+  }
+  
+};
+
+template< class Init, class Default >
+std::ostream& operator<<(std::ostream& os, SolutionGuided<Init,Default>& x) {
+  return x.display(os);
+}
+
+
+template< class Init, class Default >
+std::ostream& operator<<(std::ostream& os, SolutionGuided<Init,Default>* x) {
+  return x->display(os);
+}
 
 
 
