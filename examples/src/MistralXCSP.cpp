@@ -164,7 +164,7 @@ int main(int argc,char **argv) {
 		heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
 	} else {
 		restart = new Geometric();
-		heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+		heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
 	}
 	
 	// std::cout << solver.constraints[277].binary() << std::endl;
