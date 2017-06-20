@@ -1910,6 +1910,13 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(string id, vector<XVariab
 			for( auto X : scope )
 				solver.add( Member(X, values) );
 		}
+		
+		
+		// solver.consolidate();
+		//
+		// std::cout << solver << std::endl;
+		//
+		// exit(1);
 
 }
 

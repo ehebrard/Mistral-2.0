@@ -8661,7 +8661,10 @@ void Mistral::OccExpression::extract_variable(Solver *s) {
   
   int arity = scope.size;
   if(lower_bound < current_occ) lower_bound = current_occ;
-  if(upper_bound < arity+current_occ) upper_bound = arity+current_occ;
+  if(upper_bound > arity+current_occ) upper_bound = arity+current_occ;
+
+
+	// std::cout << "extract [" << lower_bound << ".." << upper_bound << "] (" << current_occ << ")\n";
 
   Variable aux(lower_bound, upper_bound, DYN_VAR);
   _self = aux;
