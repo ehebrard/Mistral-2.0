@@ -66,26 +66,18 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 		}
 		os << " </list>\nv   <values>";
 		
-		for( auto var : cb.variables ) {
-			if(var.get_degree()==0 && var.get_initial_min() < var.get_initial_max()) {
+		
+		for( size_t i=0; i<cb.variables.size; ++i ) {
+			Variable var = cb.variables[i];
+			int deg = cb.initial_degree[i];
+
+			if(deg==0 && var.get_initial_min() < var.get_initial_max()) {
 				os << " *";
 			} else if(var.id()>=0)
 				os << " " << cb.solver.last_solution_lb[var.id()];
 			else
 				os << " " << var.get_value();
 		}
-		
-		// int linecount = 0;
-		// for( auto var : cb.variables ) {
-		// 	if(linecount%8 == 0) os << endl;
-		// 	++linecount;
-		//
-		// 	if(var.id()>=0)
-		// 		os << " " << cb.solver.last_solution_lb[var.id()];
-		// 	else
-		// 		os << " " << var.get_value();
-		// }
-		// os << endl;
 		
 		os << " </values>\nv </instantiation>\n";
 		

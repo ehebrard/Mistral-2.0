@@ -1624,8 +1624,8 @@ namespace Mistral {
     Variable(const int lo, const int up, const int type=EXPRESSION);
     Variable(const Vector< int >& values, const int type=EXPRESSION);
 		Variable(const std::vector< int >& values, const int type=EXPRESSION);
-	Variable(const IntStack& values, const int type=EXPRESSION);
-	Variable(const int* values, const int nvalues, const int type=EXPRESSION);
+		Variable(const IntStack& values, const int type=EXPRESSION);
+		Variable(const int* values, const int nvalues, const int type=EXPRESSION);
     Variable(const int lo, const int up, const Vector< int >& values, const int type=EXPRESSION);
     Variable(Variable X, bool h);
     Variable(const Variable& X);

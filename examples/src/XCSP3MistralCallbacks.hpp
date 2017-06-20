@@ -85,6 +85,8 @@ namespace XCSP3Core {
 				Mistral::Vector<Mistral::Variable> _demand_;
 				
 				vector<int> util;
+				
+				vector<int> initial_degree;
 			
 			
         XCSP3MistralCallbacks(Mistral::Solver& s);
@@ -395,6 +397,7 @@ void XCSP3MistralCallbacks::endInstance() {
 			Variable X = variable[id];
 			variables.add(X);
 			var_ids.push_back(id);
+			initial_degree.push_back(X.get_degree());
 		}
 		
 		// var_set.initialise(0, variables.size, BitSet::empt);
