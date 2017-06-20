@@ -17,8 +17,8 @@ void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
 	catch (exception &e)
 	{
 		cout.flush();
-		cout << "\n c \tUnexpected exception :\n c \t" << e.what() << endl;
-		cout << " s UNSUPPORTED" << endl;
+		cout << "\nc \tUnexpected exception :\n c \t" << e.what() << endl;
+		cout << "s UNSUPPORTED" << endl;
 		exit(1);
 	}
 	
@@ -33,38 +33,38 @@ void print_outcome(XCSP3MistralCallbacks& cb, std::ostream& os) {
 	
   switch(result) {
   case SAT: 
-    os << " s SATISFIABLE\n" ;
+    os << "s SATISFIABLE\n" ;
     break;
   case OPT: 
-    os << " s OPTIMUM FOUND\n" ;
+    os << "s OPTIMUM FOUND\n" ;
     break;
   case UNSAT: 
-    os << " s UNSATISFIABLE\n" ;
+    os << "s UNSATISFIABLE\n" ;
     break;
   case UNKNOWN: 
-    os << " s UNKNOWN\n" ;
+    os << "s UNKNOWN\n" ;
     break;
   case LIMITOUT: 
     if(cb.solver.statistics.num_solutions > 0) 
-      os << " s SATISFIABLE\n" ;
+      os << "s SATISFIABLE\n" ;
     else 
-      os << " s UNKNOWN\n" ;
+      os << "s UNKNOWN\n" ;
   }
 }
 
 
 void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 	if(cb.solver.statistics.num_solutions > 0) {
-		os << " v <instantiation type=\"";
+		os << "v <instantiation type=\"";
 		if(cb.solver.statistics.outcome == OPT)
 			os << "optimum\" cost=\"" << cb.solver.statistics.objective_value << "\">\n";
 		else
 			os << "solution\">\n"; 
-		os << " v   <list>";
+		os << "v   <list>";
 		for( auto id : cb.var_ids ) {
 			os << " " << id;
 		}
-		os << " </list>\n v   <values>";
+		os << " </list>\nv   <values>";
 		
 		for( auto var : cb.variables ) {
 			if(var.get_degree()==0 && var.get_initial_min() < var.get_initial_max()) {
@@ -87,7 +87,7 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 		// }
 		// os << endl;
 		
-		os << " </values>\n v </instantiation>\n";
+		os << " </values>\nv </instantiation>\n";
 		
 	}
 }
@@ -101,7 +101,7 @@ public:
 	ObjectivePrinter(Solver *s) : SolutionListener(), solver(s) {}
 	
 	void notify_solution() {
-		std::cout << " o " << solver->objective->value() << std::endl;
+		std::cout << "o " << solver->objective->value() << std::endl;
 	}
 
 };
@@ -145,7 +145,7 @@ int main(int argc,char **argv) {
 	parse(cb, cmd.get_filename().c_str());
 	
 	
-	//std::cout << " c parsetime " << (get_run_time() - cpu_time) << std::endl;
+	std::cout << "c parsetime " << (get_run_time() - cpu_time) << std::endl;
 	
 	if(cmd.print_model())
 		std::cout << solver << std::endl;
@@ -185,7 +185,7 @@ int main(int argc,char **argv) {
 		}
 	}
 	else {
-		std::cout << " c search recommendation not found" << std::endl;
+		std::cout << "c search recommendation not found" << std::endl;
 		exit(1);
 		}
 
@@ -222,7 +222,7 @@ int main(int argc,char **argv) {
 				cout << endl;
 			
 				ofstream solfile("sols/sol"+int2str(num_solutions)+".txt", ofstream::out);
-				solfile << " s SATISFIABLE\n";
+				solfile << "s SATISFIABLE\n";
 				print_solution(cb, solfile);
 				solfile.close();
 			}	

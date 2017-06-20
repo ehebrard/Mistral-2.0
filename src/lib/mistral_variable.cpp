@@ -4625,9 +4625,10 @@ Mistral::TableExpression::~TableExpression() {
 }
 
 void Mistral::TableExpression::extract_constraint(Solver *s) { 
-	if(tuples->empty())
-		s->fail();
-	else {
+	if(tuples->empty()) {
+		if(support)
+			s->fail();
+	} else {
 	
 	  ConstraintTable *tab;
 	  switch(propagator) {
@@ -4655,7 +4656,8 @@ void Mistral::TableExpression::extract_constraint(Solver *s) {
 
 
 		if(tab->table.empty()) {
-			s->fail();
+			if(support)
+				s->fail();
 		} else {
 			s->add(Constraint(tab)); 
 		}
