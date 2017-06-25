@@ -71,6 +71,9 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 			Variable var = cb.variables[i];
 			int deg = cb.initial_degree[i];
 
+
+			std::cerr << cb.declared_var_ids[i] << " " << deg << std::endl;
+
 			if(deg==0 && var.get_initial_min() < var.get_initial_max()) {
 				os << " *";
 			} else if(var.id()>=0)

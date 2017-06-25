@@ -47,6 +47,7 @@
 // #define _VERBOSE_ true
 // #define _DEBUG_CUMULATIVE
 // #define _DEBUG_MDD
+// #define _DEBUG_REG true
 
 #ifdef _VERBOSE_
 #define _ID_(e) e
@@ -69,7 +70,7 @@ namespace XCSP3Core {
 			
 				map<string, Mistral::VarArray> array;
 				map<string, Mistral::Variable> variable;
-				// map<string, int> id_map;
+				map<string, int> id_map;
 				// BitSet var_set;
 			
 				Mistral::VarArray variables;
@@ -87,6 +88,7 @@ namespace XCSP3Core {
 				vector<int> util;
 				
 				vector<int> initial_degree;
+				// vector<int> initial_size;
 			
 			
         XCSP3MistralCallbacks(Mistral::Solver& s);
@@ -305,6 +307,7 @@ void XCSP3MistralCallbacks::getVariables(vector < XVariable* > &list, Vector<Var
   for(size_t i = 0; i < list.size(); i++) { //not necessary to check if the variable exists
 		// if(variable.count( list[i]->id )) {
 			scope.add(variable[list[i]->id]);
+			++initial_degree[id_map[list[i]->id]];
 		// } else if(list[i]->domain == NULL) {
 		// 	// std::cout << list[i]->id << " has an empty domain " << std::endl;
 		// 	int v = stoi(list[i]->id);
@@ -392,12 +395,14 @@ void XCSP3MistralCallbacks::endInstance() {
     cout << "End SAX parsing " << endl;
 #endif
 	
+		int i=0;
 		for( auto id : declared_var_ids ) {
 			// id_map[id] = variables.size;
 			Variable X = variable[id];
 			variables.add(X);
 			var_ids.push_back(id);
-			initial_degree.push_back(X.get_degree());
+			// initial_degree.push_back(X.get_degree());
+			initial_degree[i++] += X.get_degree(); 
 		}
 		
 		// var_set.initialise(0, variables.size, BitSet::empt);
@@ -416,6 +421,11 @@ void XCSP3MistralCallbacks::endVariables() {
 #ifdef _VERBOSE_
     cout << " end variables declaration" << endl << endl;
 #endif
+		int count = 0;
+		for( auto id : declared_var_ids ) {
+			id_map[id] = count++;
+			initial_degree.push_back(0);
+		}
 }
 
 
@@ -435,8 +445,10 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int ma
 		
 		Variable X(minValue, maxValue);	
 		variable[id] = X;
+		// id_map[id] = declared_var_ids.size();
 		// variables.add(X);
 		declared_var_ids.push_back(id);
+		// initial_size.push_back(maxValue-minValue+1);
 		
 		solver.add(X);
 }
@@ -635,6 +647,8 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var, 
     cout << (*var) << endl;
 #endif
 		
+		++initial_degree[id_map[var->id]];
+		
 		if(support) {		
 			auto the_min = *std::min_element(begin(tuples), end(tuples));
 			auto the_max = *std::max_element(begin(tuples), end(tuples));
@@ -687,6 +701,7 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id, vector<XVariab
 			solver.add( Variable(tab) );
 		} else {
 			
+			++initial_degree[id_map[list[0]->id]];
 			solver.add( Member(scope[0], *last_domain) );
 		}	
 }
@@ -711,6 +726,9 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 		
 		Variable X = variable[x->id];
 		Variable Y = variable[y->id];
+		
+		++initial_degree[id_map[x->id]];
+		++initial_degree[id_map[y->id]];
 		
 		 // LT, GE, GT, IN, EQ, NE)
 		if(op == LE) {
@@ -764,7 +782,7 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 
 void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *> &list, string start, vector <string> &final, vector <XTransition> &transitions) {
 #ifdef _VERBOSE_
-    cout << "\n    regular constraint" << endl;
+    cout << "\n    regular constraint " << id << endl;
     cout << "        ";
     displayList(list);
     cout << "        start: " << start << endl;
@@ -802,6 +820,10 @@ void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *
 
 		VarArray state_var(scope.size-1, 0, state_map.size()-1);
 		
+#ifdef _DEBUG_REG
+		std::cout << " states: " << state_var.size << ": " << state_var[0].get_domain() << std::endl;
+#endif		
+		
 		Vector<const int*>* trans = new Vector<const int*>;
 		Vector<const int*>* first = new Vector<const int*>;
 		Vector<const int*>* last  = new Vector<const int*>;
@@ -811,18 +833,33 @@ void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *
 				tuple[0] = state_map[t.from];
 				tuple[1] = t.val;
 				tuple[2] = state_map[t.to];
+				
+#ifdef _DEBUG_REG
+		std::cout << "  T " << tuple[0] << " " << tuple[1] << " " << tuple[2] << std::endl;
+#endif
+				
 				trans->add(tuple);
 				if(start == t.from) {
 					int *pair = new int[2];
 					pair[0] = tuple[1];
 					pair[1] = tuple[2];
 					first->add(pair);
+					
+#ifdef _DEBUG_REG
+		std::cout << "  F " << tuple[0] << " " << tuple[1] << std::endl;
+#endif
+		
 				}
 				if(final_map[t.to]) {
 					int *pair = new int[2];
 					pair[0] = tuple[0];
 					pair[1] = tuple[1];
 					last->add(pair);
+					
+#ifdef _DEBUG_REG
+		std::cout << "  L " << tuple[0] << " " << tuple[1] << std::endl;
+#endif
+		
 				}		
 		}
 
@@ -843,6 +880,8 @@ void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *
 			S.add(state_var[i]);
 			solver.add(Table(S, trans));
 		}
+		
+		// exit(1);
 }
 
 
@@ -1107,11 +1146,14 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentList(string id, vector <v
     }
 #endif		
 		
+		for(size_t i=0; i<lists[0].size(); ++i)
+			++initial_degree[id_map[lists[0][i]->id]];
 		for( auto lpt1=begin(lists); lpt1!=end(lists); ++lpt1) {
 			for( auto lpt2=lpt1+1; lpt2!=end(lists); ++lpt2) {
 				// assert(lpt1->size() == lpt2->size());
 				VarArray differences;
-				for(size_t i=0; i<lpt1->size(); ++i) {
+				for(size_t i=0; i<lists[0].size(); ++i) {
+					++initial_degree[id_map[(*lpt2)[i]->id]];
 					differences.add(variable[(*lpt1)[i]->id] != variable[(*lpt2)[i]->id]);
 				}
 				solver.add( Sum(differences)>0 );
@@ -1152,7 +1194,9 @@ void XCSP3MistralCallbacks::buildConstraintAllEqual(string id, vector<XVariable 
     displayList(list);
 #endif
 				
+		++initial_degree[id_map[list[0]->id]];
 		for(size_t i=1; i<list.size(); ++i) {
+			++initial_degree[id_map[list[i]->id]];
 			solver.add(variable[list[i-1]->id] == variable[list[i]->id]);
 		}
 }
@@ -1166,6 +1210,9 @@ void XCSP3MistralCallbacks::buildConstraintNotAllEqual(string id, vector<XVariab
 #endif
 				
 		VarArray differences;
+		
+		for(size_t i=0; i<list.size(); ++i) 
+			++initial_degree[id_map[list[i]->id]];
 		
 		for( auto xpt=begin(list); xpt!=end(list); ++xpt ) {
 			for( auto ypt=xpt+1; ypt!=end(list); ++ypt) {
@@ -1313,6 +1360,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 				
 		vector<Variable> scope;
 		for( auto x : list ) {
+			++initial_degree[id_map[x->id]];
 			scope.push_back( variable[x->id] );
 		}
 		
@@ -1372,6 +1420,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 		
 		vector<Variable> scope;
 		for( auto x : list ) {
+			++initial_degree[id_map[x->id]];
 			scope.push_back( variable[x->id] );
 		}
 		
@@ -1438,6 +1487,8 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 		
 		vector<Variable> scope;
 		for(unsigned int i = 0; i < list.size(); i++) {
+			++initial_degree[id_map[list[i]->id]];
+			++initial_degree[id_map[coeffs[i]->id]];
 			scope.push_back( variable[list[i]->id] * variable[coeffs[i]->id] );
 		}
 		
@@ -2287,6 +2338,7 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 				
 		VarArray equalities;
 		for( auto x : list ) {
+			++initial_degree[id_map[x->id]];
 			equalities.add( variable[x->id] == value );
 		}
 		solver.add( BoolSum(equalities) > 0 );
@@ -2302,8 +2354,10 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
     cout << "        value: " << *value << endl;
 #endif
 				
+		++initial_degree[id_map[value->id]];
 		VarArray equalities;
 		for( auto x : list ) {
+			++initial_degree[id_map[x->id]];
 			equalities.add( variable[x->id] == variable[value->id] );
 		}
 		solver.add( BoolSum(equalities) > 0 );
@@ -2609,6 +2663,8 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector <vector<X
 			for(int j=i+1; j<num_boxes; ++j) {
 				VarArray distinct;
 				for(int k=0; k<num_dim; ++k) {
+					++initial_degree[id_map[origins[i][k]->id]];
+					++initial_degree[id_map[origins[j][k]->id]];
 					Variable Xik = variable[origins[i][k]->id];
 					Variable Xjk = variable[origins[j][k]->id];
 					distinct.add( (Xik+lengths[i][k] <= Xjk) || (Xjk+lengths[j][k] <= Xik) );
@@ -2641,6 +2697,11 @@ void XCSP3MistralCallbacks::buildConstraintNoOverlap(string id, vector <vector<X
 			for(int j=i+1; j<num_boxes; ++j) {
 				VarArray distinct;
 				for(int k=0; k<num_dim; ++k) {
+					++initial_degree[id_map[origins[i][k]->id]];
+					++initial_degree[id_map[origins[j][k]->id]];
+					++initial_degree[id_map[lengths[i][k]->id]];
+					++initial_degree[id_map[lengths[j][k]->id]];
+					
 					Variable Xik = variable[origins[i][k]->id];
 					Variable Xjk = variable[origins[j][k]->id];
 					Variable Pik = variable[lengths[i][k]->id];
@@ -2663,6 +2724,7 @@ void XCSP3MistralCallbacks::buildConstraintInstantiation(string id, vector<XVari
 #endif
 		
 		for(size_t i=0; i<list.size(); ++i) {
+			++initial_degree[id_map[list[i]->id]];
 			solver.add( variable[list[i]->id] == values[i] );
 		}
 }
@@ -3434,6 +3496,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				
         NodeVariable *nv = (NodeVariable *) n;
         rv = variable[nv->var];
+				++initial_degree[id_map[nv->var]];
 				
     }
 
