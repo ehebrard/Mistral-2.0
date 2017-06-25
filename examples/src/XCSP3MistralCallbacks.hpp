@@ -591,8 +591,8 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 				int numtuples = 1;
 				for( auto j : stared ) {
 					numtuples *= scope[j].get_size();
-					if(numtuples > 100000) {
-						cout << " s UNSUPPORTED\n";
+					if(numtuples > 100000000) {
+						cout << " s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
 						exit(1);
 					}
 				}

@@ -72,7 +72,7 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 			int deg = cb.initial_degree[i];
 
 
-			std::cerr << cb.declared_var_ids[i] << " " << deg << std::endl;
+			// std::cerr << cb.declared_var_ids[i] << " " << deg << std::endl;
 
 			if(deg==0 && var.get_initial_min() < var.get_initial_max()) {
 				os << " *";
