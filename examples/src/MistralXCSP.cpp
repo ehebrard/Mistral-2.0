@@ -6,7 +6,7 @@
 using namespace XCSP3Core;
 
 
-
+XCSP3MistralCallbacks * cb_ptr;
 
 void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
 	try
@@ -102,6 +102,19 @@ public:
 };
 
 
+static void Mistral_SIGTERM_handler(int signum) {
+
+	if(cb_ptr->solver.statistics.num_solutions > 0) {
+		std::cout << "s SATISFIABLE\n" ;
+		print_solution(*cb_ptr, std::cout);
+	}
+	else
+		std::cout << "s UNKNOWN\n" ;
+	exit(0);
+}
+
+
+
 
 int main(int argc,char **argv) {
 	
@@ -139,8 +152,11 @@ int main(int argc,char **argv) {
 	XCSP3MistralCallbacks cb(solver); // my interface between the parser and the solver
 	parse(cb, cmd.get_filename().c_str());
 	
-	
-	std::cout << "c parsetime " << (get_run_time() - cpu_time) << std::endl;
+	cb_ptr= & cb;
+	signal(SIGTERM,Mistral_SIGTERM_handler);
+
+
+	//std::cout << "c parsetime " << (get_run_time() - cpu_time) << std::endl;
 	
 	if(cmd.print_model())
 		std::cout << solver << std::endl;
@@ -245,12 +261,12 @@ int main(int argc,char **argv) {
 			Vector<Variable> search_sequence;
 			BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
 
-			for(int k=0; k<cb.variables.size; ++k) {
+			for(unsigned int k=0; k<cb.variables.size; ++k) {
 				search_vars.add(cb.variables[k].id());
 				search_sequence.add(cb.variables[k]);
 			}
 
-			for(int i=0; i<solver.variables.size; ++i) {
+			for(unsigned int i=0; i<solver.variables.size; ++i) {
 				int domsize = solver.variables[i].get_size();
 
 				if(//solver.variables[i].is_boolean()

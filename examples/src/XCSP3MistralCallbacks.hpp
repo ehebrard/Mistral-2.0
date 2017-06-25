@@ -316,7 +316,7 @@ void XCSP3MistralCallbacks::getVariables(vector < XVariable* > &list, Vector<Var
 		// 	int v = list[i]->domain->minimum();
 		// 	scope.add(Variable(v,v));
 		// } else {
-		// 	cout << " s UNSUPPORTED\n";
+		// 	cout << "s UNSUPPORTED\n";
 		// 	exit(1);
 		// }
 	}
@@ -592,7 +592,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 				for( auto j : stared ) {
 					numtuples *= scope[j].get_size();
 					if(numtuples > 100000000) {
-						cout << " s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
+						cout << "s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
 						exit(1);
 					}
 				}
@@ -764,7 +764,7 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 				solver.add( (X + k) > Y );
 			}
 		} else if(op == IN) {
-			cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 			exit(1);
 		} else if(op == EQ) {
 			if(k==0)
@@ -942,7 +942,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 					cout << "old trans " << prev_map[t.to] << "(" << layer_map[prev_map[t.to]] << ") -> " << t.to << std::endl;
 					cout << "new trans " << t.from << "(" << layer_map[t.from] << ") -> " << t.to << std::endl;
 					
-					cout << " s UNSUPPORTED" << _ID_(": MDD non final node on multiple layers") << " " << t.to << " " << is_final[t.to] << " " << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": MDD non final node on multiple layers") << " " << t.to << " " << is_final[t.to] << " " << "\n";
 					exit(1);
 				}
 			} else {
@@ -971,7 +971,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 
 		// last layer should contain only the final state
 		if(layer_size[num_layers-1] > 0) {
-			cout << " s UNSUPPORTED" << _ID_(": MDD non final node on last layer") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": MDD non final node on last layer") << "\n";
 			exit(1);
 		}
 		layer_size.pop_back();
@@ -1025,7 +1025,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(string id, vector<XVariable *> &l
 				
 				if( cons == num_layers ) {
 					if(!is_final[t.to]) {
-						cout << " s UNSUPPORTED" << _ID_(": MDD dead-end transition") << "\n";
+						cout << "s UNSUPPORTED" << _ID_(": MDD dead-end transition") << "\n";
 						exit(1);
 					}
 					tuple[0] = node_map[t.from];
@@ -1125,7 +1125,7 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentExcept(string id, vector<
 #endif
 						
 		if(except.size()>1) {
-			cout << " s UNSUPPORTED" << _ID_(": AllDiff except SET") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": AllDiff except SET") << "\n";
 			exit(1);
 		}
 		
@@ -1383,7 +1383,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1443,7 +1443,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1511,7 +1511,7 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1675,7 +1675,7 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1736,7 +1736,7 @@ void XCSP3MistralCallbacks::buildConstraintCount(string id, vector<XVariable *> 
     cout << "        condition: " << xc << endl;
 #endif
 				
-		cout << " s UNSUPPORTED" << _ID_(": Occurrence of list of variables") << "\n";
+		cout << "s UNSUPPORTED" << _ID_(": Occurrence of list of variables") << "\n";
 		exit(1);
 }
 
@@ -1802,7 +1802,7 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -1878,7 +1878,7 @@ void XCSP3MistralCallbacks::buildConstraintNValues(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -2188,7 +2188,7 @@ void XCSP3MistralCallbacks::buildConstraintMinimum(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -2277,7 +2277,7 @@ void XCSP3MistralCallbacks::buildConstraintMaximum(string id, vector<XVariable *
 			
 		} else if(cond.operandType == INTERVAL) {
 			if(cond.op != IN) {
-					cout << " s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
 					exit(1);
 			}
 			
@@ -2375,7 +2375,7 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 #endif
 				
 		if(rank != ANY) {
-				cout << " s UNSUPPORTED" << _ID_(": Element rank != Any") << "\n";
+				cout << "s UNSUPPORTED" << _ID_(": Element rank != Any") << "\n";
 				exit(1);
 		}
 		
@@ -2398,7 +2398,7 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<XVariable *
 #endif
 				
 		if(rank != ANY) {
-				cout << " s UNSUPPORTED" << _ID_(": Element rank != Any") << "\n";
+				cout << "s UNSUPPORTED" << _ID_(": Element rank != Any") << "\n";
 				exit(1);
 		}
 		
@@ -2938,7 +2938,7 @@ void XCSP3MistralCallbacks::p_cumulative_discretization(Solver& s,
         	  in_process = (Member(start[i], t-process_time+1, t));
         } else {
           // TODO: tasks with variable durations
-					cout << " s UNSUPPORTED" << _ID_(": Discretization of Cumulative with variable durations") << "\n";
+					cout << "s UNSUPPORTED" << _ID_(": Discretization of Cumulative with variable durations") << "\n";
 					exit(1);
         }
         if(req[i].is_ground()) {
@@ -2997,7 +2997,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 			std::cout << "Decompose cumulative constraint" << std::endl;
 #endif
 			
-	// cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
+	// cout << "s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
 	// exit(1);
 			
 				//
@@ -3005,7 +3005,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 			//
 			//
 	if( cond.op != LE) {
-		cout << " s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
+		cout << "s UNSUPPORTED" << _ID_(": Cumulative with lower bound capacity") << "\n";
 		exit(1);
 	}
 	
@@ -3026,7 +3026,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	} else if( cond.operandType == INTEGER ) {
 		cap = Variable(cond.val, cond.val);
 	} else {
-		cout << " s UNSUPPORTED" << _ID_(": Weird Cumulative") << "\n";
+		cout << "s UNSUPPORTED" << _ID_(": Weird Cumulative") << "\n";
 		exit(1);
 	}
 
@@ -3189,19 +3189,19 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<int> &lengths, vector<XVariable *> &varHeights, XCondition &xc) {
-	cout << " s UNSUPPORTED" << _ID_(": var demand cumulative") << "\n";
+	cout << "s UNSUPPORTED" << _ID_(": var demand cumulative") << "\n";
 	exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<int> &heights, XCondition &xc) {
-	cout << " s UNSUPPORTED" << _ID_(": var duration cumulative") << "\n";
+	cout << "s UNSUPPORTED" << _ID_(": var duration cumulative") << "\n";
 	exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariable *> &origins, vector<XVariable *> &lengths, vector<XVariable *> &heights, XCondition &xc) {
-	cout << " s UNSUPPORTED" << _ID_(": var demand & duration cumulative") << "\n";
+	cout << "s UNSUPPORTED" << _ID_(": var demand & duration cumulative") << "\n";
 	exit(1);
 }
 
@@ -3218,19 +3218,19 @@ void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *
 	
 	
 	
-	cout << " s UNSUPPORTED" << _ID_(": SubCircuit") << "\n";
+	cout << "s UNSUPPORTED" << _ID_(": SubCircuit") << "\n";
 	exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex, int size) {
-	cout << " s UNSUPPORTED" << _ID_(": Fixed-size Circuit") << "\n";
+	cout << "s UNSUPPORTED" << _ID_(": Fixed-size Circuit") << "\n";
 	exit(1);
 }
 
 
 void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex, XVariable *size) {
-	cout << " s UNSUPPORTED" << _ID_(": Circuit?") << "\n";
+	cout << "s UNSUPPORTED" << _ID_(": Circuit?") << "\n";
 	exit(1);
 }
 
@@ -3288,14 +3288,14 @@ void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vec
 		
 	
 		if(type == EXPRESSION_O) {
-			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
 			exit(1);
 		} else if(type == SUM_O) {
 
 			objective = Sum(scope, coefs).get_var();
 
 		} else if(type == PRODUCT_O) {
-			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
 			exit(1);
 		} else if(type == MINIMUM_O) {
 		
@@ -3327,7 +3327,7 @@ void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vec
 			objective = BoolSum(used).get_var();
 			
 		} else if(type == LEX_O) {
-			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
 			exit(1);
 		}	
 			
@@ -3355,26 +3355,26 @@ void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vec
 		
 	
 		if(type == EXPRESSION_O) {
-			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
 			exit(1);
 		} else if(type == SUM_O) {
 
 			objective = Sum(scope, coefs);
 
 		} else if(type == PRODUCT_O) {
-			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
 			exit(1);
 		} else if(type == MINIMUM_O) {
-			cout << " s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
 			exit(1);
 		} else if(type == MAXIMUM_O) {
-			cout << " s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
 			exit(1);
 		} else if(type == NVALUES_O) {
-			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
 			exit(1);
 		} else if(type == LEX_O) {
-			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
 			exit(1);
 		}
 		
@@ -3402,14 +3402,14 @@ void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vec
 		
 	
 		if(type == EXPRESSION_O) {
-			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
 			exit(1);
 		} else if(type == SUM_O) {
 
 			objective = Sum(scope);
 
 		} else if(type == PRODUCT_O) {
-			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
 			exit(1);
 		} else if(type == MINIMUM_O) {
 			
@@ -3420,10 +3420,10 @@ void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type, vec
 			objective = Max(scope);
 		
 		} else if(type == NVALUES_O) {
-			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
 			exit(1);
 		} else if(type == LEX_O) {
-			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
 			exit(1);
 		}
 		
@@ -3451,14 +3451,14 @@ void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vec
 		
 	
 		if(type == EXPRESSION_O) {
-			cout << " s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
 			exit(1);
 		} else if(type == SUM_O) {
 
 			objective = Sum(scope);
 
 		} else if(type == PRODUCT_O) {
-			cout << " s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
 			exit(1);
 		} else if(type == MINIMUM_O) {
 			
@@ -3469,10 +3469,10 @@ void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vec
 			objective = Max(scope);
 		
 		} else if(type == NVALUES_O) {
-			cout << " s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
 			exit(1);
 		} else if(type == LEX_O) {
-			cout << " s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+			cout << "s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
 			exit(1);
 		}
 		
