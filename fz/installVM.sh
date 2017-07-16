@@ -1,39 +1,24 @@
-#echo "This script should be placed in the directory ~/entry_data in the Virtual Machine provided by the challenge organizers"
+echo "This script should be placed in the directory ~/entry_data in the Virtual Machine provided by the challenge organizers"
 
 echo "You should probably change the keyboard layout with \n dpkg-reconfigure keyboard-configuration (then restart) \n" 
-echo "g++, python, and make should be installed before this step"
-
-#read -p "Press [Enter] key to start installation of g++"
-
-#sudo apt install g++
-#read -p "Press [Enter] key to start installation of python"
-#sudo apt install python
-
-#read -p "Press [Enter] key to start installation of make"
-#sudo apt install make
-
- 
-#apt-get install git
+echo "github, g++, python, and make should be installed before this step"
 
 read -p "Press [Enter] key to start installation of Mistral-2.0"
 
-
-
-git clone https://github.com/ehebrard/Mistral-2.0.git
+git clone --recursive https://github.com/ehebrard/Mistral-2.0.git
 cd Mistral-2.0
 make clean
 cd fz
 make clean
-cd ..
 make 
 
-#To build the parallel version, remove the following comments: 
-mv fz/mistral-fzn ../
-make clean 
-cd fz 
-make clean 
-make parallel 
-mv ../../mistral-fzn ./
+#To build the parallel version, uncomment the following: 
+#mv fz/mistral-fzn ../
+#make clean 
+#cd fz 
+#make clean 
+#make parallel 
+#mv ../../mistral-fzn ./
 
 #Here  mistral-fzn and mistral-fzn_parallel are in fz/
 

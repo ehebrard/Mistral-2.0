@@ -465,6 +465,38 @@ public:
 	void encode_clauses();
 
 
+	void recommended_configs(int rec){
+
+		if (rec==1){
+			//std::cout << " c search recommendation nb 1" << std::endl;
+			if(solver.objective && solver.objective->is_optimization()) {
+				_option_policy	= new Luby();
+				_option_policy->base = 128;
+				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+			} else {
+				_option_policy = new Geometric();
+				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+			}
+		}
+		else if (rec==2){
+			//std::cout << " c search recommendation nb 1" << std::endl;
+			if(solver.objective && solver.objective->is_optimization()) {
+				_option_policy	= new Luby();
+				//restart->base = 128;
+				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (&solver);
+			} else {
+				_option_policy = new Luby();
+				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+			}
+		}
+		else {
+			std::cout << "c search recommendation not found" << std::endl;
+			exit(1);
+		}
+
+	}
+
+
 #ifdef _VERIFICATION
 	//Verification
 	std::vector<std::pair<std::string, std::vector<SolutionValue > > > verif_constraints;

@@ -908,9 +908,13 @@ FlatZincModel::set_annotations(const bool on) {
       solver.parity_processing(_option_parity);
 
     //std::cout << _variable_ordering << " " << _value_ordering << std::endl;
-
-    _option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering, _randomization);
-    
+    if (!_option_heuristic)
+    {
+    	//std::cout << "null!!!! " << std::endl;
+    	_option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering, _randomization);
+    }
+//    else
+//    	std::cout << "initialised already!  " << std::endl;
 
     //std::cout << fz_search_sequences.size << std::endl;
       

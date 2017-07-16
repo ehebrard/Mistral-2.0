@@ -76,6 +76,10 @@ int main(int argc, char *argv[])
   TCLAP::SwitchArg branchOnaux("","branch_on_aux","Branching on auxiliary variables", false);
   cmd.add( branchOnaux );
 
+  TCLAP::ValueArg<int>  recommended_Arg("","recommended","use our recommended configurations for search", false, 0, "int");
+  cmd.add( recommended_Arg );
+
+
 #ifdef _PARALLEL
   //std::cout << "PARALLEL \n \n \n " << std::endl;
   TCLAP::ValueArg<int> threadsArg("p","number-threads","Use multithreading with this option.", false, 4, "int");
@@ -193,7 +197,12 @@ int main(int argc, char *argv[])
 
   fm->branch_on_auxilary=branch_on_auxilary;
 
-  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), policy);
+  if (!recommended_Arg.getValue())
+	  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), policy);
+  else
+	  fm->recommended_configs(recommended_Arg.getValue());
+
+//  fm->set_strategy(cmd.get_variable_ordering(), cmd.get_value_ordering(), cmd.get_randomization(), policy);
   fm->set_display_model(cmd.print_model());
   fm->set_display_solution(cmd.print_solution());
   fm->set_annotations(annotationArg.getValue());
