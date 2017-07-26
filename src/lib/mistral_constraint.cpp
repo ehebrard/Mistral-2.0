@@ -49,7 +49,7 @@
 //#define _DEBUG_PREDBOOLSUM (get_solver()->statistics.num_nodes == 1072 && id == 154)
 //#define _DEBUG_ELEMENT (get_solver()->statistics.num_propagations == 143511 && id == 680)
 //#define _DEBUG_SQ true
-//#define _DEBUG_ADD (id == 6425)
+// #define _DEBUG_ADD (id == 3621)
 
 // #define _DEBUG_SQ (id==312)
 // #define _DEBUG_WEIGHTEDSUM (id==41)
@@ -63,6 +63,8 @@
 // #define _DEBUG_LEX true
 
 // #define _DEBUG_TABLE (id==27)
+
+// #define _DEBUG_ABS (id==3622)
 
 
 
@@ -3324,8 +3326,12 @@ void Mistral::PredicateAbs::initialise() {
   int ub = scope[1].get_max();
   if(ub > scope[0].get_max())
     ub = scope[0].get_max();
-  
-  buffer.initialise(lb, ub, BitSet::empt);
+	
+	int b = std::max(abs(lb), abs(ub));
+	
+	
+
+  buffer.initialise(-b, b, BitSet::empt);
 }
 
 void Mistral::PredicateAbs::mark_domain() {
@@ -3422,6 +3428,12 @@ Mistral::PropagationOutcome Mistral::PredicateAbs::propagate() {
 
 Mistral::PropagationOutcome Mistral::PredicateAbs::propagate(const int changed_idx, const Event evt) {      
   Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+#ifdef _DEBUG_ABS
+  if(_DEBUG_ABS) {
+    std::cout << get_solver()->level << ": change on (" << scope[changed_idx] << "=" << scope[changed_idx].get_domain() << ")" << std::endl;
+  }
+#endif	
 
   if(changed_idx) wiped = propagate_change_on_absX( evt );
   else wiped = propagate_change_on_X( evt );
@@ -3430,7 +3442,7 @@ Mistral::PropagationOutcome Mistral::PredicateAbs::propagate(const int changed_i
 }
 
 std::ostream& Mistral::PredicateAbs::display(std::ostream& os) const {
-  os << scope[1]/*.get_var()*/ << " == abs(" << scope[0]/*.get_var()*/ << ")";
+  os << ": abs(" << scope[0]/*.get_var()*/ << ") == " << scope[1]/*.get_var()*/ ;
   return os;
 }
 
