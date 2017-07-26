@@ -1,3 +1,5 @@
+#include <signal.h> 
+
 #include <XCSP3CoreParser.h>
 #include "XCSP3MistralCallbacks.hpp"
 
