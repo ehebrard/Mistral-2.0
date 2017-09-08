@@ -50,7 +50,8 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-default: xcsp3 flatzinc MistralXCSP
+#default: xcsp3 flatzinc MistralXCSP
+default: flatzinc 
 
 flatzinc:
 	cd fz; make
