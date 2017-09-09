@@ -1,6 +1,3 @@
-[submodule "XCSP3-CPP-Parser"]
-	path = XCSP3-CPP-Parser
-	url = https://github.com/xcsp3team/XCSP3-CPP-Parser.git
 [submodule "XCSP3-Java-Tools"]
 	path = XCSP3-Java-Tools
 	url = https://github.com/xcsp3team/XCSP3-Java-Tools.git
