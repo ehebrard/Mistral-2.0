@@ -50,7 +50,7 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-default: xcsp3 flatzinc MistralXCSP
+default: xcsp3 flatzinc
 #default: flatzinc 
 
 flatzinc:
@@ -59,6 +59,7 @@ flatzinc:
 	
 xcsp3: $(XCSP3PDIR)
 	cd $(XCSP3PDIR)/samples/; make
+	make MistralXCSP
 
 $(XCSP3PDIR):
 	git clone https://github.com/xcsp3team/XCSP3-CPP-Parser.git
