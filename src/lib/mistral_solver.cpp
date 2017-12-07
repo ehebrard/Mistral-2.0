@@ -1616,12 +1616,20 @@ Mistral::Outcome Mistral::Solver::solve() {
 void Mistral::Solver::minimize(Variable X) {
   X.initialise(this,1);
   objective = new Goal(Goal::MINIMIZATION, X.get_var());
+	
+  if(!initialised_vars) {
+    consolidate_manager = new ConsolidateListener(this);
+  }
   consolidate_manager->id_obj = X.id();
 }
 
 void Mistral::Solver::maximize(Variable X) {
   X.initialise(this,1);
   objective = new Goal(Goal::MAXIMIZATION, X.get_var());
+	
+  if(!initialised_vars) {
+    consolidate_manager = new ConsolidateListener(this);
+  }
   consolidate_manager->id_obj = X.id();
 }
 
@@ -2589,19 +2597,7 @@ void Mistral::Solver::notify_add_variable() {
 void Mistral::Solver::consolidate() 
 {
   if(!initialised_vars) {
-    // std::cout << "CREATE CONSListener" << std::endl;
-    
-    // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
-    
-    //ConsolidateListener *cl 
     consolidate_manager = new ConsolidateListener(this);
-    //add((VariableListener*)consolidate_manager);
-    //add((ConstraintListener*)consolidate_manager);
-    
-    // std::cout << variable_triggers.size << " " << constraint_triggers.size << std::endl;
-    
-    
-    // std::cout << "consolidate_manager->constraints" << std::endl << consolidate_manager->constraints << std::endl;
   }
 
   for(; initialised_vars<variables.size; ++initialised_vars) {
