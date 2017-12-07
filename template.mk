@@ -50,15 +50,19 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-#default: xcsp3 flatzinc MistralXCSP
-default: flatzinc 
+default: xcsp3 flatzinc
+#default: flatzinc 
 
 flatzinc:
 	cd fz; make
 	cp fz/mistral-fz ./bin/fzn-mistral
 	
-xcsp3:
+xcsp3: $(XCSP3PDIR)
 	cd $(XCSP3PDIR)/samples/; make
+	make MistralXCSP
+
+$(XCSP3PDIR):
+	git clone https://github.com/xcsp3team/XCSP3-CPP-Parser.git
 
 #fz/mistral-fz: fz/mistral-fzn
 #	cp fz/mistral-fzn ./bin
