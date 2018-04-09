@@ -1,11 +1,13 @@
-#ifndef TREE_H
-#define    TREE_H
+#ifndef MTREE_H
+#define    MTREE_H
 
 #include <cmath>
 #include <vector>
 
+#include "XCSP3utils.h"
+
 using namespace std;
-namespace XCSP3Core {
+namespace XCSP3Mistral {
 
 
 
@@ -114,7 +116,7 @@ namespace XCSP3Core {
 
 
         Node *fromStringToTree(std::string current) {
-            current = trim(current);
+            current = XCSP3Core::trim(current);
             //    int pos = current.find('(');
             vector<NodeOperator *> stack;
             vector<Node *> params;
@@ -234,4 +236,4 @@ namespace XCSP3Core {
 
     };
 }
-#endif	/* TREE_H */
+#endif	/* MTREE_H */

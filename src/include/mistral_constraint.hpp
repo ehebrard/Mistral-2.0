@@ -638,25 +638,25 @@ namespace Mistral {
     virtual void print_active() {
       
 
-      int k=0, x = (active & (7<<k)) >> k;
-      
-      std::cout << active << " -> " << x << " ";
-      
-      while(x) {
-	
-	if(x==7) std::cout << "{" << scope[0] << "," << scope[1] << "," << scope[2] << "}" ;
-	else if(x==6) std::cout << "{"  << scope[1] << "," << scope[2] << "}" ;
-	else if(x==5) std::cout << "{" << scope[0] << "," << scope[2] << "}" ;
-	else if(x==3) std::cout << "{" << scope[0] << "," << scope[1] << "}" ;
-	else if(x==4) std::cout << "{" << scope[2] << "}" ;
-	else if(x==2) std::cout << "{" << scope[1] << "}" ;
-	else if(x==1) std::cout << "{" << scope[0] << "}" ;
-	else std::cout << "{}" ;
-	
-	k+=3;
-	x = (active & (7<<k)) >> k;
-
-      }
+	//       int k=0, x = (active & (7<<k)) >> k;
+	//
+	//       std::cout << active << " -> " << x << " ";
+	//
+	//       while(x) {
+	//
+	// if(x==7) std::cout << "{" << scope[0] << "," << scope[1] << "," << scope[2] << "}" ;
+	// else if(x==6) std::cout << "{"  << scope[1] << "," << scope[2] << "}" ;
+	// else if(x==5) std::cout << "{" << scope[0] << "," << scope[2] << "}" ;
+	// else if(x==3) std::cout << "{" << scope[0] << "," << scope[1] << "}" ;
+	// else if(x==4) std::cout << "{" << scope[2] << "}" ;
+	// else if(x==2) std::cout << "{" << scope[1] << "}" ;
+	// else if(x==1) std::cout << "{" << scope[0] << "}" ;
+	// else std::cout << "{}" ;
+	//
+	// k+=3;
+	// x = (active & (7<<k)) >> k;
+	//
+	//       }
     }
     
 

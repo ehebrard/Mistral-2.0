@@ -287,7 +287,7 @@ namespace XCSP3Core {
 
 				void getVariables(vector < XVariable* > &list, Mistral::Vector<Mistral::Variable>& scope);
 
-				Mistral::Variable postExpression(Node *n, bool isRoot = false);
+				Mistral::Variable postExpression(XCSP3Mistral::Node *n, bool isRoot = false);
 
     };
 
@@ -712,7 +712,7 @@ void XCSP3MistralCallbacks::buildConstraintIntension(string id, string expr) {
     cout << "\n    intension constraint : " << id << " : " << expr << endl;
 #endif
 				
-    Tree tree(expr);
+    XCSP3Mistral::Tree tree(expr);
     solver.add(postExpression(tree.root, true));
     tree.dispose();
 		
@@ -3241,7 +3241,7 @@ void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
     cout << "\n    objective: minimize str expr" << expr << endl;
 #endif
 		
-    Tree tree(expr);
+    XCSP3Mistral::Tree tree(expr);
     goal = new Goal(Goal::MINIMIZATION, postExpression(tree.root, true).get_var());
     tree.dispose();
 
@@ -3253,7 +3253,7 @@ void XCSP3MistralCallbacks::buildObjectiveMaximizeExpression(string expr) {
     cout << "\n    objective: maximize str expr" << expr << endl;
 #endif
 		
-    Tree tree(expr);
+    XCSP3Mistral::Tree tree(expr);
     goal = new Goal(Goal::MAXIMIZATION, postExpression(tree.root, true).get_var());
     tree.dispose();
 }
@@ -3488,30 +3488,30 @@ void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vec
     // XCSP3CoreCallbacks::buildObjectiveMaximize(type, list);
 }
 
-Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
+Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root) {
 	Variable rv;
 	
-    if(n->type == NT_VARIABLE) {
+    if(n->type == XCSP3Mistral::NT_VARIABLE) {
         assert(!root);
 				
-        NodeVariable *nv = (NodeVariable *) n;
+        XCSP3Mistral::NodeVariable *nv = (XCSP3Mistral::NodeVariable *) n;
         rv = variable[nv->var];
 				++initial_degree[id_map[nv->var]];
 				
     }
 
-    if(n->type == NT_CONSTANT) {
+    if(n->type == XCSP3Mistral::NT_CONSTANT) {
         assert(!root);
 				
-        NodeConstant *nc = (NodeConstant *) n;
+        XCSP3Mistral::NodeConstant *nc = (XCSP3Mistral::NodeConstant *) n;
         rv = Variable(nc->val,nc->val);
 
     }
 		
 
-    NodeOperator *fn = (NodeOperator *) n;
+    XCSP3Mistral::NodeOperator *fn = (XCSP3Mistral::NodeOperator *) n;
 
-    if(fn->type == NT_EQ) {
+    if(fn->type == XCSP3Mistral::NT_EQ) {
 			
 			if(fn->args.size() == 2) {
         Variable x1 = postExpression(fn->args[0]);
@@ -3532,7 +3532,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_NE) {
+    if(fn->type == XCSP3Mistral::NT_NE) {
 			
         Variable x1 = postExpression(fn->args[0]);
         Variable x2 = postExpression(fn->args[1]);
@@ -3540,7 +3540,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				
     }
 
-    if(fn->type == NT_GE) {
+    if(fn->type == XCSP3Mistral::NT_GE) {
         
 				Variable x1 = postExpression(fn->args[0]);
         Variable x2 = postExpression(fn->args[1]);
@@ -3548,7 +3548,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     }
 
-    if(fn->type == NT_GT) {
+    if(fn->type == XCSP3Mistral::NT_GT) {
         
 				Variable x1 = postExpression(fn->args[0]);
         Variable x2 = postExpression(fn->args[1]);
@@ -3557,7 +3557,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
     }
 
 
-    if(fn->type == NT_LE) {
+    if(fn->type == XCSP3Mistral::NT_LE) {
 			
         Variable x1 = postExpression(fn->args[0]);
         Variable x2 = postExpression(fn->args[1]);
@@ -3565,7 +3565,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				
     }
 
-    if(fn->type == NT_LT) {
+    if(fn->type == XCSP3Mistral::NT_LT) {
         
 				Variable x1 = postExpression(fn->args[0]);
         Variable x2 = postExpression(fn->args[1]);
@@ -3573,7 +3573,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
     
 		}
 
-    if(fn->type == NT_IMP) { // IMP(X,Y) = NOT X OR Y
+    if(fn->type == XCSP3Mistral::NT_IMP) { // IMP(X,Y) = NOT X OR Y
 			
 				Variable x1 = postExpression(fn->args[0]);
       	Variable x2 = postExpression(fn->args[1]);
@@ -3581,7 +3581,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_OR) {
+    if(fn->type == XCSP3Mistral::NT_OR) {
 			
 			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
@@ -3602,7 +3602,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     }
 
-    if(fn->type == NT_AND) {
+    if(fn->type == XCSP3Mistral::NT_AND) {
 			
 			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
@@ -3618,14 +3618,14 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
     
 		}
 
-    if(fn->type == NT_NOT) {
+    if(fn->type == XCSP3Mistral::NT_NOT) {
 			
 				Variable x1 = postExpression(fn->args[0]);
 				rv = ( !x1 );
 			
     }
 		
-    if(fn->type == NT_IFF) {
+    if(fn->type == XCSP3Mistral::NT_IFF) {
 			
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
@@ -3633,7 +3633,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_XOR) {
+    if(fn->type == XCSP3Mistral::NT_XOR) {
 			
 			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
@@ -3650,21 +3650,21 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
     }
 
     // function stuff
-    if(fn->type == NT_NEG) {
+    if(fn->type == XCSP3Mistral::NT_NEG) {
 			
 				Variable x1 = postExpression(fn->args[0]);
 				rv = -x1;
 				
     }
 
-    if(fn->type == NT_ABS) {
+    if(fn->type == XCSP3Mistral::NT_ABS) {
 
 				Variable x1 = postExpression(fn->args[0]);
 				rv = Abs(x1);
 
     }
 
-    if(fn->type == NT_SUB) {
+    if(fn->type == XCSP3Mistral::NT_SUB) {
 			
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
@@ -3672,7 +3672,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_DIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
+    if(fn->type == XCSP3Mistral::NT_DIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
 			
 				Variable x1 = postExpression(fn->args[0]);
 				Variable x2 = postExpression(fn->args[1]);
@@ -3680,7 +3680,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_ADD) {
+    if(fn->type == XCSP3Mistral::NT_ADD) {
 			
 			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
@@ -3716,7 +3716,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 		
-    if(fn->type == NT_MULT) {
+    if(fn->type == XCSP3Mistral::NT_MULT) {
 			
 			if(fn->args.size() == 2) {
 				Variable x1 = postExpression(fn->args[0]);
@@ -3731,7 +3731,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 		
-    if(fn->type == NT_DIV) {
+    if(fn->type == XCSP3Mistral::NT_DIV) {
 			
 			assert(fn->args.size() == 2); 
 			
@@ -3741,7 +3741,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 		
-    if(fn->type == NT_MOD) {
+    if(fn->type == XCSP3Mistral::NT_MOD) {
 			
 			assert(fn->args.size() == 2); 
 			
@@ -3751,7 +3751,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_MIN) {
+    if(fn->type == XCSP3Mistral::NT_MIN) {
 				assert(!root);
 			
 				if(fn->args.size() == 2) {
@@ -3767,7 +3767,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				}
 			
     }
-    if(fn->type == NT_MAX) {
+    if(fn->type == XCSP3Mistral::NT_MAX) {
         assert(!root);
 			
 				if(fn->args.size() == 2) {
@@ -3784,7 +3784,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
     }
 
-    if(fn->type == NT_IF) {
+    if(fn->type == XCSP3Mistral::NT_IF) {
 	      assert(!root);
 		
 				Variable x = postExpression(fn->args[0]);
@@ -3795,7 +3795,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     }
 		
-    if(fn->type == NT_IN) {
+    if(fn->type == XCSP3Mistral::NT_IN) {
 
     		Variable x = postExpression(fn->args[0]);
 				Variable y = postExpression(fn->args[1]);
@@ -3808,15 +3808,15 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 
     }
 		
-    if(fn->type == NT_SET) {
+    if(fn->type == XCSP3Mistral::NT_SET) {
 	      assert(!root);
 	
 				vector<int>& elements(util);
 				elements.clear();
 
 				for( auto x : fn->args ) {
-					if(x->type == NT_CONSTANT) {
-						elements.push_back(((NodeConstant*)x)->val);
+					if(x->type == XCSP3Mistral::NT_CONSTANT) {
+						elements.push_back(((XCSP3Mistral::NodeConstant*)x)->val);
 					} else {
 						break;
 					}
