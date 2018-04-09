@@ -57,7 +57,7 @@
 
 
 
-
+#define _OLD_TREE
 
 
 
@@ -288,6 +288,8 @@ namespace XCSP3Core {
 				void getVariables(vector < XVariable* > &list, Mistral::Vector<Mistral::Variable>& scope);
 
 				Mistral::Variable postExpression(XCSP3Mistral::Node *n, bool isRoot = false);
+				
+				Mistral::Variable postExpression(Node *n, bool isRoot = false);
 
     };
 
@@ -712,9 +714,15 @@ void XCSP3MistralCallbacks::buildConstraintIntension(string id, string expr) {
     cout << "\n    intension constraint : " << id << " : " << expr << endl;
 #endif
 				
+#ifdef _OLD_TREE
     XCSP3Mistral::Tree tree(expr);
     solver.add(postExpression(tree.root, true));
     tree.dispose();
+#else		
+   	Tree tree(expr);
+    solver.add(postExpression(tree.root, true));
+		// delete tree.root;
+#endif
 		
 }
 
@@ -3241,9 +3249,16 @@ void XCSP3MistralCallbacks::buildObjectiveMinimizeExpression(string expr) {
     cout << "\n    objective: minimize str expr" << expr << endl;
 #endif
 		
+		
+#ifdef _OLD_TREE
     XCSP3Mistral::Tree tree(expr);
     goal = new Goal(Goal::MINIMIZATION, postExpression(tree.root, true).get_var());
     tree.dispose();
+#else		
+   	Tree tree(expr);
+    goal = new Goal(Goal::MINIMIZATION, postExpression(tree.root, true).get_var());
+		// delete tree.root;
+#endif
 
 }
 
@@ -3253,9 +3268,16 @@ void XCSP3MistralCallbacks::buildObjectiveMaximizeExpression(string expr) {
     cout << "\n    objective: maximize str expr" << expr << endl;
 #endif
 		
+#ifdef _OLD_TREE
     XCSP3Mistral::Tree tree(expr);
     goal = new Goal(Goal::MAXIMIZATION, postExpression(tree.root, true).get_var());
     tree.dispose();
+#else		
+   	Tree tree(expr);
+    goal = new Goal(Goal::MAXIMIZATION, postExpression(tree.root, true).get_var());
+		// delete tree.root;
+#endif
+
 }
 
 
@@ -3836,6 +3858,368 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
 
     }
 		
+
+    return rv;
+}
+
+
+
+Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
+	Variable rv;
+	
+    if(n->type == OVAR) {
+        assert(!root);
+				
+        NodeVariable *nv = (NodeVariable *) n;
+        rv = variable[nv->var];
+				++initial_degree[id_map[nv->var]];
+				
+    }
+
+    else if(n->type == ODECIMAL) {
+        assert(!root);
+				
+        NodeConstant *nc = (NodeConstant *) n;
+        rv = Variable(nc->val,nc->val);
+
+    }
+		
+		else {
+
+		    NodeOperator *fn = (NodeOperator *) n;
+
+		    if(fn->type == OEQ) {
+			
+					if(fn->parameters.size() == 2) {
+		        Variable x1 = postExpression(fn->parameters[0]);
+		        Variable x2 = postExpression(fn->parameters[1]);
+						rv = (x1 == x2);
+					} else {
+						VarArray scope;
+						for( auto expr : fn->parameters ) {
+							scope.add( postExpression(expr) );
+						}
+						VarArray equalities;
+						for(size_t i=1; i<scope.size; ++i) {
+							equalities.add(scope[i-1] == scope[i]);
+						}
+				
+						rv = (BoolSum(equalities) == (scope.size-1));
+					}
+			
+		    }
+
+		    else if(fn->type == ONE) {
+			
+		        Variable x1 = postExpression(fn->parameters[0]);
+		        Variable x2 = postExpression(fn->parameters[1]);
+		        rv = (x1 != x2);
+				
+		    }
+
+		    else if(fn->type == OGE) {
+        
+						Variable x1 = postExpression(fn->parameters[0]);
+		        Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 >= x2 );
+
+		    }
+
+		    else if(fn->type == OGT) {
+        
+						Variable x1 = postExpression(fn->parameters[0]);
+		        Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 > x2 );
+
+		    }
+
+
+		    else if(fn->type == OLE) {
+			
+		        Variable x1 = postExpression(fn->parameters[0]);
+		        Variable x2 = postExpression(fn->parameters[1]);
+		 				rv = ( x1 <= x2 );
+				
+		    }
+
+		    else if(fn->type == OLT) {
+        
+						Variable x1 = postExpression(fn->parameters[0]);
+		        Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 < x2 );
+    
+				}
+
+		    else if(fn->type == OIMP) { // IMP(X,Y) = NOT X OR Y
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+		      	Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 <= x2 );
+			
+		    }
+
+		    else if(fn->type == OOR) {
+			
+					if(fn->parameters.size() == 2) {
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 || x2 );
+					} else {
+						VarArray scope;
+						for( auto x : fn->parameters ) {
+							scope.add( postExpression(x) );
+						}
+						rv = (Sum(scope) > 0);
+					}
+					//
+					// assert(fn->parameters.size() == 2);
+					// 	Variable x1 = postExpression(fn->parameters[0]);
+					//     		Variable x2 = postExpression(fn->parameters[1]);
+					// 	rv = ( x1 || x2 );
+
+		    }
+
+		    else if(fn->type == OAND) {
+			
+					if(fn->parameters.size() == 2) {
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 && x2 );
+					} else {
+						VarArray scope;
+						for( auto x : fn->parameters ) {
+							scope.add( postExpression(x) );
+						}
+						rv = (Sum(scope) == scope.size);
+					}
+    
+				}
+
+		    else if(fn->type == ONOT) {
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						rv = ( !x1 );
+			
+		    }
+		
+		    else if(fn->type == OIFF) {
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 == x2 );
+			
+		    }
+
+		    else if(fn->type == OXOR) {
+			
+					if(fn->parameters.size() == 2) {
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 != x2 );
+					} else {
+						VarArray scope;
+						for( auto x : fn->parameters ) {
+							scope.add( postExpression(x) );
+						}
+						rv = Parity(scope, 1);
+					}
+			
+		    }
+
+		    // function stuff
+		    else if(fn->type == ONEG) {
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						rv = -x1;
+				
+		    }
+
+		    else if(fn->type == OABS) {
+
+						Variable x1 = postExpression(fn->parameters[0]);
+						rv = Abs(x1);
+
+		    }
+
+		    else if(fn->type == OSUB) {
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 - x2 );
+			
+		    }
+
+		    else if(fn->type == ODIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = Abs(x1 - x2);
+			
+		    }
+
+		    else if(fn->type == OADD) {
+			
+					if(fn->parameters.size() == 2) {
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 + x2 );
+					} else {
+						VarArray scope;
+						Vector<int> weights;
+				
+						map<int, int> id_map;
+						bool weighted = false;
+						for( auto x : fn->parameters ) {
+							Variable y = postExpression(x);
+					
+							if(y.id()>=0 && id_map.count( y.id() )) {
+								weights[id_map[y.id()]]++;
+								weighted = true;
+							} else {
+								id_map[y.id()] = weights.size;
+								weights.add(1);
+								scope.add( y );
+							}
+						}
+				
+						if(weighted) {
+							rv = Sum(scope, weights);
+						} else {
+							rv = Sum(scope);
+						}
+				
+
+					}
+			
+		    }
+		
+		    else if(fn->type == OMUL) {
+			
+					if(fn->parameters.size() == 2) {
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 * x2 );
+					} else {
+						rv= postExpression(fn->parameters[0]);
+						for(size_t i=1; i<fn->parameters.size(); ++i) {
+							rv = (rv * postExpression(fn->parameters[i]));
+						}
+					}
+			
+		    }
+		
+		    else if(fn->type == ODIV) {
+			
+					assert(fn->parameters.size() == 2); 
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 / x2 );
+			
+		    }
+		
+		    else if(fn->type == OMOD) {
+			
+					assert(fn->parameters.size() == 2); 
+			
+						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x2 = postExpression(fn->parameters[1]);
+						rv = ( x1 % x2 );
+			
+		    }
+
+		    else if(fn->type == OMIN) {
+						assert(!root);
+			
+						if(fn->parameters.size() == 2) {
+							Variable x1 = postExpression(fn->parameters[0]);
+							Variable x2 = postExpression(fn->parameters[1]);
+							rv = Min( x1, x2 );
+						} else {
+							VarArray scope;
+							for( auto x : fn->parameters ) {
+								scope.add( postExpression(x) );
+							}
+							rv = Min(scope);
+						}
+			
+		    }
+		    else if(fn->type == OMAX) {
+		        assert(!root);
+			
+						if(fn->parameters.size() == 2) {
+							Variable x1 = postExpression(fn->parameters[0]);
+							Variable x2 = postExpression(fn->parameters[1]);
+							rv = Max( x1, x2 );
+						} else {
+							VarArray scope;
+							for( auto x : fn->parameters ) {
+								scope.add( postExpression(x) );
+							}
+							rv = Max(scope);
+						}
+			
+		    }
+
+		    else if(fn->type == OIF) {
+			      assert(!root);
+		
+						Variable x = postExpression(fn->parameters[0]);
+						VarArray A;
+						A.add(postExpression(fn->parameters[2]));
+						A.add(postExpression(fn->parameters[1]));
+						rv = Element(A,x);
+
+		    }
+		
+		    else if(fn->type == OIN) {
+
+		    		Variable x = postExpression(fn->parameters[0]);
+						Variable y = postExpression(fn->parameters[1]);
+
+
+						if(y.is_void())
+							rv = Member(x, util);
+						else
+							rv = (x==y);
+
+		    }
+		
+		    else if(fn->type == OSET) {
+			      assert(!root);
+	
+						vector<int>& elements(util);
+						elements.clear();
+
+						for( auto x : fn->parameters ) {
+							if(x->type == ODECIMAL) {
+								elements.push_back(((NodeConstant*)x)->val);
+							} else {
+								break;
+							}
+						}
+				
+						if(elements.size() != fn->parameters.size()) {
+							VarArray scope;
+							for( auto x : fn->parameters ) {	
+								scope.add( postExpression(x) );
+							}
+					
+							Variable any(0, scope.size-1);
+							rv = Element(scope, any);
+						} else {
+							rv = Variable();
+						}
+
+		    }
+		
+				else {
+					std::cout << "unknown operator: " << operatorToString(fn->type) << "\n";
+					exit(1);
+			
+				}
+		
+		} 
 
     return rv;
 }
