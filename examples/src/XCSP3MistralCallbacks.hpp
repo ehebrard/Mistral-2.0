@@ -57,7 +57,7 @@
 
 
 
-#define _OLD_TREE
+//#define _OLD_TREE
 
 
 
@@ -137,6 +137,8 @@ namespace XCSP3Core {
         virtual void buildConstraintExtensionAs(string id, vector<XVariable *> list, bool support, bool hasStar) override;
 
         virtual void buildConstraintIntension(string id, string expr) override;
+
+        virtual void buildConstraintIntension(string id, Tree *tree) override;
 
         virtual void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) override;
 
@@ -725,6 +727,25 @@ void XCSP3MistralCallbacks::buildConstraintIntension(string id, string expr) {
 #endif
 		
 }
+
+
+void XCSP3MistralCallbacks::buildConstraintIntension(string id, Tree *tree) {
+#ifdef _VERBOSE_
+	cout << "\n    intension constraint : " << id << " : " << expr << endl;
+#endif
+
+#ifdef _OLD_TREE
+	XCSP3Mistral::Tree tree(expr);
+	solver.add(postExpression(tree.root, true));
+	tree.dispose();
+#else
+	//Tree tree(expr);
+	solver.add(postExpression(tree->root, true));
+	// delete tree.root;
+#endif
+
+}
+
 
 
 void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) {
@@ -3216,18 +3237,22 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 
 void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *> &list, int startIndex) {
 	
-	// VarArray next;
-	// getVariables(list, next);
+	VarArray next;
+	getVariables(list, next);
 	//
-	// VarArray timestamp(list.size(),0,list.size()-1);
-	// for( size_t i=0; i<timestamp.size; ++i ) {
-	// 	solver.add(timestamp[i] <= timestamp[next[i]]);
-	// }
+	VarArray timestamp(list.size(),0,list.size()-1);
+
+
+	solver.add( AllDiff(timestamp) );
+	solver.add( AllDiff(next) );
+	for( size_t i=0; i<timestamp.size; ++i ) {
+		solver.add ((timestamp[i] ==0) <=  (next[i] != i) );
+		solver.add((timestamp[next[i]] ==0) || ( timestamp[next[i]] == timestamp[i] +1 ));
+	}
 	
 	
-	
-	cout << "s UNSUPPORTED" << _ID_(": SubCircuit") << "\n";
-	exit(1);
+	//cout << "s UNSUPPORTED" << _ID_(": SubCircuit") << "\n";
+	//exit(1);
 }
 
 
