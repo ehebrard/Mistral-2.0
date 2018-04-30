@@ -731,17 +731,10 @@ void XCSP3MistralCallbacks::buildConstraintIntension(string id, string expr) {
 
 void XCSP3MistralCallbacks::buildConstraintIntension(string id, Tree *tree) {
 #ifdef _VERBOSE_
-	cout << "\n    intension constraint : " << id << " : " << expr << endl;
+	cout << "\n    intension constraint with tree : " << id << endl;
 #endif
 
-#ifdef _OLD_TREE
-	XCSP3Mistral::Tree tree(expr);
-	solver.add(postExpression(tree.root, true));
-	tree.dispose();
-#else
-	//Tree tree(expr);
 	solver.add(postExpression(tree->root, true));
-	// delete tree.root;
 #endif
 
 }
@@ -3247,7 +3240,7 @@ void XCSP3MistralCallbacks::buildConstraintCircuit(string id, vector<XVariable *
 	solver.add( AllDiff(next) );
 	for( size_t i=0; i<timestamp.size; ++i ) {
 		solver.add ((timestamp[i] ==0) <=  (next[i] != i) );
-		solver.add((timestamp[next[i]] ==0) || ( timestamp[next[i]] == timestamp[i] +1 ));
+		solver.add((next[i]!=i) <= ((timestamp[next[i]] ==0) || ( timestamp[next[i]] == timestamp[i] +1 )));
 	}
 	
 	
