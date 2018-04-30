@@ -735,8 +735,6 @@ void XCSP3MistralCallbacks::buildConstraintIntension(string id, Tree *tree) {
 #endif
 
 	solver.add(postExpression(tree->root, true));
-#endif
-
 }
 
 
