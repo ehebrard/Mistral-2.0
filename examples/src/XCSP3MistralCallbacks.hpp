@@ -44,7 +44,7 @@
  *
  */
 
-// #define _VERBOSE_ true
+ #define _VERBOSE_ true
 // #define _DEBUG_CUMULATIVE
 // #define _DEBUG_MDD
 // #define _DEBUG_REG true
@@ -142,6 +142,7 @@ namespace XCSP3Core {
 
         virtual void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k, XVariable *y) override;
 
+        virtual void buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k) override;
 
         virtual void buildConstraintRegular(string id, vector<XVariable *> &list, string st, vector <string> &final, vector <XTransition> &transitions) override;
 
@@ -167,9 +168,12 @@ namespace XCSP3Core {
 
         virtual void buildConstraintSum(string id, vector<XVariable *> &list, vector<int> &coeffs, XCondition &cond) override;
 
+        virtual void buildConstraintSum(string id, vector<Tree *> &trees, vector<int> &coefs, XCondition &cond) override;
+
         virtual void buildConstraintSum(string id, vector<XVariable *> &list, XCondition &cond) override;
 
         virtual void buildConstraintSum(string id, vector<XVariable *> &list, vector<XVariable *> &coeffs, XCondition &cond) override;
+
 
         virtual void buildConstraintAtMost(string id, vector<XVariable *> &list, int value, int k) override;
 
@@ -595,7 +599,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 				int numtuples = 1;
 				for( auto j : stared ) {
 					numtuples *= scope[j].get_size();
-					if(numtuples > 100000000) {
+					if(numtuples > 10000000000) {
 						cout << "s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
 						exit(1);
 					}
@@ -798,6 +802,43 @@ void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XV
 				solver.add( (X + k) != Y );
 		}
 }
+
+
+
+
+void XCSP3MistralCallbacks::buildConstraintPrimitive(string id, OrderType op, XVariable *x, int k){
+
+#ifdef _VERBOSE_
+	cout << "\n  intension constraint " << id << ": " << x->id <<  " op " << k << endl;
+#endif
+
+	Variable X = variable[x->id];
+
+		++initial_degree[id_map[x->id]];
+
+	// LT, GE, GT, IN, EQ, NE)
+	if(op == LE) {
+		solver.add (X  <= k);
+	}
+	else if(op == LT) {
+		solver.add (X  < k);
+	}
+	else if(op == GE) {
+		solver.add (X  >= k);
+	}
+	else if(op == GT) {
+		solver.add (X  > k);
+	}
+	else if(op == IN) {
+		cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+		exit(1);
+	} else if(op == EQ) {
+		solver.add (X  == k);
+	} else if(op == NE) {
+		solver.add (X  != k);
+	}
+}
+
 
 
 void XCSP3MistralCallbacks::buildConstraintRegular(string id, vector<XVariable *> &list, string start, vector <string> &final, vector <XTransition> &transitions) {
@@ -1361,7 +1402,6 @@ void XCSP3MistralCallbacks::buildConstraintLexMatrix(string id, vector <vector<X
 		}
 }
 
-
 void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &list, vector<int> &coeffs, XCondition &cond) {
 #ifdef _VERBOSE_
     cout << "\n        sum constraint:";
@@ -1428,6 +1468,73 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 		}
 		
 }
+
+
+
+void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<Tree *> &trees, vector<int> &coeffs, XCondition &cond) {
+
+	//Not sure if this is correct!
+#ifdef _VERBOSE_
+    cout << "\n        sum constraint with tree:";
+
+    cout << endl;
+#endif
+
+		vector<Variable> scope;
+		for( auto x : trees ) {
+			//initial_degree ???
+			//++initial_degree[x->id];
+			scope.push_back( postExpression(x->root, true).get_var() );
+		}
+
+		if(cond.operandType == VARIABLE) {
+			Variable total = variable[cond.var];
+
+			if(cond.op == EQ) {
+				solver.add( Sum(scope, coeffs, total) );
+			} else if(cond.op == NE) {
+				solver.add( Sum(scope, coeffs) != total);
+			} else if(cond.op == LE) {
+				solver.add( Sum(scope, coeffs) <= total);
+			} else if(cond.op == LT) {
+				solver.add( Sum(scope, coeffs) < total);
+			} else if(cond.op == GE) {
+				solver.add( Sum(scope, coeffs) >= total);
+			} else if(cond.op == GT) {
+				solver.add( Sum(scope, coeffs) >  total);
+			}
+
+		} else if(cond.operandType == INTERVAL) {
+			if(cond.op != IN) {
+					cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
+					exit(1);
+			}
+
+			solver.add( Sum(scope, coeffs, cond.min, cond.max) );
+
+		} else {
+
+			if(cond.op == EQ) {
+				solver.add( Sum(scope, coeffs, cond.val, cond.val) );
+			} else if(cond.op == NE) {
+				Variable cst(cond.val);
+				solver.add( Sum(scope, coeffs) != cst);
+			} else if(cond.op == LE) {
+				solver.add( Sum(scope, coeffs, -INFTY, cond.val) );
+			} else if(cond.op == LT) {
+				solver.add( Sum(scope, coeffs, -INFTY, cond.val-1) );
+			} else if(cond.op == GE) {
+				solver.add( Sum(scope, coeffs, cond.val, INFTY) );
+			} else if(cond.op == GT) {
+				solver.add( Sum(scope, coeffs, cond.val+1, INFTY) );
+			}
+		}
+}
+
+
+
+
+
 
 
 void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &list, XCondition &cond) {
