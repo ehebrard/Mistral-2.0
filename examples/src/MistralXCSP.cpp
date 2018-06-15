@@ -120,6 +120,7 @@ static void Mistral_SIGTERM_handler(int signum) {
 
 int main(int argc,char **argv) {
 	
+	std::cout << "c Mistral 16062018" << std::endl;
 	SolverCmdLine cmd("Mistral (xcsp3)", ' ', "2.0"); 
 	
   TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);
