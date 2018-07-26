@@ -120,6 +120,7 @@ static void Mistral_SIGTERM_handler(int signum) {
 
 int main(int argc,char **argv) {
 	
+	std::cout << "c Mistral 16062018" << std::endl;
 	SolverCmdLine cmd("Mistral (xcsp3)", ' ', "2.0"); 
 	
   TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);
@@ -200,11 +201,13 @@ int main(int argc,char **argv) {
 	else if (recommended_Arg.getValue()==2){
 		//std::cout << " c search recommendation nb 1" << std::endl;
 		if(solver.objective && solver.objective->is_optimization()) {
-			restart	= new Luby();
+			//restart	= new Luby();
+			restart = new Geometric();
 			//restart->base = 128;
 			heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (&solver);
 		} else {
-			restart = new Luby();
+			//restart = new Luby();
+			restart = new Geometric();
 			heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
 		}
 	}
