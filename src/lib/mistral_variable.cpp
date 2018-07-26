@@ -5424,6 +5424,19 @@ Mistral::Variable Mistral::Sum(Vector< Variable >& args, Vector< int >& wgts, Va
   LinearExpression *lexpr = new LinearExpression(args,wgts,0,0,offset);
   lexpr->children.add(T);
   lexpr->weight.add(-1);
+  if(lexpr->weighted==0)
+    lexpr->weighted=-1;
+  else if(lexpr->weighted==1)
+    lexpr->weighted=2;
+	
+	if(!T.is_boolean()) {
+		if(lexpr->bool_domains==0) {
+			lexpr->bool_domains = args.size+1;
+		} else if(lexpr->bool_domains>0) {
+			lexpr->bool_domains = -1;
+		}
+	}
+	
   Variable exp(lexpr);
   return exp;
 }
@@ -5431,6 +5444,19 @@ Mistral::Variable Mistral::Sum(std::vector< Variable >& args, std::vector< int >
   LinearExpression *lexpr = new LinearExpression(args,wgts,0,0,offset);
   lexpr->children.add(T);
   lexpr->weight.add(-1);
+  if(lexpr->weighted==0)
+    lexpr->weighted=-1;
+  else if(lexpr->weighted==1)
+    lexpr->weighted=2;
+	
+	if(!T.is_boolean()) {
+		if(lexpr->bool_domains==0) {
+			lexpr->bool_domains = args.size()+1;
+		} else if(lexpr->bool_domains>0) {
+			lexpr->bool_domains = -1;
+		}
+	}
+	
   Variable exp(lexpr);
   return exp;
 }

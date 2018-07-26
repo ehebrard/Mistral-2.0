@@ -599,7 +599,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 				int numtuples = 1;
 				for( auto j : stared ) {
 					numtuples *= scope[j].get_size();
-					if(numtuples > 10000000000) {
+					if(numtuples > 1000000000) {
 						cout << "s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
 						exit(1);
 					}
@@ -1427,18 +1427,23 @@ void XCSP3MistralCallbacks::buildConstraintSum(string id, vector<XVariable *> &l
 		if(cond.operandType == VARIABLE) {
 			Variable total = variable[cond.var];
 			
+			
+			
 			if(cond.op == EQ) {
+				
+				// std::cout << "HERE " << total << " in " << total.get_domain() << "\n" ;
+				
 				solver.add( Sum(scope, coeffs, total) );
 			} else if(cond.op == NE) {
-				solver.add( Sum(scope, coeffs) != total);
+				solver.add( Sum(scope, coeffs) != total );
 			} else if(cond.op == LE) {
-				solver.add( Sum(scope, coeffs) <= total);
+				solver.add( Sum(scope, coeffs) <= total );
 			} else if(cond.op == LT) {
-				solver.add( Sum(scope, coeffs) < total);
+				solver.add( Sum(scope, coeffs) < total );
 			} else if(cond.op == GE) {
-				solver.add( Sum(scope, coeffs) >= total);
+				solver.add( Sum(scope, coeffs) >= total );
 			} else if(cond.op == GT) {
-				solver.add( Sum(scope, coeffs) >  total);
+				solver.add( Sum(scope, coeffs) >  total );
 			}  
 			
 		} else if(cond.operandType == INTERVAL) {
