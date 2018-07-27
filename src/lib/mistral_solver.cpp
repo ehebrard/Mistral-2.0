@@ -3859,6 +3859,7 @@ bool Mistral::Solver::propagate()
 							taboo_constraint = culprit.freeze();
 							wiped_idx = culprit.propagate(var_evt.second); 
 							taboo_constraint = culprit.defrost();
+														
 #ifdef _DEBUG_AC
 							if(_DEBUG_AC) {
 								if(IS_OK(wiped_idx)) {
@@ -3870,6 +3871,15 @@ bool Mistral::Solver::propagate()
 								} else std::cout << "fail";
 							}
 #endif
+							
+#ifdef _REF_SOL_
+							check_reference();
+							if(!IS_OK(wiped_idx)) {
+								std::cout << "wrong fail\n";
+								exit(1);
+							}
+#endif
+							
 						}
 #ifdef _DEBUG_AC
 						if(_DEBUG_AC) {
@@ -3964,6 +3974,14 @@ bool Mistral::Solver::propagate()
 				std::cout << std::endl;
 			}
 #endif	
+			
+#ifdef _REF_SOL_
+			check_reference();
+			if(!IS_OK(wiped_idx)) {
+				std::cout << "wrong fail\n";
+				exit(1);
+			}
+#endif
     
 		} else if(active_variables.empty()) fix_point = true;
 	}
@@ -11141,6 +11159,19 @@ void Mistral::Solver::set_goal(Goal *g) {
   	}
 	}
 }
+
+
+#ifdef _REF_SOL_
+void Mistral::Solver::check_reference() {
+	for(int i=0; i<variables.size; ++i) {
+		if(reference_solution[i] != NOVAL and !variables[i].contain(reference_solution[i])) {
+			std::cout << "value " << reference_solution[i] << " consistent but removed from " << variables[i] << std::endl;
+			exit(1);
+		}
+	}
+	std::cout << "REF OK\n";
+}
+#endif
 
 
 void Mistral::Solver::check_constraint_graph_integrity() {

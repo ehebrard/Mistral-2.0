@@ -102,6 +102,8 @@ namespace Mistral {
   // //   inline Literal  operator [] (const int i) const { return Array<Literal>::data[i]; }
   
   // };
+	
+// #define _REF_SOL_ true
 
 
   //#define _DEBUG_ACTIVITY true

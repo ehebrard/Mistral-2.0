@@ -49,6 +49,8 @@
 // #define _DEBUG_MDD
 // #define _DEBUG_REG true
 
+// #define _REF_SOL_ true
+
 #ifdef _VERBOSE_
 #define _ID_(e) e
 #else
@@ -79,7 +81,8 @@ namespace XCSP3Core {
 						
 				Mistral::BitSet* last_domain;
 				Mistral::Variable last_var;
-				Mistral::Vector< const int* >* last_table;
+				Mistral::Vector< const int* >* last_table; // THIS WAS BUGGY BECAUSE LAST TABLE WAS CREATED BY EXPENDING STARS WRT THE VARIABLES' DOMAINS, WHICH MAY BE DIFFERENT IN THE NEXT CONSTRAINT
+				vector<vector<int>> *last_tuple_list; 
 			
 				Mistral::Goal *goal;
 			
@@ -89,7 +92,10 @@ namespace XCSP3Core {
 				
 				vector<int> initial_degree;
 				// vector<int> initial_size;
-			
+				
+#ifdef _REF_SOL_
+				vector<int> reference;
+#endif			
 			
         XCSP3MistralCallbacks(Mistral::Solver& s);
 
@@ -402,6 +408,19 @@ void XCSP3MistralCallbacks::endInstance() {
 #ifdef _VERBOSE_
     cout << "End SAX parsing " << endl;
 #endif
+		
+		
+#ifdef _REF_SOL_
+    ifstream valfile("ref_values", ios_base::in);
+		ifstream varfile("ref_variables", ios_base::in);
+		int v;
+		string x;
+		reference.resize(declared_var_ids.size());
+		
+		std::cout << "VARSIZE = " << solver.variables.size << std::endl;
+		
+		solver.reference_solution.resize(solver.variables.size, NOVAL);
+#endif
 	
 		int i=0;
 		for( auto id : declared_var_ids ) {
@@ -414,6 +433,20 @@ void XCSP3MistralCallbacks::endInstance() {
 		}
 		
 		// var_set.initialise(0, variables.size, BitSet::empt);
+		
+		
+#ifdef _REF_SOL_
+		// i=0;
+		for( auto id : declared_var_ids ) {
+				valfile >> v;
+				varfile >> x;
+				// std::cout << declared_var_ids[id_map[id]] << " <- " << v << std::endl;
+				reference[id_map[x]] = v;
+				std::cout << x << " <- " << reference[id_map[x]] << "(" << variables[id_map[x]] << " in " << variables[id_map[x]].get_domain() << ")" << std::endl;
+				solver.reference_solution[variables[id_map[x]].id()] = v;
+				// ++i;
+		}
+#endif
 	
 }
 
@@ -429,10 +462,12 @@ void XCSP3MistralCallbacks::endVariables() {
 #ifdef _VERBOSE_
     cout << " end variables declaration" << endl << endl;
 #endif
+		
+		
 		int count = 0;
 		for( auto id : declared_var_ids ) {
 			id_map[id] = count++;
-			initial_degree.push_back(0);
+			initial_degree.push_back(0);	
 		}
 }
 
@@ -610,6 +645,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 				do {
 					
 					tab->add(&(fact[0]));
+					numtuples--;
 
 					int j = stared[i];
 					int n = scope[j].next(fact[j]);
@@ -636,6 +672,10 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 
 				stared.clear();
 				
+				assert(numtuples == 0);
+				
+				// std::cout << "#tuples = " << numtuples << std::endl;
+				
 
 			} else {
 				tab->add(&((*(pt))[0]));
@@ -643,6 +683,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
 		}
 		
 		last_table = tab->tuples;
+		last_tuple_list = &tuples;
 		
 		solver.add( Variable(tab) );
 }
@@ -691,27 +732,33 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var, 
 
 void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id, vector<XVariable *> list, bool support, bool hasStar) {
 #ifdef _VERBOSE_
-    cout << "\n    extension constraint similar as previous one: " << id << endl;
+    cout << "\n    extension constraint similar as previous one on ";
+		displayList(list);
+		cout << ": " << id << endl;
 #endif
 				
-				
-				
-		VarArray scope;
-		getVariables(list, scope);
-		
-		
-		if(scope.size>1) {
-			TableExpression* tab = new TableExpression(scope, support);
-			for( auto t : *last_table ) {
-				tab->add(t);
-			}
-		
-			solver.add( Variable(tab) );
+		if(hasStar) {
+			buildConstraintExtension(id, list, *last_tuple_list, support, hasStar);
 		} else {
+				
+				
+			VarArray scope;
+			getVariables(list, scope);
+		
+		
+			if(scope.size>1) {
+				TableExpression* tab = new TableExpression(scope, support);
+				for( auto t : *last_table ) {
+					tab->add(t);
+				}
+		
+				solver.add( Variable(tab) );
+			} else {
 			
-			++initial_degree[id_map[list[0]->id]];
-			solver.add( Member(scope[0], *last_domain) );
-		}	
+				++initial_degree[id_map[list[0]->id]];
+				solver.add( Member(scope[0], *last_domain) );
+			}	
+		}
 }
 
 

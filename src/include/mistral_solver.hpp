@@ -435,7 +435,11 @@ namespace Mistral {
 
     void check_nogoods();
 #endif
-
+		
+#ifdef _REF_SOL_
+		std::vector<int> reference_solution;
+		void check_reference();
+#endif
 
 
     /// The set of constraints, with special accessors for triggers
@@ -764,7 +768,7 @@ namespace Mistral {
     Outcome search_maximize(Variable X);
 
 #ifdef _PARALLEL
-    //used only with parallelization to indicate an exist because a solution is found by another thread
+    //used only with parallelization to indicate an exit because a solution is found by another thread
     bool * solution_found_elsewhere;
 #endif
     ///

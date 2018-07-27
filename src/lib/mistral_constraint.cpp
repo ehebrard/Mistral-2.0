@@ -64,7 +64,7 @@
 
 // #define _DEBUG_LEX true
 
-// #define _DEBUG_TABLE (id==27)
+// #define _DEBUG_TABLE (id==55)
 
 // #define _DEBUG_ABS (id==3622)
 
@@ -8349,23 +8349,12 @@ void Mistral::ConstraintGAC2001::initialise() {
     /// init the list of supports for each value
     supportList[i] = new Vector<const int*> [scope[i].get_initial_max() - themins[i] + 1];
     supportList[i] -= themins[i];
-		
-		// if(get_solver()->constraints.size==3)
-		// std::cout << " [" << scope[i].get_initial_min() << ".." << scope[i].get_initial_max() << "]";
   }
-	// std::cout << std::endl;
+
 
   i=table.size;
   while( i-- ) {
-		
-		// if(get_solver()->constraints.size==3) {
-		// 	std::cout << i << " add (" << (int*)(table[i]) << ")" << std::endl;
-		// 	for(j=0; j<arity; ++j) {
-		// 		std::cout << " " << table[i][j] << std::endl;
-		// 	}
-		// 	std::cout << std::endl;
-		// }
-		
+
 		bool valid = true;
 		for(j=0; j<arity && valid; ++j) {
 			valid = scope[j].contain(table[i][j]);
@@ -8373,16 +8362,9 @@ void Mistral::ConstraintGAC2001::initialise() {
 		
 		if(valid) {
 	    for(j=0; j<arity; ++j) {
-			
-				// if(get_solver()->constraints.size==3)
-				// 	std::cout << " -> support[" << j << "][" << table[i][j] << "]\n";
-						
 	      supportList[j][table[i][j]].add( table[i] );
 			}
 		}	
-		// else {
-		// 	invalid.add(table[i]);
-		// }
   }
 
 	// exit(1);
