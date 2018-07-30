@@ -22,6 +22,7 @@
 
 #include <math.h>
 #include <algorithm>
+#include <limits>
 
 #include <assert.h>
 
@@ -5296,30 +5297,23 @@ void Mistral::LinearExpression::extract_constraint(Solver *s) {
 
 
 void Mistral::LinearExpression::initialise_bounds() {
-	// std::cout << "linear exp: BEG initialise bounds" << std::endl;
+	// std::cout << "\n\nlinear exp: BEG initialise bounds" << std::endl;
 	
-  int tlb=0;
-  int tub=0;
-
-  int lb = children[0].get_min()*weight[0];
-  int ub = children[0].get_max()*weight[0];
+  long long tlb=0;
+  long long tub=0;
 	
-
-  if(lb < ub) {
-    tlb += lb;
-    tub += ub;
-  } else {
-    tlb += ub;
-    tub += lb;
-  }
+	long long lb, ub;
 	
-	// std::cout << weight[0] << " * ["<< children[0].get_min() << ".." << children[0].get_max() << "] -> [" << tlb << ".." << tub << "]\n";
+	int i=0;
 
-  for(unsigned int i=1; i<children.size; ++i) {
-    lb = children[i].get_min()*weight[i];
-    ub = children[i].get_max()*weight[i];
-  
-    if(lb < ub) {
+	do {
+	
+		assert(tlb <= tub);
+		
+    lb = (long long)(children[i].get_min())*(long long)(weight[i]);
+    ub = (long long)(children[i].get_max())*(long long)(weight[i]);
+		
+    if(lb < ub) {			
       tlb += lb;
       tub += ub;
     } else {
@@ -5327,14 +5321,23 @@ void Mistral::LinearExpression::initialise_bounds() {
       tub += lb;
     }
 		
-		// std::cout << weight[i] << " * ["<< children[i].get_min() << ".." << children[i].get_max() << "] -> [" << tlb << ".." << tub << "]\n";
-  }
-
+		
+	} while(++i < children.size);
+	
+	
+	int itlb = tlb;
+	int itub = tub;
+	
+	if((long long)itlb != tlb or (long long)itub != tub)
+	{
+				std::cout << "c int overflow\ns UNSUPPORTED\n";
+				exit(1);
+	}
+	
+	
   if(tlb > lower_bound) lower_bound = tlb;
   if(tub < upper_bound) upper_bound = tub;
 	
-	// std::cout << "linear exp: END initialise bounds [" << lower_bound << ".." << upper_bound << "]" << std::endl;
-
 }
 
 void Mistral::LinearExpression::extract_variable(Solver *s) {
