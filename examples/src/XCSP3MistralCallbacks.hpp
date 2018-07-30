@@ -299,9 +299,9 @@ namespace XCSP3Core {
 
 				void getVariables(vector < XVariable* > &list, Mistral::Vector<Mistral::Variable>& scope);
 
-				Mistral::Variable postExpression(XCSP3Mistral::Node *n, bool isRoot = false);
+				Mistral::Variable postExpression(XCSP3Mistral::Node *n, int level = 1);
 				
-				Mistral::Variable postExpression(Node *n, bool isRoot = false);
+				Mistral::Variable postExpression(Node *n, int level);
 
     };
 
@@ -3229,9 +3229,9 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 		// 	var_req = true;
 		if(!dur[i].is_ground())
 			var_dur = true;
-		if(req[i].get_max() > 1 || req[i].get_min() < 1)
+		if(unit_req and (req[i].get_max() > 1 || req[i].get_min() < 1))
 			unit_req = false;
-		if(dur[i].get_max() > 1 || dur[i].get_min() < 1)
+		if(unit_dur and (dur[i].get_max() > 1 || dur[i].get_min() < 1))
 			unit_dur = false;
 		if(same_dur && (!dur[i].is_ground() || (i && dur[i-1].get_min() != dur[i].get_min())))
 			same_dur = false;
@@ -3269,7 +3269,7 @@ void XCSP3MistralCallbacks::buildConstraintCumulative(string id, vector<XVariabl
 	);
 	_demand_.neutralise();
 
-	if(start.size>1 && req[order[0]].get_min()+req[order[1]].get_min()>cap.get_max()) {
+	if(disjunctive and (start.size>1 && req[order[0]].get_min()+req[order[1]].get_min()>cap.get_max())) {
 		
 #ifdef _DEBUG_CUMULATIVE
 		std::cout << "min (" << req[order[0]].get_min() << ") and next min (" << req[order[1]].get_min() << ") demands are incompatible => disjunctive" << std::endl;
@@ -3685,11 +3685,11 @@ void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type, vec
     // XCSP3CoreCallbacks::buildObjectiveMaximize(type, list);
 }
 
-Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root) {
+Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, int level) {
 	Variable rv;
 	
     if(n->type == XCSP3Mistral::NT_VARIABLE) {
-        assert(!root);
+        assert(level > 0);
 				
         XCSP3Mistral::NodeVariable *nv = (XCSP3Mistral::NodeVariable *) n;
         rv = variable[nv->var];
@@ -3698,7 +3698,7 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
     }
 
     if(n->type == XCSP3Mistral::NT_CONSTANT) {
-        assert(!root);
+        assert(level > 0);
 				
         XCSP3Mistral::NodeConstant *nc = (XCSP3Mistral::NodeConstant *) n;
         rv = Variable(nc->val,nc->val);
@@ -3949,7 +3949,7 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
     }
 
     if(fn->type == XCSP3Mistral::NT_MIN) {
-				assert(!root);
+				assert(level > 0);
 			
 				if(fn->args.size() == 2) {
 					Variable x1 = postExpression(fn->args[0]);
@@ -3965,7 +3965,7 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
 			
     }
     if(fn->type == XCSP3Mistral::NT_MAX) {
-        assert(!root);
+        assert(level > 0);
 			
 				if(fn->args.size() == 2) {
 					Variable x1 = postExpression(fn->args[0]);
@@ -3982,7 +3982,7 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
     }
 
     if(fn->type == XCSP3Mistral::NT_IF) {
-	      assert(!root);
+	      assert(level > 0);
 		
 				Variable x = postExpression(fn->args[0]);
 				VarArray A;
@@ -4006,7 +4006,7 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
     }
 		
     if(fn->type == XCSP3Mistral::NT_SET) {
-	      assert(!root);
+	      assert(level > 0);
 	
 				vector<int>& elements(util);
 				elements.clear();
@@ -4039,23 +4039,36 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n, bool root)
 
 
 
-Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
+Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
 	Variable rv;
 	
     if(n->type == OVAR) {
-        assert(!root);
+        assert(level > 0);
 				
         NodeVariable *nv = (NodeVariable *) n;
         rv = variable[nv->var];
 				++initial_degree[id_map[nv->var]];
 				
+				
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << " in " << rv.get_domain() << std::endl;
+#endif
+				
     }
 
     else if(n->type == ODECIMAL) {
-        assert(!root);
+        assert(level > 0);
 				
         NodeConstant *nc = (NodeConstant *) n;
         rv = Variable(nc->val,nc->val);
+				
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << " in " << rv.get_domain() << std::endl;
+#endif
 
     }
 		
@@ -4066,13 +4079,13 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 		    if(fn->type == OEQ) {
 			
 					if(fn->parameters.size() == 2) {
-		        Variable x1 = postExpression(fn->parameters[0]);
-		        Variable x2 = postExpression(fn->parameters[1]);
+		        Variable x1 = postExpression(fn->parameters[0], level+1);
+		        Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = (x1 == x2);
 					} else {
 						VarArray scope;
 						for( auto expr : fn->parameters ) {
-							scope.add( postExpression(expr) );
+							scope.add( postExpression(expr, level+1) );
 						}
 						VarArray equalities;
 						for(size_t i=1; i<scope.size; ++i) {
@@ -4081,68 +4094,110 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				
 						rv = (BoolSum(equalities) == (scope.size-1));
 					}
+					
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == ONE) {
 			
-		        Variable x1 = postExpression(fn->parameters[0]);
-		        Variable x2 = postExpression(fn->parameters[1]);
+		        Variable x1 = postExpression(fn->parameters[0], level+1);
+		        Variable x2 = postExpression(fn->parameters[1], level+1);
 		        rv = (x1 != x2);
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 				
 		    }
 
 		    else if(fn->type == OGE) {
         
-						Variable x1 = postExpression(fn->parameters[0]);
-		        Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+		        Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 >= x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 
 		    else if(fn->type == OGT) {
         
-						Variable x1 = postExpression(fn->parameters[0]);
-		        Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+		        Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 > x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 
 
 		    else if(fn->type == OLE) {
 			
-		        Variable x1 = postExpression(fn->parameters[0]);
-		        Variable x2 = postExpression(fn->parameters[1]);
+		        Variable x1 = postExpression(fn->parameters[0], level+1);
+		        Variable x2 = postExpression(fn->parameters[1], level+1);
 		 				rv = ( x1 <= x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 				
 		    }
 
 		    else if(fn->type == OLT) {
         
-						Variable x1 = postExpression(fn->parameters[0]);
-		        Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+		        Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 < x2 );
+				
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
     
 				}
 
 		    else if(fn->type == OIMP) { // IMP(X,Y) = NOT X OR Y
 			
-						Variable x1 = postExpression(fn->parameters[0]);
-		      	Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+		      	Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 <= x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == OOR) {
 			
 					if(fn->parameters.size() == 2) {
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 || x2 );
 					} else {
 						VarArray scope;
 						for( auto x : fn->parameters ) {
-							scope.add( postExpression(x) );
+							scope.add( postExpression(x, level+1) );
 						}
 						rv = (Sum(scope) > 0);
 					}
@@ -4151,92 +4206,146 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 					// 	Variable x1 = postExpression(fn->parameters[0]);
 					//     		Variable x2 = postExpression(fn->parameters[1]);
 					// 	rv = ( x1 || x2 );
+					
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 
 		    else if(fn->type == OAND) {
 			
 					if(fn->parameters.size() == 2) {
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 && x2 );
 					} else {
 						VarArray scope;
 						for( auto x : fn->parameters ) {
-							scope.add( postExpression(x) );
+							scope.add( postExpression(x, level+1) );
 						}
 						rv = (Sum(scope) == scope.size);
 					}
+					
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
     
 				}
 
 		    else if(fn->type == ONOT) {
 			
-						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
 						rv = ( !x1 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 		
 		    else if(fn->type == OIFF) {
 			
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 == x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == OXOR) {
 			
 					if(fn->parameters.size() == 2) {
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 != x2 );
 					} else {
 						VarArray scope;
 						for( auto x : fn->parameters ) {
-							scope.add( postExpression(x) );
+							scope.add( postExpression(x, level+1) );
 						}
 						rv = Parity(scope, 1);
 					}
+					
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    // function stuff
 		    else if(fn->type == ONEG) {
 			
-						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
 						rv = -x1;
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 				
 		    }
 
 		    else if(fn->type == OABS) {
 
-						Variable x1 = postExpression(fn->parameters[0]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
 						rv = Abs(x1);
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 
 		    else if(fn->type == OSUB) {
 			
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 - x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == ODIST) { //Simulate DIST(X,Y) = ABS(SUB(X,Y))
 			
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = Abs(x1 - x2);
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == OADD) {
 			
 					if(fn->parameters.size() == 2) {
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 + x2 );
 					} else {
 						VarArray scope;
@@ -4245,7 +4354,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 						map<int, int> id_map;
 						bool weighted = false;
 						for( auto x : fn->parameters ) {
-							Variable y = postExpression(x);
+							Variable y = postExpression(x, level+1);
 					
 							if(y.id()>=0 && id_map.count( y.id() )) {
 								weights[id_map[y.id()]]++;
@@ -4265,21 +4374,32 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 				
 
 					}
-			
+
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif			
 		    }
 		
 		    else if(fn->type == OMUL) {
 			
 					if(fn->parameters.size() == 2) {
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 * x2 );
 					} else {
-						rv= postExpression(fn->parameters[0]);
+						rv= postExpression(fn->parameters[0], level+1);
 						for(size_t i=1; i<fn->parameters.size(); ++i) {
-							rv = (rv * postExpression(fn->parameters[i]));
+							rv = (rv * postExpression(fn->parameters[i], level+1));
 						}
 					}
+					
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 		
@@ -4287,9 +4407,15 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
 					assert(fn->parameters.size() == 2); 
 			
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 / x2 );
+			
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif			
 			
 		    }
 		
@@ -4297,71 +4423,102 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 			
 					assert(fn->parameters.size() == 2); 
 			
-						Variable x1 = postExpression(fn->parameters[0]);
-						Variable x2 = postExpression(fn->parameters[1]);
+						Variable x1 = postExpression(fn->parameters[0], level+1);
+						Variable x2 = postExpression(fn->parameters[1], level+1);
 						rv = ( x1 % x2 );
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == OMIN) {
-						assert(!root);
+						assert(level > 0);
 			
 						if(fn->parameters.size() == 2) {
-							Variable x1 = postExpression(fn->parameters[0]);
-							Variable x2 = postExpression(fn->parameters[1]);
+							Variable x1 = postExpression(fn->parameters[0], level+1);
+							Variable x2 = postExpression(fn->parameters[1], level+1);
 							rv = Min( x1, x2 );
 						} else {
 							VarArray scope;
 							for( auto x : fn->parameters ) {
-								scope.add( postExpression(x) );
+								scope.add( postExpression(x, level+1) );
 							}
 							rv = Min(scope);
 						}
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 		    else if(fn->type == OMAX) {
-		        assert(!root);
+		        assert(level > 0);
 			
 						if(fn->parameters.size() == 2) {
-							Variable x1 = postExpression(fn->parameters[0]);
-							Variable x2 = postExpression(fn->parameters[1]);
+							Variable x1 = postExpression(fn->parameters[0], level+1);
+							Variable x2 = postExpression(fn->parameters[1], level+1);
 							rv = Max( x1, x2 );
 						} else {
 							VarArray scope;
 							for( auto x : fn->parameters ) {
-								scope.add( postExpression(x) );
+								scope.add( postExpression(x, level+1) );
 							}
 							rv = Max(scope);
 						}
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 			
 		    }
 
 		    else if(fn->type == OIF) {
-			      assert(!root);
+			      assert(level > 0);
 		
-						Variable x = postExpression(fn->parameters[0]);
+						Variable x = postExpression(fn->parameters[0], level+1);
 						VarArray A;
-						A.add(postExpression(fn->parameters[2]));
-						A.add(postExpression(fn->parameters[1]));
+						A.add(postExpression(fn->parameters[2], level+1));
+						A.add(postExpression(fn->parameters[1], level+1));
+						
 						rv = Element(A,x);
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 		
 		    else if(fn->type == OIN) {
 
-		    		Variable x = postExpression(fn->parameters[0]);
-						Variable y = postExpression(fn->parameters[1]);
+		    		Variable x = postExpression(fn->parameters[0], level+1);
+						Variable y = postExpression(fn->parameters[1], level+1);
 
 
 						if(y.is_void())
 							rv = Member(x, util);
 						else
 							rv = (x==y);
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 		
 		    else if(fn->type == OSET) {
-			      assert(!root);
+			      assert(level > 0);
 	
 						vector<int>& elements(util);
 						elements.clear();
@@ -4377,7 +4534,7 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 						if(elements.size() != fn->parameters.size()) {
 							VarArray scope;
 							for( auto x : fn->parameters ) {	
-								scope.add( postExpression(x) );
+								scope.add( postExpression(x, level+1) );
 							}
 					
 							Variable any(0, scope.size-1);
@@ -4385,6 +4542,12 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, bool root) {
 						} else {
 							rv = Variable();
 						}
+						
+#ifdef _VERBOSE_
+				for(int l=0; l<level; ++l)
+						std::cout << "  ";
+				std::cout << rv << std::endl;
+#endif
 
 		    }
 		

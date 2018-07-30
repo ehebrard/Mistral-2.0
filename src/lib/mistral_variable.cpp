@@ -225,7 +225,7 @@ void Mistral::Variable::initialise_domain(const std::vector< int >& values, cons
   // for(unsigned int i=1; i<values.size; ++i) {
 	for ( auto v : values ) {
     if(v < min) min = v;
-    if(v > max) max = v;
+    else if(v > max) max = v;
 		vals.add(v);
   }
   
@@ -5610,26 +5610,32 @@ void Mistral::MaxExpression::extract_predicate(Solver *s) {
 Mistral::ElementExpression::ElementExpression(const Vector< Variable >& args, 
 Variable X, int ofs) 
 : Expression(), offset(ofs) {
+	
+	
+	// std::cout << "INDEX VAR = " << X << std::endl;
+	//
+	// std::cout << "INDEX DOMAIN = " << X.get_domain() << std::endl;
+	
 		
-	int rmd = 0;
-		
-	// std::cout << args << " [" << offset << "] [" << (X.get_min()-offset) << ".." << X.get_max()-offset << "]" << std::endl;
-
-	for(int i=0; i<(int)(args.size); ++i) {
-		if(i<(X.get_min()-offset)) {
-			
-			// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " < " << (X.get_min()-offset) << std::endl;
-			
-			++rmd;
-		} else if(i<=(X.get_max()-offset)) {
-			children.add(args[i]);
-		} else {
-			
-			// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " > " << (X.get_max()-offset) << std::endl;
-			
-		}
-	}
-	offset+=rmd;
+	// int rmd = 0;
+	//
+	// // std::cout << args << " [" << offset << "] [" << (X.get_min()-offset) << ".." << X.get_max()-offset << "]" << std::endl;
+	//
+	// for(int i=0; i<(int)(args.size); ++i) {
+	// 	if(i<(X.get_min()-offset)) {
+	//
+	// 		// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " < " << (X.get_min()-offset) << std::endl;
+	//
+	// 		++rmd;
+	// 	} else if(i<=(X.get_max()-offset)) {
+	// 		children.add(args[i]);
+	// 	} else {
+	//
+	// 		// std::cout << "  do not include " << i << ":" << args[i] << " because " << i << " > " << (X.get_max()-offset) << std::endl;
+	//
+	// 	}
+	// }
+	// offset+=rmd;
 
 	// std::cout << children << " [" << offset << "]" << std::endl;
 

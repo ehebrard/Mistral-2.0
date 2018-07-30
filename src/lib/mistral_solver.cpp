@@ -634,7 +634,9 @@ void Mistral::ConstraintQueue::declare(Constraint c, Solver *s) {
   int new_min_p = min_priority;
   int new_max_p = min_priority+cardinality-1;
   
-  if(cons_idx == 0) solver = s;  if(cons_priority < new_min_p || cons_priority > new_max_p) {
+  if(cons_idx == 0) solver = s;  
+	
+	if(cons_priority < new_min_p || cons_priority > new_max_p) {
     if(cardinality > 0) {
       if(cons_priority < new_min_p) new_min_p = cons_priority;
       if(cons_priority > new_max_p) new_max_p = cons_priority;

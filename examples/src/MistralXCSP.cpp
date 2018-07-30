@@ -150,7 +150,7 @@ int main(int argc,char **argv) {
 	cmd.set_parameters(solver);
 	
 	
-	double cpu_time = get_run_time() ;
+	// double cpu_time = get_run_time() ;
 	
 	XCSP3MistralCallbacks cb(solver); // my interface between the parser and the solver
 	parse(cb, cmd.get_filename().c_str());
