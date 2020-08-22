@@ -42,7 +42,7 @@ usage: $THISPROG [flags] model.mzn [data.dzn]
     -D "x=42;..."
         Specify model parameter values on the command line.
 
-    [Flattening - passed through to 'mzn2fzn']
+    [Flattening - passed through to 'minizinc']
     -I|--search-dir dir
     --flags-file file
     --no-output-pred-decls
@@ -87,7 +87,8 @@ cleanup () {
 
 MISTRAL_DIR=.
 
-MZN2FZN=${MZN2FZN:-mzn2fzn}
+#MZN2FZN=${MZN2FZN:-mzn2fzn}
+MZN2FZN="minizinc --compile --solver org.minizinc.mzn-fzn -O2" 
 #FLATZINC=$MISTRAL_DIR/mistral-fz
 FLATZINC=mistral-fz
 CANONICALIZE="cat"
@@ -162,6 +163,8 @@ FZN=$FZNBASE.fzn
 #echo $DZN
 
 CMD="$MZN2FZN -o $FZN $MZN2FZN_FLAGS $MZN $DZN"
+#echo running : $CMD
+
 #$QUIET " % $THISPROG: $CMD"
 if ! $CMD
 then
@@ -181,6 +184,7 @@ fi
 # formatted output.
 
 CMD="$FLATZINC $FLATZINC_FLAGS $FZN"
+#echo running : $CMD
 #$QUIET " % $THISPROG: $CMD"
 if ! $CMD | $CANONICALIZE 
 then
