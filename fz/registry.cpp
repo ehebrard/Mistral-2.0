@@ -115,7 +115,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
   }
 
   namespace {
-
+  	  /*
     int ann2icl(AST::Node* ann) {
       // if (ann) {
       //   if (ann->hasAtom("val"))
@@ -130,7 +130,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       // }
       return 0;
     }
-
+  	 */
     inline Vector<int> arg2intargs(AST::Node* arg, int offset = 0) {
       AST::Array* a = arg->getArray();
       Vector<int> ia(a->a.size()+offset);
@@ -152,6 +152,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       return ia;
     }
 
+    /*
     inline
     set<int> setrange(int min, int max)
     {
@@ -160,7 +161,8 @@ inline Variable duplicate_variable(Variable var, Solver * s){
         rv.insert(i);
       return rv;
     }
-
+    */
+    /*
     inline set<int> arg2intset(Solver& s, AST::Node* n) {
       AST::SetLit* sl = n->getSet();
       set<int> d;
@@ -172,6 +174,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       }
       return d;
     }
+    */
 
     // inline set<int> arg2intvec(Solver& s, AST::Node* n) {
     //   AST::SetLit* sl = n->getSet();
@@ -207,7 +210,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     //   }
     //   return d;
     // } 
-
+    /*
     inline vector<set<int> > arg2intsetargs(Solver& s,
                                             AST::Node* arg, int offset = 0) {
       AST::Array* a = arg->getArray();
@@ -221,6 +224,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       }
       return ia;
     }
+    */
 
     inline Vector<Variable> arg2setvarargs(Solver& s,
                                            FlatZincModel& m,
@@ -374,7 +378,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
 
       return x0;
     }
-
+    /*
     bool isBoolArray(FlatZincModel& m, AST::Node* b) {
       AST::Array* a = b->getArray();
       if (a->a.size() == 0)
@@ -389,13 +393,16 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       }
       return true;
     }
+	*/
 
+    /*
     void p_alldifferent(Solver& s, FlatZincModel &m,
                         const ConExpr& ce, AST::Node* ann) {
       Vector<Variable> va = arg2intvarargs(s, m, ce[0]);
       if(va.size)
         s.add( AllDiff(va, BOUND_CONSISTENCY) );
     }
+    */
 
     void p_int_eq(Solver& s, FlatZincModel &m,
                   const ConExpr& ce, AST::Node* ann) {
@@ -551,7 +558,75 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       s.add( (getIntVar(s, m, ce[0]) < getIntVar(s, m, ce[1])) == getBoolVar(s, m, ce[2]) ); 
     }
 
+
+    void p_int_eq_imp(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+     if (ce[0]->isIntVar()) {
+        if (ce[1]->isIntVar()) {
+        	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+        		//s.add(getBoolVar(s, m, ce[2])==1);
+        		//nothing todo
+        		return;
+        	else
+          s.add( (getIntVar(s, m, ce[0]) == getIntVar(s, m, ce[1])) >= getBoolVar(s, m, ce[2]) );
+        } else {
+          s.add( (getIntVar(s, m, ce[0]) == ce[1]->getInt()) >= getBoolVar(s, m, ce[2]) );
+        }
+     } else {
+       s.add( (getIntVar(s, m, ce[1]) == ce[0]->getInt()) >= getBoolVar(s, m, ce[2]) );
+     }
+    }
+    void p_int_ne_imp(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+     if (ce[0]->isIntVar()) {
+        if (ce[1]->isIntVar()) {
+        	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+        		s.add(getBoolVar(s, m, ce[2])==0);
+        	else
+          s.add( (getIntVar(s, m, ce[0]) != getIntVar(s, m, ce[1])) >= getBoolVar(s, m, ce[2]) );
+        } else {
+          s.add( (getIntVar(s, m, ce[0]) != ce[1]->getInt()) >= getBoolVar(s, m, ce[2]) );
+        }
+     } else {
+       s.add( (getIntVar(s, m, ce[1]) != ce[0]->getInt()) >= getBoolVar(s, m, ce[2]) );
+     }
+    }
+    void p_int_ge_imp(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+    		//s.add(getBoolVar(s, m, ce[2])==1);
+    		return;
+    	else
+      s.add( (getIntVar(s, m, ce[0]) >= getIntVar(s, m, ce[1])) >= getBoolVar(s, m, ce[2]) );
+    }
+    void p_int_gt_imp(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+    	//additional test
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+    		s.add(getBoolVar(s, m, ce[2])==0);
+    	else
+      s.add( (getIntVar(s, m, ce[0]) > getIntVar(s, m, ce[1])) >= getBoolVar(s, m, ce[2]) );
+    }
+    void p_int_le_imp(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+    		//s.add(getBoolVar(s, m, ce[2])==1);
+    		return;
+    	else
+      s.add( (getIntVar(s, m, ce[0]) <= getIntVar(s, m, ce[1])) >= getBoolVar(s, m, ce[2]) );
+    }
+    void p_int_lt_imp(Solver& s, FlatZincModel& m,
+                       const ConExpr& ce, AST::Node* ann) {
+    	if (same_id(getIntVar(s, m, ce[0]).id(), getIntVar(s, m, ce[1]).id()))
+    		s.add(getBoolVar(s, m, ce[2])==0);
+    	else
+      s.add( (getIntVar(s, m, ce[0]) < getIntVar(s, m, ce[1])) >= getBoolVar(s, m, ce[2]) );
+    }
+
+
+
     /* linear (in-)equations */
+    /*
     void p_int_lin(Solver& s, FlatZincModel& m,
                    event_type op, bool strict, bool reif,
                    const ConExpr& ce,
@@ -631,6 +706,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     	  report_unsupported("p_int_lin");
 
     }
+    */
 
     void p_int_lin_eq(Solver& s, FlatZincModel& m,
                       const ConExpr& ce, AST::Node* ann) {
@@ -3393,7 +3469,7 @@ predicate global_cardinality_low_up(array[int] of var int: x,
       
       s.add( A != B );
     }
-
+    /*
     void p_set_le(Solver& s, FlatZincModel& m,
                   const ConExpr& ce, AST::Node* ann) {
       Variable A = getSetVar(s, m, ce[0]);
@@ -3429,6 +3505,7 @@ predicate global_cardinality_low_up(array[int] of var int: x,
       
       s.add( b == (A < B) ); // Warning: this is lex leq (not set_le as defined in minizinc)
     }
+    */
 
     void p_set_eq_reif(Solver& s, FlatZincModel& m,
                      const ConExpr& ce, AST::Node* ann) {
@@ -3564,6 +3641,23 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("int_gt_reif", &p_int_gt_reif);
         registry().add("int_le_reif", &p_int_le_reif);
         registry().add("int_lt_reif", &p_int_lt_reif);
+        //_imp : from the minizinc documentation
+        //When a reified constraint is used in a positive context (see Section 2.3.6), the MiniZinc compiler can use a special version,
+        //called a half-reified predicate and identified by an _imp suffix, instead of the _reif predicate.
+        //Half-reified predicates essentially represent constraints that are implied by a Boolean variable rather than being equivalent to one.
+        //This typically leads to simpler translations or more efficient propagation
+        //(e.g., a half-reified all_different only needs to check whether it is false,
+        //but it never has to implement the negation of the actual constraint).
+        //To model this in mistral, any constraint of the form constraint_imp(scope,b) is modeled with : constraint(scope) >= b
+
+        registry().add("int_eq_imp", &p_int_eq_imp);
+        registry().add("int_ne_imp", &p_int_ne_imp);
+        registry().add("int_ge_imp", &p_int_ge_imp);
+        registry().add("int_gt_imp", &p_int_gt_imp);
+        registry().add("int_le_imp", &p_int_le_imp);
+        registry().add("int_lt_imp", &p_int_lt_imp);
+
+
         registry().add("int_lin_le", &p_int_lin_le);
         registry().add("int_lin_le_reif", &p_int_lin_le_reif);
         registry().add("int_lin_lt", &p_int_lin_lt);
@@ -3605,6 +3699,7 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("at_most_int", &p_at_most_int);
         registry().add("exactly_int", &p_exactly_int);
         registry().add("at_least_int", &p_at_least_int);
+
         registry().add("count_eq", &p_count_eq);
         registry().add("count_eq_reif", &p_count_eq_reif);
         registry().add("count_geq", &p_count_geq);
@@ -3612,6 +3707,16 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("count_leq", &p_count_leq);
         registry().add("count_lt", &p_count_lt);
         registry().add("count_neq", &p_count_neq);
+
+        registry().add("fzn_count_eq", &p_count_eq);
+        registry().add("fzn_count_eq_reif", &p_count_eq_reif);
+        registry().add("fzn_count_geq", &p_count_geq);
+        registry().add("fzn_count_gt", &p_count_gt);
+        registry().add("fzn_count_leq", &p_count_leq);
+        registry().add("fzn_count_lt", &p_count_lt);
+        registry().add("fzn_count_neq", &p_count_neq);
+
+
         registry().add("cumulative", &p_cumulative);
         //registry().add("global_cardinality_low_up", p_global_cardinality_low_up);
 
