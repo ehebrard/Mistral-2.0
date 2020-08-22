@@ -11,7 +11,7 @@ if len(sys.argv) > 1:
 #        cmd[cmd.index['-f']] = '--follow_annotations'
 
     if '-f' in cmd:
-	cmd.remove('-f')
+        cmd.remove('-f')
 
 	#mcmd = ['./mistral-fzn']
     #We assume fz/ is in the $PATH
@@ -21,7 +21,7 @@ if len(sys.argv) > 1:
 	#cmd.remove(cmd[cmd.index('-p') +1])
 	#cmd.remove('-p')
 	#Now we support parallelization. The -p gives the number of threads 
-	mcmd = ['mistral-fzn_parallel']
+        mcmd = ['mistral-fzn_parallel']
    
 
    
