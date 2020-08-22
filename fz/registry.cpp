@@ -1564,6 +1564,51 @@ inline Variable duplicate_variable(Variable var, Solver * s){
 			//      s.add(Element(iv, selector, 1) == result);
     	}
     }
+
+
+    //newly added for minizinc 2.4.3
+    //predicate array_int_maximum(var int: m, array [int] of var int: x)
+    //Constrains m to be the maximum value of the (non-empty) array x
+
+    void p_array_int_maximum(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+    	Variable max = getIntVar(s, m, ce[0]);
+    	Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
+
+    	bool max_in_v = id_in_vect(max.id(), iv);
+
+    	if (! max_in_v){
+    		Variable selector = Variable(1, iv.size);
+    		s.add(Element(iv, selector, 1) == max);
+    	}
+
+    	for (int i= 0 ; i < iv.size ; ++i )
+    		s.add(max >=iv[i]) ;
+    }
+
+    //newly added for minizinc 2.4.3
+    //predicate array_int_minimum(var int: m, array [int] of var int: x)
+    //Constrains m to be the minimum value of the (non-empty) array x
+    void p_array_int_minimum(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+    	Variable min = getIntVar(s, m, ce[0]);
+    	Vector<Variable> iv = arg2intvarargs(s, m, ce[1]);
+
+    	bool min_in_v = id_in_vect(min.id(), iv);
+
+    	if (! min_in_v){
+    		Variable selector = Variable(1, iv.size);
+    		s.add(Element(iv, selector, 1) == min);
+    	}
+
+    	for (int i= 0 ; i < iv.size ; ++i )
+    		s.add(min <= iv[i]) ;
+
+    }
+
+
+
+
     void p_array_set_element(Solver& s, FlatZincModel& m,
                              const ConExpr& ce, AST::Node* ann) {
       Variable selector = getIntVar(s, m, ce[0]);
@@ -3691,6 +3736,12 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("array_var_set_element", &p_array_set_element);
         registry().add("array_var_bool_element", &p_array_var_bool_element);
         registry().add("array_bool_element", &p_array_bool_element);
+
+        //Added for minizinc 2.4.3
+
+        registry().add("array_int_maximum", &p_array_int_maximum);
+        registry().add("array_int_minimum", &p_array_int_minimum);
+
 
         //Add here Mistral redefinitions of global constraints
         registry().add("distribute", &p_distribute);
