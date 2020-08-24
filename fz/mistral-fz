@@ -26,8 +26,7 @@ if len(sys.argv) > 1:
 
    
     mcmd.extend(cmd)
-#    mcmd.extend(['--print_sol', '-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '-c', 'dom/gwdeg', '-b', 'adapted', '--follow_annotations', '--branch_on_aux', '--decay', '0.95', '--seed 26071986'])
-    mcmd.extend(['--print_sol', '-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--recommended', '2', '--follow_annotations', '--branch_on_aux', '--decay', '0.95', '--seed 26071986'])
+    mcmd.extend(['--print_sol', '-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--recommended', '3', '--follow_annotations' , '--decay', '0.95', '--seed 26071986'])
 
 
 #    for w in mcmd:

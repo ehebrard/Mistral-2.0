@@ -467,9 +467,17 @@ public:
 
 	void recommended_configs(int rec){
 
+		bool ismin = _method==MINIMIZATION ;
+		bool ismax = _method==MAXIMIZATION ;
+		bool issat = _method==SATISFACTION ;
+
+	    //std::cout << " c recommended_configs method is satisfaction ?  :  " << issat << std::endl;
+	    //std::cout << " c recommended_configs method is minimisation ?  :  " << ismin << std::endl;
+	    //std::cout << " c recommended_configs method is maximization ?  :  " << ismax << std::endl;
+
 		if (rec==1){
 			//std::cout << " c search recommendation nb 1" << std::endl;
-			if(solver.objective && solver.objective->is_optimization()) {
+			if( ! issat  ) {
 				_option_policy	= new Luby();
 				_option_policy->base = 128;
 				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
@@ -478,21 +486,38 @@ public:
 				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
 			}
 		}
-		else if (rec==2){
-			//std::cout << " c search recommendation nb 1" << std::endl;
-			if(solver.objective && solver.objective->is_optimization()) {
-				_option_policy	= new Luby();
+		else if (rec>=2){
+			if( ! issat ) {
+				if (rec==3){
+					if ( ismax )
+						{
+						branch_on_auxilary=true;
+						}
+					else
+						{
+						branch_on_auxilary=false;
+						}
+				}
+				//_option_policy	= new Luby();
 				//restart->base = 128;
-				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (&solver);
+				//_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (&solver);
 			} else {
-				_option_policy = new Luby();
-				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+				if (rec==3){
+					branch_on_auxilary=true;
+				}
+				//_option_policy = new Luby();
+				//_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
 			}
+			_option_policy = new Luby();
+			_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
 		}
 		else {
 			std::cout << "c search recommendation not found" << std::endl;
 			exit(1);
 		}
+
+		//std::cout << "c after recommended : branch_on_auxilary is " << branch_on_auxilary << std::endl;
+
 
 	}
 

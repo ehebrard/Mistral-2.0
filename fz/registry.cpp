@@ -2109,6 +2109,63 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     	}
     }
 
+
+
+    //Reified version of count_leq
+    void p_count_leq_reif(Solver& s, FlatZincModel& m,
+    		const ConExpr& ce, AST::Node* ann) {
+
+    	//std::cout << "count_eq" << std::endl;
+    	Vector< Variable > x = arg2intvarargs(s, m, ce[0]);
+    	int size = x.size;
+    	if (size){
+    		VarArray subsequence;
+    		if (ce[1]->isInt() ){
+    			int y = ce[1]->getInt();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(x[i]==y);
+    				s.add(subsequence.back());
+    			}
+    		}
+    		else
+    		{
+    			Variable y =getIntVar(s,m,ce[1]); // ce[1]->getIntVar();
+    			for (int i=0; i < size; ++i)
+    			{
+    				subsequence.add(y==x[i]);
+    				//s.add( Free(subsequence.back()));
+    			}
+    		}
+
+
+    		if (ce[3]->isBool() ){
+    			if  (ce[3]->getBool() ) {
+    				if (ce[2]->isInt() )
+    					s.add( BoolSum(subsequence) >= ce[2]->getInt());
+    				else
+    					s.add( BoolSum(subsequence) >= getIntVar(s,m,ce[2]));
+    			}
+    			else {
+    				if (ce[2]->isInt() )
+    					s.add( BoolSum(subsequence) < ce[2]->getInt());
+    				else
+    					s.add( BoolSum(subsequence) < getIntVar(s,m,ce[2])); //ce[2]->getIntVar());
+    			}
+
+    		}
+    		else {
+    			if (ce[2]->isInt() )
+    				s.add( (BoolSum(subsequence) >= ce[2]->getInt() ) == getBoolVar(s,m,ce[3])  );
+    			else
+    				s.add( ( BoolSum(subsequence) >= getIntVar(s,m,ce[2])   ) == getBoolVar(s,m,ce[3])  ); //ce[2]->getIntVar());
+    		}
+    	}
+    }
+
+
+
+
     /*
     %-----------------------------------------------------------------------------%
     % Constrains 'c' to be strictly less than the number of occurrences of 'y'
@@ -3756,6 +3813,9 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("count_geq", &p_count_geq);
         registry().add("count_gt", &p_count_gt);
         registry().add("count_leq", &p_count_leq);
+
+        registry().add("count_leq_reif", &p_count_leq_reif);
+
         registry().add("count_lt", &p_count_lt);
         registry().add("count_neq", &p_count_neq);
 
@@ -3764,6 +3824,9 @@ predicate global_cardinality_low_up(array[int] of var int: x,
         registry().add("fzn_count_geq", &p_count_geq);
         registry().add("fzn_count_gt", &p_count_gt);
         registry().add("fzn_count_leq", &p_count_leq);
+
+        registry().add("fzn_count_leq_reif", &p_count_leq_reif);
+
         registry().add("fzn_count_lt", &p_count_lt);
         registry().add("fzn_count_neq", &p_count_neq);
 

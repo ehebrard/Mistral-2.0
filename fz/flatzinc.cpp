@@ -829,16 +829,13 @@ FlatZincModel::set_annotations(const bool on) {
 
     solver.sequence.clear();
 
-
-    //std::cout << 11 << std::endl;
+    //std::cout << " c RUN with branch_on_auxilary  :  " << branch_on_auxilary << std::endl;
 
 
     if(_option_display_mistral_model)
       std::cout << " " << solver.parameters.prefix_comment << " mistral representation:\n " << solver << std::endl;
-    
         
     Outcome result = UNKNOWN;
-
 
     Goal *goal = NULL;
 

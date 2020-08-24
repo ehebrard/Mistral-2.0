@@ -5304,7 +5304,7 @@ void Mistral::LinearExpression::initialise_bounds() {
 	
 	long long lb, ub;
 	
-	int i=0;
+	unsigned int i=0;
 
 	do {
 	
