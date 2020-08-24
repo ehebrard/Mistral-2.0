@@ -4859,7 +4859,7 @@ std::ostream& operator<<(std::ostream& os, SolutionGuided<Init,Default>* x) {
   template < int R = 1 >
   class WDEG : public GenericDVO< MaxWeight, R, FailureCountManager > {
   public:
-    WDEG() : GenericDVO< MaxWeight, R, FailureCountManager >() {}
+    () : GenericDVO<MaxWeight, R, FailureCountManager>() {}
     WDEG(Solver *s) : GenericDVO< MaxWeight, R, FailureCountManager >(s) {}
   };
 
@@ -4895,7 +4895,6 @@ std::ostream& operator<<(std::ostream& os, SolutionGuided<Init,Default>* x) {
   // typedef GenericDVO< MinDomainOverWeight, 1, FailureCountManager > WDEG;
   
   // typedef GenericDVO< MinDomainOverWeight, 1, PruningCountManager > ABS;
-  
-}
+  };
 
 #endif // __SEARCH_HPP
