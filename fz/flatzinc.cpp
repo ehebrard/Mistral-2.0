@@ -936,8 +936,8 @@ FlatZincModel::set_annotations(const bool on) {
     	//int domsize;
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
-        for(int k=0; k<fz_search_sequences.size; ++k) {
-          for(int i=0; i<fz_search_sequences[k].size; ++i) {
+        for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
+          for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
         	//domsize = fz_search_sequences[k][i].get_size();
         	//if (domsize> 1 ){
             search_vars.add(fz_search_sequences[k][i].id());
@@ -950,7 +950,7 @@ FlatZincModel::set_annotations(const bool on) {
 //#ifdef _PARALLEL
         if (branch_on_auxilary)
 //#endif
-        for(int i=0; i<solver.variables.size; ++i) {
+        for(unsigned int i=0; i<solver.variables.size; ++i) {
           int domsize = solver.variables[i].get_size();
           // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
           //   {
@@ -1041,8 +1041,8 @@ FlatZincModel::set_annotations(const bool on) {
         //int domsize;
         Vector<Variable> search_sequence;
         BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
-        for(int k=0; k<fz_search_sequences.size; ++k) {
-        	for(int i=0; i<fz_search_sequences[k].size; ++i) {
+        for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
+        	for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
         	//	domsize= fz_search_sequences[k][i].get_size();
         	//	if (domsize>1){
         			search_vars.add(fz_search_sequences[k][i].id());
@@ -1055,7 +1055,7 @@ FlatZincModel::set_annotations(const bool on) {
 //#ifdef _PARALLEL
         if (branch_on_auxilary)
 //#endif
-        for(int i=0; i<solver.variables.size; ++i) {
+        for( unsigned  int i=0; i<solver.variables.size; ++i) {
          int domsize = solver.variables[i].get_size();
           //if(domsize>1 && domsize<=2 && 
 
@@ -1637,7 +1637,7 @@ void FlatZincModel::encode_clauses()
 		while(--size)
 			encode_clause(_clauses[size].pos, _clauses[size].neg);
 
-	for(int i=0; i<cnf.size; ++i)
+	for( unsigned  int i=0; i<cnf.size; ++i)
 		solver.add(cnf[i]);
 }
 

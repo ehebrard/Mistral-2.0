@@ -467,7 +467,7 @@ public:
 
 	void recommended_configs(int rec){
 
-		bool ismin = _method==MINIMIZATION ;
+		//bool ismin = _method==MINIMIZATION ;
 		bool ismax = _method==MAXIMIZATION ;
 		bool issat = _method==SATISFACTION ;
 
