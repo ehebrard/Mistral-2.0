@@ -4859,7 +4859,7 @@ std::ostream& operator<<(std::ostream& os, SolutionGuided<Init,Default>* x) {
   template < int R = 1 >
   class WDEG : public GenericDVO< MaxWeight, R, FailureCountManager > {
   public:
-    () : GenericDVO<MaxWeight, R, FailureCountManager>() {}
+	  WDEG () : GenericDVO<MaxWeight, R, FailureCountManager>() {}
     WDEG(Solver *s) : GenericDVO< MaxWeight, R, FailureCountManager >(s) {}
   };
 
