@@ -1697,7 +1697,7 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 			}
 			else
 				//test if satisfaction without all solutions
-				if (method)
+				if (method){
 					if (* solver_->solution_found_elsewhere) {
 						print=false;
 					}
@@ -1705,6 +1705,7 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 						* solver_->solution_found_elsewhere=true;
 #pragma omp flush
 					}
+				}
 		if (print){
 			//std::cout << " thread ID : " << omp_get_thread_num() << std::endl;
 			fm_->print_solution(std::cout, *p_);

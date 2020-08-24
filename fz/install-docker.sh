@@ -36,7 +36,7 @@ mv ../../mistral-fzn ./
 
 #Here  mistral-fzn and mistral-fzn_parallel are in fz/
 cd /entry_data
-#cp Mistral-2.0/fz/mistral-fz fzn-exec
+cp Mistral-2.0/fz/mistral-fz fzn-exec
 cp Mistral-2.0/fz/mistral-fzn* ./
 cp Mistral-2.0/fz/mistral-mzn ./exec
 #export PATH=$PATH:/entry_data/Mistral-2.0/fz/
