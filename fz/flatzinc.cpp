@@ -1549,11 +1549,11 @@ void FlatZincModel::add_clause(Vector<Variable> pos ,  Vector<Variable> neg)
 	_clauses.add(v);
 
 	if(! pos.empty())
-		for (int i=0; i< pos. size ; i++)
+		for (unsigned int i=0; i< pos. size ; i++)
 			solver.add(pos[i]);
 
 	if(! neg.empty())
-		for (int i=0; i< neg. size ; i++)
+		for (unsigned int i=0; i< neg. size ; i++)
 			solver.add(neg[i]);
 }
 
@@ -1572,7 +1572,7 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 
 	if(! pos.empty())
 	{
-		for (int i=0; i< pos. size ; i++)
+		for (unsigned int i=0; i< pos. size ; i++)
 		{
 			if (! pos[i].is_ground())
 			{
@@ -1592,7 +1592,7 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 	}
 	if(! neg.empty())
 	{
-		for (int i=0; i< neg.size ; i++)
+		for (unsigned int i=0; i< neg.size ; i++)
 		{
 			if (!neg[i].is_ground())
 			{
