@@ -1582,7 +1582,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     		s.add(Element(iv, selector, 1) == max);
     	}
 
-    	for (int i= 0 ; i < iv.size ; ++i )
+    	for (unsigned int i= 0 ; i < iv.size ; ++i )
     		s.add(max >=iv[i]) ;
     }
 
@@ -1601,7 +1601,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     		s.add(Element(iv, selector, 1) == min);
     	}
 
-    	for (int i= 0 ; i < iv.size ; ++i )
+    	for (unsigned int i= 0 ; i < iv.size ; ++i )
     		s.add(min <= iv[i]) ;
 
     }
@@ -1737,7 +1737,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       for (unsigned int i=0; i< size; ++i){
     	  if (iv[i].is_ground()) {
     		  int value =iv[i].get_min();
-    		  for (int j=(i+1); j< size; ++j){
+    		  for (unsigned int j=(i+1); j< size; ++j){
 
     			  if (iv[j].is_ground() ){
     				  if (iv[j].get_min() == value )
@@ -1749,7 +1749,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
     	  }
     	  else {
     		  posted.add(iv[i]);
-    		  for (int j=(i+1); j< size; ++j){
+    		  for (unsigned int j=(i+1); j< size; ++j){
     			  if (iv[j].is_ground() )
     				  s.add (iv[i] != iv[j].get_min());
     		  }
@@ -2542,7 +2542,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
         total = 0;
         isBoolean = true;
         min_req = Mistral::INFTY;
-        for(int i=0; i<start.size; ++i) {
+        for(unsigned int i=0; i<start.size; ++i) {
           if(start[i].get_min() <= t && start[i].get_max()+dur[i].get_max() >= t) {
             total += req[i].get_max();
             if(min_req > req[i].get_min()) {
@@ -2651,7 +2651,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
       int orig=INFTY, horizon = 0, ddate, rdate, unit_req=true, unit_dur=true, disjunctive=false, same_req=true, same_dur=true, var_dur=false, var_req=false;
       //
 
-      for(int i=0; i<start.size; ++i) {
+      for(unsigned int i=0; i<start.size; ++i) {
         ddate = start[i].get_max() + dur[i].get_max();
         if(horizon<ddate) {
           horizon = ddate;
@@ -2687,7 +2687,7 @@ inline Variable duplicate_variable(Variable var, Solver * s){
 #endif
 
       int *order = new int[start.size];
-      for(int i=0; i<start.size; ++i) {
+      for(unsigned int i=0; i<start.size; ++i) {
         order[i] = i;
       }
       demand.copy(req);
