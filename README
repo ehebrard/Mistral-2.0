@@ -1,6 +1,7 @@
 Mistral is an open source constraint programming library written in C++. It implements a modelling API, however, it can also read instance files in XCSP3 or FlatZinc format. Moreover, it is fully interfaced with Numberjack (https://github.com/eomahony/Numberjack) which provides a Python API for modelling and solving combinatorial optimization problems using several back-end solvers.
 
-Compilation note: If you use the gcc compiler, then you must use the g++-5 version. Any version of gcc that is higher than 5 will not work on most of flatzinc instances due to an major bug between GCC and Bison (that is used by the flatzinc parser skeleton). clang works perfectly fine.
+Compilation note: If you use the gcc compiler, then you must use the g++-5 version. Any version of gcc that is higher than 5 will not work on most of flatzinc instances due to a major bug between GCC and Bison (that is used by the flatzinc parser skeleton). clang works perfectly fine.
+
 
 To use Mistral-2.0 as a flatzinc solver: 
 
@@ -27,4 +28,5 @@ The option '-p $n' can be passed to fz/mistral-fz to indicate $n available logic
 5- Notes:
 */ Search annotations are not (yet) supported. So with or without the option -f, the solver will ignore them.
 */ The fz/mzn-lib/ directory contains some solver-specific definitions of global constraints from the MiniZinc library. When generating fzn instances, please use the option "-I fz/mzn"
-*/ To install Mistral-2.0 within the Minizinc challenge virtual machine, just run fz/installVM.sh
+*/ To install Mistral-2.0 in a Minizinc challenge docker container, simply run fz/install-docker.sh from /entry_data then modify /fzn-exec and /exec accordingly. 
+*/ The docker image for the minizinc challenge is available at https://hub.docker.com/r/msiala/mistral2. The docker pull command is "docker pull msiala/mistral2" 

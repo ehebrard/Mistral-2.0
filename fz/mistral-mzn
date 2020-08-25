@@ -91,7 +91,7 @@ MISTRAL_DIR=.
 MZN2FZN="minizinc --compile --solver org.minizinc.mzn-fzn" 
 #FLATZINC=$MISTRAL_DIR/mistral-fz
 FLATZINC=mistral-fz
-FLATZINC=/entry_data/fzn-exec
+#FLATZINC=/entry_data/fzn-exec
 CANONICALIZE="cat"
 QUIET=echo
 #Mohamed: Why TMPDZN?  

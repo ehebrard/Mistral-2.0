@@ -16,6 +16,8 @@ apt-get -y install wget
 apt-get -y install libxml2-dev
 apt-get -y install make 
 apt-get -y install git
+apt-get install bison 
+apt-get install flex 
 
 export CXX=g++-5
 export CCC=g++-5
