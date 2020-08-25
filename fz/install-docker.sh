@@ -56,7 +56,7 @@ echo "I should edit fzn-exec and exec to use /entry_data/mistral-fzn and /entry_
 #test :
 
 ./fzn-exec Mistral-2.0/data/zinc/amaze3.fzn 
-./exec Mistral-2.0/data/zinc/amaze3.mzn  Mistral-2.0/data/zinc/data/2012-03-29.dzn 
+./exec Mistral-2.0/data/zinc/amaze3.mzn  Mistral-2.0/data/zinc/2012-03-29.dzn 
 
 /minizinc/mzn-exec-free /minizinc/test.mzn /minizinc/2.dzn
 /minizinc/mzn-exec-par -p 2 /minizinc/test.mzn /minizinc/2.dzn
