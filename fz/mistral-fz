@@ -16,12 +16,15 @@ if len(sys.argv) > 1:
 	#mcmd = ['./mistral-fzn']
     #We assume fz/ is in the $PATH
     mcmd = ['mistral-fzn']
+    #mcmd = ['/entry_data/mistral-fzn']
     
     if '-p' in cmd:
 	#cmd.remove(cmd[cmd.index('-p') +1])
 	#cmd.remove('-p')
 	#Now we support parallelization. The -p gives the number of threads 
         mcmd = ['mistral-fzn_parallel']
+        #mcmd = ['/entry_data/mistral-fzn_parallel']
+        
    
 
    
