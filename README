@@ -1,3 +1,7 @@
+Mistral is an open source constraint programming library written in C++. It implements a modelling API, however, it can also read instance files in XCSP3 or FlatZinc format. Moreover, it is fully interfaced with Numberjack (https://github.com/eomahony/Numberjack) which provides a Python API for modelling and solving combinatorial optimization problems using several back-end solvers.
+
+Compilation note: If you use the gcc compiler, then you must use the g++-5 version. Any version of gcc that is higher than 5 will not work on most of flatzinc instances due to an major bug between GCC and Bison (that is used by the flatzinc parser skeleton). clang works perfectly fine.
+
 To use Mistral-2.0 as a flatzinc solver: 
 
 1- Mistral-2.0/fz should be in the $PATH 

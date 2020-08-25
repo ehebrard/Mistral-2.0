@@ -88,7 +88,7 @@ cleanup () {
 MISTRAL_DIR=.
 
 #MZN2FZN=${MZN2FZN:-mzn2fzn}
-MZN2FZN="minizinc --compile --solver org.minizinc.mzn-fzn -O2" 
+MZN2FZN="minizinc --compile --solver org.minizinc.mzn-fzn" 
 #FLATZINC=$MISTRAL_DIR/mistral-fz
 FLATZINC=mistral-fz
 CANONICALIZE="cat"

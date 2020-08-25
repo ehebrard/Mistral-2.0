@@ -61,7 +61,7 @@ namespace CSPXMLParser
   public:
     typedef unsigned char Byte;
 
-    static const int npos=NOVAL;
+    static const int npos=Mistral::NOVAL;
 
     UTF8String()
     {
