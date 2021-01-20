@@ -5322,7 +5322,7 @@ Mistral::Outcome Mistral::Solver::satisfied() {
     last_solution_lb[i] = variables[i].get_min();
     last_solution_ub[i] = variables[i].get_max();
 
-    std::cout << variables[i] << " := " << last_solution_lb[i] << " " << variables[i].get_domain() << std::endl;
+    // std::cout << variables[i] << " := " << last_solution_lb[i] << " " << variables[i].get_domain() << std::endl;
 
   }
   //std::cout << std::endl;
