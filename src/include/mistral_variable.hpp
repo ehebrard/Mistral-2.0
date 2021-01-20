@@ -3715,9 +3715,9 @@ namespace Mistral {
       else if(ub==NOVAL) { lb=0; ub=lb-1; }
       
       for(int i=0; i<n; ++i) {
-	Variable x(lb, ub, type);
-	add(x);
-	//stack_[i] = x;
+				Variable x(lb, ub, type);
+				add(x);
+				//stack_[i] = x;
       }
     }
 

@@ -2864,6 +2864,8 @@ namespace Mistral {
     virtual int check( const int* sol ) const { 
       return((sol[0]*factor) != sol[1]);
     }
+		PropagationOutcome prop_backward(const Event evt);
+		PropagationOutcome prop_forward(const Event evt);
     virtual PropagationOutcome propagate(const int changed_idx, const Event evt);
     virtual PropagationOutcome propagate();
     //virtual RewritingOutcome rewrite();

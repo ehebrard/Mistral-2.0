@@ -67,6 +67,8 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 // #define _DEBUG_ABS (id==3622)
 
+// #define _DEBUG_FACTOR (id==333)
+
 
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
@@ -3310,6 +3312,95 @@ int integer_div_lo(const int x, const int y) {
 }
 
 Mistral::PropagationOutcome
+Mistral::PredicateFactor::prop_backward(const Event evt) {
+	Mistral::PropagationOutcome wiped = CONSISTENT;
+	int bound, prev;
+	if (factor > 0) {
+
+	  if (LB_CHANGED(evt)) {
+	    bound = integer_div_up(scope[1].get_min(), factor);
+			prev = scope[0].get_min();
+	    if (FAILED(scope[0].set_min(bound)))
+	      wiped = FAILURE(0);
+			else if(prev < scope[0].get_min()) {
+				wiped = prop_forward(LB_EVENT);
+			}
+	  }
+	  if (UB_CHANGED(evt)) {
+	    bound = integer_div_lo(scope[1].get_max(), factor);
+			prev = scope[0].get_max();
+	    if (FAILED(scope[0].set_max(bound)))
+	      wiped = FAILURE(0);
+			else if(prev > scope[0].get_max()) {
+				wiped = prop_forward(UB_EVENT);
+			}
+	  }
+	} else {
+	  if (UB_CHANGED(evt)) {
+	    bound = integer_div_up(scope[1].get_max(), factor);
+			prev = scope[0].get_min();
+	    if (FAILED(scope[0].set_min(bound)))
+	      wiped = FAILURE(0);
+			else if(prev < scope[0].get_min()) {
+				wiped = prop_forward(LB_EVENT);
+			}
+	  }
+	  if (LB_CHANGED(evt)) {
+	    bound = integer_div_lo(scope[1].get_min(), factor);
+			prev = scope[0].get_max();
+	    if (FAILED(scope[0].set_max(bound)))
+	      wiped = FAILURE(0);
+			else if(prev > scope[0].get_max()) {
+				wiped = prop_forward(UB_EVENT);
+			}
+	  }
+	}
+	return wiped;
+}
+
+Mistral::PropagationOutcome
+Mistral::PredicateFactor::prop_forward(const Event evt) {
+	Mistral::PropagationOutcome wiped = CONSISTENT;
+	int prev;
+	if (factor > 0) {
+	  if (LB_CHANGED(evt)) {
+			prev = scope[1].get_min();
+	    if(FAILED(scope[1].set_min(scope[0].get_min() * factor))) {
+				wiped = FAILURE(1);
+			} else if(scope[1].get_min() > prev) {
+				wiped = prop_backward(LB_EVENT);
+			}
+		}
+	  if (UB_CHANGED(evt)) {
+			prev = scope[1].get_max();
+	    if(FAILED(scope[1].set_max(scope[0].get_max() * factor))) {
+	  		wiped = FAILURE(1);
+			} else if(scope[1].get_max() < prev) {
+				wiped = prop_backward(UB_EVENT);
+		  }
+		}
+	} else {
+	  if (UB_CHANGED(evt)) {
+		 	prev = scope[1].get_min();
+	    if(FAILED(scope[1].set_min(scope[0].get_max() * factor))) {
+				wiped = FAILURE(1);
+			} else if(scope[1].get_min() > prev) {
+				wiped = prop_backward(LB_EVENT);
+			}
+		}		
+	  if (LB_CHANGED(evt)) {
+			prev = scope[1].get_max();
+	    if(FAILED(scope[1].set_max(scope[0].get_min() * factor))) {
+	    	wiped = FAILURE(1);
+			} else if(scope[1].get_max() < prev) {
+				wiped = prop_backward(UB_EVENT);
+		  }
+		}
+	}
+	return wiped;
+}
+
+Mistral::PropagationOutcome
 Mistral::PredicateFactor::propagate(const int changed_idx, const Event evt) {
   Mistral::PropagationOutcome wiped = CONSISTENT;
 
@@ -3323,47 +3414,9 @@ Mistral::PredicateFactor::propagate(const int changed_idx, const Event evt) {
 #endif
 
   if (changed_idx == 1) {
-    int bound;
-    if (factor > 0) {
-
-      if (LB_CHANGED(evt)) {
-        bound = integer_div_up(scope[1].get_min(), factor);
-        if (FAILED(scope[0].set_min(bound)))
-          wiped = FAILURE(0);
-      }
-      if (UB_CHANGED(evt)) {
-        bound = integer_div_lo(scope[1].get_max(), factor);
-        if (FAILED(scope[0].set_max(bound)))
-          wiped = FAILURE(0);
-      }
-    } else {
-      if (UB_CHANGED(evt)) {
-        bound = integer_div_up(scope[1].get_max(), factor);
-        if (FAILED(scope[0].set_min(bound)))
-          wiped = FAILURE(0);
-      }
-      if (LB_CHANGED(evt)) {
-        bound = integer_div_lo(scope[1].get_min(), factor);
-        if (FAILED(scope[0].set_max(bound)))
-          wiped = FAILURE(0);
-      }
-    }
+		wiped = prop_backward(evt);
   } else {
-    if (factor > 0) {
-      if (LB_CHANGED(evt) &&
-          FAILED(scope[1].set_min(scope[0].get_min() * factor)))
-        wiped = FAILURE(1);
-      if (UB_CHANGED(evt) &&
-          FAILED(scope[1].set_max(scope[0].get_max() * factor)))
-        wiped = FAILURE(1);
-    } else {
-      if (UB_CHANGED(evt) &&
-          FAILED(scope[1].set_min(scope[0].get_max() * factor)))
-        wiped = FAILURE(1);
-      if (LB_CHANGED(evt) &&
-          FAILED(scope[1].set_max(scope[0].get_min() * factor)))
-        wiped = FAILURE(1);
-    }
+		wiped = prop_forward(evt);
   }
 
 #ifdef _DEBUG_FACTOR
@@ -3378,7 +3431,7 @@ Mistral::PredicateFactor::propagate(const int changed_idx, const Event evt) {
 }
 
 std::ostream &Mistral::PredicateFactor::display(std::ostream &os) const {
-  os << scope[1] /*.get_var()*/ << " == (" << scope[0] /*.get_var()*/ << " * "
+  os << scope[1] /*.get_var()*/ << " == (" << scope[0] /*.get_var()*/ << " . "
      << factor << ")";
   return os;
 }
