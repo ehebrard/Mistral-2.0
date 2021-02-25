@@ -2142,10 +2142,10 @@ std::ostream& SchedulingSolution::print(std::ostream& os, std::string type) {
 
 
 
-void SchedulingSolver::dichotomic_search()
+void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
 {
   
-	std::cout << this <<std::endl;
+	// std::cout << this <<std::endl;
 
 	stats->lower_bound = get_lb();
 	stats->upper_bound = get_ub();
@@ -2166,7 +2166,7 @@ void SchedulingSolver::dichotomic_search()
   
 
 
-	BranchingHeuristic *heu = new SchedulingWeightedDegree < TaskDomOverBoolWeight, Guided< MinValue >, 2 > (this, disjunct_map);
+	// BranchingHeuristic *heu = new SchedulingWeightedDegree < TaskDomOverBoolWeight, Guided< MinValue >, 2 > (this, disjunct_map);
 
 	//BranchingHeuristic *heu = new GenericHeuristic < NoOrder, MinValue > (this);
 

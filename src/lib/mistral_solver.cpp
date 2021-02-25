@@ -2621,7 +2621,7 @@ void Mistral::Solver::consolidate()
       variables[initialised_vars] = X;
 
       if(X.domain_type > DYN_VAR) {
-	booleans.add(variables.stack_+initialised_vars);
+				booleans.add(variables.stack_+initialised_vars);
       }
     }
   }
@@ -5407,7 +5407,7 @@ if (*solution_found_elsewhere){
 }
 #endif
 
-  return (parameters.limit && 
+  auto res = (parameters.limit && 
 	  ((parameters.time_limit > 0.0 && (get_run_time() - statistics.start_time) > parameters.time_limit) ||
 	   (parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit)) ||
 	   (parameters.fail_limit > 0 && (statistics.num_failures > parameters.fail_limit)) ||
@@ -5415,6 +5415,22 @@ if (*solution_found_elsewhere){
 	   (parameters.propagation_limit > 0 && (statistics.num_propagations > parameters.propagation_limit)) // ||
 	   // (parameters.backtrack_limit > 0 && (statistics.num_backtracks > parameters.backtrack_limit))
 	   ));
+	
+	// if(res) {
+	// 	if((parameters.time_limit > 0.0 && (get_run_time() - statistics.start_time) > parameters.time_limit))
+	// 		std::cout << "TIME!\n";
+	// 	if(parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit))
+	// 		std::cout << "NODE!\n";
+	// 	if(parameters.fail_limit > 0 && (statistics.num_failures > parameters.fail_limit))
+	// 		std::cout << "FAIL!\n";
+	// 	if(parameters.restart_limit > 0 && (statistics.num_failures > parameters.restart_limit))
+	// 		std::cout << "RESTART!\n";
+	// 	if(parameters.propagation_limit > 0 && (statistics.num_propagations > parameters.propagation_limit))
+	// 		std::cout << "PROPAG!\n";
+	// }
+	
+	
+	return res;
 }
 
 // void Mistral::Search::init_search(Vector< Variable >& seq, VarOrdering *h, RestartPolicy *p) {

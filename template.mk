@@ -50,7 +50,7 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-default: xcsp3 flatzinc
+default: xcsp3 flatzinc 
 #default: flatzinc 
 
 flatzinc:

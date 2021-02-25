@@ -59,7 +59,9 @@ int main( int argc, char** argv )
 
   //std::cout << solver << std::endl;
   
-  solver->dichotomic_search();
+	BranchingHeuristic *heu = new SchedulingWeightedDegree < TaskDomOverBoolWeight, Guided< MinValue >, 2 > (solver, solver->disjunct_map);
+	
+  solver->dichotomic_search(heu);
   
 
   if(!stats.solved()) {

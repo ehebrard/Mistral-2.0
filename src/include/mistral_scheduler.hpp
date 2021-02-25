@@ -217,7 +217,6 @@ namespace Mistral {
 
 
 		void osp_readData( const char* filename );
-		//void osp_readData( const char* filename );
 		void sds_readData( const char* filename );
 		void jtl_readData( const char* filename );
 		void now_readData( const char* filename );
@@ -400,6 +399,12 @@ namespace Mistral {
 			}
 
 			offset = min_idx;
+			
+			
+			// std::cout << "OFFSET: " << offset << std::endl;
+			// exit(1);
+			
+			
 			neighborhood = new Vector< Variable >[max_idx-min_idx+1];
 			neighborhood -= offset;
 
@@ -417,7 +422,15 @@ namespace Mistral {
 			//std::cout << graph << std::endl;
 			//exit(1);
 
-		}  
+		}
+		
+		
+		// GenericDVO< VarComparator, RAND, FailureCountManager >& get_var_heuristic() {
+		// 	return GenericHeuristic< GenericDVO< VarComparator, RAND, FailureCountManager >, Branching >::var;
+		// }
+		
+		// bool compvar()
+		
 
 		virtual ~SchedulingWeightedDegree() {
 			neighborhood += offset;
@@ -497,7 +510,7 @@ namespace Mistral {
 		// bool probe_ub();
 		// void jtl_presolve();
 		// void old_jtl_presolve();
-		void dichotomic_search();
+		void dichotomic_search(BranchingHeuristic *heu);
 		// void all_solutions_search();
 		void branch_and_bound();
 		// //void large_neighborhood_search();

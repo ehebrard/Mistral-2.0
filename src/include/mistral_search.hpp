@@ -1478,6 +1478,8 @@ namespace Mistral {
     virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {}
     virtual void close() {}
 
+		virtual bool comp(const Variable& x, const Variable& y) { return true; }
+
     virtual Decision branch() = 0;
 
     virtual std::ostream& display(std::ostream& os) = 0;
@@ -1513,6 +1515,8 @@ namespace Mistral {
 
     VarSelector var;
     ValSelector choice;
+
+		virtual bool comp(const Variable& x, const Variable& y) { return var.comp(x,y); }
 
     GenericHeuristic(Solver *s) 
       : BranchingHeuristic(s) {
@@ -1597,6 +1601,8 @@ namespace Mistral {
 			solver->remove((BacktrackListener*)this);
 		
    }
+	 
+	 virtual bool comp(const Variable& x, const Variable& y) { return default_var.comp(x,y); }
 
 
    virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
@@ -1752,6 +1758,8 @@ namespace Mistral {
 			solver->remove((BacktrackListener*)this);
 		
    }
+	 
+	 virtual bool comp(const Variable& x, const Variable& y) { return default_var.comp(x,y); }
 
 
 	 virtual void initialise(VarStack< Variable, ReversibleNum<int> >& seq) {
@@ -2432,6 +2440,12 @@ namespace Mistral {
 			return manager->get_bound_weight(); }
     WeightMap *get_weight_map() { 
 			return manager; }
+			
+		bool comp(const Variable& x, const Variable& y) {
+			current = x;
+			bests[0] = y;
+			return current < bests[0];
+		}
 
 		Variable select()
 		{
@@ -2660,6 +2674,10 @@ namespace Mistral {
     WeightMap *get_weight_map() { return NULL; }
     
     Variable select();
+		
+		bool comp(const Variable& x, const Variable& y) { 
+			return true;
+		}
 
     virtual std::ostream& display(std::ostream& os) const {
       os << "Go by the default sequence: " << solver->sequence.back(); 
@@ -2699,6 +2717,10 @@ namespace Mistral {
 		WeightMap *get_weight_map() { return NULL; }
     
     Variable select();
+		
+		bool comp(const Variable& x, const Variable& y) {
+			return x.id() < y.id();
+		}
 
     virtual std::ostream& display(std::ostream& os) const {
       os << "Go by lexicographic order: " ;
