@@ -658,6 +658,22 @@ std::string Mistral::Variable::get_domain(const bool latex) const {
 }
 
 
+void Mistral::Variable::get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+  if     (domain_type ==  BITSET_VAR) bitset_domain->get_lb_history(lbs,lvls);
+  else if(domain_type ==   RANGE_VAR)  range_domain->get_lb_history(lbs,lvls);
+	else if(domain_type == EXPRESSION) {
+		  expression->get_self().get_lb_history(lbs,lvls);
+	}
+}
+
+void Mistral::Variable::update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+  if     (domain_type ==  BITSET_VAR) bitset_domain->update_lb_history(lbs,lvls);
+  else if(domain_type ==   RANGE_VAR)  range_domain->update_lb_history(lbs,lvls);
+	else if(domain_type == EXPRESSION) {
+		  expression->get_self().update_lb_history(lbs,lvls);
+	}
+}
+
 std::string Mistral::Variable::get_history() const {
   std::ostringstream buf;
   if     (domain_type ==  BITSET_VAR) buf << bitset_domain->get_history();
@@ -8274,6 +8290,14 @@ bool Mistral::Goal::improving(const int val) const {
   // 	  (type == MINIMIZATION ? 
   // 	   (val < upper_bound) : 
   // 	   (val > lower_bound)) );
+}
+
+void Mistral::Goal::get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+	objective.get_lb_history(lbs,lvls);
+}
+
+void Mistral::Goal::update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+	objective.update_lb_history(lbs,lvls);
 }
     
 

@@ -8,6 +8,72 @@ using namespace Mistral;
 
 
 
+class DSMI {
+
+public:
+	
+	SchedulingSolver *solver;
+	
+	std::vector<int> values_lb;
+	std::vector<int> levels;
+
+	DSMI(SchedulingSolver *s) : solver(s) {}
+
+
+	
+	void evaluate() {
+		// std::cout << "\nhello incr backtrack at level " << solver->level << " objective = " << solver->get_objective_var().get_domain() << " \n";
+		// values_lb.clear();
+		// levels.clear();
+		solver->get_objective_var().update_lb_history(values_lb, levels);
+		
+		
+		
+
+		auto v{values_lb.begin()};
+		auto l{levels.begin()};
+		while(v != values_lb.end()) {
+			std::cout << *v << " at level " << *l << std::endl;
+			++v;
+			++l;
+		}
+		assert(l == levels.end());
+	}
+
+};
+
+class EvalBacktrack : public BacktrackListener {
+
+public:
+	
+	DSMI *criterion;
+
+	EvalBacktrack(DSMI *c) : BacktrackListener(), criterion(c) {}
+		
+	void notify_backtrack() {
+		std::cout << "Backtrack:\n";
+		criterion->evaluate();
+		std::cout << "lb >= " <<  criterion->solver->get_objective_var().get_max() << " at level " << criterion->solver->level << std::endl;
+	}
+
+};
+
+class EvalSolution : public SolutionListener {
+
+public:
+	
+	DSMI *criterion;
+
+	EvalSolution(DSMI *c) : SolutionListener(), criterion(c) {}
+		
+	void notify_solution() {
+		std::cout << "Solution:\n";
+		criterion->evaluate();
+	}
+
+};
+
+
 
 
 int main( int argc, char** argv )
@@ -105,6 +171,12 @@ int main( int argc, char** argv )
 	
 	std::cout << std::endl << "SAVE " << solver->level << "|" << solver->decisions.size << std::endl;
 	
+	
+	
+	DSMI criterion(solver);	
+	
+	solver->add(new EvalBacktrack(&criterion));
+	solver->add(new EvalSolution(&criterion));
 	
 
 	/** Save before making decisions **/

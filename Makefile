@@ -1,12 +1,73 @@
 
 
-# COPTIMIZE=-g
-COMPILFLAGS=-D_UNIX -D_BIT32 #-D_DEBUG_SEARCH -D_DEBUG_AC #-D_DEBUG_MEMORY# #-D_DEBUG_SEARCH #-DNDEBUG 
+COMPILFLAGS = -D_UNIX -D_BIT32 
 COPTIMIZE = -O3
-#COMPILFLAGS = -Wint-to-pointer-cast -D_UNIX -D_BIT32 -DNDEBUG #-D_DEBUG_SEARCH -D_DEBUG_AC #-D_DEBUG_NOGOOD -D_DEBUG_FAIL # -D_DEBUG_AC # #-D_DEBUG_GENPROPAG #-D_MONITOR -D_DEBUG_SEARCH  #-D_DEBUG_NOGOOD # #-D_DEBUG_PROPAGATE #-D_DEBUG_CARRAY  #-D_VARNCONQUEUE  -D_DEBUG_PRUNING #-D_DEBUG_AC -D_DEBUG_QUEUE #-D_VARNCONQUEUE #-D_PROFILING #-D_DEBUG_SEARCH #-D_DEBUG_PROPAG # -D_DEBUG_PRUNING -D_DEBUG_AC -D_DEBUG_QUEUE #-D_DEBUG_REWRITE #-D_DEBUG_CGRAPH #-D_DEBUG_PROPAG -D_DEBUG_MUL #-D_DEBUG_AC # -D_DEBUG_UNITPROP -D_DEBUG_WATCH #-D_DEBUG_PROPAG #-D_DEBUG_REWRITE #-D_DEBUG_AC  #-D_CHRONOLOGICAL #-D_DEBUG_AC 
+
+MAINDIR = .
+
+CCC = g++
 
 
-include ./template.mk
+BIN=$(MAINDIR)/bin
+SRC=$(MAINDIR)/src/lib
+MOD=$(MAINDIR)/examples
+OBJ=$(MAINDIR)/src/obj
+INC=$(MAINDIR)/src/include
+DOC=$(MAINDIR)/doc
+TCL=$(MAINDIR)/tools/tclap/include
+
+MODELS = $(wildcard $(MOD)/src/*.cpp)
+BINS = $(patsubst $(MOD)/src/%, $(BIN)/%, $(MODELS:.cpp=))
+
+
+PINCSRC = $(wildcard $(INC)/*.hpp)
+PLIBSRC = $(wildcard $(SRC)/*.cpp)
+PLIBAUX = $(PLIBSRC:.cpp=.o)
+PLIBOBJ = $(patsubst $(SRC)/%, $(OBJ)/%, $(PLIBAUX))
+XLIBSRC = $(wildcard $(XSRC)/*.cc)
+XLIBAUX = $(XLIBSRC:.cc=.o)
+XLIBOBJ = $(patsubst $(XSRC)/%, $(XOBJ)/%, $(XLIBAUX))
+
+
+CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) 
+LFLAGS = -L$(OBJ)
+
+
+## Compile options
+%.o:			CFLAGS +=$(COPTIMIZE)  $(COMPILFLAGS) #-ggdb -D DEBUG
+%.op:			CFLAGS +=$(COPTIMIZE) -pg -ggdb -D NDEBUG
+%.od:			CFLAGS +=-O0 -ggdb -D DEBUG -D INVARIANTS #-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
+%.or:			CFLAGS +=$(COPTIMIZE) -D NDEBUG
+%.oc:                   CFLAGS +=-O0 -fprofile-arcs -ftest-coverage -ggdb -D DEBUG
+
+
+#------------------------------------------------------------
+#  make all      : to compile the examples.
+#------------------------------------------------------------
+
+
+all: lib $(BINS)
+
+# The library
+lib: $(PLIBOBJ) $(PUTIOBJ)
+$(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
+	@echo 'compile '$<
+	$(CCC) $(CFLAGS) -c $< -o $@ 
+
+# The examples
+$(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
+	@echo 'link '$<
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $(XLIBOBJ) $< -lm -o $@
+
+$(MOD)/obj/%.o: $(MOD)/src/%.cpp
+	@echo 'compile '$<
+	$(CCC) $(CFLAGS) -c $< -o $@ 
+
+# Examples, one at a time
+%: $(MOD)/obj/%.o $(PLIBOBJ) $(XLIBOBJ)
+	@echo 'link '$<	
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $(XLIBOBJ) $< -lm -o $(BIN)/$@ 
+
 
 DATE := $(shell date '+%y-%m-%d')
 

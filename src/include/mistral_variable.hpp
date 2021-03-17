@@ -232,6 +232,38 @@ namespace Mistral {
 		//   solver->iterator_space.release(id);
 		// }
 
+		void get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+			for(auto k{0}; k<trail_.size; k+=4) {
+				int xmin{trail_[k]};
+				// int xmax{trail_[k+1]};
+				// int xsize{trail_[k+2]};
+				int xlevel{trail_[k+3]};
+
+				lbs.push_back(xmin);
+				lvls.push_back(xlevel);
+			}
+		}
+		
+		void update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+			
+			for(int i{0}; i<lbs.size()-1; ++i) {
+				assert(lbs[i] == trail_[4 * i]);
+				assert(lvls[i] == trail_[4 * i + 3]);
+			}
+			
+			if(lbs.size() > 0) {
+				lbs.pop_back();
+				lvls.pop_back();
+			}
+			
+			auto n{trail_.size/4};
+			
+			while(lbs.size() < n) {
+				lbs.push_back(trail_[lbs.size() * 4]);
+				lvls.push_back(trail_[lbs.size() * 4 + 3]);
+			}
+			
+		}
 
 		std::string get_history() {
 			std::ostringstream buf;
@@ -1296,7 +1328,16 @@ namespace Mistral {
     }
 
     //@}
-
+		
+		void get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+			std::cout << "NOT IMPLEMENTED!\n";
+			assert(false);
+		}
+		
+		void update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+			std::cout << "NOT IMPLEMENTED!\n";
+			assert(false);
+		}
 
     /*!@name Virtual Accessors and Iterators*/
     //@{
@@ -1339,6 +1380,35 @@ namespace Mistral {
 
     virtual ~VariableRange() {
     }
+		
+		void get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+			for(auto k{0}; k<trail_.size; k+=3) {
+				int xmin{trail_[k]};
+				// int xmax{trail_[k+1]};
+				int xlevel{trail_[k+2]};
+				lbs.push_back(xmin);
+				lvls.push_back(xlevel);
+			}
+		}
+		
+		void update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const {
+			for(auto i{0}; i+1<lbs.size(); ++i) {
+				assert(lbs[i] == trail_[3 * i]);
+				assert(lvls[i] == trail_[3 * i + 2]);
+			}
+
+			if(lbs.size() > 0) {
+				lbs.pop_back();
+				lvls.pop_back();
+			}
+
+			auto n{trail_.size/3};
+			
+			while(lbs.size() < n) {
+				lbs.push_back(trail_[lbs.size() * 3]);
+				lvls.push_back(trail_[lvls.size() * 3 + 2]);
+			}
+		}
 
 
    std::string get_history() {
@@ -1740,6 +1810,9 @@ namespace Mistral {
     int get_solution_int_value() const ; 
     int get_solution_min() const ; 
     int get_solution_max() const ; 
+		
+		void get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const ;
+		void update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const ;
     /// Returns the domain 
     //Bitset_domain get_domain() const ; 
     std::string get_domain(const bool latex=false) const ; 
@@ -3764,6 +3837,9 @@ namespace Mistral {
     //int get_range() const;
     int value() const;
     bool enforce();
+		
+		void get_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const;
+		void update_lb_history(std::vector<int>& lbs, std::vector<int>& lvls) const;
 
     void set_type(method t) {
       type = t;
