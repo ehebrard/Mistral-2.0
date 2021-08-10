@@ -2185,6 +2185,9 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
 		minfsble<maxfsble && 
 			iteration<params->Dichotomy
 	) {
+		
+		std::cout << "parameters.propagation_limit " << parameters.propagation_limit << std::endl;
+		std::cout << "parameters.time_limit " << parameters.time_limit << std::endl;
 
     
 		double remaining_time = params->Optimise - stats->get_total_time();
@@ -2316,7 +2319,6 @@ void SchedulingSolver::branch_and_bound()
 	save();
 	set_objective(stats->upper_bound-1);
 	addObjective();
-
 
 	//std::cout << (get_run_time() - statistics.start_time) << std::endl;
 

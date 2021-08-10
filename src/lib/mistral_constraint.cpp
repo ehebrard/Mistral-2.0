@@ -67,7 +67,7 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 // #define _DEBUG_ABS (id==3622)
 
-// #define _DEBUG_FACTOR (id==333)
+// #define _DEBUG_FACTOR (id==23)
 
 
 
@@ -3260,6 +3260,14 @@ void Mistral::PredicateFactor::mark_domain() {
 
 Mistral::PropagationOutcome Mistral::PredicateFactor::propagate() {
   Mistral::PropagationOutcome wiped = CONSISTENT;
+	
+#ifdef _DEBUG_FACTOR
+  if (_DEBUG_FACTOR) {
+    std::cout << std::endl
+              << scope[0].get_domain() << " * " << factor << " = "
+              << scope[1].get_domain() << " lvl=" << get_solver()->level << std::endl;
+  }
+#endif
 
   if (FAILED(scope[0].set_min(
           (factor > 0 ? scope[1].get_min() : scope[1].get_max()) / factor))) {
@@ -3280,6 +3288,14 @@ Mistral::PropagationOutcome Mistral::PredicateFactor::propagate() {
                  factor))) {
     wiped = FAILURE(1);
   }
+	
+#ifdef _DEBUG_FACTOR
+  if (_DEBUG_FACTOR) {
+    std::cout << scope[0].get_domain() << " * " << factor << " = "
+              << scope[1].get_domain() << std::endl
+              << wiped << std::endl;
+  }
+#endif
 
   return wiped;
 }
@@ -3305,10 +3321,10 @@ int integer_div_lo(const int x, const int y) {
   int q = x / y;
 
   if (q < 0) {
-    return q + r;
+    return q - r;
   } else {
     return q;
-}
+	}
 }
 
 Mistral::PropagationOutcome
@@ -3319,6 +3335,13 @@ Mistral::PredicateFactor::prop_backward(const Event evt) {
 
 	  if (LB_CHANGED(evt)) {
 	    bound = integer_div_up(scope[1].get_min(), factor);
+			
+#ifdef _DEBUG_FACTOR
+  if (_DEBUG_FACTOR) {			
+			std::cout << "lb = " << bound << std::endl;
+	  }
+	#endif
+		
 			prev = scope[0].get_min();
 	    if (FAILED(scope[0].set_min(bound)))
 	      wiped = FAILURE(0);
@@ -3326,8 +3349,17 @@ Mistral::PredicateFactor::prop_backward(const Event evt) {
 				wiped = prop_forward(LB_EVENT);
 			}
 	  }
+		
+		
 	  if (UB_CHANGED(evt)) {
 	    bound = integer_div_lo(scope[1].get_max(), factor);
+			
+#ifdef _DEBUG_FACTOR
+  if (_DEBUG_FACTOR) {
+			std::cout << "ub = " << bound << std::endl;
+	  }
+	#endif
+			
 			prev = scope[0].get_max();
 	    if (FAILED(scope[0].set_max(bound)))
 	      wiped = FAILURE(0);
@@ -3335,6 +3367,7 @@ Mistral::PredicateFactor::prop_backward(const Event evt) {
 				wiped = prop_forward(UB_EVENT);
 			}
 	  }
+		
 	} else {
 	  if (UB_CHANGED(evt)) {
 	    bound = integer_div_up(scope[1].get_max(), factor);
