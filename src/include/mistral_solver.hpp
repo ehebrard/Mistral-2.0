@@ -33,7 +33,7 @@
 
 #include <tclap/CmdLine.h>
 
-
+#include <boost/dynamic_bitset.hpp>
 
 namespace Mistral {
 
@@ -372,6 +372,7 @@ namespace Mistral {
   class RestartListener;
   class SuccessListener;
   class BacktrackListener;
+  // class FailureListener;
   class DecisionListener;
   class VariableListener;
   class ConstraintListener;
@@ -412,6 +413,8 @@ namespace Mistral {
     Vector< int > assignment_order;
     ReversibleNum<int> assignment_rank;
     Vector< int > assigned;
+
+    boost::dynamic_bitset<> is_relevant;
 
 #ifdef _MONITOR
     SearchMonitor monitor_list;
@@ -504,6 +507,7 @@ namespace Mistral {
     Vector<RestartListener*>       restart_triggers;
     Vector<SuccessListener*>       success_triggers;
     Vector<BacktrackListener*>   backtrack_triggers;
+    // Vector<FailureListener*>       failure_triggers;
     Vector<DecisionListener*>     decision_triggers;
     Vector<VariableListener*>     variable_triggers;
     Vector<ConstraintListener*> constraint_triggers;
@@ -631,6 +635,7 @@ namespace Mistral {
     void add(RestartListener* l);
     void add(SuccessListener* l);
     void add(BacktrackListener* l);
+    // void add(FailureListener* l);
     void add(DecisionListener* l);
     void add(VariableListener* l);
     void add(ConstraintListener* l);

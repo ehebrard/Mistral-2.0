@@ -744,14 +744,15 @@ namespace Mistral {
 
 		std::ostream& display(std::ostream& os) const {
 			os << name() << "(" << scope[0] << ", " << scope[1];
-			if(ARITY > 2)
-				os << ", " << scope[2];
-			os << ")";
-			return os;
-		}
-  
-	};
 
+#if (ARITY > 2)
+                        // if(ARITY > 2)
+                        os << ", " << scope[2];
+#endif
+                        os << ")";
+                        return os;
+                }
+  };
 
   class BinaryConstraint : public FixedArityConstraint<2> {
     

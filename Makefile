@@ -8,6 +8,9 @@ MAINDIR = .
 CCC = g++
 
 
+BOOSTDIR = /Users/boost/boost_1_73_0/boost
+
+
 BIN=$(MAINDIR)/bin
 SRC=$(MAINDIR)/src/lib
 MOD=$(MAINDIR)/examples
@@ -29,7 +32,7 @@ XLIBAUX = $(XLIBSRC:.cc=.o)
 XLIBOBJ = $(patsubst $(XSRC)/%, $(XOBJ)/%, $(XLIBAUX))
 
 
-CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) 
+CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(BOOSTDIR) 
 LFLAGS = -L$(OBJ)
 
 

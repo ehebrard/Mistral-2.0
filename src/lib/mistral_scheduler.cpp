@@ -34,6 +34,640 @@ using namespace Mistral;
 #define BNB   1
 #define LNS   2
 
+int choose(const int n, const int k) {
+  auto r{1};
+  auto d{1};
+  for (auto i{1}; i <= k; ++i) {
+    r *= (n - k + i);
+    d *= i;
+  }
+  return r / d;
+}
+
+int lookup(const int i, const int j, const int n) {
+  return i * (2 * n - i - 3) / 2 + j - 1;
+}
+
+void CriticalPathListener::reset() { inpath.reset(); }
+
+size_t CriticalPathListener::count() const { return inpath.count(); }
+
+// bool CriticalPathListener::isPredecessor(const int p, const int t) const {
+//   return sched->tasks[p].get_min() + sched->data->getDuration(p) ==
+//          sched->tasks[t].get_min();
+// }
+//
+// bool CriticalPathListener::isSuccessor(const int s, const int t) const {
+//   return sched->tasks[s].get_max() - sched->data->getDuration(t) ==
+//          sched->tasks[t].get_max();
+// }
+
+int CriticalPathListener::CriticalPathListener::jobOf(const int t) const {
+  return t / sched->data->nMachines();
+}
+
+int CriticalPathListener::rankInJobOf(const int t) const {
+  return t % sched->data->nMachines();
+}
+
+int CriticalPathListener::rankInMachineOf(const int t) const {
+  return rank_in_machine[t];
+}
+
+int CriticalPathListener::machineOf(const int t) const {
+  return machine_map[t];
+}
+
+int CriticalPathListener::disjunct(const int m, const int i,
+                                   const int j) const {
+  assert(i < j);
+
+  int n{sched->data->nJobs()};
+  return m * n * (n - 1) / 2 + lookup(i, j, n);
+}
+
+bool CriticalPathListener::precede(const int t1, const int t2) const {
+  int m{machineOf(t1)};
+
+  assert(machineOf(t2) == m);
+
+  int k1{rankInMachineOf(t1)};
+  int k2{rankInMachineOf(t2)};
+
+  // std::cout << t1 << " " << k1 << " " << sched->tasks[t1].get_domain()
+  //           << std::endl;
+  // std::cout << t2 << " " << k2 << " " << sched->tasks[t2].get_domain()
+  //           << std::endl;
+
+  if (k1 < k2) {
+    int d{disjunct(m, k1, k2)};
+
+    // std::cout << "(b) " << sched->disjuncts[d] << ": "
+    //           << sched->disjuncts[d].get_domain() << " => "
+    //           << (sched->disjuncts[d].get_min() < 1) << std::endl;
+
+    return sched->disjuncts[d].get_max() > 0;
+  } else {
+    assert(k2 < k1);
+    int d{disjunct(m, k2, k1)};
+
+    // std::cout << "(a) " << sched->disjuncts[d] << ": "
+    //           << sched->disjuncts[d].get_domain() << " => "
+    //           << (sched->disjuncts[d].get_max() > 0) << std::endl;
+
+    return sched->disjuncts[d].get_min() < 1;
+  }
+}
+
+int CriticalPathListener::getPredecessor(const int t, const int taboo) {
+  // first, check if there is the predecessor on the job is on the critical path
+  int rkt{rankInJobOf(t)};
+  if (rkt > 0) {
+    int job{jobOf(t)};
+    int p{sched->data->getJobTask(job, rkt - 1)};
+    if (sched->tasks[p].get_min() + sched->data->getDuration(p) >=
+        sched->tasks[t].get_min()) {
+
+      if (debug_flag) {
+        std::cout << " preceding task on job : " << sched->tasks[p].get_domain()
+                  << " + " << sched->data->getDuration(p) << std::endl;
+      }
+
+      return p;
+    }
+  }
+
+  candidates.clear();
+  // if not, try with the tasks on the same machine
+  int m{machineOf(t)};
+  int k{rankInMachineOf(t)};
+  for (auto i{0}; i < sched->data->nJobs(); ++i) {
+
+    if (debug_flag) {
+      std::cout << "  - (" << k << "/" << i << ": "
+                << sched->data->getMachineTask(m, i) << ")";
+    }
+
+    if (i < k) {
+      int d{disjunct(m, i, k)};
+
+      if (debug_flag) {
+        if (sched->disjuncts[d].get_min())
+          std::cout << " (pred)";
+        else if (not sched->disjuncts[d].get_max())
+          std::cout << " (succ)";
+        else
+          std::cout << " (neither)";
+
+        std::cout
+            << " " << sched->disjuncts[d].get_domain() << " "
+            << sched->tasks[sched->data->getMachineTask(m, i)].get_domain()
+            << " + "
+            << sched->data->getDuration(sched->data->getMachineTask(m, i));
+      }
+
+      if (sched->disjuncts[d].get_min()) {
+        int p{sched->data->getMachineTask(m, i)};
+        if (p != taboo and
+            sched->tasks[p].get_min() + sched->data->getDuration(p) >=
+                sched->tasks[t].get_min()) {
+
+          if (debug_flag) {
+            std::cout << " ==> THIS ONE!!";
+          }
+
+          candidates.push_back(p);
+          candidates.push_back(d);
+        }
+      }
+
+      if (debug_flag) {
+        std::cout << std::endl;
+      }
+
+    } else if (k < i) {
+      int d{disjunct(m, k, i)};
+
+      if (debug_flag) {
+        if (sched->disjuncts[d].get_min())
+          std::cout << " (succ)";
+        else if (not sched->disjuncts[d].get_max())
+          std::cout << " (pred)";
+        else
+          std::cout << " (neither)";
+
+        std::cout
+            << " " << sched->disjuncts[d].get_domain() << " "
+            << sched->tasks[sched->data->getMachineTask(m, i)].get_domain()
+            << " + "
+            << sched->data->getDuration(sched->data->getMachineTask(m, i));
+      }
+
+      if (not sched->disjuncts[d].get_max()) {
+        int p{sched->data->getMachineTask(m, i)};
+        if (p != taboo and
+            sched->tasks[p].get_min() + sched->data->getDuration(p) >=
+                sched->tasks[t].get_min()) {
+
+          if (debug_flag) {
+            std::cout << " ==> THIS ONE!!";
+          }
+
+          candidates.push_back(p);
+          candidates.push_back(d);
+        }
+      }
+
+      if (debug_flag) {
+        std::cout << std::endl;
+      }
+    }
+
+    else if (debug_flag) {
+      std::cout << " (neither)" << std::endl;
+    }
+  }
+  // sched->tasks[p].get_min() + sched->data->getDuration(p) ==
+  // sched->tasks[t].get_min();
+
+  if (candidates.size() == 0)
+    return -1;
+  // assert(candidates.size() > 0);
+
+  for (auto i{0}; i < candidates.size(); i += 2) {
+    auto p{candidates[i]};
+    auto d{candidates[i + 1]};
+
+    if (inpath[d])
+      return p;
+  }
+
+  // if(candidates.size() == 0) {
+  // 	assert(taboo == -1);
+  // 	return -1;
+  // }
+
+  // inpath.set(candidates[1]);
+  literals.push_back(candidates[1]);
+  return candidates[0];
+}
+
+int CriticalPathListener::getSuccessor(const int t, const int taboo) {
+  // first, check if there is the predecessor on the job is on the critical path
+  int rkt{rankInJobOf(t)};
+  if (rkt < sched->data->nMachines() - 1) {
+    int job{jobOf(t)};
+    int p{sched->data->getJobTask(job, rkt + 1)};
+    if (sched->tasks[p].get_max() <=
+        sched->data->getDuration(t) + sched->tasks[t].get_max()) {
+
+      if (debug_flag) {
+        std::cout << " preceding task on job : " << sched->tasks[p].get_domain()
+                  << " + " << sched->data->getDuration(p) << std::endl;
+      }
+
+      return p;
+    }
+  }
+
+  candidates.clear();
+  // if not, try with the tasks on the same machine
+  int m{machineOf(t)};
+  int k{rankInMachineOf(t)};
+  for (auto i{0}; i < sched->data->nJobs(); ++i) {
+
+    if (debug_flag) {
+      std::cout << "  - (" << k << "/" << i << ")";
+    }
+
+    if (i < k) {
+      int d{disjunct(m, i, k)};
+
+      if (debug_flag) {
+        if (sched->disjuncts[d].get_min())
+          std::cout << " (pred)";
+        else if (not sched->disjuncts[d].get_max())
+          std::cout << " (succ)";
+        else
+          std::cout << " (neither)";
+
+        std::cout
+            << " " << sched->disjuncts[d].get_domain() << " "
+            << sched->tasks[sched->data->getMachineTask(m, i)].get_domain()
+            << " - " << sched->data->getDuration(t);
+      }
+
+      if (not sched->disjuncts[d].get_max()) {
+        int p{sched->data->getMachineTask(m, i)};
+        if (p != taboo and
+            sched->tasks[p].get_max() <=
+                sched->data->getDuration(t) + sched->tasks[t].get_max()) {
+
+          if (debug_flag) {
+            std::cout << " ==> THIS ONE!!";
+          }
+
+          candidates.push_back(p);
+          candidates.push_back(d);
+        }
+      }
+
+      if (debug_flag) {
+        std::cout << std::endl;
+      }
+
+    } else if (k < i) {
+      int d{disjunct(m, k, i)};
+
+      if (debug_flag) {
+        if (sched->disjuncts[d].get_min())
+          std::cout << " (succ)";
+        else if (not sched->disjuncts[d].get_max())
+          std::cout << " (pred)";
+        else
+          std::cout << " (neither)";
+
+        std::cout
+            << " " << sched->disjuncts[d].get_domain() << " "
+            << sched->tasks[sched->data->getMachineTask(m, i)].get_domain()
+            << " - " << sched->data->getDuration(t);
+      }
+
+      if (sched->disjuncts[d].get_min()) {
+        int p{sched->data->getMachineTask(m, i)};
+        if (p != taboo and
+            sched->tasks[p].get_max() <=
+                sched->data->getDuration(t) + sched->tasks[t].get_max()) {
+
+          if (debug_flag) {
+            std::cout << " ==> THIS ONE!!";
+          }
+
+          candidates.push_back(p);
+          candidates.push_back(d);
+        }
+      }
+
+      if (debug_flag) {
+        std::cout << std::endl;
+      }
+
+    }
+
+    else if (debug_flag) {
+      std::cout << " (neither)" << std::endl;
+    }
+  }
+  // sched->tasks[p].get_min() + sched->data->getDuration(p) ==
+  // sched->tasks[t].get_min();
+
+  if (candidates.size() == 0)
+    return -1;
+  // assert(candidates.size() > 0);
+
+  for (auto i{0}; i < candidates.size(); i += 2) {
+    auto p{candidates[i]};
+    auto d{candidates[i + 1]};
+
+    if (inpath[d])
+      return p;
+  }
+
+  // if(candidates.size() == 0) {
+  // 	assert(taboo == -1);
+  // 	return -1;
+  // }
+
+  literals.push_back(candidates[1]);
+  // inpath.set(candidates[1]);
+  return candidates[0];
+}
+
+CriticalPathListener::CriticalPathListener(SchedulingSolver *s) : sched(s) {
+  inpath.resize(sched->disjuncts.size, 0);
+
+  // job_map.resize(sched->data->nTasks(), -1);
+  machine_map.resize(sched->data->nTasks(), -1);
+  rank_in_machine.resize(sched->data->nTasks(), -1);
+  // job_rank.resize(sched->data->nTasks(), -1);
+
+  // auto n{sched->data->nJobs()};
+  // w.resize(n, -1);
+
+  // std::cout << *sched << std::endl;
+  //
+  // exit(1);
+
+  int t{0};
+  for (auto j{0}; j < sched->data->nJobs(); ++j) {
+    assert(sched->data->nTasksInJob(j) == sched->data->nMachines());
+
+    for (auto i{0}; i < sched->data->nMachines(); ++i) {
+      assert(sched->data->getJobTask(j, i) == t);
+      assert(jobOf(t) == j);
+      assert(rankInJobOf(t) == i);
+
+      ++t;
+    }
+  }
+
+  for (auto m{0}; m < sched->data->nMachines(); ++m) {
+    assert(sched->data->nTasksInMachine(m) == sched->data->nJobs());
+
+    // std::cout << "\nMachine " << m << std::endl;
+
+    // int c{0};
+    for (auto i{0}; i < sched->data->nJobs(); ++i) {
+      machine_map[sched->data->getMachineTask(m, i)] = m;
+      rank_in_machine[sched->data->getMachineTask(m, i)] = i;
+      for (auto j{i + 1}; j < sched->data->nJobs(); ++j) {
+        // assert(lookup(i,k,sched->data->nJobs()) == c++);
+        int d = disjunct(m, i, j);
+
+        // std::cout << d << std::endl;
+
+        auto con = sched->constraints[d +
+                                      (sched->data->nMachines() - 1) *
+                                          sched->data->nJobs()];
+
+        // std::cout << sched->data->getMachineTask(m,i) << " / "
+        // 		<< sched->data->getMachineTask(m,j) << std::endl;
+        //
+        // std::cout << m << " " << i << " " << j << ": " << con << std::endl;
+        //
+
+        Variable *v = con.get_scope();
+
+        // std::cout << v[0].id() << " " << v[1].id() << " " << v[2].id() <<
+        // std::endl;
+
+        assert(v[0].id() == sched->data->getMachineTask(m, i));
+        assert(v[1].id() == sched->data->getMachineTask(m, j));
+        assert(v[2].id() == sched->disjuncts[d].id());
+      }
+    }
+  }
+}
+
+// bool CriticalPathListener::isFirst
+
+void CriticalPathListener::notify_backtrack() {
+  // std::cout << "hello!\n";
+
+  // std::cout << inpath << std::endl;
+
+  Constraint con = sched->culprit;
+
+  if (debug_flag)
+    std::cout << "\nfail on " << con << "!\n";
+  // for(auto i{0}; i<sched->data->nJobs(); ++i) {
+  // 	for(auto j : sched->data->getJob(i)) {
+  // 		std::cout << " " << j ;
+  // 	}
+  // 	std::cout << std::endl;
+  // }
+
+  Variable *scope = con.get_scope();
+  int v[2] = {scope[0].id(), scope[1].id()};
+
+  int t;
+  if (con.arity() == 3) {
+    assert(machineOf(v[0]) == machineOf(v[1]));
+
+    if (not precede(v[0], v[1])) {
+      assert(precede(v[1], v[0]));
+      t = v[0];
+      v[0] = v[1];
+      v[1] = t;
+    }
+    //
+    //
+    // t = v[0];
+    // if(sched->tasks[v[0]].get_min() > 0) {
+    // 	t = getPredecessor(v[0], v[1]);
+    // if(t >= 0) {
+    //
+    // }
+    //
+    //
+    //
+    // for(auto i{0}; i<2; ++i) {
+    // 	    t = v[i];
+    // 	    while (t>=0 and sched->tasks[t].get_min() != 0) {
+    //
+    // 	      std::cout << "find predecessor of t" << t << " (but not " <<
+    // v[1-i] << ") " <<
+    // 	      sched->tasks[t].get_domain() << std::endl;
+    //
+    //
+    // 	      t = getPredecessor(t, v[1-i]);
+    //
+    // 				std::cout << t << std::endl;
+    // 	    }
+    //
+    // 	    t = v[1-i];
+    // 	    while (sched->tasks[t].get_max() + sched->data->getDuration(t) <
+    // 	           sched->C_max.get_max()) {
+    //
+    // 	 			std::cout << "find successor of t" << t << " (but not "
+    // <<
+    // v[1-i]
+    // <<
+    // ") " <<
+    // 	 			sched->tasks[t].get_domain() << std::endl;
+    //
+    // 	      t = getSuccessor(t, v[1-i]);
+    //
+    // 				std::cout << t << std::endl;
+    // 	    }
+    // }
+    assert(precede(v[0], v[1]));
+
+    if (debug_flag) {
+      std::cout << "disjunct\n";
+    }
+  } else {
+
+    if (debug_flag) {
+      std::cout << "precedence\n";
+    }
+  }
+
+  // assert(jobOf(v[0]) == jobOf(v[1]));
+
+  if (debug_flag) {
+    std::cout << "\nfind critical path before " << v[0] << " ("
+              << sched->tasks[v[0]].get_domain() << "+"
+              << sched->data->getDuration(v[0]) << ") and after " << v[1]
+              << " (" << sched->tasks[v[1]].get_domain() << "+"
+              << sched->data->getDuration(v[1]) << ")" << std::endl;
+  }
+
+  literals.clear();
+  t = v[0];
+  while (sched->tasks[t].get_min() != 0) {
+
+    if (debug_flag) {
+      std::cout << "find predecessor of t" << t << " "
+                << sched->tasks[t].get_domain() << std::endl;
+    }
+
+    t = getPredecessor(t, v[1]);
+
+    // assert(t != v[1]);
+
+    if (debug_flag) {
+      if (t < 0)
+        std::cout << "cycle!!\n";
+      else
+        std::cout << t << std::endl;
+    }
+
+    if (t < 0) {
+      // literals.clear();
+      break;
+    }
+  }
+
+  if (t >= 0) {
+    t = v[1];
+    while (sched->tasks[t].get_max() + sched->data->getDuration(t) <
+           sched->C_max.get_max()) {
+
+      if (debug_flag) {
+        std::cout << "find successor of t" << t << " "
+                  << sched->tasks[t].get_domain() << std::endl;
+      }
+
+      t = getSuccessor(t, v[0]);
+
+      assert(t != v[0]);
+
+      if (debug_flag) {
+        std::cout << t << std::endl;
+      }
+    }
+
+    assert(t >= 0);
+    for (auto l : literals) {
+      inpath.set(l);
+    }
+  }
+
+  // std::cout << "find predecessor of " << sched->tasks[v[0]].get_domain() <<
+  // std::endl;
+  // int p{getPredecessor(v[0])};
+
+  // int d{disjunct()}
+
+  // auto t{v[0]};
+  // while(sched->tasks[t].get_min() != 0) {
+  // 	auto job{jobOf(t)};
+  // 	auto rank{rankOf(t)};
+  //
+  // 	bool exists{false};
+  //
+  // 	auto p{sched->data->getJobTask(job, rank-1)};
+  // 	if(rank != 0 and isPredecessor(p, t)) {
+  // 		// the previous task on the same job
+  // 		t = p;
+  // 		exists = true;
+  // 	} else {
+  // 		auto machine{machineOf(t)};
+  // 		for(auto x : sched->data->getTasksOfMachine(machine)) {
+  // 			if(isPredecessor(x, t)) {
+  // 				t = x;
+  // 				exists = true;
+  // 				break;
+  // 			}
+  // 		}
+  // 	}
+  //
+  // 	if(not exists) {
+  // 		std::cout << " no more predecessors!!\n";
+  // 		exit(1);
+  // 	}
+  // 	std::cout << " " << sched->tasks[t].get_domain() ;
+  // }
+  //
+  // std::cout << std::endl;
+
+  // for(auto i{0}; i<sched->data->nJobs(); ++i) {
+  // 	for(auto j : sched->data->getTasksOfJob(i)) {
+  // 		std::cout << " " << sched->tasks[j].get_domain() << " (" <<
+  // sched->data->getDuration(j) << ")" ;
+  // 		assert(sched->tasks[j].id() == j);
+  //
+  // 		if(v[0]==j or v[1]==j) {
+  // 			std::cout << "*";
+  // 		}
+  //
+  // 	}
+  // 	std::cout << std::endl;
+  // }
+
+  // if(con.arity() == 2)
+  // {
+  // 	std::cout << "prec\n";
+  // 	v[0] = scope[0].id();
+  // 	v[1] = scope[1].id();
+  // }
+  // else if(con.arity() == 3)
+  // {
+  // 	std::cout << "disjunct\n";
+  // 	v[0] = scope[0].id();
+  // 	v[1] = scope[1].id();
+  // }
+  // else {
+  // 	std::cout << "weird\n";
+  // 	exit(1);
+  // }
+
+  // std::cout << v[0] << " " << v[1] << std::endl;
+  //
+  //
+  // sched->print_domains(std::cout);
+}
 
 StatisticList::StatisticList() {
 	best_solution_index     = 0;
@@ -348,23 +982,21 @@ ParameterList::ParameterList(int length, char **commandline) {
 	PolicyRestart = GEOMETRIC;
 	FixTasks  = 0;
 	NgdType   = 2;
-	OrderTasks = 1;
+        OrderTasks = 0;
 
-
-
-	if(Type == "osp") {
-		Objective = "makespan";
-		if(Heuristic == "none")
-			Heuristic = "osp-b";
-	} else if(Type == "sds") {
-		Objective = "makespan";
-		if(Heuristic == "none")
-			Heuristic = "osp-b";
-	} else if(Type == "jtl") {
-		Objective = "makespan";
-		Presolve = "jtl";
-		if(Heuristic == "none")
-			Heuristic = "osp-t";
+        if (Type == "osp") {
+          Objective = "makespan";
+          if (Heuristic == "none")
+            Heuristic = "osp-b";
+        } else if (Type == "sds") {
+          Objective = "makespan";
+          if (Heuristic == "none")
+            Heuristic = "osp-b";
+        } else if (Type == "jtl") {
+          Objective = "makespan";
+          Presolve = "jtl";
+          if (Heuristic == "none")
+            Heuristic = "osp-t";
 	} else if(Type == "now" || Type == "now2") {
 		Objective = "makespan";
 		Presolve = "default";
@@ -1817,9 +2449,17 @@ void SchedulingSolver::setup() {
 
 SchedulingSolver::~SchedulingSolver() {}
 
+std::ostream &SchedulingSolver::print_domains(std::ostream &os) const {
 
+  for (auto i{0}; i < data->nJobs(); ++i) {
+    for (auto j : data->getTasksOfJob(i)) {
+      os << " " << tasks[j].get_domain();
+    }
+    os << std::endl;
+  }
 
-
+  return os;
+}
 
 int L_sum_Model::get_lb() {
 	return lb_L_sum;
@@ -2179,44 +2819,49 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
 	//propagate the bounds, with respect to the initial upper bound
 	Outcome result = (propagate() ? UNKNOWN : UNSAT);
 
-  
-	////////// dichotomic search ///////////////
-	while( //result == UNKNOWN && 
-		minfsble<maxfsble && 
-			iteration<params->Dichotomy
-	) {
-		
-		std::cout << "parameters.propagation_limit " << parameters.propagation_limit << std::endl;
-		std::cout << "parameters.time_limit " << parameters.time_limit << std::endl;
+        CriticalPathListener *cpl = new CriticalPathListener(this);
+        add(cpl);
 
-    
-		double remaining_time = params->Optimise - stats->get_total_time();
-    
-		if(remaining_time < (2*params->NodeBase)) break;
-    
-		objective = (int)(floor(((double)minfsble + (double)maxfsble)/2));
-		std::cout << "\n c +=========[ start dichotomic step ]=========+" << std::endl;
-		//       setPropagsLimit(params->NodeCutoff);
-    
-		parameters.propagation_limit = params->NodeCutoff;
-    
-    
-		std::cout << std::left << std::setw(30) << " c | current real range" << ":" 
-			<< std::right << " " << std::setw(5) << stats->lower_bound 
-				<< " to " << std::setw(5) << stats->upper_bound << " |" << std::endl;
-		std::cout << std::left << std::setw(30) << " c | current dichotomic range" << ":" 
-			<< std::right << " " << std::setw(5) << minfsble 
-				<< " to " << std::setw(5) << maxfsble << " |" << std::endl;
-		std::cout << std::left << std::setw(30) << " c | target objective" << ":"  
-			<< std::right << std::setw(15) << objective << " |" << std::endl;
-   
-    
-		statistics.start_time = get_run_time();
+        ////////// dichotomic search ///////////////
+        while ( // result == UNKNOWN &&
+            minfsble < maxfsble && iteration < params->Dichotomy) {
 
-		save();
-    
-		result = set_objective(objective);
-    
+          cpl->reset();
+
+          std::cout << "parameters.propagation_limit "
+                    << parameters.propagation_limit << std::endl;
+          std::cout << "parameters.time_limit " << parameters.time_limit
+                    << std::endl;
+
+          double remaining_time = params->Optimise - stats->get_total_time();
+
+          if (remaining_time < (2 * params->NodeBase))
+            break;
+
+          objective = (int)(floor(((double)minfsble + (double)maxfsble) / 2));
+          std::cout << "\n c +=========[ start dichotomic step ]=========+"
+                    << std::endl;
+          //       setPropagsLimit(params->NodeCutoff);
+
+          parameters.propagation_limit = params->NodeCutoff;
+
+          std::cout << std::left << std::setw(30) << " c | current real range"
+                    << ":" << std::right << " " << std::setw(5)
+                    << stats->lower_bound << " to " << std::setw(5)
+                    << stats->upper_bound << " |" << std::endl;
+          std::cout << std::left << std::setw(30)
+                    << " c | current dichotomic range"
+                    << ":" << std::right << " " << std::setw(5) << minfsble
+                    << " to " << std::setw(5) << maxfsble << " |" << std::endl;
+          std::cout << std::left << std::setw(30) << " c | target objective"
+                    << ":" << std::right << std::setw(15) << objective << " |"
+                    << std::endl;
+
+          statistics.start_time = get_run_time();
+
+          save();
+
+          result = set_objective(objective);
 
 #ifdef _DEBUG_PRUNING
 		monitor(tasks);
@@ -2253,13 +2898,19 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
       
 		} else {
 
-			new_objective = objective;
-			minfsble = objective+1;
+                  new_objective = objective;
+                  minfsble = objective + 1;
 
-			if( result == UNSAT ) {
-				std::cout << std::left << std::setw(30) << " c | real lower bound" << ":" << std::right << std::setw(15) << minfsble << " |" << std::endl;
-			} else {
-				std::cout << std::left << std::setw(30) << " c | dichotomic lower bound" << ":" << std::right << std::setw(15) << minfsble << " |" << std::endl;
+                  if (result == UNSAT) {
+                    std::cout << std::left << std::setw(30)
+                              << " c | real lower bound"
+                              << ":" << std::right << std::setw(15) << minfsble
+                              << " |" << std::endl;
+                  } else {
+                    std::cout << std::left << std::setw(30)
+                              << " c | dichotomic lower bound"
+                              << ":" << std::right << std::setw(15) << minfsble
+                              << " |" << std::endl;
 			}
       
 
@@ -2275,29 +2926,40 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
 		std::cout << std::left << std::setw(30) << " c | cpu time" << ":" << std::right << std::setw(15) << (double)((int)((stats->time.back())*10000))/10000.0 << " |" << std::endl;
     
 		//printStatistics(std::cout, ((params->Verbose ? RUNTIME : 0) + ((params->Verbose || result != UNKNOWN)  ? BTS + PPGS : 0) + OUTCOME) );
-    
-    
-		//std::cout << "LEVEL: " << level << " " << this << std::endl;
 
-		restore();
-		statistics.initialise(this);
-		pol->initialise(parameters.restart_limit);
+                std::cout << " c nogood size = " << cpl->count() << std::endl;
+
+                // std::cout << "LEVEL: " << level << " " << this << std::endl;
+
+                restore();
+                statistics.initialise(this);
+                pol->initialise(parameters.restart_limit);
 
 		// std::cout << std::left << std::setw(30) << " c current dichotomic range" << ":" 
 		// 	      << std::right << std::setw(6) << " " << std::setw(5) << minfsble 
 		// 	      << " to " << std::setw(5) << maxfsble << " " << iteration << " " << params->Dichotomy << std::endl;
-		std::cout << " c +==========[ end dichotomic step ]==========+" << std::endl;
-    
 
-		++iteration;
-	} 
-	//   } else if( status == SAT ) {
-	//     std::cout << " c Solved during preprocessing!" << std::endl;
-  
-	//   } else if( status == UNSAT ) {
-	//     std::cout << " c Found inconsistent during preprocessing!" << std::endl;
-  
-	//   }
+                int count{0};
+                for (auto d : disjuncts)
+                  if (Solver::is_relevant[d.id()])
+                    ++count;
+
+                std::cout << " c " << count << " out of " << disjuncts.size
+                          << " disjuncts were used in the proof\n";
+
+                std::cout << " c +==========[ end dichotomic step ]==========+"
+                          << std::endl;
+
+                ++iteration;
+        }
+        //   } else if( status == SAT ) {
+        //     std::cout << " c Solved during preprocessing!" << std::endl;
+
+        //   } else if( status == UNSAT ) {
+        //     std::cout << " c Found inconsistent during preprocessing!" <<
+        //     std::endl;
+
+        //   }
     
 	std::cout << std::endl;
 }

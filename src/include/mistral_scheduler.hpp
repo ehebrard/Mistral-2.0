@@ -38,146 +38,192 @@
 
 namespace Mistral {
 
-	class SchedulingSolver;
-	class StatisticList {
-	private:
-		int best_solution_index;
-		int branch_and_bound_index;
+int choose(const int n, const int k);
 
-	public:
+class SchedulingSolver;
 
-		SchedulingSolver *solver;
+class CriticalPathListener : public BacktrackListener {
+public:
+  CriticalPathListener(SchedulingSolver *s);
 
-		int    num_nogoods;
-		int    num_solutions;
-		int    lower_bound;
-		int    upper_bound;
+  virtual void notify_backtrack();
 
-		double avg_nogood_size;
-		double avg_cutoff_time;
-		double avg_distance;
-		double min_distance;
-		double max_distance;
+  std::ostream &display(std::ostream &os) {
+    os << "critpath-L";
+    return os;
+  }
 
-		double normalized_objective;
-		//double normalizer;
-    
-		double real_start_time;
+  size_t count() const;
 
-		std::vector<long unsigned int> nodes;
-		std::vector<long unsigned int> backtracks;
-		std::vector<long unsigned int> fails;
-		std::vector<long unsigned int> propags;
-		std::vector<double>            time;
-		std::vector<double>            soltime;
-		std::vector<int>               outcome;
-		std::vector<int>               types;
+  void reset();
 
-		StatisticList();
-		virtual ~StatisticList();
+  int jobOf(const int t) const;
 
-		bool solved();
-		double get_total_time();
-		double get_lowerbound_time();
-		void start();
-		void add_info(const int obj, const int tp);
-		//void add_info(const int lb, const int ub);
+  int rankInJobOf(const int t) const;
 
-		std::ostream& print(std::ostream& os, 
-		const char* prefix=" ",
-		const int start=0, 
-		const int end=-1);
-	};
+  int machineOf(const int t) const;
 
-	class Instance;
-	class ParameterList {
-	public:
+  int rankInMachineOf(const int t) const;
 
-		static const int LEX     =  0;
-		static const int ANTILEX = -2;
-		static const int PROMISE =  1;
-		static const int ANTI    = -1;
-		static const int GUIDED  =  2;
-		static const int RGUIDED =  3;
-		static const int RAND    =  4;
+  int disjunct(const int m, const int i, const int j) const;
 
-		static const int nia = 20;
-		static const char* int_ident[nia];
-    
-		static const int nsa = 11;
-		static const char* str_ident[nsa];
-    
-    
-		const char* str_param[nsa];
-		int int_param[nia];
+  bool precede(const int p, const int t) const;
 
-		char* data_file;
-		char* data_file_name;
+  // bool isSuccessor(const int p, const int t) const;
 
-		SchedulingSolver *solver;
+  int getPredecessor(const int t, const int taboo = -1);
 
-		int UBinit; // "ub": user defined upper bound (-1 if not)
-		int LBinit; // "lb": user defined lower bound (-1 if not)
-		int Checked; // "check": whether the solution is checked
-		int Seed; // "seed": random seed
-		int Cutoff; // "cutoff": time cutoff of dichotomic steps
-		unsigned long long int NodeCutoff; // "nodes": node cutoff of dichotomic steps
-		int NodeBase; // "dyncutoff": node cutoff trying to mimic time cutoff
-		int Dichotomy; // "dichotomy": max number of dichotomic steps
-		int Base; // "base": base cutoff for restarts
-		int Randomized; // "randomized": level of randomization
-		int Verbose; // "verbose": level of verbosity
-		int Optimise; // "optimise": total time cutoff 
-		int Rngd; // "nogood": whether nogood on restart are used
-		int Precision; // "-": precision when turning float weights into int weights
-		int Hlimit; // "hlimit": maximum number of variables evaluated by the dvo
-		int InitBound; // "init": number of iterations when initialising the upper bound
-		int Neighbor; // "neighbor": number of machines to re-schedule during LNS
-		int InitStep; // "initstep": whether an initial probe with high makespan should be performed
-		int FixTasks; // Whether tasks' starting time should be fixed (searched)
-		//int MinRank; // Whether the sum of the disjunct should be minimised
-		int OrderTasks; // Whetheer tasks should be ordered within the disjuncts
-		int NgdType; // nogood type for solution removal
+  int getSuccessor(const int t, const int taboo = -1);
 
-		double Factor;
-		double Decay;
+private:
+  bool debug_flag{false};
 
-		std::string Policy;
-		std::string Heuristic;
-		std::string Type; 
-		std::string Value;
-		std::string DValue;
-		std::string IValue;
-		std::string Objective;
-		std::string Algorithm;
-		std::string Presolve;
+  // std::vector<int> w;
+  boost::dynamic_bitset<> inpath;
+  SchedulingSolver *sched;
+  // vector<int> job_map;
+  // vector<int> job_rank;
+  std::vector<int> machine_map;
+  std::vector<int> rank_in_machine;
 
-		int PolicyRestart;
+  std::vector<int> literals;
+  std::vector<int> candidates;
+};
 
-		ParameterList(int length, char** commandline);
-		//ParameterList();
-		//ParameterList(const ParameterList& pl);
-		virtual ~ParameterList() {}
+class StatisticList {
+private:
+  int best_solution_index;
+  int branch_and_bound_index;
 
-		void initialise(SchedulingSolver*);
-		void initialise(const ParameterList& pl);
-		std::ostream& print(std::ostream& os);
+public:
+  SchedulingSolver *solver;
 
-	};
+  int num_nogoods;
+  int num_solutions;
+  int lower_bound;
+  int upper_bound;
 
-	class pair_ {
-	public:
-    
-		int element;
-		int rank;
+  double avg_nogood_size;
+  double avg_cutoff_time;
+  double avg_distance;
+  double min_distance;
+  double max_distance;
 
-		pair_(const int elt, const int rk) : element(elt), rank(rk) {}
-	};
+  double normalized_objective;
+  // double normalizer;
 
-	struct Term {
-		int X;
-		int Y;
-		int k;
+  double real_start_time;
+
+  std::vector<long unsigned int> nodes;
+  std::vector<long unsigned int> backtracks;
+  std::vector<long unsigned int> fails;
+  std::vector<long unsigned int> propags;
+  std::vector<double> time;
+  std::vector<double> soltime;
+  std::vector<int> outcome;
+  std::vector<int> types;
+
+  StatisticList();
+  virtual ~StatisticList();
+
+  bool solved();
+  double get_total_time();
+  double get_lowerbound_time();
+  void start();
+  void add_info(const int obj, const int tp);
+  // void add_info(const int lb, const int ub);
+
+  std::ostream &print(std::ostream &os, const char *prefix = " ",
+                      const int start = 0, const int end = -1);
+};
+
+class Instance;
+class ParameterList {
+public:
+  static const int LEX = 0;
+  static const int ANTILEX = -2;
+  static const int PROMISE = 1;
+  static const int ANTI = -1;
+  static const int GUIDED = 2;
+  static const int RGUIDED = 3;
+  static const int RAND = 4;
+
+  static const int nia = 20;
+  static const char *int_ident[nia];
+
+  static const int nsa = 11;
+  static const char *str_ident[nsa];
+
+  const char *str_param[nsa];
+  int int_param[nia];
+
+  char *data_file;
+  char *data_file_name;
+
+  SchedulingSolver *solver;
+
+  int UBinit;  // "ub": user defined upper bound (-1 if not)
+  int LBinit;  // "lb": user defined lower bound (-1 if not)
+  int Checked; // "check": whether the solution is checked
+  int Seed;    // "seed": random seed
+  int Cutoff;  // "cutoff": time cutoff of dichotomic steps
+  unsigned long long int NodeCutoff; // "nodes": node cutoff of dichotomic steps
+  int NodeBase;   // "dyncutoff": node cutoff trying to mimic time cutoff
+  int Dichotomy;  // "dichotomy": max number of dichotomic steps
+  int Base;       // "base": base cutoff for restarts
+  int Randomized; // "randomized": level of randomization
+  int Verbose;    // "verbose": level of verbosity
+  int Optimise;   // "optimise": total time cutoff
+  int Rngd;       // "nogood": whether nogood on restart are used
+  int Precision;  // "-": precision when turning float weights into int weights
+  int Hlimit;     // "hlimit": maximum number of variables evaluated by the dvo
+  int InitBound;  // "init": number of iterations when initialising the upper
+                  // bound
+  int Neighbor;   // "neighbor": number of machines to re-schedule during LNS
+  int InitStep;   // "initstep": whether an initial probe with high makespan
+                  // should be performed
+  int FixTasks;   // Whether tasks' starting time should be fixed (searched)
+  // int MinRank; // Whether the sum of the disjunct should be minimised
+  int OrderTasks; // Whetheer tasks should be ordered within the disjuncts
+  int NgdType;    // nogood type for solution removal
+
+  double Factor;
+  double Decay;
+
+  std::string Policy;
+  std::string Heuristic;
+  std::string Type;
+  std::string Value;
+  std::string DValue;
+  std::string IValue;
+  std::string Objective;
+  std::string Algorithm;
+  std::string Presolve;
+
+  int PolicyRestart;
+
+  ParameterList(int length, char **commandline);
+  // ParameterList();
+  // ParameterList(const ParameterList& pl);
+  virtual ~ParameterList() {}
+
+  void initialise(SchedulingSolver *);
+  void initialise(const ParameterList &pl);
+  std::ostream &print(std::ostream &os);
+};
+
+class pair_ {
+public:
+  int element;
+  int rank;
+
+  pair_(const int elt, const int rk) : element(elt), rank(rk) {}
+};
+
+struct Term {
+  int X;
+  int Y;
+  int k;
 	};
 	class Instance {
 
@@ -271,16 +317,32 @@ namespace Mistral {
 		int  nTasksInJob(const int j) const {return tasks_in_job[j].size();}
 		int  nTasksInMachine(const int j) const {return tasks_in_machine[j].size();}
 
-		int  getJobTask(const int i, const int j) const {return tasks_in_job[i][j];}
-		int  getMachineTask(const int i, const int j) const {return tasks_in_machine[i][j];}
-		int  getLastTaskofJob(const int i) const {return tasks_in_job[i][nTasksInJob(i)-1];}
+                const std::vector<int> &getTasksOfJob(const int i) const {
+                  return tasks_in_job[i];
+                }
+                const std::vector<int> &getTasksOfMachine(const int i) const {
+                  return tasks_in_machine[i];
+                }
 
+                int getJobTask(const int i, const int j) const {
+                  return tasks_in_job[i][j];
+                }
+                int getMachineTask(const int i, const int j) const {
+                  return tasks_in_machine[i][j];
+                }
+                int getLastTaskofJob(const int i) const {
+                  return tasks_in_job[i][nTasksInJob(i) - 1];
+                }
 
-		int  getJob(const int i, const int j) const {return jobs_of_task[i][j];}
-		int  getMachine(const int i, const int j) const {return machines_of_task[i][j];}
+                int getJob(const int i, const int j) const {
+                  return jobs_of_task[i][j];
+                }
+                int getMachine(const int i, const int j) const {
+                  return machines_of_task[i][j];
+                }
 
-		int  getDuration(const int i) const {return duration[i];}
-		int  getReleaseDate(const int i) const {return release_date[i];}
+                int getDuration(const int i) const { return duration[i]; }
+                int  getReleaseDate(const int i) const {return release_date[i];}
 		void setReleaseDate(const int i, const int d) {release_date[i] = d;}
 		int  getDueDate(const int i) const {return due_date[i];}
 
@@ -497,20 +559,21 @@ namespace Mistral {
 
 		virtual void setup();
 
-		//virtual int virtual_iterative_dfs();
+                std::ostream &print_domains(std::ostream &os) const;
 
-		// std::ostream& print_weights(std::ostream& os);
-		// void decay_weights(const double decay);
+                // virtual int virtual_iterative_dfs();
 
-		void addObjective() { 
-			objective = new Goal(Goal::MINIMIZATION, get_objective_var());
-		}
-    
+                // std::ostream& print_weights(std::ostream& os);
+                // void decay_weights(const double decay);
 
-		// bool probe_ub();
-		// void jtl_presolve();
-		// void old_jtl_presolve();
-		void dichotomic_search(BranchingHeuristic *heu);
+                void addObjective() {
+                  objective = new Goal(Goal::MINIMIZATION, get_objective_var());
+                }
+
+                // bool probe_ub();
+                // void jtl_presolve();
+                // void old_jtl_presolve();
+                void dichotomic_search(BranchingHeuristic *heu);
 		// void all_solutions_search();
 		void branch_and_bound();
 		// //void large_neighborhood_search();
@@ -651,12 +714,4 @@ namespace Mistral {
 		unsigned int size() { return pool_.size(); }
 
 	};
-
-
-
-
-
-
-
-
 }

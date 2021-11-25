@@ -1471,14 +1471,11 @@ int Mistral::Solver::declare(Variable x) {
 	// lit_activity.add(0);
 	// var_activity.add(0);
 
-  
+        // is_relevant.resize(variables.size, variables.back().is_ground());
 
-	notify_add_variable();
+        notify_add_variable();
 
-	//std::cout << x.get_domain() << std::endl;
-
-
-
+// std::cout << x.get_domain() << std::endl;
 
 #ifdef _DEBUG_BUILD
 	std::cout << x << " in " << x.get_domain() << std::endl;
@@ -2005,6 +2002,12 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
     progress_i = (last_target-target_i)/last_target;
     last_target = target_i;
 
+    is_relevant.reset();
+    assert(is_relevant.size() >= variables.size);
+    for (auto i{0}; i < variables.size; ++i) {
+      if (variables[i].is_ground())
+        is_relevant.set(i);
+    }
   }
 
   if(satisfiability == LIMITOUT) statistics.outcome = interrupted();
@@ -2074,8 +2077,9 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   std::cout << "INIT SEARCH!" << std::endl;
 #endif
 
-  
+  is_relevant.resize(variables.size, 0);
 
+  // cout << is_relevant.size() << " / " << variables.size << endl;
 
   if(level < 0) save();
 
@@ -2468,6 +2472,10 @@ void Mistral::Solver::add(Mistral::BacktrackListener* l) {
   l->fid = backtrack_triggers.size;
   backtrack_triggers.add(l);
 }
+// void Mistral::Solver::add(Mistral::FailureListener* l) {
+//   l->fid = failure_triggers.size;
+//   failure_triggers.add(l);
+// }
 void Mistral::Solver::add(Mistral::DecisionListener* l) {
   l->did = decision_triggers.size;
   decision_triggers.add(l);
@@ -2506,6 +2514,12 @@ void Mistral::Solver::remove(Mistral::BacktrackListener* l) {
   if(backtrack_triggers.size>idx) 
     backtrack_triggers[idx]->fid = idx;
 }
+// void Mistral::Solver::remove(Mistral::FailureListener* l) {
+//   unsigned int idx = l->fid;
+//   failure_triggers.remove(idx);
+//   if(failure_triggers.size>idx)
+//     failure_triggers[idx]->fid = idx;
+// }
 void Mistral::Solver::remove(Mistral::DecisionListener* l) {
   unsigned int idx = l->did;
   decision_triggers.remove(idx);
@@ -3760,7 +3774,11 @@ bool Mistral::Solver::propagate()
 			// get the variable event
 			var_evt = active_variables.pop_front();
 			vidx = var_evt.first;
-    
+
+                        assert(vidx >= 0);
+                        assert(vidx < is_relevant.size());
+                        is_relevant.set(vidx);
+
 #ifdef _DEBUG_AC
 			if(_DEBUG_AC) {
 				std::cout << "c "; //for(int lvl=0; lvl<iteration; ++lvl) std::cout << " ";
