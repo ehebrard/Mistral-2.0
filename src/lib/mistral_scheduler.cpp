@@ -62,7 +62,7 @@ size_t CriticalPathListener::count() const { return inpath.count(); }
 //          sched->tasks[t].get_max();
 // }
 
-int CriticalPathListener::CriticalPathListener::jobOf(const int t) const {
+int CriticalPathListener::jobOf(const int t) const {
   return t / sched->data->nMachines();
 }
 
@@ -294,7 +294,7 @@ int CriticalPathListener::getSuccessor(const int t, const int taboo) {
         std::cout
             << " " << sched->disjuncts[d].get_domain() << " "
             << sched->tasks[sched->data->getMachineTask(m, i)].get_domain()
-            << " - " << sched->data->getDuration(t);
+            << " - " << sched->data->getDuration(t) ;
       }
 
       if (not sched->disjuncts[d].get_max()) {
@@ -384,7 +384,15 @@ int CriticalPathListener::getSuccessor(const int t, const int taboo) {
 }
 
 CriticalPathListener::CriticalPathListener(SchedulingSolver *s) : sched(s) {
+	
+	// std::cout << sched->disjuncts.size << std::endl;
+	
   inpath.resize(sched->disjuncts.size, 0);
+	
+	cur_path.initialise(0, sched->tasks.size, 0, false);
+	
+	
+	// std::cout << sched->data->nTasks() << std::endl;
 
   // job_map.resize(sched->data->nTasks(), -1);
   machine_map.resize(sched->data->nTasks(), -1);
@@ -418,6 +426,11 @@ CriticalPathListener::CriticalPathListener(SchedulingSolver *s) : sched(s) {
 
     // int c{0};
     for (auto i{0}; i < sched->data->nJobs(); ++i) {
+			
+			auto t{sched->data->getMachineTask(m, i)};
+			assert(t >= 0 and t < machine_map.size());
+			assert(t >= 0 and t < rank_in_machine.size());
+			
       machine_map[sched->data->getMachineTask(m, i)] = m;
       rank_in_machine[sched->data->getMachineTask(m, i)] = i;
       for (auto j{i + 1}; j < sched->data->nJobs(); ++j) {
@@ -447,25 +460,17 @@ CriticalPathListener::CriticalPathListener(SchedulingSolver *s) : sched(s) {
       }
     }
   }
+	
+	// exit(1);
 }
 
 // bool CriticalPathListener::isFirst
 
 void CriticalPathListener::notify_backtrack() {
-  // std::cout << "hello!\n";
-
-  // std::cout << inpath << std::endl;
-
   Constraint con = sched->culprit;
 
   if (debug_flag)
     std::cout << "\nfail on " << con << "!\n";
-  // for(auto i{0}; i<sched->data->nJobs(); ++i) {
-  // 	for(auto j : sched->data->getJob(i)) {
-  // 		std::cout << " " << j ;
-  // 	}
-  // 	std::cout << std::endl;
-  // }
 
   Variable *scope = con.get_scope();
   int v[2] = {scope[0].id(), scope[1].id()};
@@ -480,61 +485,24 @@ void CriticalPathListener::notify_backtrack() {
       v[0] = v[1];
       v[1] = t;
     }
-    //
-    //
-    // t = v[0];
-    // if(sched->tasks[v[0]].get_min() > 0) {
-    // 	t = getPredecessor(v[0], v[1]);
-    // if(t >= 0) {
-    //
-    // }
-    //
-    //
-    //
-    // for(auto i{0}; i<2; ++i) {
-    // 	    t = v[i];
-    // 	    while (t>=0 and sched->tasks[t].get_min() != 0) {
-    //
-    // 	      std::cout << "find predecessor of t" << t << " (but not " <<
-    // v[1-i] << ") " <<
-    // 	      sched->tasks[t].get_domain() << std::endl;
-    //
-    //
-    // 	      t = getPredecessor(t, v[1-i]);
-    //
-    // 				std::cout << t << std::endl;
-    // 	    }
-    //
-    // 	    t = v[1-i];
-    // 	    while (sched->tasks[t].get_max() + sched->data->getDuration(t) <
-    // 	           sched->C_max.get_max()) {
-    //
-    // 	 			std::cout << "find successor of t" << t << " (but not "
-    // <<
-    // v[1-i]
-    // <<
-    // ") " <<
-    // 	 			sched->tasks[t].get_domain() << std::endl;
-    //
-    // 	      t = getSuccessor(t, v[1-i]);
-    //
-    // 				std::cout << t << std::endl;
-    // 	    }
-    // }
+
     assert(precede(v[0], v[1]));
 
     if (debug_flag) {
       std::cout << "disjunct\n";
     }
   } else {
-
     if (debug_flag) {
       std::cout << "precedence\n";
     }
   }
-
-  // assert(jobOf(v[0]) == jobOf(v[1]));
-
+	
+	// if(v[0] == 190 and v[1] == 176)
+	// 	debug_flag = true;
+	// else
+	// 	debug_flag = false;
+	
+	
   if (debug_flag) {
     std::cout << "\nfind critical path before " << v[0] << " ("
               << sched->tasks[v[0]].get_domain() << "+"
@@ -542,6 +510,14 @@ void CriticalPathListener::notify_backtrack() {
               << " (" << sched->tasks[v[1]].get_domain() << "+"
               << sched->data->getDuration(v[1]) << ")" << std::endl;
   }
+
+	
+	int detect_loop = 0;
+	
+	cur_path.clear();
+	cur_path.add(v[0]);
+	cur_path.add(v[1]);
+
 
   literals.clear();
   t = v[0];
@@ -553,8 +529,7 @@ void CriticalPathListener::notify_backtrack() {
     }
 
     t = getPredecessor(t, v[1]);
-
-    // assert(t != v[1]);
+		
 
     if (debug_flag) {
       if (t < 0)
@@ -563,12 +538,21 @@ void CriticalPathListener::notify_backtrack() {
         std::cout << t << std::endl;
     }
 
-    if (t < 0) {
-      // literals.clear();
+    if (t < 0 or cur_path.contain(t)) {
+			t = -1;
       break;
-    }
+    } else {
+	    cur_path.add(t);
+	  }
+		
+		if(++detect_loop >= 100) 
+		{
+			std::cout << "loop (" << v[0] << " " << v[1] << ")\n";
+			exit(1);
+		}
   }
 
+	detect_loop = 0;
   if (t >= 0) {
     t = v[1];
     while (sched->tasks[t].get_max() + sched->data->getDuration(t) <
@@ -581,92 +565,32 @@ void CriticalPathListener::notify_backtrack() {
 
       t = getSuccessor(t, v[0]);
 
-      assert(t != v[0]);
+      // assert(t != v[0]);
 
       if (debug_flag) {
         std::cout << t << std::endl;
       }
+			
+	    if (t < 0 or cur_path.contain(t)) {
+				t = -1;
+	      break;
+	    } else {
+	    	cur_path.add(t);
+	    }
+			
+			if(++detect_loop >= 100) 
+			{
+				std::cout << "loop (" << v[0] << " " << v[1] << ")\n";
+				exit(1);
+			}
     }
 
-    assert(t >= 0);
-    for (auto l : literals) {
-      inpath.set(l);
-    }
+    if(t >= 0)
+	    for (auto l : literals) {
+				assert(l >= 0 and l < inpath.size());
+	      inpath.set(l);
+	    }
   }
-
-  // std::cout << "find predecessor of " << sched->tasks[v[0]].get_domain() <<
-  // std::endl;
-  // int p{getPredecessor(v[0])};
-
-  // int d{disjunct()}
-
-  // auto t{v[0]};
-  // while(sched->tasks[t].get_min() != 0) {
-  // 	auto job{jobOf(t)};
-  // 	auto rank{rankOf(t)};
-  //
-  // 	bool exists{false};
-  //
-  // 	auto p{sched->data->getJobTask(job, rank-1)};
-  // 	if(rank != 0 and isPredecessor(p, t)) {
-  // 		// the previous task on the same job
-  // 		t = p;
-  // 		exists = true;
-  // 	} else {
-  // 		auto machine{machineOf(t)};
-  // 		for(auto x : sched->data->getTasksOfMachine(machine)) {
-  // 			if(isPredecessor(x, t)) {
-  // 				t = x;
-  // 				exists = true;
-  // 				break;
-  // 			}
-  // 		}
-  // 	}
-  //
-  // 	if(not exists) {
-  // 		std::cout << " no more predecessors!!\n";
-  // 		exit(1);
-  // 	}
-  // 	std::cout << " " << sched->tasks[t].get_domain() ;
-  // }
-  //
-  // std::cout << std::endl;
-
-  // for(auto i{0}; i<sched->data->nJobs(); ++i) {
-  // 	for(auto j : sched->data->getTasksOfJob(i)) {
-  // 		std::cout << " " << sched->tasks[j].get_domain() << " (" <<
-  // sched->data->getDuration(j) << ")" ;
-  // 		assert(sched->tasks[j].id() == j);
-  //
-  // 		if(v[0]==j or v[1]==j) {
-  // 			std::cout << "*";
-  // 		}
-  //
-  // 	}
-  // 	std::cout << std::endl;
-  // }
-
-  // if(con.arity() == 2)
-  // {
-  // 	std::cout << "prec\n";
-  // 	v[0] = scope[0].id();
-  // 	v[1] = scope[1].id();
-  // }
-  // else if(con.arity() == 3)
-  // {
-  // 	std::cout << "disjunct\n";
-  // 	v[0] = scope[0].id();
-  // 	v[1] = scope[1].id();
-  // }
-  // else {
-  // 	std::cout << "weird\n";
-  // 	exit(1);
-  // }
-
-  // std::cout << v[0] << " " << v[1] << std::endl;
-  //
-  //
-  // sched->print_domains(std::cout);
 }
 
 StatisticList::StatisticList() {
@@ -2842,6 +2766,8 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
           std::cout << "\n c +=========[ start dichotomic step ]=========+"
                     << std::endl;
           //       setPropagsLimit(params->NodeCutoff);
+					
+
 
           parameters.propagation_limit = params->NodeCutoff;
 

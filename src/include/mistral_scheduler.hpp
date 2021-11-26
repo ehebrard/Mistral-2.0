@@ -75,8 +75,9 @@ public:
 
   int getSuccessor(const int t, const int taboo = -1);
 
+	bool debug_flag{false};
+
 private:
-  bool debug_flag{false};
 
   // std::vector<int> w;
   boost::dynamic_bitset<> inpath;
@@ -86,8 +87,12 @@ private:
   std::vector<int> machine_map;
   std::vector<int> rank_in_machine;
 
+
+	std::vector<int> candidates;
   std::vector<int> literals;
-  std::vector<int> candidates;
+	IntStack cur_path;
+	
+  // 
 };
 
 class StatisticList {
