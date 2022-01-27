@@ -18,7 +18,11 @@ EXEC      ?= $(notdir $(shell pwd))
 LIB       ?= $(EXEC)
 
 CXX       ?= g++
-CFLAGS    ?= -Wall 
+
+BOOSTDIR = /Users/boost/boost_1_73_0/boost
+CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(BOOSTDIR)
+
+#CFLAGS    ?= -Wall 
 LFLAGS    ?= -Wall 
 
 COPTIMIZE ?= -O3 --param inline-unit-growth=60 
