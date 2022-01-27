@@ -1,32 +1,14 @@
 Mistral is an open source constraint programming library written in C++. It implements a modelling API, however, it can also read instance files in XCSP3 or FlatZinc format. It is also fully interfaced with Numberjack (https://github.com/eomahony/Numberjack) which provides a Python API for modelling and solving combinatorial optimization problems using several back-end solvers.
 
-Compilation note: If you want to run the solver on minizinc/flatzinc instances and if you use the gcc compiler, then you must use the g++-5 version. Any version of gcc that is higher than 5 will not work on most of the flatzinc instances due to a bug between GCC and Bison (that is used by the flatzinc parser skeleton). The clang compiler (on MacOS) works perfectly fine.
+A number of examples are available in the examples/src folder. To get started, you can have a look at the /examples/src/simple_linear_constraints.cpp file. It provides an simple problem defined by a set of linear constraints.  To compile it, use the following command: 
+
+$make simple_linear_constraints 
+
+This generated the binary bin/simple_linear_constraints
 
 
-To use Mistral-2.0 as a flatzinc solver: 
+The minizinc interface is available in the fz/folder. The fz/README file contains information regarding compilation and execution. 
 
-1- cd fz 
-2- Compile with
-$ make
+Compilation note:
 
-This will generate the binary file fzn-mistral that is used by the script ./mistral-fz
-3- You can test a flatzinc instance with:
-$ ./mistral-fz ../data/zinc/zebra.fzn 
-
-The option "-a" can be used to print all solutions 
-
-$ ./mistral-fz ../data/zinc/zebra.fzn -a
-
-
-4- Mistral-2.0 implements a simple form of parallelism. To build the parallel solver, first clean the binaries in fz (i.e. by running "$ make clean" in fz/), then compile (within fz/) with:
-
-$ make parallel 
-
-The option '-p $n' can be passed to fz/mistral-fz to indicate $n available logical cores.
-
-5- Notes:
-*/ The solver requires the boost library. Get the latest version here https://www.boost.org and update the Makefile accordingly. If you use the flatzinc interface, the PATH of the boost library should be given in the template file. 
-*/ The docker image for the minizinc challenge is available at https://hub.docker.com/r/msiala/mistral2. The docker pull command is "docker pull msiala/mistral2:mzn2020". Pleae follow the tutorial on the challenge https://www.minizinc.org/challenge2020/docker.html to run the image.
-*/ Search annotations are not (yet) supported. So with or without the option -f, the solver will ignore them.
-*/ The fz/mzn-lib/ directory contains some solver-specific definitions of global constraints from the MiniZinc library. When generating fzn instances, please use the option "-I fz/mzn"
-*/ To install Mistral-2.0 in a Minizinc challenge docker container, simply run fz/install-docker.sh from /entry_data then modify /fzn-exec and /exec accordingly.
+*/ The solver requires the boost library. Get the latest version here https://www.boost.org and update the Makefile accordingly.
