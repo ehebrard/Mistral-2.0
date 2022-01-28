@@ -233,74 +233,74 @@ void
 FlatZincModel::newSetVar(SetVarSpec* vs) {
 
 #ifdef _VERBOSE_PARSER
-  if((setVarCount % _VERBOSE_PARSER) == 0) {
-    std::cout << "s";
-    std::cout.flush();
-  }
+	if((setVarCount % _VERBOSE_PARSER) == 0) {
+		std::cout << "s";
+		std::cout.flush();
+	}
 #endif
 
-  if (vs->alias) {
-    sv[setVarCount++] = sv[vs->i];
-  } else if( vs->assigned) {
-    assert(vs->upperBound());
-    AST::SetLit* vsv = vs->upperBound.some();
-    if (vsv->interval) {
+	if (vs->alias) {
+		sv[setVarCount++] = sv[vs->i];
+	} else if( vs->assigned) {
+		assert(vs->upperBound());
+		AST::SetLit* vsv = vs->upperBound.some();
+		if (vsv->interval) {
 
-      std::cout << "create a set variable from a ground interval [" << vsv->min << ".." << vsv->max << "]\n";
+			std::cout << "create a set variable from a ground interval [" << vsv->min << ".." << vsv->max << "]\n";
 
-      Variable x = SetVariable(vsv->min, vsv->max);
-      sv[setVarCount++] = x;
+			Variable x = SetVariable(vsv->min, vsv->max);
+			sv[setVarCount++] = x;
 
-      std::cout << x << " in " << x.get_domain() << std::endl;
+			std::cout << x << " in " << x.get_domain() << std::endl;
 
-    } else {
-      if( vsv->s.empty() ) {
+		} else {
+			if( vsv->s.empty() ) {
 
-        // std::cout << "create an empty set variable\n";
+				// std::cout << "create an empty set variable\n";
 
-        // Variable x = SetVariable();
+				// Variable x = SetVariable();
 
-        // std::cout << x << " in " << x.get_domain() << std::endl;
+				// std::cout << x << " in " << x.get_domain() << std::endl;
 
-        // //x.exclude(solver, 0, NO_REASON);
-        // //sv[setVarCount++] = x;
-      } else {
-        int umin = vsv->s[0], umax = vsv->s[0];
-        for(size_t i = 1; i != vsv->s.size(); ++i) {
-          umin = std::min(umin, vsv->s[i]);
-          umax = std::max(umax, vsv->s[i]);
-        }
-        Variable x = SetVariable(umin, umax);
-        sv[setVarCount++] = x;
-        // for(size_t i = 0; i != vsv->s.size(); ++i)
-        //   x.include(solver, vsv->s[i], NO_REASON);
-        // for(int i = x.umin(solver), iend = x.umax(solver); i <= iend; ++i)
-        //   if( !x.includes(solver, i) )
-        //     x.exclude(solver, i, NO_REASON);
-      }
-    }
-  } else if( vs->upperBound() ) {
-    AST::SetLit* vsv = vs->upperBound.some();
-    Variable x = SetVariable(vsv->min, vsv->max);
-    //setvar x = solver.newSetVar(vsv->min, vsv->max);
-    sv[setVarCount++] = x;
-    // if( !vsv->interval ) {
-    //   int prev = vsv->min;
-    //   for(size_t i = 0; i != vsv->s.size(); ++i) {
-    //     if( vsv->s[i] > prev+1 ) {
-    //       for(int q = prev+1; q != vsv->s[i]; ++q)
-    //         x.exclude(solver, q, NO_REASON);
-    //     }
-    //     prev = vsv->s[i];
-    //   }
-    // } // otherwise everything is unset and we are done here
-  } else {
-    // completely free
-    //setvar x = solver.newSetVar(-1000, 1000);
-    Variable x = SetVariable(-1000, 1000);
-    sv[setVarCount++] = x;
-  }
-  sv_introduced[setVarCount-1] = vs->introduced;
+				// //x.exclude(solver, 0, NO_REASON);
+				// //sv[setVarCount++] = x;
+			} else {
+				int umin = vsv->s[0], umax = vsv->s[0];
+				for(size_t i = 1; i != vsv->s.size(); ++i) {
+					umin = std::min(umin, vsv->s[i]);
+					umax = std::max(umax, vsv->s[i]);
+				}
+				Variable x = SetVariable(umin, umax);
+				sv[setVarCount++] = x;
+				// for(size_t i = 0; i != vsv->s.size(); ++i)
+				//   x.include(solver, vsv->s[i], NO_REASON);
+				// for(int i = x.umin(solver), iend = x.umax(solver); i <= iend; ++i)
+				//   if( !x.includes(solver, i) )
+				//     x.exclude(solver, i, NO_REASON);
+			}
+		}
+	} else if( vs->upperBound() ) {
+		AST::SetLit* vsv = vs->upperBound.some();
+		Variable x = SetVariable(vsv->min, vsv->max);
+		//setvar x = solver.newSetVar(vsv->min, vsv->max);
+		sv[setVarCount++] = x;
+		// if( !vsv->interval ) {
+		//   int prev = vsv->min;
+		//   for(size_t i = 0; i != vsv->s.size(); ++i) {
+		//     if( vsv->s[i] > prev+1 ) {
+		//       for(int q = prev+1; q != vsv->s[i]; ++q)
+		//         x.exclude(solver, q, NO_REASON);
+		//     }
+		//     prev = vsv->s[i];
+		//   }
+		// } // otherwise everything is unset and we are done here
+	} else {
+		// completely free
+		//setvar x = solver.newSetVar(-1000, 1000);
+		Variable x = SetVariable(-1000, 1000);
+		sv[setVarCount++] = x;
+	}
+	sv_introduced[setVarCount-1] = vs->introduced;
 }
 
 void
@@ -496,46 +496,46 @@ bool FlatZincModel::getAnnotations( AST::Call*  c , Vector<Variable> &__vars, st
 
 	if (c->isCall("int_search") || c->isCall("bool_search"))
 	{
-	if (c->args->isArray())
-	{
-	//	cout<< "c array size : "<< c->args->getArray()->a.size() ;
-		if (c->args->getArray()->a[0]->isArray())
+		if (c->args->isArray())
 		{
-			AST::Array * __varsArray = c->args->getArray()->a[0]->getArray();
-			//cout<< " c number of branching variables : "<< __varsArray->a.size() << endl;
-
-			for (unsigned int j=0; j< __varsArray->a.size(); j++ )
+			//	cout<< "c array size : "<< c->args->getArray()->a.size() ;
+			if (c->args->getArray()->a[0]->isArray())
 			{
-                          if (__varsArray->a[j]->isIntVar()){
-                          	  if (iv[__varsArray->a[j]->getIntVar()].get_var().id()>=0)
-                            __vars.push_back(iv[__varsArray->a[j]->getIntVar()].get_var());
-                          }
-                          else if (__varsArray->a[j]->isSetVar()){
-                        	  if (sv[__varsArray->a[j]->getSetVar()].get_var().id() >=0)
-                            __vars.push_back( sv[__varsArray->a[j]->getSetVar()]);
-                          }
-                          else if (__varsArray->a[j]->isBoolVar()){
-                        	  if (bv[__varsArray->a[j]->getBoolVar()].get_var().id() >=0 )
-                            __vars.push_back( bv[__varsArray->a[j]->getBoolVar()].get_var());
-                          }
-                          else
-                            return false;
+				AST::Array * __varsArray = c->args->getArray()->a[0]->getArray();
+				//cout<< " c number of branching variables : "<< __varsArray->a.size() << endl;
+
+				for (unsigned int j=0; j< __varsArray->a.size(); j++ )
+				{
+					if (__varsArray->a[j]->isIntVar()){
+						if (iv[__varsArray->a[j]->getIntVar()].get_var().id()>=0)
+							__vars.push_back(iv[__varsArray->a[j]->getIntVar()].get_var());
+					}
+					else if (__varsArray->a[j]->isSetVar()){
+						if (sv[__varsArray->a[j]->getSetVar()].get_var().id() >=0)
+							__vars.push_back( sv[__varsArray->a[j]->getSetVar()]);
+					}
+					else if (__varsArray->a[j]->isBoolVar()){
+						if (bv[__varsArray->a[j]->getBoolVar()].get_var().id() >=0 )
+							__vars.push_back( bv[__varsArray->a[j]->getBoolVar()].get_var());
+					}
+					else
+						return false;
+				}
 			}
+
+			else return false;
+
+			//test if atom ?
+			std::ostringstream __tmpStream;
+			c->args->getArray()->a[1]->print(__tmpStream);
+			_varHeuristic = __tmpStream.str();
+			__tmpStream.str("");
+			c->args->getArray()->a[2]->print(__tmpStream);
+			_valHeuristic = __tmpStream.str();
+
 		}
-
-		else return false;
-
-		//test if atom ?
-		std::ostringstream __tmpStream;
-		c->args->getArray()->a[1]->print(__tmpStream);
-		_varHeuristic = __tmpStream.str();
-		__tmpStream.str("");
-		c->args->getArray()->a[2]->print(__tmpStream);
-		_valHeuristic = __tmpStream.str();
-
-	}
-	else
-		return false;
+		else
+			return false;
 	}
 	else
 		return false;
@@ -587,6 +587,125 @@ FlatZincModel::solve(AST::Array* ann) {
 
 // }
 
+
+
+
+void
+FlatZincModel::recommended_configs(int rec){
+
+	//std::cout << " c using configuration:  " << rec << std::endl;
+	//bool ismin = _method==MINIMIZATION ;
+
+	//std::cout << " c recommended_configs method is satisfaction ?  :  " << issat << std::endl;
+	//std::cout << " c recommended_configs method is minimisation ?  :  " << ismin << std::endl;
+	//std::cout << " c recommended_configs method is maximization ?  :  " << ismax << std::endl;
+
+
+	bool ismax = _method==MAXIMIZATION ;
+	bool issat = _method==SATISFACTION ;
+
+	//Portfolio configurations from 11 to 28:
+	switch(rec) {
+
+	//First 4 basic configs branch on aux / restart
+	case 11:
+		branch_on_auxilary=true;
+		_option_policy = new Luby();
+		solver.parameters.activity_decay = 0.95;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+	case 12:
+		branch_on_auxilary=false;
+		_option_policy = new Luby();
+		solver.parameters.activity_decay = 0.95;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+	case 13:
+		branch_on_auxilary=true;
+		_option_policy = new Geometric();
+		solver.parameters.activity_decay = 0.95;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+	case 14:
+		branch_on_auxilary=false;
+		_option_policy = new Geometric();
+		solver.parameters.activity_decay = 0.95;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+
+		// Same as previous however with different decay
+	case 21:
+		branch_on_auxilary=true;
+		_option_policy = new Luby();
+		solver.parameters.activity_decay = 0.7;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+	case 22:
+		branch_on_auxilary=false;
+		_option_policy = new Luby();
+		solver.parameters.activity_decay = 0.7;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+	case 23:
+		branch_on_auxilary=true;
+		_option_policy = new Geometric();
+		solver.parameters.activity_decay = 0.7;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+	case 24:
+		branch_on_auxilary=false;
+		_option_policy = new Geometric();
+		solver.parameters.activity_decay = 0.7;
+		_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		break;
+
+	default:
+		//Old behaviour
+		if (rec==1){
+			//std::cout << " c search recommendation nb 1" << std::endl;
+			if( ! issat  ) {
+				_option_policy	= new Luby();
+				_option_policy->base = 128;
+				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+			} else {
+				_option_policy = new Geometric();
+				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+			}
+		}
+		else if (rec>=2){
+			if( ! issat ) {
+				if (rec==3){
+					if ( ismax )
+					{
+						branch_on_auxilary=true;
+					}
+					else
+					{
+						branch_on_auxilary=false;
+					}
+				}
+				//_option_policy	= new Luby();
+				//restart->base = 128;
+				//_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (&solver);
+			} else {
+				if (rec==3){
+					branch_on_auxilary=true;
+				}
+				//_option_policy = new Luby();
+				//_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+			}
+			_option_policy = new Luby();
+			_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
+		}
+		else {
+			std::cout << "c search recommendation not found" << std::endl;
+			exit(1);
+		}
+	}
+	//std::cout << "c after recommended : branch_on_auxilary is " << branch_on_auxilary << std::endl;
+}
+
+
 void
 FlatZincModel::minimize(int var, AST::Array* ann) {
 	_method = MINIMIZATION;
@@ -604,7 +723,7 @@ FlatZincModel::minimize(int var, AST::Array* ann) {
 		ann = new AST::Array(c);
 	else
 		ann->a.push_back(c);
-	*/
+	 */
 
 }
 
@@ -656,11 +775,11 @@ FlatZincModel::set_parameters(SolverParameters& p) {
 
 void
 FlatZincModel::set_strategy(string var_o, string val_o, const int rand, string r_pol) {
-  _variable_ordering = var_o;
-  _value_ordering = val_o;
-  _randomization = rand;
+	_variable_ordering = var_o;
+	_value_ordering = val_o;
+	_randomization = rand;
 	// _option_heuristic = solver.heuristic_factory(var_o, val_o);
-	 _option_policy = solver.restart_factory(r_pol);
+	_option_policy = solver.restart_factory(r_pol);
 }
 
 void
@@ -679,6 +798,12 @@ FlatZincModel::set_parity_processing(const int lvl) {
 }
 
 void
+FlatZincModel::set_display_collection(const bool on) {
+	_option_display_information = on;
+}
+
+
+void
 FlatZincModel::set_display_model(const bool on) {
 	_option_display_mistral_model = on;
 }
@@ -690,340 +815,340 @@ FlatZincModel::set_display_solution(const bool on) {
 
 void 
 FlatZincModel::set_enumeration(const bool on) {
-  _option_enumerate = on;
+	_option_enumerate = on;
 }
 
 void 
 FlatZincModel::set_annotations(const bool on) {
-  _option_annotations = on;
+	_option_annotations = on;
 }
 
 
-  void 
-  FlatZincModel::get_annotations() {
-    //cout << _solveAnnotations << endl;
+void
+FlatZincModel::get_annotations() {
+	//cout << _solveAnnotations << endl;
 
-    if (_solveAnnotations!= NULL)
-      {
-        //int __search_strategies = 1;
-        //cout << " c annotations size : " << _solveAnnotations->a.size() << endl;
-        //fz_search_goals.add(goal);
+	if (_solveAnnotations!= NULL)
+	{
+		//int __search_strategies = 1;
+		//cout << " c annotations size : " << _solveAnnotations->a.size() << endl;
+		//fz_search_goals.add(goal);
 
-        if (_solveAnnotations->a[0]->isCall("seq_search")) {
-          //cout << " c SEQ_SEARCH " << endl ;
-          
-          AST::Call* c = _solveAnnotations->a[0]->getCall();
-          if (c->args->isArray())
-            {
-              int __number_phases =c->args->getArray()->a.size();
-              //cout << " c Total number of search strategies:" << __number_phases  << endl;
+		if (_solveAnnotations->a[0]->isCall("seq_search")) {
+			//cout << " c SEQ_SEARCH " << endl ;
 
-              for (int j = 0; j< __number_phases; j++)
-                {
-                  Vector<Variable> __branching_variables;
-                  std::string __var_heuristic;
-                  std::string __val_heuristic;
+			AST::Call* c = _solveAnnotations->a[0]->getCall();
+			if (c->args->isArray())
+			{
+				int __number_phases =c->args->getArray()->a.size();
+				//cout << " c Total number of search strategies:" << __number_phases  << endl;
 
-                  if (getAnnotations(c->args->getArray()->a[j]->getCall(),__branching_variables, __var_heuristic ,__val_heuristic))
-                    {
-                      // cout << " c Search strategy number "<< j+1 << endl;
-                      // cout << " c var heuristic : "<< __var_heuristic << endl;
-                      // cout << " c val heuristic : "<< __val_heuristic << endl;
-                      // cout << " c _variables size : "<< __branching_variables.size  << endl;
-                      // cout << " c branching variables : \n "<< __branching_variables  << endl;
+				for (int j = 0; j< __number_phases; j++)
+				{
+					Vector<Variable> __branching_variables;
+					std::string __var_heuristic;
+					std::string __val_heuristic;
 
-                      fz_search_sequences.add(__branching_variables);
-                      //fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
-                      //fz_search_policies.add(NULL);
-                      //if(j) fz_search_goals.add(NULL);
+					if (getAnnotations(c->args->getArray()->a[j]->getCall(),__branching_variables, __var_heuristic ,__val_heuristic))
+					{
+						// cout << " c Search strategy number "<< j+1 << endl;
+						// cout << " c var heuristic : "<< __var_heuristic << endl;
+						// cout << " c val heuristic : "<< __val_heuristic << endl;
+						// cout << " c _variables size : "<< __branching_variables.size  << endl;
+						// cout << " c branching variables : \n "<< __branching_variables  << endl;
 
-                    }
-                  // else
-                  //   cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
-                }
-              //cout << " c seq_search is not yet supported." << endl;
-            }
-          // else
-          //   cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
-        }
-        else
-          {
-            Vector<Variable> __branching_variables;
-            std::string __var_heuristic;
-            std::string __val_heuristic;
+						fz_search_sequences.add(__branching_variables);
+						//fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
+						//fz_search_policies.add(NULL);
+						//if(j) fz_search_goals.add(NULL);
 
-            //cout << " c Total number of search strategies:" << __search_strategies  << endl;
-            if (getAnnotations(_solveAnnotations->getArray()->a[0]->getCall(), __branching_variables, __var_heuristic ,__val_heuristic ))
-              {
-                // cout << " c var heuristic : "<< __var_heuristic  << endl;
-                // cout << " c val heuristic : "<< __val_heuristic  << endl;
-                // cout << " c number of banching variables : "<< __branching_variables.size  << endl;
-                // //cout << " c branching variables : \n "<< banching_variables  << endl;
+					}
+					// else
+					//   cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
+				}
+				//cout << " c seq_search is not yet supported." << endl;
+			}
+			// else
+			//   cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
+		}
+		else
+		{
+			Vector<Variable> __branching_variables;
+			std::string __var_heuristic;
+			std::string __val_heuristic;
 
-                fz_search_sequences.add(__branching_variables);
-                //fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
-                //fz_search_policies.add(NULL);
-                
-              }
-            // else
-            //   cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
-          }
+			//cout << " c Total number of search strategies:" << __search_strategies  << endl;
+			if (getAnnotations(_solveAnnotations->getArray()->a[0]->getCall(), __branching_variables, __var_heuristic ,__val_heuristic ))
+			{
+				// cout << " c var heuristic : "<< __var_heuristic  << endl;
+				// cout << " c val heuristic : "<< __val_heuristic  << endl;
+				// cout << " c number of banching variables : "<< __branching_variables.size  << endl;
+				// //cout << " c branching variables : \n "<< banching_variables  << endl;
 
-        // cout << sequences << std::endl;
-        // for(unsigned int i=0; i<heuristics.size; ++i) {
-        //   heuristics[i]->display(std::cout);
-        //   std::cout << std::endl;
-        // }
-      }
-    // else
-    //   cout << " c No specific annotation. The solver will use the default search strategy." << endl;
+				fz_search_sequences.add(__branching_variables);
+				//fz_search_heuristics.add(solver.heuristic_factory(__var_heuristic, __val_heuristic));
+				//fz_search_policies.add(NULL);
 
+			}
+			// else
+			//   cout << " c Something wrong with search annotations. The solver will use the default search strategy." << endl;
+		}
 
+		// cout << sequences << std::endl;
+		// for(unsigned int i=0; i<heuristics.size; ++i) {
+		//   heuristics[i]->display(std::cout);
+		//   std::cout << std::endl;
+		// }
+	}
+	// else
+	//   cout << " c No specific annotation. The solver will use the default search strategy." << endl;
 
 
-    //cout << solver.sequence.size << endl;
-
-    //exit(1);
-  }
 
 
-  void
-  FlatZincModel::run(std::ostream& out, Printer& p) {
-    using std::setw;
-    using std::setfill;
-    
-#ifdef _DEBUG_FLATZINC
-    std::cout << " " << solver.parameters.prefix_comment << " run!" << std::endl;
-#endif
+	//cout << solver.sequence.size << endl;
 
-    if(_option_rewriting) {
-#ifdef _DEBUG_FLATZINC
-      std::cout << "before rewriting:\n" << solver << std::endl;
-#endif
+	//exit(1);
+}
 
-      solver.rewrite() ;
+
+void
+FlatZincModel::run(std::ostream& out, Printer& p) {
+	using std::setw;
+	using std::setfill;
 
 #ifdef _DEBUG_FLATZINC
-      std::cout << "after rewriting:\n" << solver << std::endl;
+	std::cout << " " << solver.parameters.prefix_comment << " run!" << std::endl;
 #endif
-    }
-    else
-        if(_option_simple_rewriting) {
-    #ifdef _DEBUG_FLATZINC
-          std::cout << "before simple_rewriting:\n" << solver << std::endl;
-    #endif
 
-          solver.simple_rewrite() ;
+	if(_option_rewriting) {
+#ifdef _DEBUG_FLATZINC
+		std::cout << "before rewriting:\n" << solver << std::endl;
+#endif
 
+		solver.rewrite() ;
 
-  
+#ifdef _DEBUG_FLATZINC
+		std::cout << "after rewriting:\n" << solver << std::endl;
+#endif
+	}
+	else
+		if(_option_simple_rewriting) {
+#ifdef _DEBUG_FLATZINC
+			std::cout << "before simple_rewriting:\n" << solver << std::endl;
+#endif
 
-
-    #ifdef _DEBUG_FLATZINC
-          std::cout << "after simple_rewriting:\n" << solver << std::endl;
-    #endif
-        }
-
-
-    solver.consolidate();
-
-    solver.sequence.clear();
-
-    //std::cout << " c RUN with branch_on_auxilary  :  " << branch_on_auxilary << std::endl;
+			solver.simple_rewrite() ;
 
 
-    if(_option_display_mistral_model)
-      std::cout << " " << solver.parameters.prefix_comment << " mistral representation:\n " << solver << std::endl;
-        
-    Outcome result = UNKNOWN;
 
-    Goal *goal = NULL;
 
-    switch (_method) {
-    case MINIMIZATION: {
+
+#ifdef _DEBUG_FLATZINC
+			std::cout << "after simple_rewriting:\n" << solver << std::endl;
+#endif
+		}
+
+
+	solver.consolidate();
+
+	solver.sequence.clear();
+
+	//std::cout << " c RUN with branch_on_auxilary  :  " << branch_on_auxilary << std::endl;
+
+
+	if(_option_display_mistral_model)
+		std::cout << " " << solver.parameters.prefix_comment << " mistral representation:\n " << solver << std::endl;
+
+	Outcome result = UNKNOWN;
+
+	Goal *goal = NULL;
+
+	switch (_method) {
+	case MINIMIZATION: {
 
 #ifdef _PARALLEL
-//crutial
+		//crutial
 #else
-    	if (solver.parameters.verbosity>0)
-    		std::cout << " " << solver.parameters.prefix_comment << " Minimize " << iv[_optVar].get_var() << std::endl;
+		if (solver.parameters.verbosity>0)
+			std::cout << " " << solver.parameters.prefix_comment << " Minimize " << iv[_optVar].get_var() << std::endl;
 #endif
-      goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
-      break;
-    }
-    case MAXIMIZATION: {
+		goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
+		break;
+	}
+	case MAXIMIZATION: {
 #ifdef _PARALLEL
-//crutial
+		//crutial
 #else
-    	if (solver.parameters.verbosity>0)
-    		std::cout << " " << solver.parameters.prefix_comment << " Maximize " << iv[_optVar].get_var() << std::endl;
+		if (solver.parameters.verbosity>0)
+			std::cout << " " << solver.parameters.prefix_comment << " Maximize " << iv[_optVar].get_var() << std::endl;
 #endif
-      goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
-      break;
-    }
-    case SATISFACTION: {
+		goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
+		break;
+	}
+	case SATISFACTION: {
 #ifdef _PARALLEL
-//crutial
+		//crutial
 #else
-    	if (solver.parameters.verbosity>0)
-    		std::cout << " " << solver.parameters.prefix_comment << " Solve " << std::endl;
+		if (solver.parameters.verbosity>0)
+			std::cout << " " << solver.parameters.prefix_comment << " Solve " << std::endl;
 #endif
-      if(_option_enumerate) 
-        goal = new Goal(Goal::ENUMERATION);
-      else 
-        goal = new Goal(Goal::SATISFACTION);
-      break;
-    }
-    }
+		if(_option_enumerate)
+			goal = new Goal(Goal::ENUMERATION);
+		else
+			goal = new Goal(Goal::SATISFACTION);
+		break;
+	}
+	}
 
 
 
-    //std::cout << "after goal: " << solver.active_constraints.empty() << std::endl;
+	//std::cout << "after goal: " << solver.active_constraints.empty() << std::endl;
 
-    if(goal) {
-      solver.objective = goal;
-      
-      if(goal->is_optimization()) {
-        solver.consolidate_manager->id_obj = goal->objective.id();
-      }
-    }
+	if(goal) {
+		solver.objective = goal;
 
-    //std::cout << 22 << std::endl;
+		if(goal->is_optimization()) {
+			solver.consolidate_manager->id_obj = goal->objective.id();
+		}
+	}
+
+	//std::cout << 22 << std::endl;
 
 
-//    if(solver.is_pseudo_boolean())
- //     solver.set_learning_on();
+	//    if(solver.is_pseudo_boolean())
+	//     solver.set_learning_on();
 
-    if(_option_annotations) {
-      fz_search_goals.add(goal);
-      get_annotations();
-    }
+	if(_option_annotations) {
+		fz_search_goals.add(goal);
+		get_annotations();
+	}
 
-    //std::cout << 33 << std::endl;
+	//std::cout << 33 << std::endl;
 
-    if(_option_parity)
-      solver.parity_processing(_option_parity);
+	if(_option_parity)
+		solver.parity_processing(_option_parity);
 
-    //std::cout << _variable_ordering << " " << _value_ordering << std::endl;
-    if (!_option_heuristic)
-    {
-    	//std::cout << "null!!!! " << std::endl;
-    	_option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering, _randomization);
-    }
-//    else
-//    	std::cout << "initialised already!  " << std::endl;
+	//std::cout << _variable_ordering << " " << _value_ordering << std::endl;
+	if (!_option_heuristic)
+	{
+		//std::cout << "null!!!! " << std::endl;
+		_option_heuristic = solver.heuristic_factory(_variable_ordering, _value_ordering, _randomization);
+	}
+	//    else
+	//    	std::cout << "initialised already!  " << std::endl;
 
-    //std::cout << fz_search_sequences.size << std::endl;
-      
-    if(fz_search_sequences.size < 2) {
+	//std::cout << fz_search_sequences.size << std::endl;
 
-      // there is no annotation, we use the default strategy
-      //result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
-        
-      if(fz_search_sequences.empty()) {
-        //std::cout << solver.variables << std::endl;
+	if(fz_search_sequences.size < 2) {
 
-        //std::cout << 44 << std::endl;
-        result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
-        //std::cout << 55 << std::endl;
+		// there is no annotation, we use the default strategy
+		//result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
 
-      } else {
-        //std::cout << fz_search_sequences[0] << std::endl;
-        //result = solver.depth_first_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
+		if(fz_search_sequences.empty()) {
+			//std::cout << solver.variables << std::endl;
 
-        //std::cout << 11 << std::endl;
+			//std::cout << 44 << std::endl;
+			result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+			//std::cout << 55 << std::endl;
 
-    	//int domsize;
-        Vector<Variable> search_sequence;
-        BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
-        for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
-          for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
-        	//domsize = fz_search_sequences[k][i].get_size();
-        	//if (domsize> 1 ){
-            search_vars.add(fz_search_sequences[k][i].id());
-            search_sequence.add(fz_search_sequences[k][i]);
-        	//}
+		} else {
+			//std::cout << fz_search_sequences[0] << std::endl;
+			//result = solver.depth_first_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
 
-          }
-        }
+			//std::cout << 11 << std::endl;
 
-//#ifdef _PARALLEL
-        if (branch_on_auxilary)
-//#endif
-        for(unsigned int i=0; i<solver.variables.size; ++i) {
-          int domsize = solver.variables[i].get_size();
-          // if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
-          //   {
-          //     std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
-          //   }
-          // else if((domsize<=1 || domsize>2) && solver.variables[i].is_boolean()) 
-          //   {
-          //     std::cout << "?2 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
-          //   }
-          if(//solver.variables[i].is_boolean() 
-             domsize>1 && domsize<=10
-             && !(search_vars.contain(solver.variables[i].id()))) {
-            search_vars.add(i);
-            search_sequence.add(solver.variables[i]);
-          }
-        }
-        /*
+			//int domsize;
+			Vector<Variable> search_sequence;
+			BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
+			for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
+				for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
+					//domsize = fz_search_sequences[k][i].get_size();
+					//if (domsize> 1 ){
+					search_vars.add(fz_search_sequences[k][i].id());
+					search_sequence.add(fz_search_sequences[k][i]);
+					//}
+
+				}
+			}
+
+			//#ifdef _PARALLEL
+			if (branch_on_auxilary)
+				//#endif
+				for(unsigned int i=0; i<solver.variables.size; ++i) {
+					int domsize = solver.variables[i].get_size();
+					// if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
+					//   {
+					//     std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
+					//   }
+					// else if((domsize<=1 || domsize>2) && solver.variables[i].is_boolean())
+					//   {
+					//     std::cout << "?2 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
+					//   }
+					if(//solver.variables[i].is_boolean()
+							domsize>1 && domsize<=10
+							&& !(search_vars.contain(solver.variables[i].id()))) {
+						search_vars.add(i);
+						search_sequence.add(solver.variables[i]);
+					}
+				}
+			/*
         if(solver.objective->is_optimization() && !search_vars.contain(solver.objective->objective.id())) {
           search_sequence.add(solver.objective->objective);
         }
-        
-        */
-        /*
+
+			 */
+			/*
         cout << " " << solver.parameters.prefix_comment 
              << " 1 sequence search on " << fz_search_sequences << std::endl
              << search_sequence << std::endl
              << solver.variables << std::endl;
-        */
+			 */
 
-        //Add output variables here
-        AST::Array*  otp = p.get_output();
-        if (otp!=NULL){
-        	for (unsigned int i=0; i< otp->a.size(); i++) {
-        		AST::Node* ai = otp->a[i];
-        		if (ai->isArray()) {
-        			AST::Array* aia = ai->getArray();
-        			int size = aia->a.size();
-        			for (int j=0; j<size; j++) {
-        				int __id=-1;
-        				if (aia->a[j]->isIntVar()) {
-        					__id= iv[aia->a[j]->getIntVar()].id();
-        				} else if (aia->a[j]->isBoolVar()) {
-        					__id= bv[aia->a[j]->getBoolVar()].id();
-        				}
+			//Add output variables here
+			AST::Array*  otp = p.get_output();
+			if (otp!=NULL){
+				for (unsigned int i=0; i< otp->a.size(); i++) {
+					AST::Node* ai = otp->a[i];
+					if (ai->isArray()) {
+						AST::Array* aia = ai->getArray();
+						int size = aia->a.size();
+						for (int j=0; j<size; j++) {
+							int __id=-1;
+							if (aia->a[j]->isIntVar()) {
+								__id= iv[aia->a[j]->getIntVar()].id();
+							} else if (aia->a[j]->isBoolVar()) {
+								__id= bv[aia->a[j]->getBoolVar()].id();
+							}
 
-        				if (__id>=0)
-        					if(!(search_vars.contain( __id ))) {
-        						search_vars.add(__id);
-        						search_sequence.add(solver.variables[__id]);
-        					}
-        			}
+							if (__id>=0)
+								if(!(search_vars.contain( __id ))) {
+									search_vars.add(__id);
+									search_sequence.add(solver.variables[__id]);
+								}
+						}
 
-        		} else {
-        			int __id=-1;
-        			if (ai->isIntVar()) {
-        				__id= iv[ai->getIntVar()].id();
-        			} else if (ai->isBoolVar()) {
-        				__id= bv[ai->getBoolVar()].id();
-        			}
+					} else {
+						int __id=-1;
+						if (ai->isIntVar()) {
+							__id= iv[ai->getIntVar()].id();
+						} else if (ai->isBoolVar()) {
+							__id= bv[ai->getBoolVar()].id();
+						}
 
-        			if (__id>=0)
-        				if(!(search_vars.contain( __id ))) {
-        					search_vars.add(__id);
-        					search_sequence.add(solver.variables[__id]);
-        				}
-        		}
-        	}
-        }
+						if (__id>=0)
+							if(!(search_vars.contain( __id ))) {
+								search_vars.add(__id);
+								search_sequence.add(solver.variables[__id]);
+							}
+					}
+				}
+			}
 
 
-        result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
+			result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
 
-        /*
+			/*
         solver.initialise_search(fz_search_sequences[0], _option_heuristic, _option_policy, goal);
         //solver.heuristic->display(std::cout);
 
@@ -1032,34 +1157,34 @@ FlatZincModel::set_annotations(const bool on) {
         solver.statistics.start_time = get_run_time();
         return solver.restart_search(0, _restore_);
         //result = solver.depth_first_search();
-        */
-      }
+			 */
+		}
 
-    } else {
-      // follows flatzinc model's annotations
+	} else {
+		// follows flatzinc model's annotations
 
-        //int domsize;
-        Vector<Variable> search_sequence;
-        BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
-        for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
-        	for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
-        	//	domsize= fz_search_sequences[k][i].get_size();
-        	//	if (domsize>1){
-        			search_vars.add(fz_search_sequences[k][i].id());
-        			search_sequence.add(fz_search_sequences[k][i]);
-        	//	}
-        	}
-        }
+		//int domsize;
+		Vector<Variable> search_sequence;
+		BitSet search_vars(0, solver.variables.size-1, BitSet::empt);
+		for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
+			for(unsigned int i=0; i<fz_search_sequences[k].size; ++i) {
+				//	domsize= fz_search_sequences[k][i].get_size();
+				//	if (domsize>1){
+				search_vars.add(fz_search_sequences[k][i].id());
+				search_sequence.add(fz_search_sequences[k][i]);
+				//	}
+			}
+		}
 
 
-//#ifdef _PARALLEL
-        if (branch_on_auxilary)
-//#endif
-        for( unsigned  int i=0; i<solver.variables.size; ++i) {
-         int domsize = solver.variables[i].get_size();
-          //if(domsize>1 && domsize<=2 && 
+		//#ifdef _PARALLEL
+		if (branch_on_auxilary)
+			//#endif
+			for( unsigned  int i=0; i<solver.variables.size; ++i) {
+				int domsize = solver.variables[i].get_size();
+				//if(domsize>1 && domsize<=2 &&
 
-          /*
+				/*
           if(domsize>1 && domsize<=2 && !solver.variables[i].is_boolean())
             {
               std::cout << "?1 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
@@ -1068,74 +1193,74 @@ FlatZincModel::set_annotations(const bool on) {
             {
               std::cout << "?2 " << solver.variables[i] << " in " << solver.variables[i].get_domain() << " " << domsize << " " << solver.variables[i].is_boolean() << std::endl;
             }
-          */
+				 */
 
-          if(//solver.variables[i].is_boolean() &&
-             domsize>1 && domsize<=10 && 
-             !(search_vars.contain(solver.variables[i].id()))) {
-            search_vars.add(i);
-            search_sequence.add(solver.variables[i]);
-          }
-        }
+				if(//solver.variables[i].is_boolean() &&
+						domsize>1 && domsize<=10 &&
+						!(search_vars.contain(solver.variables[i].id()))) {
+					search_vars.add(i);
+					search_sequence.add(solver.variables[i]);
+				}
+			}
 
-        /*
+		/*
         if(solver.objective->is_optimization() && !search_vars.contain(solver.objective->objective.id())) {
           search_sequence.add(solver.objective->objective);
         }
-        */
-        /*
+		 */
+		/*
       cout << " " << solver.parameters.prefix_comment 
              << " 2 sequence search on " << fz_search_sequences << std::endl
              << search_sequence << std::endl
              << solver.variables << std::endl;        
-        */
+		 */
 
-        //Add output variables here
-        AST::Array*  otp = p.get_output();
-        if (otp!=NULL){
-        	for (unsigned int i=0; i< otp->a.size(); i++) {
-        		AST::Node* ai = otp->a[i];
-        		if (ai->isArray()) {
-        			AST::Array* aia = ai->getArray();
-        			int size = aia->a.size();
-        			for (int j=0; j<size; j++) {
-        				int __id=-1;
-        				if (aia->a[j]->isIntVar()) {
-        					__id= iv[aia->a[j]->getIntVar()].id();
-        				} else if (aia->a[j]->isBoolVar()) {
-        					__id= bv[aia->a[j]->getBoolVar()].id();
-        				}
+		//Add output variables here
+		AST::Array*  otp = p.get_output();
+		if (otp!=NULL){
+			for (unsigned int i=0; i< otp->a.size(); i++) {
+				AST::Node* ai = otp->a[i];
+				if (ai->isArray()) {
+					AST::Array* aia = ai->getArray();
+					int size = aia->a.size();
+					for (int j=0; j<size; j++) {
+						int __id=-1;
+						if (aia->a[j]->isIntVar()) {
+							__id= iv[aia->a[j]->getIntVar()].id();
+						} else if (aia->a[j]->isBoolVar()) {
+							__id= bv[aia->a[j]->getBoolVar()].id();
+						}
 
-        				if (__id>=0)
-        					if(!(search_vars.contain( __id ))) {
-        						search_vars.add(__id);
-        						search_sequence.add(solver.variables[__id]);
-        					}
-        			}
+						if (__id>=0)
+							if(!(search_vars.contain( __id ))) {
+								search_vars.add(__id);
+								search_sequence.add(solver.variables[__id]);
+							}
+					}
 
-        		} else {
-        			int __id=-1;
-        			if (ai->isIntVar()) {
-        				__id= iv[ai->getIntVar()].id();
-        			} else if (ai->isBoolVar()) {
-        				__id= bv[ai->getBoolVar()].id();
-        			}
+				} else {
+					int __id=-1;
+					if (ai->isIntVar()) {
+						__id= iv[ai->getIntVar()].id();
+					} else if (ai->isBoolVar()) {
+						__id= bv[ai->getBoolVar()].id();
+					}
 
-        			if (__id>=0)
-        				if(!(search_vars.contain( __id ))) {
-        					search_vars.add(__id);
-        					search_sequence.add(solver.variables[__id]);
-        				}
-        		}
-        	}
-        }
-
-        
-        result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
+					if (__id>=0)
+						if(!(search_vars.contain( __id ))) {
+							search_vars.add(__id);
+							search_sequence.add(solver.variables[__id]);
+						}
+				}
+			}
+		}
 
 
+		result = solver.depth_first_search(search_sequence, _option_heuristic, _option_policy, goal);
 
- /*
+
+
+		/*
 #ifdef _MONITOR
       for(unsigned int k=0; k<fz_search_sequences.size; ++k) {
         solver.monitor_list << "[ " ;
@@ -1149,195 +1274,195 @@ FlatZincModel::set_annotations(const bool on) {
       solver.monitor_list << "\n" ;
 #endif
 
-     
+
       result = solver.sequence_search(fz_search_sequences, 
                                       fz_search_heuristics, 
                                       fz_search_policies, 
                                       fz_search_goals);
-      
+
                                       result = solver.depth_first_search(fz_search_sequences, _option_heuristic, _option_policy, goal);
- */
+		 */
 
 
 
 
-      //cout << outcome2str(result) << " " << outcome2str(solver.statistics.outcome) << endl;
+		//cout << outcome2str(result) << " " << outcome2str(solver.statistics.outcome) << endl;
 
 
-    }
-      
-
-
+	}
 
 
 
 
 
-//     switch (_method) {
-//     case MINIMIZATION: {
-
-//       //#ifdef _DEBUG_FLATZINC
-// #ifdef _FLATZINC_OUTPUT
-//       cout << "%";
-// #endif
-//       std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
-//       //#endif
-
-//       Goal *goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
-//       //	if (__search_strategies == 1)
-//       //		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
-//       //	else
-//       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
-
-//       //result = solver.minimize(iv[_optVar]);
-//       break;
-//     }
-//     case MAXIMIZATION: {
-
-//       //#ifdef _DEBUG_FLATZINC
-// #ifdef _FLATZINC_OUTPUT
-//       cout << "%";
-// #endif
-//       std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
-//       //#endif
-
-//       Goal *goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
-//       //	if (__search_strategies == 1)
-//       //		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
-//       //	else
-//       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
-//       //result = solver.maximize(iv[_optVar]);
-//       break;
-//     }
-//     case SATISFACTION: {
-
-//       //#ifdef _DEBUG_FLATZINC
-// #ifdef _FLATZINC_OUTPUT
-//       cout << "%";
-// #endif
-//       std::cout << " c Solve " << std::endl;
-//       //#endif
-
-//       //Goal *goal = new Goal(Goal::SATISFACTION);
 
 
-//       // for(int i=0; i<solver.variables.size; ++i) {
-//       //   solver.monitor_list << solver.variables[i] ;
-//       //   solver.monitor_list << " " ;
-//       // }
+
+	//     switch (_method) {
+	//     case MINIMIZATION: {
+
+	//       //#ifdef _DEBUG_FLATZINC
+	// #ifdef _FLATZINC_OUTPUT
+	//       cout << "%";
+	// #endif
+	//       std::cout << " c Minimize " << iv[_optVar].get_var() << std::endl;
+	//       //#endif
+
+	//       Goal *goal = new Goal(Goal::MINIMIZATION, iv[_optVar].get_var());
+	//       //	if (__search_strategies == 1)
+	//       //		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
+	//       //	else
+	//       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+
+	//       //result = solver.minimize(iv[_optVar]);
+	//       break;
+	//     }
+	//     case MAXIMIZATION: {
+
+	//       //#ifdef _DEBUG_FLATZINC
+	// #ifdef _FLATZINC_OUTPUT
+	//       cout << "%";
+	// #endif
+	//       std::cout << " c Maximize " << iv[_optVar].get_var() << std::endl;
+	//       //#endif
+
+	//       Goal *goal = new Goal(Goal::MAXIMIZATION, iv[_optVar].get_var());
+	//       //	if (__search_strategies == 1)
+	//       //		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
+	//       //	else
+	//       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+	//       //result = solver.maximize(iv[_optVar]);
+	//       break;
+	//     }
+	//     case SATISFACTION: {
+
+	//       //#ifdef _DEBUG_FLATZINC
+	// #ifdef _FLATZINC_OUTPUT
+	//       cout << "%";
+	// #endif
+	//       std::cout << " c Solve " << std::endl;
+	//       //#endif
+
+	//       //Goal *goal = new Goal(Goal::SATISFACTION);
 
 
-//       // int matrix[100];
+	//       // for(int i=0; i<solver.variables.size; ++i) {
+	//       //   solver.monitor_list << solver.variables[i] ;
+	//       //   solver.monitor_list << " " ;
+	//       // }
 
 
-//       // //std::cout << iv << std::endl;
-//       // for(int i=0; i<100; ++i) {
-//       //   Variable x = iv[i].get_var();
-//       //   if(x.domain_type == CONST_VAR)
-//       //     matrix[i] = x.get_value();
-//       //   else
-//       //     matrix[i] = -(x.get_id());
-//       // }
-
-// #ifdef _MONITOR
-//       for(int i=0; i<10; ++i) {
-//         for(int j=0; j<10; ++j) {
-//           solver.monitor_list << " ";
-//           Variable x = iv[i*10+j].get_var();
-//           if(x.domain_type == CONST_VAR) {
-//             //solver.monitor_list << x.get_value();
-//             solver.monitor_list << " ";
-//           } else {
-//             solver.monitor_list << solver.variables[x.id()];
-//           }
-//         }
-//         solver.monitor_list << "\n";
-//       }
-// #endif
-      
-//       Goal *goal;
-//       if(_option_enumerate) 
-//         goal = new Goal(Goal::ENUMERATION);
-//       else 
-//         goal = new Goal(Goal::SATISFACTION);
-
-//       //if (__search_strategies == 1)
-//       //		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
-//       //	else
-//       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+	//       // int matrix[100];
 
 
-//       // //std::cout << iv << std::endl;
-//       // for(int i=0; i<10; ++i) {
-//       //   for(int j=0; j<10; ++j) {
-//       //     Variable x = iv[i*10+j].get_var();
-//       //     if(x.is_ground())
-//       //       std::cout << setw(2) << x.get_value() << "     ";
-//       //     else
-//       //       std::cout << setw(2) << x.get_solution_int_value() << " (" << x.id() << ") ";
+	//       // //std::cout << iv << std::endl;
+	//       // for(int i=0; i<100; ++i) {
+	//       //   Variable x = iv[i].get_var();
+	//       //   if(x.domain_type == CONST_VAR)
+	//       //     matrix[i] = x.get_value();
+	//       //   else
+	//       //     matrix[i] = -(x.get_id());
+	//       // }
 
-//       //       //std::cout << x << " in " << x.get_domain() << " ";
-//       //   }
-//       //   std::cout << std::endl;
-//       // }
-//       // //result = solver.solve();
-//       break;
-//     }
-//     }
+	// #ifdef _MONITOR
+	//       for(int i=0; i<10; ++i) {
+	//         for(int j=0; j<10; ++j) {
+	//           solver.monitor_list << " ";
+	//           Variable x = iv[i*10+j].get_var();
+	//           if(x.domain_type == CONST_VAR) {
+	//             //solver.monitor_list << x.get_value();
+	//             solver.monitor_list << " ";
+	//           } else {
+	//             solver.monitor_list << solver.variables[x.id()];
+	//           }
+	//         }
+	//         solver.monitor_list << "\n";
+	//       }
+	// #endif
+
+	//       Goal *goal;
+	//       if(_option_enumerate)
+	//         goal = new Goal(Goal::ENUMERATION);
+	//       else
+	//         goal = new Goal(Goal::SATISFACTION);
+
+	//       //if (__search_strategies == 1)
+	//       //		result = solver.depth_first_search(banching_variables, heuristic, policy, goal);
+	//       //	else
+	//       result = solver.depth_first_search(solver.variables, _option_heuristic, _option_policy, goal);
+
+
+	//       // //std::cout << iv << std::endl;
+	//       // for(int i=0; i<10; ++i) {
+	//       //   for(int j=0; j<10; ++j) {
+	//       //     Variable x = iv[i*10+j].get_var();
+	//       //     if(x.is_ground())
+	//       //       std::cout << setw(2) << x.get_value() << "     ";
+	//       //     else
+	//       //       std::cout << setw(2) << x.get_solution_int_value() << " (" << x.id() << ") ";
+
+	//       //       //std::cout << x << " in " << x.get_domain() << " ";
+	//       //   }
+	//       //   std::cout << std::endl;
+	//       // }
+	//       // //result = solver.solve();
+	//       break;
+	//     }
+	//     }
 
 
 #ifdef _DEBUG_VERIFICATION
-    if ((result == SAT) || (result == OPT) || ((result == LIMITOUT) && (solver.statistics.num_solutions >0)))
-      {
-        cout<< " \n \n \n solver variables :  " << solver.variables.size ;
-        int __size = solver.variables.size;
-        for ( int i = 0; i < __size ; i++)
-          {
-            cout<< "  " << endl;
-            std::cout << solver.variables[i].get_solution_int_value() << " (" << solver.variables[i].id() << ") ";
-            std::cout << solver.variables[i] << " in " << solver.variables[i].get_domain() << " ";
-          }
-      }
+	if ((result == SAT) || (result == OPT) || ((result == LIMITOUT) && (solver.statistics.num_solutions >0)))
+	{
+		cout<< " \n \n \n solver variables :  " << solver.variables.size ;
+		int __size = solver.variables.size;
+		for ( int i = 0; i < __size ; i++)
+		{
+			cout<< "  " << endl;
+			std::cout << solver.variables[i].get_solution_int_value() << " (" << solver.variables[i].id() << ") ";
+			std::cout << solver.variables[i] << " in " << solver.variables[i].get_domain() << " ";
+		}
+	}
 #endif
 
 
-    //std::cout << solver.statistics << std::endl;
+	//std::cout << solver.statistics << std::endl;
 
 
-    // switch(result) {
-    // case UNKNOWN: {
-    //   out << "c" << setw(5) << setfill('=') << '='
-    //       << "UNKNOWN" << setw(5) << '=' << "\n";
-    //   break;
-    // }
-    // case SAT: {
-    //   print(out, p);
-    //   out << "c" << setw(5) << setfill('=') << '='
-    //       << "SAT" << setw(5) << '=' << "\n";
-    //   break;
-    // }
-    // case UNSAT: {
-    //   out << "c" << setw(5) << setfill('=') << '='
-    //       << "UNSAT" << setw(5) << '=' << "\n";
-    //   break;
-    // }
-    // case OPT: {
-    //   print(out, p);
-    //   out << "c" << setw(5) << setfill('=') << '='
-    //       << "OPTIMAL" << setw(5) << '=' << "\n";
-    //   break;
-    // }
-    // }
+	// switch(result) {
+	// case UNKNOWN: {
+	//   out << "c" << setw(5) << setfill('=') << '='
+	//       << "UNKNOWN" << setw(5) << '=' << "\n";
+	//   break;
+	// }
+	// case SAT: {
+	//   print(out, p);
+	//   out << "c" << setw(5) << setfill('=') << '='
+	//       << "SAT" << setw(5) << '=' << "\n";
+	//   break;
+	// }
+	// case UNSAT: {
+	//   out << "c" << setw(5) << setfill('=') << '='
+	//       << "UNSAT" << setw(5) << '=' << "\n";
+	//   break;
+	// }
+	// case OPT: {
+	//   print(out, p);
+	//   out << "c" << setw(5) << setfill('=') << '='
+	//       << "OPTIMAL" << setw(5) << '=' << "\n";
+	//   break;
+	// }
+	// }
 
 
-    // if(solver.statistics.num_solutions) {
-    //   for(unsigned int i=0; i<iv.size; ++i) {
-    //     out << iv[i].get_var() << " = " << iv[i].get_solution_str_value() << " ";
-    //   }
-    //   out << endl;
-    // }
+	// if(solver.statistics.num_solutions) {
+	//   for(unsigned int i=0; i<iv.size; ++i) {
+	//     out << iv[i].get_var() << " = " << iv[i].get_solution_str_value() << " ";
+	//   }
+	//   out << endl;
+	// }
 
-  }
+}
 
 
 FlatZincModel::Meth
@@ -1353,30 +1478,30 @@ FlatZincModel::optVar(void) const {
 void
 FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
 
-  //#ifdef _FLATZINC_OUTPUT
+	//#ifdef _FLATZINC_OUTPUT
 #ifdef _PARALLEL
-//#pragma omp critical
+	//#pragma omp critical
 	{
-	//	if (! *(solver.solution_found_elsewhere)){
+		//	if (! *(solver.solution_found_elsewhere)){
 #endif
-	Mistral::Outcome outcome = solver.statistics.outcome;
-        if (outcome == OPT)
-          out<<"==========" << std::endl;
-        else if (solver.statistics.num_solutions && solver.objective && solver.objective->is_optimization())
-          out<<"=====UNBOUNDED====="<< std::endl;
-	else if (outcome == UNSAT)
-          out<<"=====UNSATISFIABLE====="<< std::endl;
-        else if (outcome != SAT)
-          out<<"=====UNKNOWN====="<< std::endl;
-	//out<< std::endl;
+		Mistral::Outcome outcome = solver.statistics.outcome;
+		if (outcome == OPT)
+			out<<"==========" << std::endl;
+		else if (solver.statistics.num_solutions && solver.objective && solver.objective->is_optimization())
+			out<<"=====UNBOUNDED====="<< std::endl;
+		else if (outcome == UNSAT)
+			out<<"=====UNSATISFIABLE====="<< std::endl;
+		else if (outcome != SAT)
+			out<<"=====UNKNOWN====="<< std::endl;
+		//out<< std::endl;
 
 #ifdef _PARALLEL
-}
-//	}
+	}
+	//	}
 #endif
-        //#else
-        //solver.statistics.print_full(out);
-        //#endif
+	//#else
+	//solver.statistics.print_full(out);
+	//#endif
 
 
 }
@@ -1385,28 +1510,28 @@ FlatZincModel::print_final(std::ostream& out, const Printer& p) const {
 void
 FlatZincModel::print_solution(std::ostream& out, const Printer& p) const {
 
-  //#ifdef _FLATZINC_OUTPUT
+	//#ifdef _FLATZINC_OUTPUT
 
-  // for(int i=0; i<solver.variables.size; ++i) {
-  //   std::cout << solver.variables[i] << ": " ;
-  //   if(solver.variables[i].get_solution_min() == solver.variables[i].get_solution_max())
-  //     std::cout << solver.variables[i].get_solution_min() << std::endl;
-  //   else std::cout << solver.variables[i].get_solution_min() << ".." << solver.variables[i].get_solution_max() << std::endl;
-  // }
+	// for(int i=0; i<solver.variables.size; ++i) {
+	//   std::cout << solver.variables[i] << ": " ;
+	//   if(solver.variables[i].get_solution_min() == solver.variables[i].get_solution_max())
+	//     std::cout << solver.variables[i].get_solution_min() << std::endl;
+	//   else std::cout << solver.variables[i].get_solution_min() << ".." << solver.variables[i].get_solution_max() << std::endl;
+	// }
 
-  if(_option_display_solution) {
-    if(solver.statistics.num_solutions) {
-      p.print(out, solver, iv, bv, sv);
-      
-      if(_optVar >= 0)
-    	  if(solver.parameters.verbosity >0)
-        out << " " << solver.parameters.prefix_comment << " objective: " << iv[_optVar].get_var() 
-            << " in [" << iv[_optVar].get_solution_min() 
-            << ".." << iv[_optVar].get_solution_max() << "]" << endl;
-    }
-    out << "----------" << std::endl;
-  }
-  //#endif
+	if(_option_display_solution) {
+		if(solver.statistics.num_solutions) {
+			p.print(out, solver, iv, bv, sv);
+
+			if(_optVar >= 0)
+				if(solver.parameters.verbosity >0)
+					out << " " << solver.parameters.prefix_comment << " objective: " << iv[_optVar].get_var()
+					<< " in [" << iv[_optVar].get_solution_min()
+					<< ".." << iv[_optVar].get_solution_max() << "]" << endl;
+		}
+		out << "----------" << std::endl;
+	}
+	//#endif
 
 
 }
@@ -1430,14 +1555,14 @@ Printer::printElem(std::ostream& out,
 	if (ai->isInt(k)) {
 		out << k;
 	} else if (ai->isIntVar()) {
-          // int lb = iv[ai->getIntVar()].get_solution_min();
-          // int ub = iv[ai->getIntVar()].get_solution_max();
-          // if( lb == ub )
-          //   out << lb;
-          // else
-          //   out << lb << ".." << ub;
-          
-          out << iv[ai->getIntVar()].get_solution_int_value();
+		// int lb = iv[ai->getIntVar()].get_solution_min();
+		// int ub = iv[ai->getIntVar()].get_solution_max();
+		// if( lb == ub )
+		//   out << lb;
+		// else
+		//   out << lb << ".." << ub;
+
+		out << iv[ai->getIntVar()].get_solution_int_value();
 	} else if (ai->isBoolVar()) {
 		/*
 		int lb = bv[ai->getBoolVar()].get_solution_min();
@@ -1449,7 +1574,7 @@ Printer::printElem(std::ostream& out,
 		} else {
 			out << "false..true";
 		}
-		*/
+		 */
 		int lb = bv[ai->getBoolVar()].get_solution_int_value();
 		if (lb == 1)
 		{
@@ -1462,9 +1587,9 @@ Printer::printElem(std::ostream& out,
 		set<int> lb;
 		set<int> ub;
 		for(unsigned int i=0; i<x->elts_lb.size; ++i) {
-                  lb.insert(x->elts_lb[i]);
-                  ub.insert(x->elts_lb[i]);
-                }
+			lb.insert(x->elts_lb[i]);
+			ub.insert(x->elts_lb[i]);
+		}
 		for(unsigned int i=0; i<x->elts_var.size; ++i) {
 			if(x->get_index_var(i).get_solution_min()) {
 				lb.insert(x->elts_var[i]);
@@ -1577,7 +1702,7 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 			if (! pos[i].is_ground())
 			{
 				//	solver.add(pos[i]);
-//				lit =  (2* pos[i].id()) +1;
+				//				lit =  (2* pos[i].id()) +1;
 				clause.add(literal(pos[i],1));
 				if(clause.size ==1)
 				{
@@ -1620,7 +1745,7 @@ void FlatZincModel::encode_clause (Vector<Variable> pos ,  Vector<Variable> neg)
 		if (clause.size >0)
 		{
 			clause.sort();
-//			std::cout<< "add clause : " <<clause<< std::endl;
+			//			std::cout<< "add clause : " <<clause<< std::endl;
 			cnf.add(clause);
 		}
 		else if (clause.size ==0)
@@ -1646,8 +1771,8 @@ void FlatZincModel::encode_clauses()
 
 
 FlatZinc::SolutionPrinter::SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) 
-  : p_(p), fm_(fm), solver_(s) {
-  //solver_->add((SolutionListener*)this);
+: p_(p), fm_(fm), solver_(s) {
+	//solver_->add((SolutionListener*)this);
 #ifdef _PARALLEL
 	if (fm->method() == FlatZincModel::MINIMIZATION)
 		method=1;
@@ -1712,7 +1837,7 @@ void FlatZinc::SolutionPrinter::notify_solution() {
 		}
 	}
 #else
-  fm_->print_solution(std::cout, *p_);
+	fm_->print_solution(std::cout, *p_);
 #endif
 
 };

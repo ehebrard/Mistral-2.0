@@ -5,8 +5,8 @@ import subprocess
 
 if len(sys.argv) > 1:
     cmd = sys.argv[1:-1]
-    print ("c Fine name should be the last argument")
-    print ("c Use the option '--recommended v' to specify the particular configuration to use")
+    #print (" c Fine name should be the last argument")
+    #print (" c Use the option '--recommended v' to specify the particular configuration to use")
     filename = sys.argv[-1]
 
 
@@ -16,8 +16,6 @@ if len(sys.argv) > 1:
     if '-f' in cmd:
         cmd.remove('-f')
 
-	#mcmd = ['./mistral-fzn']
-    #We assume fz/ is in the $PATH
     mcmd = ['./mistral-fzn']
     #mcmd = ['/entry_data/mistral-fzn']
     
@@ -30,7 +28,8 @@ if len(sys.argv) > 1:
         
 
     mcmd.extend(cmd)
-    mcmd.extend(['--print_sol', '-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--follow_annotations' , '--decay', '0.95', '--seed 123456789'])
+    #I just removed '--print_sol'
+    mcmd.extend(['-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--follow_annotations' , '--decay', '0.95', '--seed 123456789'])
 
 
 #    for w in mcmd:

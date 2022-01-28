@@ -259,33 +259,34 @@ public:
 		SATISFACTION, //< Solve as satisfaction problem
 		MINIMIZATION, //< Solve as minimization problem
 		MAXIMIZATION  //< Solve as maximization problem
-  	};
+	};
 protected:
 	/// Mistral stuff
 	Solver &solver;
 
-  // search stuff
-  Vector< Vector< Variable > >  fz_search_sequences;
-  Vector< BranchingHeuristic *> fz_search_heuristics;
-  Vector< RestartPolicy * >     fz_search_policies;
-  Vector< Goal * >              fz_search_goals;
+	// search stuff
+	Vector< Vector< Variable > >  fz_search_sequences;
+	Vector< BranchingHeuristic *> fz_search_heuristics;
+	Vector< RestartPolicy * >     fz_search_policies;
+	Vector< Goal * >              fz_search_goals;
 
 
 	/// Options
 	BranchingHeuristic *_option_heuristic;
-  std::string _variable_ordering;
-  std::string _value_ordering;
-  int _randomization;
-  //std::string _restart_policy;
+	std::string _variable_ordering;
+	std::string _value_ordering;
+	int _randomization;
+	//std::string _restart_policy;
 
 	RestartPolicy *_option_policy;
 	bool _option_rewriting;
 	bool _option_simple_rewriting;
-  bool _option_enumerate;
-  bool _option_display_mistral_model;
-  bool _option_display_solution;
-  bool _option_annotations;
-  int _option_parity;
+	bool _option_enumerate;
+	bool _option_display_information ;
+	bool _option_display_mistral_model;
+	bool _option_display_solution;
+	bool _option_annotations;
+	int _option_parity;
 	////
 
 
@@ -323,10 +324,10 @@ public:
 	long int * best_kown_objective;
 	//bool branch_on_auxilary;
 	long int get_last_objective_value() { return solver.statistics.objective_value ;}
-    void set_solution_found_elsewhere(bool * s) {solver.solution_found_elsewhere= s;}
+	void set_solution_found_elsewhere(bool * s) {solver.solution_found_elsewhere= s;}
 #endif
 
-    bool branch_on_auxilary;
+	bool branch_on_auxilary;
 
 	/// The integer variables
 	IntVarArray iv;
@@ -382,7 +383,7 @@ public:
 	void set_parameters(SolverParameters& p);
 
 	/// setup parameters from the command line
-  void set_strategy(std::string var_o, std::string val_o, const int rand, std::string r_pol);
+	void set_strategy(std::string var_o, std::string val_o, const int rand, std::string r_pol);
 
 	/// setup the rewriting step
 	void set_rewriting(const bool on);
@@ -393,30 +394,34 @@ public:
 	void set_parity_processing(const int lvl);
 
 	/// setup the rewriting step
-  void set_enumeration(const bool on);
+	void set_enumeration(const bool on);
 
-  //return _option_enumerate
-  bool get_enumeration() {return _option_enumerate;}
+	//return _option_enumerate
+	bool get_enumeration() {return _option_enumerate;}
+
+
+	/// setup the collection of information
+	void set_display_collection(const bool on);
 
 	/// setup the rewriting step
-  void set_display_model(const bool on);
+	void set_display_model(const bool on);
 
 	/// setup the rewriting step
-  void set_display_solution(const bool on);
+	void set_display_solution(const bool on);
 
 	/// setup annotations
-  void set_annotations(const bool on);
+	void set_annotations(const bool on);
 
 
-  /// get annotations from the flatzinc model
-  void get_annotations();
+	/// get annotations from the flatzinc model
+	void get_annotations();
 
 	/// Run the search
 	void run(std::ostream& out, Printer& p);
 
-  /// Produce output on \a out using \a p
-  void print_final(std::ostream& out, const Printer& p) const;
-  void print_solution(std::ostream& out, const Printer& p) const;
+	/// Produce output on \a out using \a p
+	void print_final(std::ostream& out, const Printer& p) const;
+	void print_solution(std::ostream& out, const Printer& p) const;
 
 	/**
 	 * \brief Remove all variables not needed for output
@@ -464,62 +469,8 @@ public:
 	void encode_clause(Vector<Variable> pos ,  Vector<Variable> neg);
 	void encode_clauses();
 
-
-	void recommended_configs(int rec){
-
-		//bool ismin = _method==MINIMIZATION ;
-		bool ismax = _method==MAXIMIZATION ;
-		bool issat = _method==SATISFACTION ;
-
-	    //std::cout << " c recommended_configs method is satisfaction ?  :  " << issat << std::endl;
-	    //std::cout << " c recommended_configs method is minimisation ?  :  " << ismin << std::endl;
-	    //std::cout << " c recommended_configs method is maximization ?  :  " << ismax << std::endl;
-
-		if (rec==1){
-			//std::cout << " c search recommendation nb 1" << std::endl;
-			if( ! issat  ) {
-				_option_policy	= new Luby();
-				_option_policy->base = 128;
-				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
-			} else {
-				_option_policy = new Geometric();
-				_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
-			}
-		}
-		else if (rec>=2){
-			if( ! issat ) {
-				if (rec==3){
-					if ( ismax )
-						{
-						branch_on_auxilary=true;
-						}
-					else
-						{
-						branch_on_auxilary=false;
-						}
-				}
-				//_option_policy	= new Luby();
-				//restart->base = 128;
-				//_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, Guided< MinValue >, Guided< MinValue >, 1 > (&solver);
-			} else {
-				if (rec==3){
-					branch_on_auxilary=true;
-				}
-				//_option_policy = new Luby();
-				//_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
-			}
-			_option_policy = new Luby();
-			_option_heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 2, ConflictCountManager >,  Guided< MinValue >,  Guided< MinValue >, 1 > (&solver);
-		}
-		else {
-			std::cout << "c search recommendation not found" << std::endl;
-			exit(1);
-		}
-
-		//std::cout << "c after recommended : branch_on_auxilary is " << branch_on_auxilary << std::endl;
-
-
-	}
+	//Chose a recommended search configuration
+	void recommended_configs(int rec);
 
 
 #ifdef _VERIFICATION
@@ -537,7 +488,7 @@ private:
 	const std::string msg;
 public:
 	Error(const std::string& where, const std::string& what)
-	: msg(where+": "+what) {}
+: msg(where+": "+what) {}
 	const std::string& toString(void) const { return msg; }
 };
 
@@ -562,42 +513,43 @@ FlatZincModel* parse(std::istream& is,
 		FlatZincModel* fzs=NULL);
 
 
-  /*! \class SolutionListener
+/*! \class SolutionListener
     \brief SolutionListener Class
 
-    * Called whenever the solver solutions *
-    
+ * Called whenever the solver solutions *
+
     This is used to implement procedures triggered by solutions
-  */
-  class SolutionPrinter : public SolutionListener {
+ */
+class SolutionPrinter : public SolutionListener {
 
-  public:
+public:
 
-    Printer *p_;
-    FlatZincModel *fm_;
-    Mistral::Solver *solver_;
+	Printer *p_;
+	FlatZincModel *fm_;
+	Mistral::Solver *solver_;
 
 #ifdef _PARALLEL
-    // minimization _method=1,  maximization: _method=2 ; satisfaction with one solution: _method=3 ; else _method=0
-    int method;
+	// minimization _method=1,  maximization: _method=2 ; satisfaction with one solution: _method=3 ; else _method=0
+	int method;
 #endif
-    // SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) : p_(p), fm_(fm), solver_(s) {
-    //   solver->add((SolutionPrinter*)this);
-    // }
+	// SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s) : p_(p), fm_(fm), solver_(s) {
+	//   solver->add((SolutionPrinter*)this);
+	// }
 
-    SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s);
-    virtual ~SolutionPrinter();    
+	SolutionPrinter(Printer *p, FlatZincModel *fm, Mistral::Solver *s);
+	virtual ~SolutionPrinter();
 
-    virtual void notify_solution() ;
-    //{
-    //   fm_->print(std::cout, *p_);
-    // };
-    
-    std::ostream& display(std::ostream& os) { os << "Flatzinc solution-printer"; return os; }    
-  };
+	virtual void notify_solution() ;
+	//{
+	//   fm_->print(std::cout, *p_);
+	// };
+
+	std::ostream& display(std::ostream& os) { os << "Flatzinc solution-printer"; return os; }
+};
 
 }
 
 #endif
 
-// STATISTICS: flatzinc-any
+
+
