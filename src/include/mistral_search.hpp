@@ -1750,6 +1750,7 @@ namespace Mistral {
 			default_var.get_value_weight(),default_var.get_bound_weight()
 				,default_var.get_weight_map()
 				);
+	     //Why NULL NULL NULL? it seems to force the ValSelectorPrime to be Guided< MinValue >. At least when running. 
      choice = ValSelectorPrime(s, NULL, NULL, NULL);
    }
 
