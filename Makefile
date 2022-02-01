@@ -6,7 +6,7 @@ COPTIMIZE = -O3
 MAINDIR = .
 
 CCC = g++
-
+#CCC = g++-5
 
 BOOSTDIR = /Users/boost/boost_1_73_0/boost
 
