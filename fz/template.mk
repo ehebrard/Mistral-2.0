@@ -18,6 +18,7 @@ EXEC      ?= $(notdir $(shell pwd))
 LIB       ?= $(EXEC)
 
 CXX       ?= g++
+#CXX       = g++-5
 
 
 BOOSTDIR = /Users/boost/boost_1_73_0/boost
