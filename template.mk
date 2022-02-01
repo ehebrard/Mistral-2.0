@@ -4,6 +4,7 @@ MAINDIR ?= .
 COPTIMIZE ?= -O3
 
 CCC = g++
+#CCC       = g++-5
 
 XCSP3PDIR=$(MAINDIR)/XCSP3-CPP-Parser
 
