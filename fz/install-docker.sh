@@ -28,6 +28,7 @@ cd Mistral-2.0
 wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2
 tar -xvf boost_1_79_0.tar.bz2
 mv boost_1_79_0.tar.bz2 boost
+rm boost_1_79_0.tar.bz2
 
 git clone https://github.com/xcsp3team/XCSP3-CPP-Parser.git 
 git clone https://github.com/xcsp3team/XCSP3-Java-Tools.git
@@ -35,6 +36,7 @@ git clone https://github.com/xcsp3team/XCSP3-Java-Tools.git
 cd fz
 read -p "I should edit template.mk and ../template.mk to use g++-5"
 make clean
+#update template.mk to change the location of boost 
 make
 
 #To build the parallel version
