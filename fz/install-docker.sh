@@ -34,7 +34,8 @@ git clone https://github.com/xcsp3team/XCSP3-CPP-Parser.git
 git clone https://github.com/xcsp3team/XCSP3-Java-Tools.git
 #make clean
 cd fz
-read -p "I should edit template.mk and ../template.mk to use g++-5"
+read -p "I should edit template.mk and ../template.mk to use g++-5 and boost" 
+cp template-minizinc-docker template.mk
 make clean
 #update template.mk to change the location of boost 
 make
