@@ -11,7 +11,7 @@ apt-get -y install software-properties-common
 apt-add-repository universe
 apt-get -y update
 apt-get -y install g++-5
-apt-get -y install python-pip
+apt-get -y install python pip
 apt-get -y install wget
 apt-get -y install libxml2-dev
 apt-get -y install make 
@@ -25,6 +25,10 @@ export CCC=g++-5
 
 git clone https://github.com/ehebrard/Mistral-2.0.git
 cd Mistral-2.0
+wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2
+tar -xvf boost_1_79_0.tar.bz2
+mv boost_1_79_0.tar.bz2 boost
+
 git clone https://github.com/xcsp3team/XCSP3-CPP-Parser.git 
 git clone https://github.com/xcsp3team/XCSP3-Java-Tools.git
 #make clean
