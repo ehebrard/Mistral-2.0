@@ -21,7 +21,9 @@ CXX       ?= g++
 #CXX       = g++-5
 
 
-BOOSTDIR = /Users/boost/boost_1_73_0/boost
+#BOOSTDIR = /Users/boost/boost_1_73_0/boost
+BOOSTDIR = ../boost
+
 CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(BOOSTDIR)
 
 #CFLAGS    ?= -Wall 
