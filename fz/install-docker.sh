@@ -1,10 +1,10 @@
 #!/bin/sh
-echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container. Run the script with the command 'yes Y | install-docker.sh '  \n"
+echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container. Run the script with the command 'yes Y | ./install-docker.sh '  \n"
 read -p "Press [Enter] key to start installation of Mistral-2.0"
 apt-get update
-apt-get -y install wget
-cd /entry_data
 apt-get -y install nano
+cd /entry_data
+apt-get -y install wget
 apt-get -y install software-properties-common
 apt-add-repository universe
 echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list 
@@ -16,8 +16,8 @@ apt-get -y install wget
 apt-get -y install libxml2-dev
 apt-get -y install make 
 apt-get -y install git
-apt-get install bison 
-apt-get install flex 
+apt-get -y install bison 
+apt-get -y install flex 
 export CXX=g++-5
 export CCC=g++-5
 git clone https://github.com/ehebrard/Mistral-2.0.git
