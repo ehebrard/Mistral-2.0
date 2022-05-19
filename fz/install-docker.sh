@@ -1,5 +1,5 @@
 #!/bin/sh
-echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container\n"
+echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container. Run the script with the command 'yes Y | install-docker.sh '  \n"
 read -p "Press [Enter] key to start installation of Mistral-2.0"
 apt-get update
 apt-get -y install wget
@@ -38,7 +38,6 @@ make
 echo "test if it works"
 ./mistral-fz ../data/zinc/amaze3.fzn
 ./mistral-mzn ../data/zinc/amaze3.mzn ../data/zinc/2012-03-29.dzn 
-
 #To build the parallel version
 mv ./mistral-fzn ../..
 cd ..
@@ -47,7 +46,6 @@ cd fz
 make clean 
 make parallel 
 mv ../../mistral-fzn ./
-
 #Here  mistral-fzn and mistral-fzn_parallel are in fz/
 cd /entry_data
 cp Mistral-2.0/fz/mistral-fz fzn-exec
@@ -58,14 +56,10 @@ cp Mistral-2.0/fz/mistral-mzn ./exec
 chmod 777 *
 cp Mistral-2.0/fz/mznlib/* mzn-lib/
 echo "Mistral-2.0 Installed."
-
-echo "I should edit fzn-exec and exec to use /entry_data/mistral-fzn and /entry_data/fzn-exec "
-
+cd 
+#echo "I should edit fzn-exec and exec to use /entry_data/mistral-fzn and /entry_data/fzn-exec "
 #test :
-
 ./fzn-exec Mistral-2.0/data/zinc/amaze3.fzn 
 ./exec Mistral-2.0/data/zinc/amaze3.mzn  Mistral-2.0/data/zinc/2012-03-29.dzn 
-
 /minizinc/mzn-exec-free /minizinc/test.mzn /minizinc/2.dzn
 /minizinc/mzn-exec-par -p 2 /minizinc/test.mzn /minizinc/2.dzn
- 
