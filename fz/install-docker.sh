@@ -10,7 +10,8 @@ apt-add-repository universe
 echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list 
 echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list
 apt-get -y update
-apt-get -y install g++-5
+#apt-get -y install g++-5
+apt-get -y install g++
 apt-get -y install python pip
 apt-get -y install wget
 apt-get -y install libxml2-dev
