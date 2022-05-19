@@ -1,0 +1,41 @@
+#! /usr/bin/env python3
+
+import sys
+import subprocess
+
+#mcmd = ['./mistral-fzn']
+#If we add fz/ to the $PATH
+#mcmd = ['mistral-fzn']
+mcmd = ['/entry_data/mistral-fzn']
+
+if len(sys.argv) > 1:
+    cmd = sys.argv[1:-1]
+    filename = sys.argv[-1]
+
+#    if '-f' in cmd:
+#        cmd[cmd.index['-f']] = '--follow_annotations'
+
+    if '-f' in cmd:
+        cmd.remove('-f')
+    
+    if '-p' in cmd:
+	#cmd.remove(cmd[cmd.index('-p') +1])
+	#cmd.remove('-p')
+	#Now we support parallelization. The -p gives the number of threads 
+        #mcmd = ['mistral-fzn_parallel']
+        mcmd = ['/entry_data/mistral-fzn_parallel']
+        
+   
+
+   
+    mcmd.extend(cmd)
+    mcmd.extend(['--print_sol', '-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--recommended', '3', '--follow_annotations' , '--decay', '0.95', '--seed 26071986'])
+
+
+#    for w in mcmd:
+#        print w,
+#    print
+
+
+    mistral = subprocess.Popen(mcmd) #, stdout=subprocess.PIPE)
+    mistral.wait()
