@@ -1,3 +1,4 @@
+#!/bin/bash
 echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container. Run the script with the command 'yes Y | ./install-docker.sh '  \n"
 read -p "Press [Enter] key to start installation of Mistral-2.0"
 apt-get update
@@ -17,8 +18,8 @@ apt-get -y install make
 apt-get -y install git
 apt-get -y install bison 
 apt-get -y install flex 
-export CXX=g++-5
-export CCC=g++-5
+#export CXX=g++-5
+#export CCC=g++-5
 git clone https://github.com/ehebrard/Mistral-2.0.git
 cd Mistral-2.0
 wget https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2
@@ -30,7 +31,7 @@ git clone https://github.com/xcsp3team/XCSP3-Java-Tools.git
 make clean
 cd fz
 #read -p "I should edit template.mk and ../template.mk to use g++-5 and boost" 
-cp template-minizinc-docker template.mk
+#cp template-minizinc-docker template.mk
 make clean
 #update template.mk to change the location of boost 
 make
