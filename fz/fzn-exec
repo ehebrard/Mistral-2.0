@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-
+#This is a version of mistral-fz used only for the challenge
 import sys
 import subprocess
 
