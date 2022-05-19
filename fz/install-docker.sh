@@ -51,15 +51,17 @@ cd /entry_data
 cp Mistral-2.0/fz/mistral-fz fzn-exec
 cp Mistral-2.0/fz/mistral-fzn* ./
 cp Mistral-2.0/fz/mistral-mzn ./exec
-#export PATH=$PATH:/entry_data/Mistral-2.0/fz/
-#echo "PATH=/entry_data/Mistral-2.0/fz:$PATH" >> ~/.bashrc
+echo "PATH=/entry_data/Mistral-2.0/fz:$PATH" >> ~/.bashrc
+source ~/.bashrc
 chmod 777 *
 cp Mistral-2.0/fz/mznlib/* mzn-lib/
 echo "Mistral-2.0 Installed."
 cd 
-#echo "I should edit fzn-exec and exec to use /entry_data/mistral-fzn and /entry_data/fzn-exec "
+#echo "Should I edit fzn-exec and exec to use /entry_data/mistral-fzn and /entry_data/fzn-exec ? "
 #test :
-./fzn-exec Mistral-2.0/data/zinc/amaze3.fzn 
-./exec Mistral-2.0/data/zinc/amaze3.mzn  Mistral-2.0/data/zinc/2012-03-29.dzn 
+./fzn-exec --print_sta Mistral-2.0/data/zinc/amaze3.fzn > fzn-test.txt
+./exec --print_sta  Mistral-2.0/data/zinc/amaze3.mzn  Mistral-2.0/data/zinc/2012-03-29.dzn > mzn-test.txt
+cat fzn-test.txt
+cat mzn-test.txt
 /minizinc/mzn-exec-free /minizinc/test.mzn /minizinc/2.dzn
 /minizinc/mzn-exec-par -p 2 /minizinc/test.mzn /minizinc/2.dzn
