@@ -1,4 +1,3 @@
-#!/bin/sh
 echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container. Run the script with the command 'yes Y | ./install-docker.sh '  \n"
 read -p "Press [Enter] key to start installation of Mistral-2.0"
 apt-get update
