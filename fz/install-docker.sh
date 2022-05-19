@@ -10,8 +10,8 @@ apt-add-repository universe
 echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list 
 echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list
 apt-get -y update
-#apt-get -y install g++-5
-apt-get -y install g++
+apt-get -y install g++-5
+#apt-get -y install g++
 apt-get -y install python pip
 apt-get -y install wget
 apt-get -y install libxml2-dev
@@ -32,7 +32,7 @@ git clone https://github.com/xcsp3team/XCSP3-Java-Tools.git
 make clean
 cd fz
 #read -p "I should edit template.mk and ../template.mk to use g++-5 and boost" 
-#cp template-minizinc-docker template.mk
+cp template-minizinc-docker template.mk
 make clean
 #update template.mk to change the location of boost 
 make
