@@ -1,8 +1,8 @@
 #!/bin/bash
 #echo -e "This script is used to install the solver in the docker container used by the minizinc challenge. It should be placed in the directory ~/entry_data in the orignal minizinc chalenge container"
 #read -p "Press [Enter] key to start installation of Mistral-2.0"
-apt-get update
-apt-get -y install nano
+#apt-get update
+#apt-get -y install nano
 apt-get -y install wget
 cd /entry_data
 apt-get -y install software-properties-common
@@ -11,6 +11,8 @@ echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.
 echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list
 apt-get -y update
 apt-get -y install g++-5
+export CXX=g++-5
+export CCC=g++-5
 #apt-get -y install g++
 apt-get -y install python pip
 apt-get -y install libxml2-dev
@@ -32,11 +34,6 @@ cd fz
 cp template-minizinc-docker template.mk
 #update template.mk to change the location of boost 
 make
-#make clean
-#git slash save 
-#git pull
-#make clean
-#make
 echo "test if it works \n \n \n \n \n \n \n \n \n \n \n "
 ./mistral-fz ../data/zinc/amaze3.fzn
 ./mistral-mzn ../data/zinc/amaze3.mzn ../data/zinc/2012-03-29.dzn 
