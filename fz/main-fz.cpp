@@ -80,6 +80,16 @@ int main(int argc, char *argv[])
   cmd.add( recommended_Arg );
 
 
+  TCLAP::ValueArg<std::string> output_m("","output-mode","output form ",false,"c","string");
+  cmd.add( output_m );
+
+  TCLAP::SwitchArg output_o("","output-objective","output objective ",false);
+  cmd.add( output_o );
+
+
+//  pcommentArg = new TCLAP::ValueArg<std::string>("","prefix_comment","output comments prefix",false,"c","string");
+
+
 #ifdef _PARALLEL
   //std::cout << "PARALLEL \n \n \n " << std::endl;
   TCLAP::ValueArg<int> threadsArg("p","number-threads","Use multithreading with this option.", false, 4, "int");

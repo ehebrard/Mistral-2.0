@@ -150,6 +150,8 @@ do
 	                    FZNBASE=$FZNBASE-`basename $ARG .mzn`;;
     *.dzn)                  DZN=$DZN" "$ARG
 	                    FZNBASE=$FZNBASE-`basename $ARG .dzn`;;
+    *.json)                 DZN=$DZN" "$ARG
+                            FZNBASE=$FZNBASE-`basename $ARG .json`;;
     *)                      FLATZINC_FLAGS="$FLATZINC_FLAGS $ARG";;
     esac
 done

@@ -90,7 +90,7 @@ MISTRAL_DIR=.
 #MZN2FZN=${MZN2FZN:-mzn2fzn}
 MZN2FZN="minizinc --compile --solver org.minizinc.mzn-fzn" 
 #FLATZINC=$MISTRAL_DIR/mistral-fz
-FLATZINC=mistral-fz
+FLATZINC=./mistral-fz
 #FLATZINC=/entry_data/fzn-exec
 CANONICALIZE="cat"
 QUIET=echo
@@ -140,6 +140,8 @@ do
 	                    FZNBASE=$FZNBASE-`basename $ARG .mzn`;;
     *.dzn)                  DZN=$DZN" "$ARG
 	                    FZNBASE=$FZNBASE-`basename $ARG .dzn`;;
+    *.json)                 DZN=$DZN" "$ARG
+                            FZNBASE=$FZNBASE-`basename $ARG .json`;;
     *)                      FLATZINC_FLAGS="$FLATZINC_FLAGS $ARG";;
     esac
 done
