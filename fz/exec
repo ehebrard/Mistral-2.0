@@ -146,11 +146,12 @@ do
     -v|--verbose)           MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG";;
     -c)                     CANONICALIZE="solns2dzn -c";;
     -D)                     echo "$1;" | sed 's/;;/;/g' >> $TMPDZN; shift;;
-    *.mzn)                  MZN=$ARG
+    --output-mode)         shift;; 
+    *mzn)                  MZN=$ARG
 	                    FZNBASE=$FZNBASE-`basename $ARG .mzn`;;
-    *.dzn)                  DZN=$DZN" "$ARG
+    *dzn)                  DZN=$DZN" "$ARG
 	                    FZNBASE=$FZNBASE-`basename $ARG .dzn`;;
-    *.json)                 DZN=$DZN" "$ARG
+    *json)                 DZN=$DZN" "$ARG
                             FZNBASE=$FZNBASE-`basename $ARG .json`;;
     *)                      FLATZINC_FLAGS="$FLATZINC_FLAGS $ARG";;
     esac
