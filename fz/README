@@ -1,0 +1,44 @@
+This folder is used for the flatzinc interface. You first need to compile the code with:
+
+$ make
+
+This will generate the executable file fzn-mistral in the 'bin' folder.
+
+3- You can test a flatzinc instance with
+
+$ ./mistral-fz ../data/zinc/golomb_9.fzn
+
+The option '--recommended $v' is used to specify which configuration; and the option '--print_sta' is used to print the statistics; and the option '-a' can be used to explore the find all the solutions. For instance: 
+
+
+$ ./mistral-fz -a --recommended 23 --print_sta   ../data/zinc/golomb_9.fzn 
+
+
+The set of options can be found by using: 
+$./mistral-fz --help
+ 
+
+4- Mistral-2.0 implements a simple form of parallelism. To build the parallel solver, first clean the binaries in fz (i.e. by running "$ make clean"), then compile with:
+
+$ make parallel 
+
+The option '-p $n' can be passed to fz/mistral-fz to indicate $n available logical cores.
+
+The option '--recommended $v' can be used to specify a particular search configuration $v (the possible values of $v are in [1,100]). 
+
+
+5- Use the following to generate an fzn file "flattened.fzn" given an mzn model "f.mzn" and a dzn data "d.mzn" 
+
+$minizinc --compile --solver org.minizinc.mzn-fzn  -O2 -I mznlib/ f.mzn d.dzn --fzn flattened.fzn 
+
+For instance: 
+$minizinc --compile --solver org.minizinc.mzn-fzn  -O2 -I mznlib/ benchmark/atsp.mzn benchmark/atsp-instance5_0p15.dzn --fzn benchmark/use-mznlib.fzn 
+
+5- Notes:
+
+*/ The solver requires the boost library. Get the latest version here https://www.boost.org and update the template file. 
+*/ Compilation note: If you want to run the solver on minizinc/flatzinc instances and if you use the gcc compiler, then you must use the g++-5 version. Any version of gcc that is higher than 5 will not work on most of flatzinc instances due to a bug between GCC and Bison (that is triggered by the flatzinc parser skeleton). The clang compiler (on MacOS) works perfectly fine.
+*/ The docker image for the minizinc challenge is available at https://hub.docker.com/r/msiala/mistral2. The docker pull command is "docker pull msiala/mistral2:mzn2020". Pleae follow the tutorial on the challenge https://www.minizinc.org/challenge2020/docker.html to run the image.
+*/ Search annotations are not (yet) supported. So with or without the option -f, the solver will ignore them.
+*/ The fz/mzn-lib/ directory contains some solver-specific definitions of global constraints from the MiniZinc library. When generating fzn instances, please use the option "-I fz/mzn"
+*/ To install Mistral-2.0 in a Minizinc challenge docker container, simply run fz/install-docker.sh from /entry_data then modify /fzn-exec and /exec accordingly. 

@@ -6,7 +6,7 @@ COPTIMIZE = -O3
 MAINDIR = .
 
 CCC = g++
-
+#CCC = g++-5
 
 # BOOSTDIR = /Users/Shared/boost_1_78_0
 
@@ -92,7 +92,7 @@ DATE := $(shell date '+%y-%m-%d')
 
 clean : 
 	cd fz;	make clean;
-	cd XCSP3-CPP-Parser/samples ; make clean; 
+	if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
 	rm -rf $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~ ./fzn-mistral fz/mistral-fzn
 
 archive: 

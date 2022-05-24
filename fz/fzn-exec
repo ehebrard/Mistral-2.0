@@ -1,35 +1,35 @@
 #! /usr/bin/env python3
-
+#This is a version of mistral-fz used only for the challenge
 import sys
 import subprocess
 
+#mcmd = ['./mistral-fzn']
+#If we add fz/ to the $PATH
+#mcmd = ['mistral-fzn']
+mcmd = ['/entry_data/mistral-fzn']
+
 if len(sys.argv) > 1:
     cmd = sys.argv[1:-1]
-    #print (" c Fine name should be the last argument")
-    #print (" c Use the option '--recommended v' to specify the particular configuration to use")
     filename = sys.argv[-1]
-
 
 #    if '-f' in cmd:
 #        cmd[cmd.index['-f']] = '--follow_annotations'
 
     if '-f' in cmd:
         cmd.remove('-f')
-
-    mcmd = ['./mistral-fzn']
-    #mcmd = ['/entry_data/mistral-fzn']
     
     if '-p' in cmd:
 	#cmd.remove(cmd[cmd.index('-p') +1])
 	#cmd.remove('-p')
 	#Now we support parallelization. The -p gives the number of threads 
-        mcmd = ['./mistral-fzn_parallel']
-        #mcmd = ['/entry_data/mistral-fzn_parallel']
+        #mcmd = ['mistral-fzn_parallel']
+        mcmd = ['/entry_data/mistral-fzn_parallel']
         
+   
 
+   
     mcmd.extend(cmd)
-    #I just removed '--print_sol'
-    mcmd.extend(['-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--follow_annotations' , '--decay', '0.95', '--seed 1815'])
+    mcmd.extend(['--print_sol', '-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--recommended', '3', '--follow_annotations' , '--decay', '0.94', '--seed 1815'])
 
 
 #    for w in mcmd:

@@ -1,4 +1,8 @@
 #!/bin/sh
+
+#This is a version of mistral-mzn used only for the challenge
+
+
 # mzn
 # vim: ft=sh ts=4 sw=4 et
 # Ralph Becket <rafe@csse.unimelb.edu.au>
@@ -23,6 +27,15 @@
 #Mohamed : I don't understand the difference between -I and -G. I made them the same for the 2015 challenge
 
 THISPROG=`basename "$0"`
+
+#FLATZINC=$MISTRAL_DIR/mistral-fz
+#FLATZINC=mistral-fz
+FLATZINC=/entry_data/fzn-exec
+
+
+#MZN2FZN_FLAGS="-I $MISTRAL_DIR/mzn-lib"
+MZN2FZN_FLAGS=" -I /entry_data/mzn-lib "
+
 
 usage () {
     cat <<EOF
@@ -89,9 +102,7 @@ MISTRAL_DIR=.
 
 #MZN2FZN=${MZN2FZN:-mzn2fzn}
 MZN2FZN="minizinc --compile --solver org.minizinc.mzn-fzn" 
-#FLATZINC=$MISTRAL_DIR/mistral-fz
-FLATZINC=./mistral-fz
-#FLATZINC=/entry_data/fzn-exec
+
 CANONICALIZE="cat"
 QUIET=echo
 #Mohamed: Why TMPDZN?  
@@ -102,8 +113,7 @@ DZN=""
 
 # Parse flags.
 
-#MZN2FZN_FLAGS="-I $MISTRAL_DIR/mznlib"
-MZN2FZN_FLAGS=" "
+
 FZNBASE=mistral-fzn
 
 while test $# -gt 0
@@ -135,7 +145,7 @@ do
     --all-solutions)        FLATZINC_FLAGS="$FLATZINC_FLAGS $ARG";;
     -v|--verbose)           MZN2FZN_FLAGS="$MZN2FZN_FLAGS $ARG";;
     -c)                     CANONICALIZE="solns2dzn -c";;
-    -D)                     echo "$1;" | sed 's/;;/;/g' >> $TMPDZN; shift;; 
+    -D)                     echo "$1;" | sed 's/;;/;/g' >> $TMPDZN; shift;;
     --output-mode)         shift;; 
     *mzn)                  MZN=$ARG
 	                    FZNBASE=$FZNBASE-`basename $ARG .mzn`;;
