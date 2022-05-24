@@ -11,22 +11,31 @@ using namespace XCSP3Core;
 XCSP3MistralCallbacks * cb_ptr;
 
 void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
-	try
-	{
-		XCSP3CoreParser parser(&cb);
-		parser.parse(instancefile); // fileName is a string
-	}
-	catch (exception &e)
-	{
-		cout.flush();
-		cout << "\nc \tUnexpected exception :\n c \t" << e.what() << endl;
-		cout << "s UNSUPPORTED" << endl;
-		exit(1);
-	}
-	
-	cb.solver.consolidate();
-	
-	cb.solver.set_goal(cb.goal);
+  // try
+  // {
+  XCSP3CoreParser parser(&cb);
+
+  // cout << "parse\n";
+
+  parser.parse(instancefile); // fileName is a string
+  // }
+  // catch (exception &e)
+  // {
+  // 	cout.flush();
+  // 	cout << "\nc \tUnexpected exception :\n c \t" << e.what() << endl;
+  // 	cout << "s UNSUPPORTED" << endl;
+  // 	exit(1);
+  // }
+
+  // cout << "consolidate\n";
+
+  cb.solver.consolidate();
+
+  // cout << "set goal\n";
+
+  cb.solver.set_goal(cb.goal);
+
+  // cout << "end parse\n";
 }
 
 

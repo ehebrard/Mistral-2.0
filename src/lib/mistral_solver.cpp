@@ -35,7 +35,7 @@
 //#define _DEBUG_NOGOOD true //(statistics.num_filterings == 491)
 
 // #define _DEBUG_SEARCH true
-// #define _DEBUG_AC (statistics.num_propagations > 1000)
+// #define _DEBUG_AC true //(statistics.num_propagations > 1000)
 //(!decisions.empty() && decisions.back().var.id() == 137)
 
 //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738) || (statistics.num_filterings == 44368) || (statistics.num_filterings == 43659))

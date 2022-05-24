@@ -8,7 +8,9 @@ MAINDIR = .
 CCC = g++
 
 
-BOOSTDIR = /Users/boost/boost_1_73_0/boost
+# BOOSTDIR = /Users/Shared/boost_1_78_0
+
+XCSP3PDIR=$(MAINDIR)/XCSP3-CPP-Parser
 
 
 BIN=$(MAINDIR)/bin
@@ -18,6 +20,9 @@ OBJ=$(MAINDIR)/src/obj
 INC=$(MAINDIR)/src/include
 DOC=$(MAINDIR)/doc
 TCL=$(MAINDIR)/tools/tclap/include
+XINC=$(XCSP3PDIR)/include
+XSRC=$(XCSP3PDIR)/src
+XOBJ=$(XCSP3PDIR)/obj
 
 MODELS = $(wildcard $(MOD)/src/*.cpp)
 BINS = $(patsubst $(MOD)/src/%, $(BIN)/%, $(MODELS:.cpp=))
@@ -32,7 +37,7 @@ XLIBAUX = $(XLIBSRC:.cc=.o)
 XLIBOBJ = $(patsubst $(XSRC)/%, $(XOBJ)/%, $(XLIBAUX))
 
 
-CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(BOOSTDIR) 
+CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(XINC) `xml2-config --cflags`
 LFLAGS = -L$(OBJ)
 
 
@@ -49,7 +54,14 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-all: lib $(BINS)
+all: lib xcsp3 $(BINS)
+	
+xcsp3: $(XCSP3PDIR)/lib/libparserxcsp3core.a
+	make MistralXCSP
+
+$(XCSP3PDIR)/lib/libparserxcsp3core.a:
+	cd $(XCSP3PDIR)/samples/; make lib
+
 
 # The library
 lib: $(PLIBOBJ) $(PUTIOBJ)
@@ -60,16 +72,20 @@ $(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
 # The examples
 $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<
-	$(CCC) $(CFLAGS) $(PLIBOBJ) $(XLIBOBJ) $< -lm -o $@
+	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3PDIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $@
 
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
 	$(CCC) $(CFLAGS) -c $< -o $@ 
-
+	
+# MistralXCSP: $(MOD)/obj/MistralXCSP.o $(XCSP3PDIR)/lib/libparserxcsp3core.a
+# 	@echo 'link '$<
+# 	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3PDIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $(BIN)/$@
+	
 # Examples, one at a time
-%: $(MOD)/obj/%.o $(PLIBOBJ) $(XLIBOBJ)
+%: $(MOD)/obj/%.o $(PLIBOBJ) 
 	@echo 'link '$<	
-	$(CCC) $(CFLAGS) $(PLIBOBJ) $(XLIBOBJ) $< -lm -o $(BIN)/$@ 
+	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3PDIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $(BIN)/$@ 
 
 
 DATE := $(shell date '+%y-%m-%d')

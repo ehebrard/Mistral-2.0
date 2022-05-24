@@ -45,7 +45,6 @@
 // #define _DEBUG_HISTORY true //(id == 1422)
 // #define _DEBUG_BUILD true
 
-
 //
 namespace Mistral {
 

@@ -2743,14 +2743,18 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
 	//propagate the bounds, with respect to the initial upper bound
 	Outcome result = (propagate() ? UNKNOWN : UNSAT);
 
+#ifdef NOGOODS
         CriticalPathListener *cpl = new CriticalPathListener(this);
         add(cpl);
+#endif
 
         ////////// dichotomic search ///////////////
         while ( // result == UNKNOWN &&
             minfsble < maxfsble && iteration < params->Dichotomy) {
 
+#ifdef NOGOODS
           cpl->reset();
+#endif
 
           std::cout << "parameters.propagation_limit "
                     << parameters.propagation_limit << std::endl;
@@ -2853,41 +2857,45 @@ void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
     
 		//printStatistics(std::cout, ((params->Verbose ? RUNTIME : 0) + ((params->Verbose || result != UNKNOWN)  ? BTS + PPGS : 0) + OUTCOME) );
 
-                std::cout << " c nogood size = " << cpl->count() << std::endl;
+#ifdef NOGOODS
+    std::cout << " c nogood size = " << cpl->count() << std::endl;
+#endif
 
-                // std::cout << "LEVEL: " << level << " " << this << std::endl;
+    // std::cout << "LEVEL: " << level << " " << this << std::endl;
 
-                restore();
-                statistics.initialise(this);
-                pol->initialise(parameters.restart_limit);
+    restore();
+    statistics.initialise(this);
+    pol->initialise(parameters.restart_limit);
 
-		// std::cout << std::left << std::setw(30) << " c current dichotomic range" << ":" 
-		// 	      << std::right << std::setw(6) << " " << std::setw(5) << minfsble 
-		// 	      << " to " << std::setw(5) << maxfsble << " " << iteration << " " << params->Dichotomy << std::endl;
+    // std::cout << std::left << std::setw(30) << " c current dichotomic range"
+    // << ":"
+    // 	      << std::right << std::setw(6) << " " << std::setw(5) << minfsble
+    // 	      << " to " << std::setw(5) << maxfsble << " " << iteration << " "
+    // << params->Dichotomy << std::endl;
 
-                int count{0};
-                for (auto d : disjuncts)
-                  if (Solver::is_relevant[d.id()])
-                    ++count;
+    int count{0};
+    for (auto d : disjuncts)
+      if (Solver::is_relevant[d.id()])
+        ++count;
 
-                std::cout << " c " << count << " out of " << disjuncts.size
-                          << " disjuncts were used in the proof\n";
+    std::cout << " c " << count << " out of " << disjuncts.size
+              << " disjuncts were used in the proof\n";
 
-                std::cout << " c +==========[ end dichotomic step ]==========+"
-                          << std::endl;
+    std::cout << " c +==========[ end dichotomic step ]==========+"
+              << std::endl;
 
-                ++iteration;
-        }
-        //   } else if( status == SAT ) {
-        //     std::cout << " c Solved during preprocessing!" << std::endl;
+    ++iteration;
+  }
+  //   } else if( status == SAT ) {
+  //     std::cout << " c Solved during preprocessing!" << std::endl;
 
-        //   } else if( status == UNSAT ) {
-        //     std::cout << " c Found inconsistent during preprocessing!" <<
-        //     std::endl;
+  //   } else if( status == UNSAT ) {
+  //     std::cout << " c Found inconsistent during preprocessing!" <<
+  //     std::endl;
 
-        //   }
-    
-	std::cout << std::endl;
+  //   }
+
+  std::cout << std::endl;
 }
  
 
