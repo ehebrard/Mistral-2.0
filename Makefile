@@ -10,7 +10,7 @@ CCC = g++
 
 # BOOSTDIR = /Users/Shared/boost_1_78_0
 
-XCSP3PDIR=$(MAINDIR)/XCSP3-CPP-Parser
+XCSP3DIR=$(MAINDIR)/XCSP3-CPP-Parser
 
 
 BIN=$(MAINDIR)/bin
@@ -20,9 +20,19 @@ OBJ=$(MAINDIR)/src/obj
 INC=$(MAINDIR)/src/include
 DOC=$(MAINDIR)/doc
 TCL=$(MAINDIR)/tools/tclap/include
-XINC=$(XCSP3PDIR)/include
-XSRC=$(XCSP3PDIR)/src
-XOBJ=$(XCSP3PDIR)/obj
+XINC=$(XCSP3DIR)/include
+XSRC=$(XCSP3DIR)/src
+XOBJ=$(XCSP3DIR)/obj
+XLIB=$(XCSP3DIR)/lib
+
+XLIBFLAG = `xml2-config --libs`
+XINCFLAG = `xml2-config --cflags`  -I$(XINC)
+XCPP_FILES := $(wildcard $(XSRC)/*.cc)
+XOBJ_FILES := $(addprefix $(XOBJ)/,$(notdir $(XCPP_FILES:.cc=.o)))
+
+
+CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) 
+
 
 MODELS = $(wildcard $(MOD)/src/*.cpp)
 BINS = $(patsubst $(MOD)/src/%, $(BIN)/%, $(MODELS:.cpp=))
@@ -37,16 +47,8 @@ XLIBAUX = $(XLIBSRC:.cc=.o)
 XLIBOBJ = $(patsubst $(XSRC)/%, $(XOBJ)/%, $(XLIBAUX))
 
 
-CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) -I$(XINC) `xml2-config --cflags`
+
 LFLAGS = -L$(OBJ)
-
-
-## Compile options
-%.o:			CFLAGS +=$(COPTIMIZE)  $(COMPILFLAGS) #-ggdb -D DEBUG
-%.op:			CFLAGS +=$(COPTIMIZE) -pg -ggdb -D NDEBUG
-%.od:			CFLAGS +=-O0 -ggdb -D DEBUG -D INVARIANTS #-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC
-%.or:			CFLAGS +=$(COPTIMIZE) -D NDEBUG
-%.oc:                   CFLAGS +=-O0 -fprofile-arcs -ftest-coverage -ggdb -D DEBUG
 
 
 #------------------------------------------------------------
@@ -56,11 +58,11 @@ LFLAGS = -L$(OBJ)
 
 all: lib xcsp3 $(BINS)
 	
-xcsp3: $(XCSP3PDIR)/lib/libparserxcsp3core.a
-	make MistralXCSP
-
-$(XCSP3PDIR)/lib/libparserxcsp3core.a:
-	cd $(XCSP3PDIR)/samples/; make lib
+# xcsp3: $(XCSP3DIR)/lib/libparserxcsp3core.a
+# 	make MistralXCSP
+#
+# # $(XCSP3DIR)/lib/libparserxcsp3core.a:
+# # 	cd $(XCSP3DIR)/samples/; make lib
 
 
 # The library
@@ -72,28 +74,55 @@ $(OBJ)/%.o:  $(SRC)/%.cpp $(INC)/%.hpp
 # The examples
 $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 	@echo 'link '$<
-	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3PDIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $@
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $@
 
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
 	$(CCC) $(CFLAGS) -c $< -o $@ 
 	
-# MistralXCSP: $(MOD)/obj/MistralXCSP.o $(XCSP3PDIR)/lib/libparserxcsp3core.a
+# MistralXCSP: $(MOD)/obj/MistralXCSP.o $(XCSP3DIR)/lib/libparserxcsp3core.a
 # 	@echo 'link '$<
-# 	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3PDIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $(BIN)/$@
+# 	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3DIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $(BIN)/$@
 	
 # Examples, one at a time
 %: $(MOD)/obj/%.o $(PLIBOBJ) 
 	@echo 'link '$<	
-	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3PDIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $(BIN)/$@ 
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
+	
+	
+xcsp3: $(BIN)/MistralXCSP
+
+testlib: $(XCSP3DIR)/samples/main.cc
+	$(CCC) $(CFLAGS) $(XINCFLAG) -o $(BIN)/testlib main.cc -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core
+
+$(BIN)/MistralXCSP: $(MOD)/obj/MistralXCSP.o $(PLIBOBJ) $(XLIB)/libparserxcsp3core.a
+	@echo 'link '$<
+	$(CCC) $(CFLAGS) $(XINCFLAG) $(PLIBOBJ) -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core $< -lm -o $@
+
+$(MOD)/obj/MistralXCSP.o: $(MOD)/src/MistralXCSP.cpp
+	@echo 'compile '$<
+	$(CCC) $(CFLAGS) $(XINCFLAG) -c $< -o $@ 
+	
+$(XOBJ)/%.o: $(XSRC)/%.cc
+	@mkdir -p $(XOBJ)
+	$(CCC) $(CFLAGS) $(XINCFLAG) -c -o $@ $<
+
+$(XLIB)/libparserxcsp3core.a: $(XOBJ_FILES) 
+	@mkdir -p $(XLIB)
+	ar rcsv $(XLIB)/libparserxcsp3core.a $(XOBJ_FILES)
+
+
+# xclean:
+# 	rm -rf $(XOBJ)/*.o $(XLIB)/* $(BIN)/testlib
+#
 
 
 DATE := $(shell date '+%y-%m-%d')
 
 clean : 
 	cd fz;	make clean;
-	if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
-	rm -rf $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~ ./fzn-mistral fz/mistral-fzn
+	# if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
+	rm -rf $(XOBJ)/*.o $(XLIB)/* $(BIN)/testlib $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~ ./fzn-mistral fz/mistral-fzn
 
 archive: 
 	@echo Export Mistral version 2.0.$(DATE)
@@ -109,3 +138,6 @@ test: bin/unit_test
 	cd fz; make; 
 	bin/unit_test
 	cd fz; ./test_fcts.sh passed
+	
+	
+
