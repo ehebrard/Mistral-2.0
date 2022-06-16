@@ -83,7 +83,7 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
 			int deg = cb.initial_degree[i];
 
 
-			// std::cerr << cb.declared_var_ids[i] << " " << deg << std::endl;
+			// std::cerr << var << " " << cb.declared_var_ids[i] << " " << deg << std::endl;
 
 			if(deg==0 && var.get_initial_min() < var.get_initial_max()) {
 				os << " *";
@@ -129,7 +129,7 @@ static void Mistral_SIGTERM_handler(int signum) {
 
 int main(int argc,char **argv) {
 	
-	std::cout << "c Mistral 16062018" << std::endl;
+	std::cout << "c Mistral XCSP3" << std::endl;
 	SolverCmdLine cmd("Mistral (xcsp3)", ' ', "2.0"); 
 	
   TCLAP::SwitchArg simple_rewriteArg("","simple_rewrite","Uses simple rewriting", false);

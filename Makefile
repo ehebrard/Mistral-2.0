@@ -31,7 +31,7 @@ XCPP_FILES := $(wildcard $(XSRC)/*.cc)
 XOBJ_FILES := $(addprefix $(XOBJ)/,$(notdir $(XCPP_FILES:.cc=.o)))
 
 
-CFLAGS = -Wall -std=c++11 -I$(INC) -I$(TCL) 
+CFLAGS = -Wall -std=c++11 $(COPTIMIZE) -I$(INC) -I$(TCL) 
 
 
 MODELS = $(wildcard $(MOD)/src/*.cpp)
@@ -56,13 +56,7 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-all: lib xcsp3 $(BINS)
-	
-# xcsp3: $(XCSP3DIR)/lib/libparserxcsp3core.a
-# 	make MistralXCSP
-#
-# # $(XCSP3DIR)/lib/libparserxcsp3core.a:
-# # 	cd $(XCSP3DIR)/samples/; make lib
+all: lib $(BINS)
 
 
 # The library
@@ -79,27 +73,23 @@ $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
 	$(CCC) $(CFLAGS) -c $< -o $@ 
-	
-# MistralXCSP: $(MOD)/obj/MistralXCSP.o $(XCSP3DIR)/lib/libparserxcsp3core.a
-# 	@echo 'link '$<
-# 	$(CCC) $(CFLAGS) $(PLIBOBJ) -L $(XCSP3DIR)/lib `xml2-config --libs` -lparserxcsp3core $< -lm -o $(BIN)/$@
-	
+		
 # Examples, one at a time
 %: $(MOD)/obj/%.o $(PLIBOBJ) 
 	@echo 'link '$<	
 	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
 	
 	
-xcsp3: $(BIN)/MistralXCSP
+# xcsp3: $(BIN)/MistralXCSP
 
 testlib: $(XCSP3DIR)/samples/main.cc
 	$(CCC) $(CFLAGS) $(XINCFLAG) -o $(BIN)/testlib main.cc -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core
 
 $(BIN)/MistralXCSP: $(MOD)/obj/MistralXCSP.o $(PLIBOBJ) $(XLIB)/libparserxcsp3core.a
 	@echo 'link '$<
-	$(CCC) $(CFLAGS) $(XINCFLAG) $(PLIBOBJ) -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core $< -lm -o $@
+	$(CCC) $(COPTIMIZE) $(PLIBOBJ) -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core $< -lm -o $@
 
-$(MOD)/obj/MistralXCSP.o: $(MOD)/src/MistralXCSP.cpp
+$(MOD)/obj/MistralXCSP.o: $(MOD)/src/MistralXCSP.cpp $(MOD)/src/XCSP3MistralCallbacks.hpp 
 	@echo 'compile '$<
 	$(CCC) $(CFLAGS) $(XINCFLAG) -c $< -o $@ 
 	
@@ -112,16 +102,11 @@ $(XLIB)/libparserxcsp3core.a: $(XOBJ_FILES)
 	ar rcsv $(XLIB)/libparserxcsp3core.a $(XOBJ_FILES)
 
 
-# xclean:
-# 	rm -rf $(XOBJ)/*.o $(XLIB)/* $(BIN)/testlib
-#
-
-
 DATE := $(shell date '+%y-%m-%d')
 
 clean : 
 	cd fz;	make clean;
-	# if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
+ 	# if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
 	rm -rf $(XOBJ)/*.o $(XLIB)/* $(BIN)/testlib $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~ ./fzn-mistral fz/mistral-fzn
 
 archive: 

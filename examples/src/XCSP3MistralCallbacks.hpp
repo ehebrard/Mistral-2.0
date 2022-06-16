@@ -44,7 +44,7 @@
 *
 */
 
-#define _VERBOSE_ true
+// #define _VERBOSE_ true
 // #define _DEBUG_CUMULATIVE
 // #define _DEBUG_MDD
 // #define _DEBUG_REG true
@@ -849,7 +849,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var,
 
   ++initial_degree[id_map[var->id]];
 
-  cout << "here " << var->id << " / " << variable.size() << "\n";
+  // cout << "here " << var->id << " / " << variable.size() << "\n";
 
   if (support) {
     auto the_min = *std::min_element(begin(tuples), end(tuples));
@@ -863,11 +863,11 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var,
       last_domain->add(t);
     }
 
-    cout << *last_domain << endl;
+    // cout << *last_domain << endl;
 
     solver.add(Member(variable[var->id], *last_domain));
 
-    cout << 22 << endl;
+    // cout << 22 << endl;
 
   } else {
 
@@ -2645,9 +2645,9 @@ void XCSP3MistralCallbacks::buildConstraintCardinality(
     for (auto X : scope)
       solver.add(Member(X, values));
 
-  if (values.back() - (*begin(values)) + 1 == (int)(values.size()))
+  if (values.back() - (*begin(values)) + 1 == (int)(values.size())) {
     solver.add(Occurrences(scope, values, occurs, occurs));
-  else {
+  } else {
     for (size_t i = 0; i < values.size(); ++i) {
       solver.add(Occurrence(scope, values[i]) == occurs[i]);
     }
@@ -3234,6 +3234,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id,
     ++initial_degree[id_map[x->id]];
     equalities.add(variable[x->id] == variable[value->id]);
   }
+	
+	++initial_degree[id_map[value->id]];
+	
   solver.add(BoolSum(equalities) > 0);
 }
 
@@ -3260,7 +3263,11 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id,
 
   VarArray scope;
   getVariables(list, scope);
+	++initial_degree[id_map[index->id]];
   solver.add(Element(scope, variable[index->id], startIndex) == value);
+	
+	
+	
 }
 
 void XCSP3MistralCallbacks::buildConstraintElement(
@@ -3305,6 +3312,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(
   // 	std::cout << " " << x.get_value() ;
   // }
   // std::cout << std::endl;
+	
+	++initial_degree[id_map[index->id]];
+	++initial_degree[id_map[value->id]];
 
   solver.add(Element(scope, variable[index->id], startIndex) ==
              variable[value->id]);
@@ -3329,6 +3339,10 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id, vector<int> &list,
   for (auto v : list) {
     scope.add(Variable(v, v));
   }
+	
+	++initial_degree[id_map[index->id]];
+	++initial_degree[id_map[value->id]];
+	
   solver.add(Element(scope, variable[index->id], startIndex) ==
              variable[value->id]);
 }
@@ -3351,6 +3365,9 @@ void XCSP3MistralCallbacks::buildConstraintElement(string id,
 
   VarArray scope;
   getVariables(list, scope);
+	
+	++initial_degree[id_map[index->id]];
+	// ++initial_degree[id_map[value->id]];
 
   Variable Elt = Element(scope, variable[index->id], startIndex);
 
@@ -3427,6 +3444,11 @@ void XCSP3MistralCallbacks::buildConstraintElement(
     }
     rows.add(Element(scope, variable[rowIndex->id], startRowIndex));
   }
+	
+	++initial_degree[id_map[rowIndex->id]];
+	++initial_degree[id_map[colIndex->id]];
+	++initial_degree[id_map[value->id]];
+	
 
   solver.add(Element(rows, variable[colIndex->id], startColIndex) ==
              variable[value->id]);
@@ -3455,6 +3477,10 @@ void XCSP3MistralCallbacks::buildConstraintElement(
     getVariables(row, scope);
     rows.add(Element(scope, variable[rowIndex->id], startRowIndex));
   }
+	
+	++initial_degree[id_map[rowIndex->id]];
+	++initial_degree[id_map[colIndex->id]];
+	// ++initial_degree[id_map[value->id]];
 
   solver.add(Element(rows, variable[colIndex->id], startColIndex) == value);
 }
@@ -3483,6 +3509,10 @@ void XCSP3MistralCallbacks::buildConstraintElement(
     getVariables(row, scope);
     rows.add(Element(scope, variable[rowIndex->id], startRowIndex));
   }
+	
+	++initial_degree[id_map[rowIndex->id]];
+	++initial_degree[id_map[colIndex->id]];
+	++initial_degree[id_map[value->id]];
 
   solver.add(Element(rows, variable[colIndex->id], startColIndex) ==
              variable[value->id]);
