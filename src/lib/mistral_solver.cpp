@@ -1919,6 +1919,8 @@ Mistral::Outcome Mistral::Solver::restart_search(const int root, const bool _res
   }
 
   Outcome satisfiability = UNKNOWN;
+	
+	std::cout << "obj\n";
 
   statistics.objective_value = objective->value();
 	
