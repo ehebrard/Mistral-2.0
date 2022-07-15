@@ -1322,7 +1322,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(
   }
 
   int tuple[3];
-  for (const auto t : transitions) {
+  for (const auto &t : transitions) {
     auto cons{0};
 
     if (t.from == root) {

@@ -31,7 +31,7 @@ XCPP_FILES := $(wildcard $(XSRC)/*.cc)
 XOBJ_FILES := $(addprefix $(XOBJ)/,$(notdir $(XCPP_FILES:.cc=.o)))
 
 
-CFLAGS = -Wall -std=c++11 $(COPTIMIZE) -I$(INC) -I$(TCL) 
+CFLAGS = -Wall -std=c++11 $(COPTIMIZE) -I$(COMPILER_PATH) -I$(INC) -I$(TCL) 
 
 
 MODELS = $(wildcard $(MOD)/src/*.cpp)
@@ -56,7 +56,7 @@ LFLAGS = -L$(OBJ)
 #------------------------------------------------------------
 
 
-all: lib $(BINS)
+all: $(XCSP3DIR) lib $(BINS)
 
 
 # The library
@@ -84,6 +84,10 @@ $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 
 testlib: $(XCSP3DIR)/samples/main.cc
 	$(CCC) $(CFLAGS) $(XINCFLAG) -o $(BIN)/testlib main.cc -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core
+
+# Gille's parser for XCSP 3
+$(XCSP3DIR):
+	git clone https://github.com/xcsp3team/XCSP3-CPP-Parser
 
 $(BIN)/MistralXCSP: $(MOD)/obj/MistralXCSP.o $(PLIBOBJ) $(XLIB)/libparserxcsp3core.a
 	@echo 'link '$<
