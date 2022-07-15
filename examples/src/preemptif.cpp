@@ -39,15 +39,15 @@ int main( int argc, char** argv )
 	
 	
 	for(auto i{0}; i<jsp.nTasks(); ++i) {
-		solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);	
+		solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
 	}
-	
-	
+
+
 	for(auto j{0}; j<jsp.nJobs(); ++j) {
 		for(auto i{1}; i<jsp.nTasksInJob(j); ++i) {
-			solver.add(start_time[jsp.getJobTask(j,i)] >= end_time[jsp.getJobTask(j,i-1)]);	
+			solver.add(start_time[jsp.getJobTask(j,i)] >= end_time[jsp.getJobTask(j,i-1)]);
 		}
-	}	
+	}
 	
 	
 	
@@ -91,7 +91,15 @@ int main( int argc, char** argv )
 	// 	std::cout << solver.constraints.size << std::endl;
 	//
 	// }
+	
+	VarArray end_job;
+	for(auto j{0}; j<jsp.nJobs(); ++j) {
+		auto i{jsp.nTasksInJob(j)};
+		end_job.add(end_time[i]);
+	}
 
+	
+	solver.minimize(Max(end_job));
 
 	
 
@@ -107,23 +115,23 @@ int main( int argc, char** argv )
 	RestartPolicy *restart;
 
 
-	// restart	= new Luby();
-	// restart->base = 128;
-	// heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
-	//
-	//
-	// std::cout << "search\n";
-	//
-	// solver.depth_first_search(solver.variables, heuristic, restart);
+	restart	= new Luby();
+	restart->base = 128;
+	heuristic = new LastConflict < GenericDVO < MinDomainOverWeight, 1, ConflictCountManager >, SolutionGuided< MinValue, RandomMinMax >, SolutionGuided< MinValue, RandomMinMax >, 1 > (&solver);
+
+
+	solver.depth_first_search(solver.variables, heuristic, restart);
 	
-	solver.depth_first_search();
+	// solver.depth_first_search();
 	
-
-  stats.print(std::cout, "");  
-  std::cout << "s " << (stats.num_solutions ? "SATISFIABLE" : "UNSATISFIABLE") 
-   	    << " \nv 00" << std::endl;
-
-
+	
+	for(auto j{0}; j<jsp.nJobs(); ++j) {
+		for(auto i{0}; i<jsp.nTasksInJob(j); ++i) {
+			std::cout << " t" << (i+1) << ": [" << start_time[jsp.getJobTask(j,i)].get_solution_int_value() 
+				<< ".." << end_time[jsp.getJobTask(j,i)].get_solution_int_value() << "]" ;
+		}
+		std::cout << std::endl;
+	}
 
 }
   
