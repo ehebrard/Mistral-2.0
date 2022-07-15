@@ -29,7 +29,7 @@ if len(sys.argv) > 1:
 
     mcmd.extend(cmd)
     #I just removed '--print_sol'
-    mcmd.extend(['-v 0', '-z 2', '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--follow_annotations' , '--decay', '0.95', '--seed 1815'])
+    mcmd.extend(['-v 0', '-z 2', '--print_sol' , '--prefix_sol', '%', '--prefix_comment', '%', '--prefix_obj', '%', '--prefix_stat', '%', '--prefix_res', '%', filename, '--follow_annotations' , '--decay', '0.95', '--seed 1815'])
 
 
 #    for w in mcmd:
