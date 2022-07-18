@@ -15214,7 +15214,7 @@ Mistral::ConstraintNoOverlap::~ConstraintNoOverlap() {
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
-  // for(auto i{0}; i<duration.size(); ++i) {
+  // for(auto i{0}; i<n; ++i) {
   // 	auto p{duration[i]};
   // 	auto est{st[i].get_min()};
   // 	auto ect{et[i].get_min()};
@@ -15228,6 +15228,8 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
   std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int b) {
     return scope[a + n].get_max() <= scope[b + n].get_max();
   });
+
+  auto horizon{scope[*lct_order.rbegin() + n].get_max()};
 
   // std::cout << "EST\n";
   // for (auto i : est_order) {
@@ -15244,8 +15246,9 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
   //
   // std::cout << std::endl;
 	int prev;
-	
-	prev = -1;
+
+        // std::cout << std::endl << "forward:\n";
+        prev = -1;
 	T.clear();
   for (auto i{0}; i < est_order.size(); ++i) {
     theta_rank[est_order[i]] = i;
@@ -15255,23 +15258,49 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
     T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
 
     // std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
-    //           << scope[a + duration.size()].get_max() << "] : " << T.getBound()
+    //           << scope[a + n].get_max() << "] : " << T.getBound()
+    //           << " (" << scope[a + n].get_min() << ")"
     //           << std::endl;
-    //	
-		
-		if(T.getBound() > scope[a + duration.size()].get_max()) {
-			return FAILURE(a + duration.size());
-		} else if(prev < 0 or T.getBound() > scope[prev + duration.size()].get_max()) {
-      if (FAILED(scope[a + duration.size()].set_min(T.getBound()))) {
-        return FAILURE(a + duration.size());
-      }
-		}
-		
 
-		prev = a;
+    if (T.getBound() > scope[a + n].get_max()) {
+      return FAILURE(a + n);
+    } else if (prev < 0 or T.getBound() > scope[prev + n].get_max()) {
+      if (FAILED(scope[a + n].set_min(T.getBound()))) {
+        return FAILURE(a + n);
+      }
+    }
+
+    prev = a;
   }
-	
-	
+
+  // std::cout << std::endl << "backward:\n";
+  prev = -1;
+  T.clear();
+  for (auto i{0}; i < lct_order.size(); ++i) {
+    theta_rank[lct_order[lct_order.size() - i - 1]] = i;
+  }
+  for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
+    auto a{*ai};
+
+    T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
+
+    // std::cout << "[" << (horizon - scope[a + n].get_max()) << ".." <<
+    // duration[a] << ".."
+    //           << (horizon - scope[a].get_min()) << "] : " << T.getBound()
+    //           << " (" << (horizon - scope[a].get_max()) << ")"
+    //           << std::endl;
+
+    if (T.getBound() > (horizon - scope[a].get_min())) {
+      assert(false); // this check is equivalent to the forward pass
+      return FAILURE(a);
+    } else if (prev < 0 or T.getBound() > (horizon - scope[prev].get_min())) {
+      if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
+        return FAILURE(a);
+      }
+    }
+
+    prev = a;
+  }
 
   return CONSISTENT;
 }
