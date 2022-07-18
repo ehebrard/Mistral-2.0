@@ -69,7 +69,8 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 // #define _DEBUG_FACTOR (id==23)
 
-
+#define _DEBUG_NOOVERLAP                                                       \
+  (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -15214,8 +15215,23 @@ Mistral::ConstraintNoOverlap::~ConstraintNoOverlap() {
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
+#ifdef _DEBUG_NOOVERLAP
+
+  int num_assigned{0};
+  for (auto x : scope) {
+    num_assigned += x.is_ground();
+  }
+
+  if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+    std::cout << "propagate[" << this->id << "] " << this << std::endl;
+    for (int i = 0; i < scope.size; ++i)
+      std::cout << scope[i].get_domain() << (changes.contain(i) ? "* " : " ");
+    std::cout << std::endl << active << std::endl;
+  }
+#endif
+
   // for(auto i{0}; i<n; ++i) {
-  // 	auto p{duration[i]};
+  // 	auto p{duration[i]}
   // 	auto est{st[i].get_min()};
   // 	auto ect{et[i].get_min()};
   // }
@@ -15231,25 +15247,28 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
   auto horizon{scope[*lct_order.rbegin() + n].get_max()};
 
-  // std::cout << "EST\n";
-  // for (auto i : est_order) {
-  //   std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
-  //             << std::endl;
-  // }
-  //
-  // std::cout << "\nLCT\n";
-  // for (auto i : lct_order) {
-  //   std::cout << i << " " << scope[i + n] << ": " << scope[i +
-  //   n].get_domain()
-  //             << std::endl;
-  // }
-  //
-  // std::cout << std::endl;
-	int prev;
+#ifdef _DEBUG_NOOVERLAP
+  if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+    std::cout << "EST\n";
+    for (auto i : est_order) {
+      std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+                << std::endl;
+    }
 
-        // std::cout << std::endl << "forward:\n";
-        prev = -1;
-	T.clear();
+    std::cout << "\nLCT\n";
+    for (auto i : lct_order) {
+      std::cout << i << " " << scope[i + n] << ": " << scope[i + n].get_domain()
+                << std::endl;
+    }
+
+    std::cout << std::endl << std::endl << "forward:\n";
+  }
+#endif
+
+  int prev;
+
+  prev = -1;
+  T.clear();
   for (auto i{0}; i < est_order.size(); ++i) {
     theta_rank[est_order[i]] = i;
   }
@@ -15257,10 +15276,13 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
     T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
 
-    // std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
-    //           << scope[a + n].get_max() << "] : " << T.getBound()
-    //           << " (" << scope[a + n].get_min() << ")"
-    //           << std::endl;
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+      std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
+                << scope[a + n].get_max() << "] : " << T.getBound() << " ("
+                << scope[a + n].get_min() << ")" << std::endl;
+    }
+#endif
 
     if (T.getBound() > scope[a + n].get_max()) {
       return FAILURE(a + n);
@@ -15273,7 +15295,12 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
     prev = a;
   }
 
-  // std::cout << std::endl << "backward:\n";
+#ifdef _DEBUG_NOOVERLAP
+  if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+    std::cout << std::endl << "backward:\n";
+  }
+#endif
+
   prev = -1;
   T.clear();
   for (auto i{0}; i < lct_order.size(); ++i) {
@@ -15284,11 +15311,14 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
     T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
 
-    // std::cout << "[" << (horizon - scope[a + n].get_max()) << ".." <<
-    // duration[a] << ".."
-    //           << (horizon - scope[a].get_min()) << "] : " << T.getBound()
-    //           << " (" << (horizon - scope[a].get_max()) << ")"
-    //           << std::endl;
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+      std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
+                << duration[a] << ".." << (horizon - scope[a].get_min())
+                << "] : " << T.getBound() << " ("
+                << (horizon - scope[a].get_max()) << ")" << std::endl;
+    }
+#endif
 
     if (T.getBound() > (horizon - scope[a].get_min())) {
       assert(false); // this check is equivalent to the forward pass
@@ -15303,121 +15333,124 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
   }
 
   return CONSISTENT;
-}
-
-int Mistral::ConstraintNoOverlap::check(const int *s) const {
-  // int i = scope.size, j;
-  // while (--i) {
-  //   j = i;
-  //   while (j--)
-  //     if (s[i] == s[j] && s[i] != exception)
-  //       return 1;
-  // }
-  return 0;
-}
-
-std::ostream &Mistral::ConstraintNoOverlap::display(std::ostream &os) const {
-  os << "NoOverlap(" << scope[0] << ".." << scope[duration.size()];
-  for (unsigned int i = 1; i < scope.size; ++i)
-    os << ", " << scope[i] << ".." << scope[duration.size() + i];
-  os << ")";
-  return os;
-}
-
-/**********************************************
-* Multi-AtMostSeqCard Constraint
-**********************************************/
-
-void Mistral::ConstraintMultiAtMostSeqCard::initialise_struct(const int k,
-                                                              const int d,
-                                                              const int *p,
-                                                              const int *q) {
-  priority = 0;
-
-  _k = k;
-  _d = d;
-  if (_k) {
-    _p = new int[_k];
-    _q = new int[_k];
-    memcpy(_p, p, _k * sizeof(int));
-    memcpy(_q, q, _k * sizeof(int));
   }
 
-  wl = NULL;
-  wr = NULL;
-  occurrences = NULL;
-  cardinality = NULL;
-  lcumulated = NULL;
-  rcumulated = NULL;
-}
-
-Mistral::ConstraintMultiAtMostSeqCard::ConstraintMultiAtMostSeqCard()
-    : GlobalConstraint() {
-  initialise_struct();
-}
-
-Mistral::ConstraintMultiAtMostSeqCard::ConstraintMultiAtMostSeqCard(
-    Vector<Variable> &scp, const int k, const int d, const int *p, const int *q)
-    : GlobalConstraint(scp) {
-  initialise_struct(k, d, p, q);
-}
-
-Mistral::ConstraintMultiAtMostSeqCard::ConstraintMultiAtMostSeqCard(
-    std::vector<Variable> &scp, const int k, const int d, const int *p,
-    const int *q)
-    : GlobalConstraint(scp) {
-  initialise_struct(k, d, p, q);
-}
-
-void Mistral::ConstraintMultiAtMostSeqCard::initialise() {
-  ConstraintImplementation::initialise();
-  for (unsigned int i = 0; i < scope.size; ++i)
-    trigger_on(_VALUE_, scope[i]);
-
-  int max_q = _q[0];
-  for (int i = 1; i < _k; ++i)
-    if (max_q < _q[i])
-      max_q = _q[i];
-
-  int arity = scope.size;
-
-  wl = new int[arity + 2 * max_q];
-  std::fill(wl, wl + arity + 2 * max_q, 0);
-  wl += max_q;
-
-  wr = new int[arity + 2 * max_q];
-  std::fill(wr, wr + arity + 2 * max_q, 0);
-  wr += max_q;
-
-  occurrences = new int *[_k];
-  for (int i = 0; i < _k; ++i) {
-    occurrences[i] = new int[arity + _p[i] + 1];
-    std::fill(occurrences[i], occurrences[i] + arity + _p[i] + 1, 0);
-    occurrences[i] += arity;
+  int Mistral::ConstraintNoOverlap::check(const int *s) const {
+    // int i = scope.size, j;
+    // while (--i) {
+    //   j = i;
+    //   while (j--)
+    //     if (s[i] == s[j] && s[i] != exception)
+    //       return 1;
+    // }
+    return 0;
   }
 
-  cardinality = new int *[_k];
-  for (int i = 0; i < _k; ++i) {
-    cardinality[i] = new int[2 * _q[i]];
-    std::fill(cardinality[i], cardinality[i] + 2 * _q[i], 0);
-    cardinality[i] += _q[i];
+  std::ostream &Mistral::ConstraintNoOverlap::display(std::ostream &os) const {
+    os << "NoOverlap(" << scope[0] << ".." << scope[duration.size()] << "("
+       << duration[0] << ")";
+    for (unsigned int i = 1; i < duration.size(); ++i)
+      os << ", " << scope[i] << ".." << scope[duration.size() + i] << "("
+         << duration[i] << ")";
+    os << ")";
+    return os;
   }
 
-  lcumulated = new int[arity + 1];
-  rcumulated = new int[arity + 1];
-  reverse.initialise(0, arity);
-  for (int i = 0; i < arity; ++i)
-    reverse.add(scope[arity - 1 - i]);
+  /**********************************************
+   * Multi-AtMostSeqCard Constraint
+   **********************************************/
 
-  GlobalConstraint::initialise();
-}
+  void Mistral::ConstraintMultiAtMostSeqCard::initialise_struct(const int k,
+                                                                const int d,
+                                                                const int *p,
+                                                                const int *q) {
+    priority = 0;
 
-void Mistral::ConstraintMultiAtMostSeqCard::mark_domain() {
-  for (int i = scope.size; i;)
-    get_solver()->forbid(scope[--i].id(), LIST_VAR);
-}
+    _k = k;
+    _d = d;
+    if (_k) {
+      _p = new int[_k];
+      _q = new int[_k];
+      memcpy(_p, p, _k * sizeof(int));
+      memcpy(_q, q, _k * sizeof(int));
+    }
 
-Mistral::ConstraintMultiAtMostSeqCard::~ConstraintMultiAtMostSeqCard() {
+    wl = NULL;
+    wr = NULL;
+    occurrences = NULL;
+    cardinality = NULL;
+    lcumulated = NULL;
+    rcumulated = NULL;
+  }
+
+  Mistral::ConstraintMultiAtMostSeqCard::ConstraintMultiAtMostSeqCard()
+      : GlobalConstraint() {
+    initialise_struct();
+  }
+
+  Mistral::ConstraintMultiAtMostSeqCard::ConstraintMultiAtMostSeqCard(
+      Vector<Variable> &scp, const int k, const int d, const int *p,
+      const int *q)
+      : GlobalConstraint(scp) {
+    initialise_struct(k, d, p, q);
+  }
+
+  Mistral::ConstraintMultiAtMostSeqCard::ConstraintMultiAtMostSeqCard(
+      std::vector<Variable> &scp, const int k, const int d, const int *p,
+      const int *q)
+      : GlobalConstraint(scp) {
+    initialise_struct(k, d, p, q);
+  }
+
+  void Mistral::ConstraintMultiAtMostSeqCard::initialise() {
+    ConstraintImplementation::initialise();
+    for (unsigned int i = 0; i < scope.size; ++i)
+      trigger_on(_VALUE_, scope[i]);
+
+    int max_q = _q[0];
+    for (int i = 1; i < _k; ++i)
+      if (max_q < _q[i])
+        max_q = _q[i];
+
+    int arity = scope.size;
+
+    wl = new int[arity + 2 * max_q];
+    std::fill(wl, wl + arity + 2 * max_q, 0);
+    wl += max_q;
+
+    wr = new int[arity + 2 * max_q];
+    std::fill(wr, wr + arity + 2 * max_q, 0);
+    wr += max_q;
+
+    occurrences = new int *[_k];
+    for (int i = 0; i < _k; ++i) {
+      occurrences[i] = new int[arity + _p[i] + 1];
+      std::fill(occurrences[i], occurrences[i] + arity + _p[i] + 1, 0);
+      occurrences[i] += arity;
+    }
+
+    cardinality = new int *[_k];
+    for (int i = 0; i < _k; ++i) {
+      cardinality[i] = new int[2 * _q[i]];
+      std::fill(cardinality[i], cardinality[i] + 2 * _q[i], 0);
+      cardinality[i] += _q[i];
+    }
+
+    lcumulated = new int[arity + 1];
+    rcumulated = new int[arity + 1];
+    reverse.initialise(0, arity);
+    for (int i = 0; i < arity; ++i)
+      reverse.add(scope[arity - 1 - i]);
+
+    GlobalConstraint::initialise();
+  }
+
+  void Mistral::ConstraintMultiAtMostSeqCard::mark_domain() {
+    for (int i = scope.size; i;)
+      get_solver()->forbid(scope[--i].id(), LIST_VAR);
+  }
+
+  Mistral::ConstraintMultiAtMostSeqCard::~ConstraintMultiAtMostSeqCard() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete atmostseqcard constraint" << std::endl;
 #endif
@@ -15450,7 +15483,7 @@ Mistral::ConstraintMultiAtMostSeqCard::~ConstraintMultiAtMostSeqCard() {
 
   delete[] _q;
   delete[] _p;
-}
+  }
 
 bool Mistral::ConstraintMultiAtMostSeqCard::greedy_assign(int *w,
                                                           int *cumulated,

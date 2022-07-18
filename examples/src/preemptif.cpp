@@ -2,6 +2,7 @@
 
 #include "mistral_scheduler.hpp"
 
+#define VERBOSE
 
 using namespace Mistral;
 
@@ -108,7 +109,11 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
 
       // there is no task to run
       if (H.size() == 0) {
+
+#ifdef VERBOSE
         std::cout << "idle from " << t << " to " << next << std::endl;
+#endif
+
         t = next;
         std::pair<int, int> I{-1, next};
         sched.push_back(I);
@@ -126,7 +131,10 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
 
           assert(r <= next);
 
+#ifdef VERBOSE
           std::cout << "idle from " << t << " to " << r << std::endl;
+#endif
+
           std::pair<int, int> I{-1, r};
           sched.push_back(I);
 
@@ -136,9 +144,13 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
           auto idx{urgent_task.index};
 
           if (t + urgent_task.duration <= next) {
+
+#ifdef VERBOSE
             std::cout << "run " << urgent_task.index
                       << " until completion (t=" << (t + urgent_task.duration)
                       << ")\n";
+#endif
+
             t += urgent_task.duration;
             urgent_task.setDuration(0);
 
@@ -149,15 +161,22 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
           } else {
             // auto incr{next - t}
             auto p{urgent_task.duration + t - next};
+
+#ifdef VERBOSE
             std::cout << "run " << urgent_task.index << " for " << (next - t)
                       << " unit of time (t=" << next << ", " << p
                       << " remaining)\n";
+#endif
+
             urgent_task.setDuration(p);
             t = next;
           }
 
+#ifdef VERBOSE
           std::cout << "insert <" << idx << ", " << t << ">\n";
-          if (idx != sched.back().first) {
+#endif
+
+          if (sched.empty() or idx != sched.back().first) {
             std::pair<int, int> I{idx, t};
             sched.push_back(I);
           } else {
@@ -230,10 +249,12 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
 
     auto next{start_time[dd.index].get_solution_int_value()};
 
-    // std::cout << t << " -> " << next << "  " << dd.index << ": "
-    //           << start_time[dd.index].get_solution_int_value() << ".."
-    //           << end_time[dd.index].get_solution_int_value() << " ("
-    //           << jsp.getDuration(dd.index) << ")" << std::endl;
+#ifdef VERBOSE
+    std::cout << t << " -> " << next << "  " << dd.index << ": "
+              << start_time[dd.index].get_solution_int_value() << ".."
+              << end_time[dd.index].get_solution_int_value() << " ("
+              << jsp.getDuration(dd.index) << ")" << std::endl;
+#endif
 
     while (next > t) {
 
@@ -272,6 +293,12 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
             t += H.get_min().duration;
 
             if (t > H.get_min().date) {
+
+#ifdef VERBOSE
+              std::cout << t << " > " << H.get_min().index << "'s end ("
+                        << H.get_min().date << ")\n";
+#endif
+
               return false;
             }
 
@@ -309,6 +336,11 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
     t += a.duration;
 
     if (t > a.date) {
+
+#ifdef VERBOSE
+      std::cout << t << " > " << a.index << "'s end (" << a.date << ")\n";
+#endif
+
       return false;
     }
   }
@@ -342,7 +374,7 @@ int main( int argc, char** argv )
 
   Solver solver;
 
-  solver.parameters.verbosity = 2;
+  solver.parameters.verbosity = 3;
 
   VarArray start_time(jsp.nTasks(), 0, ub);
   VarArray end_time(jsp.nTasks(), 0, ub);
@@ -424,6 +456,8 @@ int main( int argc, char** argv )
   solver.initialise_search(solver.variables, heuristic, restart);
 
   solver.propagate();
+
+  // exit(1);
 
   int LB = 0;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
