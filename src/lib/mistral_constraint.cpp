@@ -15173,6 +15173,128 @@ Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit,
 }
 #endif
 
+Mistral::ConstraintNoOverlap::ConstraintNoOverlap(Vector<Variable> &scp,
+                                                  const std::vector<int> &d)
+    : GlobalConstraint(scp), duration(d), T(d.size()) {
+
+  for (unsigned int i = 0; i < duration.size(); ++i) {
+    lct_order.push_back(i);
+    est_order.push_back(i);
+  }
+
+  theta_rank.resize(est_order.size(), 0);
+
+  priority = 2;
+
+  assert(2 * duration.size() == scope.size);
+}
+
+void Mistral::ConstraintNoOverlap::initialise() {
+  ConstraintImplementation::initialise();
+  for (unsigned int i = 0; i < scope.size; ++i) {
+    trigger_on(_RANGE_, scope[i]);
+  }
+  GlobalConstraint::initialise();
+  // culprit = -1;
+  // GlobalConstraint::set_idempotent(true);
+}
+
+void Mistral::ConstraintNoOverlap::mark_domain() {
+  // for (unsigned int i = scope.size; i;) {
+  //   // get_solver()->mark_non_convex(scope[i].id());
+  //   get_solver()->forbid(scope[--i].id(), RANGE_VAR);
+  // }
+}
+
+Mistral::ConstraintNoOverlap::~ConstraintNoOverlap() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete no overlap constraint" << std::endl;
+#endif
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
+
+  // for(auto i{0}; i<duration.size(); ++i) {
+  // 	auto p{duration[i]};
+  // 	auto est{st[i].get_min()};
+  // 	auto ect{et[i].get_min()};
+  // }
+
+  std::sort(est_order.begin(), est_order.end(), [&](const int a, const int b) {
+    return scope[a].get_min() <= scope[b].get_min();
+  });
+
+  auto n{duration.size()};
+  std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int b) {
+    return scope[a + n].get_max() <= scope[b + n].get_max();
+  });
+
+  // std::cout << "EST\n";
+  // for (auto i : est_order) {
+  //   std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+  //             << std::endl;
+  // }
+  //
+  // std::cout << "\nLCT\n";
+  // for (auto i : lct_order) {
+  //   std::cout << i << " " << scope[i + n] << ": " << scope[i +
+  //   n].get_domain()
+  //             << std::endl;
+  // }
+  //
+  // std::cout << std::endl;
+	int prev;
+	
+	prev = -1;
+	T.clear();
+  for (auto i{0}; i < est_order.size(); ++i) {
+    theta_rank[est_order[i]] = i;
+  }
+  for (auto a : lct_order) {
+
+    T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
+
+    // std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
+    //           << scope[a + duration.size()].get_max() << "] : " << T.getBound()
+    //           << std::endl;
+    //	
+		
+		if(T.getBound() > scope[a + duration.size()].get_max()) {
+			return FAILURE(a + duration.size());
+		} else if(prev < 0 or T.getBound() > scope[prev + duration.size()].get_max()) {
+      if (FAILED(scope[a + duration.size()].set_min(T.getBound()))) {
+        return FAILURE(a + duration.size());
+      }
+		}
+		
+
+		prev = a;
+  }
+	
+	
+
+  return CONSISTENT;
+}
+
+int Mistral::ConstraintNoOverlap::check(const int *s) const {
+  // int i = scope.size, j;
+  // while (--i) {
+  //   j = i;
+  //   while (j--)
+  //     if (s[i] == s[j] && s[i] != exception)
+  //       return 1;
+  // }
+  return 0;
+}
+
+std::ostream &Mistral::ConstraintNoOverlap::display(std::ostream &os) const {
+  os << "NoOverlap(" << scope[0] << ".." << scope[duration.size()];
+  for (unsigned int i = 1; i < scope.size; ++i)
+    os << ", " << scope[i] << ".." << scope[duration.size() + i];
+  os << ")";
+  return os;
+}
+
 /**********************************************
 * Multi-AtMostSeqCard Constraint
 **********************************************/

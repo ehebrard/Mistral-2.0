@@ -5293,8 +5293,70 @@ namespace Mistral {
     //@}
   };
 
+  /***********************************************
+   * NoOverlap Constraint (overload check only).
+   ***********************************************/
+  /*! \class ConstraintNoOverlap
+    \brief  NoOverlap Constraint
+  */
+  class ConstraintNoOverlap : public GlobalConstraint {
 
+  public:
+    // Vector<int> assigned;
+    std::vector<int> duration;
 
+    std::vector<int> est_order;
+
+    std::vector<int> lct_order;
+
+    std::vector<int> theta_rank;
+
+    ThetaTree T;
+
+    /**@name Constructors*/
+    //@{
+    ConstraintNoOverlap() : GlobalConstraint() { priority = 2; }
+    ConstraintNoOverlap(Vector<Variable> &scp,
+                        const std::vector<int> &duration);
+    // ConstraintNoOverlap(std::vector< Variable >& scp, const std::vector< int
+    // >& duration);
+    virtual Constraint clone() {
+      return Constraint(new ConstraintNoOverlap(scope, duration) // , type
+                        );
+    }
+    virtual void initialise();
+    virtual void mark_domain();
+    virtual int idempotent() { return 1; }
+    virtual int postponed() { return 1; }
+    virtual int pushed() { return 1; }
+    virtual ~ConstraintNoOverlap();
+    //@}
+
+    /**@name Solving*/
+    //@{
+    virtual int check(const int *sol) const;
+    virtual PropagationOutcome propagate();
+    // virtual PropagationOutcome propagate(const int changed_idx, const Event
+    // evt);
+    // virtual RewritingOutcome rewrite();
+    //@}
+
+    /**@name Miscellaneous*/
+    //@{
+    virtual std::ostream &display(std::ostream &) const;
+    virtual std::string name() const { return "{=/=}"; }
+    //@}
+    // #ifdef _CNE_WC
+    //     double weight_conflict(double unit, Vector<double>& weights);//  {
+    //     virtual bool conflict_is_explained() {return true;}
+    // #endif
+    //   std::cout << std::endl;
+    //   for(int i=0; i<scope.size; ++i) {
+    // 	std::cout << scope[i].get_domain() << std::endl;
+    // 	weights[scope[i].id()] += unit;
+    //   }
+    // }
+  };
 
   std::ostream& operator<< (std::ostream& os, const Constraint& x);
   std::ostream& operator<< (std::ostream& os, const Constraint* x);

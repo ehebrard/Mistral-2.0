@@ -4586,6 +4586,48 @@ Mistral::Variable Mistral::AllDiffExcept(Vector< Variable >& args, const int exc
   return exp;
 }
 
+Mistral::NoOverlapExpression::NoOverlapExpression(Vector<Variable> &st,
+                                                  Vector<Variable> &et,
+                                                  const std::vector<int> &p)
+    : Expression(st), duration(p) {
+
+  for (unsigned int i = 0; i < et.size; ++i)
+    children.add(et[i]);
+}
+
+Mistral::NoOverlapExpression::~NoOverlapExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete NoOverlap expression" << std::endl;
+#endif
+}
+
+void Mistral::NoOverlapExpression::extract_constraint(Solver *s) {
+
+  s->add(Constraint(new ConstraintNoOverlap(children, duration)));
+}
+
+void Mistral::NoOverlapExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: NoOverlap constraint can't yet be used as a predicate"
+            << std::endl;
+  exit(0);
+}
+
+void Mistral::NoOverlapExpression::extract_predicate(Solver *s) {
+  std::cerr << "Error: NoOverlap constraint can't yet be used as a predicate"
+            << std::endl;
+  exit(0);
+}
+
+const char *Mistral::NoOverlapExpression::get_name() const {
+  return "NoOverlap";
+}
+
+Mistral::Variable Mistral::NoOverlap(Vector<Variable> &st, Vector<Variable> &et,
+                                     const std::vector<int> &p) {
+  Variable exp(new NoOverlapExpression(st, et, p));
+  return exp;
+}
+
 Mistral::OccurrencesExpression::OccurrencesExpression(
     Vector<Variable> &args, const int first, const int last, const int *lb,
     const int *ub, const int ct)

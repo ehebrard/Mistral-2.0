@@ -3164,27 +3164,28 @@ Mistral::ThetaElement::ThetaElement(int id, int _startMin, int _endMin,
       duration(_duration) {}
 Mistral::ThetaElement::ThetaElement() {}
 
-Mistral::ThetaTree::ThetaTree(std::vector<ThetaElement> &_tasks) {
-  for (int i = 0; i < _tasks.size(); i++) {
-    tasks.push_back(_tasks[i]);
-  }
+Mistral::ThetaTree::ThetaTree(const size_t ntasks) {
   N = 1;
-  while (N < tasks.size()) {
+  while (N < ntasks) {
     N *= 2;
   }
-  int number_of_nodes = N + tasks.size();
+  int number_of_nodes = N + ntasks;
   node = std::vector<ThetaNode>(number_of_nodes, ThetaNode());
-  reinit();
+  // reinit();
 }
-void Mistral::ThetaTree::reinit() {
-  std::sort(tasks.begin(), tasks.end(), EarliestStartTime);
-  int n = N;
-  for (ThetaElement &t : tasks) {
-    // index[t] = n;
-    t.setId(n);
-    n++;
-  }
-}
+Mistral::ThetaTree::ThetaTree() {}
+
+// Mistral::ThetaTree::ThetaTree(const size_t ntask)
+
+// void Mistral::ThetaTree::reinit(VarArray& st, VarArray et) {
+//   std::sort(tasks.begin(), tasks.end(), EarliestStartTime);
+//   int n = N;
+//   for (ThetaElement &t : tasks) {
+//     // index[t] = n;
+//     t.setId(n);
+//     n++;
+//   }
+// }
 void Mistral::ThetaTree::update(int i) {
   while (i > 1) {
     i = parent(i);
@@ -3195,6 +3196,12 @@ void Mistral::ThetaTree::update(int i) {
     if (node[i].bound < node[l].bound + node[r].duration)
       node[i].bound = node[l].bound + node[r].duration;
   }
+}
+void Mistral::ThetaTree::insert(const int i, const int est, const int dur) {
+  auto l{i + N};
+  node[l].duration = dur;
+  node[l].bound = est + dur;
+  update(l);
 }
 void Mistral::ThetaTree::insert(ThetaElement &task) {
   int i = task.getId();

@@ -5558,7 +5558,7 @@ public:
 
   T &get_min() { return data[0]; }
 
-  size_t size() { return data.size; }
+  size_t size() const { return data.size; }
 
   /*!@name Printing*/
   //@{
@@ -12546,10 +12546,13 @@ private:
   int N;
 
 public:
-  ThetaTree(std::vector<ThetaElement> &tasks);
+  // ThetaTree(std::vector<ThetaElement> &tasks);
+  ThetaTree();
+  ThetaTree(const size_t ntask);
   ~ThetaTree();
   // void clear();
-  void reinit();
+  // void reinit();
+  void insert(const int i, const int est, const int dur);
   void insert(ThetaElement &t);
   int getBound();
   void update(int i);

@@ -2878,26 +2878,43 @@ namespace Mistral {
   Variable AllDiff(Vector< Variable >& args, const int ct=BOUND_CONSISTENCY);
 	Variable AllDiffExcept(Vector< Variable >& args, const int exception);
 
+        class NoOverlapExpression : public Expression {
 
-  class OccurrencesExpression : public Expression {
+        public:
+          std::vector<int> duration;
 
-  public:
+          NoOverlapExpression(Vector<Variable> &st, Vector<Variable> &et,
+                              const std::vector<int> &p);
+          virtual ~NoOverlapExpression();
 
-    int consistency_level;
-    
-    int firstval;
-    int lastval;
-    const int *lower_bounds;
-    const int *upper_bounds;
+          virtual void extract_constraint(Solver *);
+          virtual void extract_variable(Solver *);
+          virtual void extract_predicate(Solver *);
+          virtual const char *get_name() const;
+        };
 
-    OccurrencesExpression(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct);
-    virtual ~OccurrencesExpression();
+        Variable NoOverlap(Vector<Variable> &st, Vector<Variable> &et,
+                           const std::vector<int> &p);
 
-    virtual void extract_constraint(Solver*);
-    virtual void extract_variable(Solver*);
-    virtual void extract_predicate(Solver*);
-    virtual const char* get_name() const;
+        class OccurrencesExpression : public Expression {
 
+        public:
+          int consistency_level;
+
+          int firstval;
+          int lastval;
+          const int *lower_bounds;
+          const int *upper_bounds;
+
+          OccurrencesExpression(Vector<Variable> &args, const int first,
+                                const int last, const int *lb, const int *ub,
+                                const int ct);
+          virtual ~OccurrencesExpression();
+
+          virtual void extract_constraint(Solver *);
+          virtual void extract_variable(Solver *);
+          virtual void extract_predicate(Solver *);
+          virtual const char *get_name() const;
   };
 
   Variable Occurrences(Vector< Variable >& args, const int first, const int last, const int* lb, const int* ub, const int ct=BOUND_CONSISTENCY);
