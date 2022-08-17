@@ -69,8 +69,10 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 // #define _DEBUG_FACTOR (id==23)
 
-#define _DEBUG_NOOVERLAP                                                       \
-  (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
+#define _DEBUG_ALLDIFF true
+// #define _DEBUG_NOOVERLAP                                                       \
+//   true // (get_solver()->statistics.num_propagations == 25890)
+// // (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -98,7 +100,9 @@ std::ostream& Mistral::operator<< (std::ostream& os,  Mistral::ConstraintTrigger
   return x->display(os);
 }
 
-
+const int INCONSISTENT = 0;
+const int CHANGES = 1;
+const int NO_CHANGES = 2;
 
 // void Mistral::Constraint::set_rank(const int idx) {
 //   int rank = (data^CTYPE);
@@ -15174,188 +15178,6 @@ Mistral::ConstraintCliqueNotEqual::weight_conflict(double unit,
 }
 #endif
 
-Mistral::ConstraintNoOverlap::ConstraintNoOverlap(Vector<Variable> &scp,
-                                                  const std::vector<int> &d)
-    : GlobalConstraint(scp), duration(d), T(d.size()) {
-
-  for (unsigned int i = 0; i < duration.size(); ++i) {
-    lct_order.push_back(i);
-    est_order.push_back(i);
-  }
-
-  theta_rank.resize(est_order.size(), 0);
-
-  priority = 2;
-
-  assert(2 * duration.size() == scope.size);
-}
-
-void Mistral::ConstraintNoOverlap::initialise() {
-  ConstraintImplementation::initialise();
-  for (unsigned int i = 0; i < scope.size; ++i) {
-    trigger_on(_RANGE_, scope[i]);
-  }
-  GlobalConstraint::initialise();
-  // culprit = -1;
-  // GlobalConstraint::set_idempotent(true);
-}
-
-void Mistral::ConstraintNoOverlap::mark_domain() {
-  // for (unsigned int i = scope.size; i;) {
-  //   // get_solver()->mark_non_convex(scope[i].id());
-  //   get_solver()->forbid(scope[--i].id(), RANGE_VAR);
-  // }
-}
-
-Mistral::ConstraintNoOverlap::~ConstraintNoOverlap() {
-#ifdef _DEBUG_MEMORY
-  std::cout << "c delete no overlap constraint" << std::endl;
-#endif
-}
-
-Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
-
-#ifdef _DEBUG_NOOVERLAP
-
-  int num_assigned{0};
-  for (auto x : scope) {
-    num_assigned += x.is_ground();
-  }
-
-  if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-    std::cout << "propagate[" << this->id << "] " << this << std::endl;
-    for (int i = 0; i < scope.size; ++i)
-      std::cout << scope[i].get_domain() << (changes.contain(i) ? "* " : " ");
-    std::cout << std::endl << active << std::endl;
-  }
-#endif
-
-  // for(auto i{0}; i<n; ++i) {
-  // 	auto p{duration[i]}
-  // 	auto est{st[i].get_min()};
-  // 	auto ect{et[i].get_min()};
-  // }
-
-  std::sort(est_order.begin(), est_order.end(), [&](const int a, const int b) {
-    return scope[a].get_min() <= scope[b].get_min();
-  });
-
-  auto n{duration.size()};
-  std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int b) {
-    return scope[a + n].get_max() <= scope[b + n].get_max();
-  });
-
-  auto horizon{scope[*lct_order.rbegin() + n].get_max()};
-
-#ifdef _DEBUG_NOOVERLAP
-  if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-    std::cout << "EST\n";
-    for (auto i : est_order) {
-      std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
-                << std::endl;
-    }
-
-    std::cout << "\nLCT\n";
-    for (auto i : lct_order) {
-      std::cout << i << " " << scope[i + n] << ": " << scope[i + n].get_domain()
-                << std::endl;
-    }
-
-    std::cout << std::endl << std::endl << "forward:\n";
-  }
-#endif
-
-  int prev;
-
-  prev = -1;
-  T.clear();
-  for (auto i{0}; i < est_order.size(); ++i) {
-    theta_rank[est_order[i]] = i;
-  }
-  for (auto a : lct_order) {
-
-    T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
-
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-      std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
-                << scope[a + n].get_max() << "] : " << T.getBound() << " ("
-                << scope[a + n].get_min() << ")" << std::endl;
-    }
-#endif
-
-    if (T.getBound() > scope[a + n].get_max()) {
-      return FAILURE(a + n);
-    } else if (prev < 0 or T.getBound() > scope[prev + n].get_max()) {
-      if (FAILED(scope[a + n].set_min(T.getBound()))) {
-        return FAILURE(a + n);
-      }
-    }
-
-    prev = a;
-  }
-
-#ifdef _DEBUG_NOOVERLAP
-  if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-    std::cout << std::endl << "backward:\n";
-  }
-#endif
-
-  prev = -1;
-  T.clear();
-  for (auto i{0}; i < lct_order.size(); ++i) {
-    theta_rank[lct_order[lct_order.size() - i - 1]] = i;
-  }
-  for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
-    auto a{*ai};
-
-    T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
-
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-      std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
-                << duration[a] << ".." << (horizon - scope[a].get_min())
-                << "] : " << T.getBound() << " ("
-                << (horizon - scope[a].get_max()) << ")" << std::endl;
-    }
-#endif
-
-    if (T.getBound() > (horizon - scope[a].get_min())) {
-      assert(false); // this check is equivalent to the forward pass
-      return FAILURE(a);
-    } else if (prev < 0 or T.getBound() > (horizon - scope[prev].get_min())) {
-      if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
-        return FAILURE(a);
-      }
-    }
-
-    prev = a;
-  }
-
-  return CONSISTENT;
-  }
-
-  int Mistral::ConstraintNoOverlap::check(const int *s) const {
-    // int i = scope.size, j;
-    // while (--i) {
-    //   j = i;
-    //   while (j--)
-    //     if (s[i] == s[j] && s[i] != exception)
-    //       return 1;
-    // }
-    return 0;
-  }
-
-  std::ostream &Mistral::ConstraintNoOverlap::display(std::ostream &os) const {
-    os << "NoOverlap(" << scope[0] << ".." << scope[duration.size()] << "("
-       << duration[0] << ")";
-    for (unsigned int i = 1; i < duration.size(); ++i)
-      os << ", " << scope[i] << ".." << scope[duration.size() + i] << "("
-         << duration[i] << ")";
-    os << ")";
-    return os;
-  }
-
   /**********************************************
    * Multi-AtMostSeqCard Constraint
    **********************************************/
@@ -16889,10 +16711,6 @@ std::ostream& Mistral::ConstraintStretch::display(std::ostream& os) const {
 * AllDiff Constraint
 **********************************************/
 
-const int INCONSISTENT = 0;
-const int CHANGES      = 1;
-const int NO_CHANGES   = 2;
-
 Mistral::ConstraintAllDiff::ConstraintAllDiff(Vector<Variable> &scp)
     : GlobalConstraint(scp) {
   priority = 0;
@@ -17008,6 +16826,13 @@ void Mistral::ConstraintAllDiff::sortit()
   sortmin(minsorted, scope.size);
   sortmax(maxsorted, scope.size);
 
+  // for(int i{1}; i<scope.size; ++i) {
+  //   assert(minsorted[i-1]->min <= minsorted[i]->min);
+  //   assert(maxsorted[i-1]->max <= maxsorted[i]->max);
+  // }
+
+  // for(int i{1}; i<scope.size; ++i)
+
   min = minsorted[0]->min;
   max = maxsorted[0]->max + 1;
   bounds[0] = last = min - 2;
@@ -17031,14 +16856,45 @@ void Mistral::ConstraintAllDiff::sortit()
   }
   ConstraintAllDiff::nb = nb;
   bounds[nb + 1] = bounds[nb] + 2;
+
+#ifdef _DEBUG_ALLDIFF
+  if (_DEBUG_ALLDIFF) {
+    std::cout << "\nmin:";
+    for (auto q{0}; q < scope.size; ++q) {
+      std::cout << std::setw(5) << minsorted[q]->min;
+    }
+    std::cout << "\n    ";
+    for (auto q{0}; q < scope.size; ++q) {
+      std::cout << std::setw(5) << minsorted[q]->max;
+    }
+    std::cout << "\nmax:";
+    for (auto q{0}; q < scope.size; ++q) {
+      std::cout << std::setw(5) << maxsorted[q]->min;
+    }
+    std::cout << "\n    ";
+    for (auto q{0}; q < scope.size; ++q) {
+      std::cout << std::setw(5) << maxsorted[q]->max;
+    }
+    std::cout << std::endl;
+  }
+#endif
 }
 
 
 void pathset(int *t, int start, int end, int to) 
 {
+
   int k, l;
-  for (l = start; (k = l) != end; t[k] = to)
+  for (l = start; (k = l) != end; t[k] = to) {
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << " path[" << k << "] = " << t[k] << " <- " << to << std::endl;
+    }
+#endif
+
     l = t[k];
+  }
 }
 
 int pathmin(int *t, int i) 
@@ -17063,31 +16919,161 @@ int Mistral::ConstraintAllDiff::filterlower()
 
   for (i = 1; i <= nb + 1; i++)
     d[i] = bounds[i] - bounds[t[i] = h[i] = i - 1];
+
+#ifdef _DEBUG_ALLDIFF
+  if (_DEBUG_ALLDIFF) {
+    std::cout << "step 0:\nindex:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << q;
+    }
+    std::cout << "\nbound:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << bounds[q];
+    }
+    std::cout << "\ndiffs:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << d[q];
+    }
+    std::cout << "\ntreel:     ";
+    for (auto q{1}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << t[q];
+    }
+    std::cout << "\nhalll:     ";
+    for (auto q{1}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << h[q];
+    }
+    std::cout << std::endl;
+  }
+#endif
+
   for (i = 0; i < (int)(scope.size);
        i++) { // visit Intervals in increasing max order
     x = maxsorted[i]->minrank;
     y = maxsorted[i]->maxrank;
     j = t[z = pathmax(t, x + 1)];
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "process [" << maxsorted[i]->min << ".."
+                << (maxsorted[i]->max + 1) << ") p=1"
+                << " -> reduce difference of interval [" << bounds[j] << ","
+                << bounds[z] << ")"
+                << "\n";
+    }
+#endif
+
     if (--d[z] == 0)
       t[z = pathmax(t, t[z] = z + 1)] = j;
     pathset(t, x + 1, z, z); // path compression
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "path compression\ntreel:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << t[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
+
     if (d[z] < bounds[z] - bounds[y]) {
 
       expl_note = 2 * i;
       // print_structs();
       // std::cout << "MAXSORTED " << i << " " << expl_note << std::endl;
 
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "overload on interval [" << bounds[j] << "," << bounds[y]
+                  << ") because " << bounds[z] << " - " << bounds[y] << " > "
+                  << d[z] << " \n";
+      }
+#endif
+
       return INCONSISTENT; // no solution
     }
+
+#ifdef _DEBUG_ALLDIFF
+    else if (_DEBUG_ALLDIFF) {
+      std::cout << "no overload on interval [" << bounds[j] << "," << bounds[y]
+                << ") because " << bounds[z] << " - " << bounds[y]
+                << " <= " << d[z] << " \n";
+    }
+#endif
+
     if (h[x] > x) {
       maxsorted[i]->min = bounds[w = pathmax(h, h[x])];
       pathset(h, x, w, w); // path compression
+
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "path compression\nhalll:     ";
+        for (auto q{1}; q <= nb + 1; ++q) {
+          std::cout << std::setw(5) << h[q];
+        }
+        std::cout << std::endl;
+      }
+#endif
+
       _changes_ = 1;
     }
     if (d[z] == bounds[z] - bounds[y]) {
       pathset(h, h[y], j - 1, y); // mark hall Interval
+
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "path compression\nhalll:     ";
+        for (auto q{1}; q <= nb + 1; ++q) {
+          std::cout << std::setw(5) << h[q];
+        }
+        std::cout << std::endl;
+      }
+#endif
+
       h[y] = j - 1; //("hall Interval [%d,%d)\n",bounds[j],bounds[y]);
+
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "hall Interval [" << bounds[j] << "," << bounds[y]
+                  << ") because " << bounds[z] << " - " << bounds[y]
+                  << " == " << d[z] << " \n";
+      }
+#endif
     }
+
+#ifdef _DEBUG_ALLDIFF
+    else if (_DEBUG_ALLDIFF) {
+      std::cout << "no hall interval [" << bounds[j] << "," << bounds[y]
+                << ") because " << bounds[z] << " - " << bounds[y]
+                << " != " << d[z] << " \n";
+    }
+#endif
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "step " << i << ":\nindex:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << q;
+      }
+      std::cout << "\nbound:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << bounds[q];
+      }
+      std::cout << "\ndiffs:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << d[q];
+      }
+      std::cout << "\ntreel:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << t[q];
+      }
+      std::cout << "\nhalll:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << h[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
   }
   if (_changes_)
     return CHANGES;
@@ -17103,30 +17089,152 @@ int Mistral::ConstraintAllDiff::filterupper()
 
   for (i = 0; i <= nb; i++)
     d[i] = bounds[t[i] = h[i] = i + 1] - bounds[i];
+
+#ifdef _DEBUG_ALLDIFF
+  if (_DEBUG_ALLDIFF) {
+    std::cout << "step 0:\nindex:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << q;
+    }
+    std::cout << "\nbound:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << bounds[q];
+    }
+    std::cout << "\ndiffs:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << d[q];
+    }
+    std::cout << "\ntreel:";
+    for (auto q{0}; q <= nb; ++q) {
+      std::cout << std::setw(5) << t[q];
+    }
+    std::cout << "\nhalll:";
+    for (auto q{0}; q <= nb; ++q) {
+      std::cout << std::setw(5) << h[q];
+    }
+    std::cout << std::endl;
+  }
+#endif
+
   for (i = scope.size; --i >= 0;) { // visit Intervals in decreasing min order
     x = minsorted[i]->maxrank;
     y = minsorted[i]->minrank;
     j = t[z = pathmin(t, x - 1)];
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "process [" << minsorted[i]->min << ".."
+                << (minsorted[i]->max + 1) << ") p=1"
+                << " -> reduce difference of interval [" << bounds[y] << ","
+                << bounds[j] << ")"
+                << "\n";
+    }
+#endif
+
     if (--d[z] == 0)
       t[z = pathmin(t, t[z] = z - 1)] = j;
     pathset(t, x - 1, z, z);
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "path compression\ntreel:";
+      for (auto q{0}; q <= nb; ++q) {
+        std::cout << std::setw(5) << t[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
+
     if (d[z] < bounds[y] - bounds[z]) {
 
       expl_note = 1 + (2 * i);
       // print_structs();
       // std::cout << "MINSORTED " << i << " " << expl_note << std::endl;
 
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "overload on interval [" << bounds[y] << "," << bounds[j]
+                  << ") because " << bounds[y] << " - " << bounds[z] << " > "
+                  << d[z] << " \n";
+      }
+#endif
+
       return INCONSISTENT; // no solution
     }
+
+#ifdef _DEBUG_ALLDIFF
+    else if (_DEBUG_ALLDIFF) {
+      std::cout << "no overload on interval [" << bounds[y] << "," << bounds[j]
+                << ") because " << bounds[y] << " - " << bounds[z]
+                << " <= " << d[z] << " \n";
+    }
+#endif
+
     if (h[x] < x) {
       minsorted[i]->max = bounds[w = pathmin(h, h[x])] - 1;
       pathset(h, x, w, w);
+
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "path compression\nhalll:";
+        for (auto q{0}; q <= nb; ++q) {
+          std::cout << std::setw(5) << h[q];
+        }
+        std::cout << std::endl;
+      }
+#endif
+
       _changes_ = 1;
     }
     if (d[z] == bounds[y] - bounds[z]) {
       pathset(h, h[y], j + 1, y);
+
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "path compression\nhalll:";
+        for (auto q{0}; q <= nb; ++q) {
+          std::cout << std::setw(5) << h[q];
+        }
+        std::cout << std::endl;
+      }
+#endif
+
       h[y] = j + 1;
+
+#ifdef _DEBUG_ALLDIFF
+      if (_DEBUG_ALLDIFF) {
+        std::cout << "hall Interval [" << bounds[y] << "," << bounds[j]
+                  << ") because " << bounds[y] << " - " << bounds[z]
+                  << " == " << d[z] << " \n";
+      }
+#endif
     }
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "step " << i << ":\nindex:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << q;
+      }
+      std::cout << "\nbound:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << bounds[q];
+      }
+      std::cout << "\ndiffs:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << d[q];
+      }
+      std::cout << "\ntreel:";
+      for (auto q{0}; q <= nb; ++q) {
+        std::cout << std::setw(5) << t[q];
+      }
+      std::cout << "\nhalll:";
+      for (auto q{0}; q <= nb; ++q) {
+        std::cout << std::setw(5) << h[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
   }
   if (_changes_)
     return CHANGES;
@@ -17223,9 +17331,23 @@ Mistral::PropagationOutcome Mistral::ConstraintAllDiff::propagate()
 
   sortit();
 
+#ifdef _DEBUG_ALLDIFF
+  if (_DEBUG_ALLDIFF) {
+    std::cout << "\nfilter lower\n";
+  }
+#endif
+
   status_lower = filterlower();
-  if (status_lower != INCONSISTENT)
+  if (status_lower != INCONSISTENT) {
+
+#ifdef _DEBUG_ALLDIFF
+    if (_DEBUG_ALLDIFF) {
+      std::cout << "\nfilter upper\n";
+    }
+#endif
+
     status_upper = filterupper();
+  }
 
   if ((status_lower == INCONSISTENT) || (status_upper == INCONSISTENT)) {
     return FAILURE(changes.back());
@@ -21336,6 +21458,864 @@ std::ostream& ConstraintOccurrences::display(std::ostream& o) const
   return o;
 }
 
+Mistral::ConstraintNoOverlap::ConstraintNoOverlap(Vector<Variable> & scp,
+                                                  const std::vector<int> &d)
+    : GlobalConstraint(scp), duration(d), T(d.size()) {
+
+  for (unsigned int i = 0; i < numVars(); ++i) {
+    lct_order.push_back(i);
+    est_order.push_back(i);
+  }
+
+  theta_rank.resize(numVars(), 0);
+
+  priority = 2;
+
+  assert(2 * numVars() == scope.size);
+
+  lastLevel = -2;
+  nb = 0;
+
+  // max_duration = std::max(duration);
+  max_duration = *std::max_element(duration.begin(), duration.end());
+
+  // std::cout << min_duration << " " << max_duration << std::endl;
+
+  iv.resize(numVars());
+  minsorted.resize(numVars());
+  maxsorted.resize(numVars());
+  bounds.resize(2 * numVars() + 2, 0);
+
+  for (auto i{0}; i < numVars(); ++i) {
+    minsorted[i] = maxsorted[i] = &iv[i];
+    iv[i].min = iv[i].max = NOVAL;
+    iv[i].duration = duration[i];
+  }
+
+  tree_link.resize(2 * numVars() + 2);
+  diff.resize(2 * numVars() + 2);
+  hall_link.resize(2 * numVars() + 2);
+}
+
+void Mistral::ConstraintNoOverlap::initialise() {
+  ConstraintImplementation::initialise();
+  for (unsigned int i = 0; i < scope.size; ++i) {
+    trigger_on(_RANGE_, scope[i]);
+  }
+  GlobalConstraint::initialise();
+  // culprit = -1;
+  GlobalConstraint::set_idempotent();
+}
+
+void Mistral::ConstraintNoOverlap::mark_domain() {
+  // for (unsigned int i = scope.size; i;) {
+  //   // get_solver()->mark_non_convex(scope[i].id());
+  //   get_solver()->forbid(scope[--i].id(), RANGE_VAR);
+  // }
+}
+
+Mistral::ConstraintNoOverlap::~ConstraintNoOverlap() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete no overlap constraint" << std::endl;
+#endif
+}
+
+void Mistral::ConstraintNoOverlap::sortit() {
+  int i, j, nb;
+  int min, max, last;
+  int n{static_cast<int>(numVars())};
+
+  std::sort(minsorted.begin(), minsorted.end(),
+            [](const NO_Interval *a, const NO_Interval *b) {
+              return a->min < b->min;
+            });
+  std::sort(maxsorted.begin(), maxsorted.end(),
+            [](const NO_Interval *a, const NO_Interval *b) {
+              return a->max < b->max;
+            });
+
+  min = (*(minsorted.begin()))->min;
+  max = (*(maxsorted.begin()))->max + 1;
+  // MODIF: to have undominated intervals we need to be a bit more careful
+  bounds[0] = last = min - 1 - max_duration;
+
+  for (i = j = nb = 0;;) { // merge minsorted[] and maxsorted[] into bounds[]
+    if (i < n && min <= max) { // make sure minsorted exhausted first
+      if (min != last)
+        bounds[++nb] = last = min;
+      minsorted[i]->minrank = nb;
+      if (++i < n)
+        min = minsorted[i]->min;
+    } else {
+      if (max != last)
+        bounds[++nb] = last = max;
+      maxsorted[j]->maxrank = nb;
+      if (++j == n)
+        break;
+      max = maxsorted[j]->max + 1;
+    }
+  }
+  ConstraintNoOverlap::nb = nb;
+  // MODIF: to have undominated intervals we need to be a bit more careful
+  bounds[nb + 1] = bounds[nb] + 1 + max_duration;
+
+#ifdef _DEBUG_NOOVERLAP
+  if (_DEBUG_NOOVERLAP) {
+    std::cout << "\nmin:";
+    for (auto q{0}; q < minsorted.size(); ++q) {
+      std::cout << std::setw(5) << minsorted[q]->min;
+    }
+    std::cout << "\n    ";
+    for (auto q{0}; q < minsorted.size(); ++q) {
+      std::cout << std::setw(5) << minsorted[q]->max;
+    }
+    std::cout << "\nmax:";
+    for (auto q{0}; q < maxsorted.size(); ++q) {
+      std::cout << std::setw(5) << maxsorted[q]->min;
+    }
+    std::cout << "\n    ";
+    for (auto q{0}; q < maxsorted.size(); ++q) {
+      std::cout << std::setw(5) << maxsorted[q]->max;
+    }
+    std::cout << std::endl;
+  }
+#endif
+}
+
+int Mistral::ConstraintNoOverlap::filterlower() {
+
+  // bool stop{false};
+
+  int i, j;
+  int w, x, y, z, _changes_ = 0;
+
+  for (i = 1; i <= nb + 1; i++)
+    diff[i] = bounds[i] - bounds[tree_link[i] = hall_link[i] = i - 1];
+
+    // std::cout << "NB=" << nb << " (" <<
+    // get_solver()->statistics.num_propagations
+    //           << ")" << std::endl;
+
+#ifdef _DEBUG_NOOVERLAP
+  if (_DEBUG_NOOVERLAP) {
+    std::cout << "step 0:\nindex:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << q;
+    }
+    std::cout << "\nbound:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << bounds[q];
+    }
+    std::cout << "\ndiffs:     ";
+    for (auto q{1}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << diff[q];
+    }
+    std::cout << "\ntreel:     ";
+    for (auto q{1}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << tree_link[q];
+    }
+    std::cout << "\nhalll:     ";
+    for (auto q{1}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << hall_link[q];
+    }
+    std::cout << std::endl;
+  }
+#endif
+
+  for (i = 0; i < duration.size();
+       i++) { // visit Intervals in increasing max order
+    x = maxsorted[i]->minrank;
+    y = maxsorted[i]->maxrank;
+    j = tree_link[z = pathmax(&tree_link[0], x + 1)];
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "\nprocess [" << maxsorted[i]->min << ".."
+                << (maxsorted[i]->max + 1) << "] / ["
+                << bounds[maxsorted[i]->minrank] << ".."
+                << bounds[maxsorted[i]->maxrank]
+                << "] p=" << maxsorted[i]->duration
+                << " -> reduce difference of interval [" << bounds[j] << ","
+                << bounds[z] << ") by " << maxsorted[i]->duration << "\n";
+    }
+#endif
+
+    // MODIF: the difference decreases by the duration of the task (number of
+    // unit tasks) if (--diff[z] == 0)
+
+    // bool multi{true};
+
+    // if (multi) {
+      auto load{maxsorted[i]->duration};
+
+      auto length{0};
+      // auto c{z};
+      while (load > 0) {
+
+#ifdef _DEBUG_NOOVERLAP
+        if (_DEBUG_NOOVERLAP) {
+          std::cout << " -> reduce difference of interval [" << bounds[j] << ","
+                    << bounds[z] << ") by " << std::min(load, diff[z]) << "\n";
+        }
+#endif
+
+        if (diff[z] <= load) {
+          load -= diff[z];
+          diff[z] = 0;
+          z = pathmax(&tree_link[0], tree_link[z] = z + 1);
+          length += 1;
+        } else {
+          diff[z] -= load;
+          load = 0;
+        }
+      }
+      if (length > 0) {
+        // stop = true;
+
+        tree_link[z] = j;
+      }
+
+//     } else {
+
+//       // std::cout << "x=" << x << ", z=" << z << std::endl;
+
+//       diff[z] -= maxsorted[i]->duration;
+//       if (diff[z] <= 0) {
+//         //       tree_link[z] = z + 1;
+
+// #ifdef _DEBUG_NOOVERLAP
+//         if (_DEBUG_NOOVERLAP) {
+//           std::cout << " rm interval [" << bounds[j] << ".." << bounds[z]
+//                     << "] tree_link[" << z << "] <- " << z + 1 << ", z <- "
+//                     << pathmax(&tree_link[0], z + 1) << std::endl;
+//         }
+// #endif
+
+//         tree_link[z = pathmax(&tree_link[0], tree_link[z] = z + 1)] = j;
+//       }
+//     }
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "maj\nvar " << (i + 1) << ":\nindex:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << q;
+      }
+      std::cout << "\nbound:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << bounds[q];
+      }
+      std::cout << "\ndiffs:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << diff[q];
+      }
+      std::cout << "\ntreel:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << tree_link[q];
+      }
+      std::cout << "\nhalll:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << hall_link[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
+
+    pathset(&tree_link[0], x + 1, z, z); // path compression
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "compression\nvar " << (i + 1) << ":\nindex:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << q;
+      }
+      std::cout << "\nbound:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << bounds[q];
+      }
+      std::cout << "\ndiffs:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << diff[q];
+      }
+      std::cout << "\ntreel:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << tree_link[q];
+      }
+      std::cout << "\nhalll:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << hall_link[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
+
+    if (diff[z] < bounds[z] - bounds[y]) {
+
+      expl_note = 2 * i;
+      // print_structs();
+      // std::cout << "MAXSORTED " << i << " " << expl_note << std::endl;
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+
+        std::cout << "z=" << z << ", y=" << y << std::endl;
+
+        std::cout << "overload on interval [" << bounds[j] << "," << bounds[y]
+                  << ")\n";
+      }
+#endif
+
+      // std::cout << "STOP(2)=" << stop << std::endl;
+      // if (stop)
+      //   exit(1);
+      return INCONSISTENT; // no solution
+    }
+
+#ifdef _DEBUG_NOOVERLAP
+    else if (_DEBUG_NOOVERLAP) {
+      std::cout << "no overload on interval [" << bounds[j] << "," << bounds[y]
+                << ") because " << bounds[z] << " - " << bounds[y]
+                << " <= " << diff[z] << " \n";
+    }
+#endif
+
+    if (hall_link[x] > x) {
+
+      // #ifdef _DEBUG_NOOVERLAP
+      //       if (_DEBUG_NOOVERLAP) {
+      //         std::cout << "merge interval\n";
+      //       }
+      // #endif
+
+      maxsorted[i]->min = bounds[w = pathmax(&hall_link[0], hall_link[x])];
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << "prune lower bound >= " << maxsorted[i]->min << "\n";
+      }
+#endif
+
+      pathset(&hall_link[0], x, w, w); // path compression
+      _changes_ = 1;
+    }
+    if (diff[z] == bounds[z] - bounds[y]) {
+      pathset(&hall_link[0], hall_link[y], j - 1, y); // mark hall Interval
+      hall_link[y] = j - 1;
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << "hall Interval [" << bounds[j] << "," << bounds[y]
+                  << ") because " << bounds[z] << " - " << bounds[y]
+                  << " == " << diff[z] << " \n";
+      }
+#endif
+    }
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "var " << (i + 1) << ":\nindex:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << q;
+      }
+      std::cout << "\nbound:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << bounds[q];
+      }
+      std::cout << "\ndiffs:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << diff[q];
+      }
+      std::cout << "\ntreel:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << tree_link[q];
+      }
+      std::cout << "\nhalll:     ";
+      for (auto q{1}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << hall_link[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
+
+    // std::cout << "STOP(3)=" << stop << std::endl;
+    // if (stop)
+    //   exit(1);
+  }
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //   if (_DEBUG_NOOVERLAP) {
+  //     exit(1);
+  //   }
+  // #endif
+
+  if (_changes_)
+    return CHANGES;
+  else
+    return NO_CHANGES;
+}
+
+int Mistral::ConstraintNoOverlap::filterupper() {
+  int i, j;
+  int w, x, y, z, _changes_ = 0;
+
+  for (i = 0; i <= nb; i++)
+    diff[i] = bounds[tree_link[i] = hall_link[i] = i + 1] - bounds[i];
+
+#ifdef _DEBUG_NOOVERLAP
+  if (_DEBUG_NOOVERLAP) {
+    std::cout << "step 0:\nindex:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << q;
+    }
+    std::cout << "\nbound:";
+    for (auto q{0}; q <= nb + 1; ++q) {
+      std::cout << std::setw(5) << bounds[q];
+    }
+    std::cout << "\ndiffs:     ";
+    for (auto q{0}; q <= nb; ++q) {
+      std::cout << std::setw(5) << diff[q];
+    }
+    std::cout << "\ntreel:     ";
+    for (auto q{0}; q <= nb; ++q) {
+      std::cout << std::setw(5) << tree_link[q];
+    }
+    std::cout << "\nhalll:     ";
+    for (auto q{0}; q <= nb; ++q) {
+      std::cout << std::setw(5) << hall_link[q];
+    }
+    std::cout << std::endl;
+  }
+#endif
+
+  for (i = numVars(); --i >= 0;) { // visit Intervals in decreasing min order
+    x = minsorted[i]->maxrank;
+    y = minsorted[i]->minrank;
+    j = tree_link[z = pathmin(&tree_link[0], x - 1)];
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "\nprocess [" << minsorted[i]->min << ".."
+                << (minsorted[i]->max + 1) << "] / ["
+                << bounds[minsorted[i]->minrank] << ".."
+                << bounds[minsorted[i]->maxrank]
+                << "] p=" << minsorted[i]->duration
+                << " -> reduce difference of interval [" << bounds[z] << ","
+                << bounds[j] << ") by " << minsorted[i]->duration << "\n";
+    }
+#endif
+
+    // MODIF: the difference decreases by the duration of the task (number of
+    // unit tasks) if (--diff[z] == 0)
+
+    auto load{minsorted[i]->duration};
+
+    auto length{0};
+    while (load > 0) {
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << " -> reduce difference of interval [" << bounds[j] << ","
+                  << bounds[z] << ") by " << std::min(load, diff[z]) << "\n";
+      }
+#endif
+
+      // if(diff[z] == 0)
+      //   exit(1);
+
+      if (diff[z] <= load) {
+        load -= diff[z];
+        diff[z] = 0;
+        z = pathmin(&tree_link[0], tree_link[z] = z - 1);
+        length += 1;
+      } else {
+        diff[z] -= load;
+        load = 0;
+      }
+    }
+    if (length > 0) {
+      // stop = true;
+
+      tree_link[z] = j;
+    }
+
+    // diff[z] -= minsorted[i]->duration;
+    // if (diff[z] <= 0)
+    //   tree_link[z = pathmin(&tree_link[0], tree_link[z] = z - 1)] = j;
+
+    pathset(&tree_link[0], x - 1, z, z);
+    if (diff[z] < bounds[y] - bounds[z]) {
+
+      expl_note = 1 + (2 * i);
+      // print_structs();
+      // std::cout << "MINSORTED " << i << " " << expl_note << std::endl;
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << "overload on interval [" << bounds[y] << "," << bounds[j]
+                  << ") because " << bounds[y] << " - " << bounds[z] << " > "
+                  << diff[z] << " \n";
+      }
+#endif
+
+      return INCONSISTENT; // no solution
+    }
+
+#ifdef _DEBUG_NOOVERLAP
+    else if (_DEBUG_NOOVERLAP) {
+      std::cout << "no overload on interval [" << bounds[y] << "," << bounds[j]
+                << ") because " << bounds[y] << " - " << bounds[z]
+                << " <= " << diff[z] << " \n";
+    }
+#endif
+
+    if (hall_link[x] < x) {
+
+      minsorted[i]->max = bounds[w = pathmin(&hall_link[0], hall_link[x])] - 1;
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << "prune upper bound <= " << minsorted[i]->max << "\n";
+      }
+#endif
+
+      pathset(&hall_link[0], x, w, w);
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << "path compression\nhalll:";
+        for (auto q{0}; q <= nb; ++q) {
+          std::cout << std::setw(5) << hall_link[q];
+        }
+        std::cout << std::endl;
+      }
+#endif
+
+      _changes_ = 1;
+    }
+    if (diff[z] == bounds[y] - bounds[z]) {
+
+      // std::cout << "here hall_link[y]=" << hall_link[y] << ", j+1=" << (j + 1)
+      //           << ", y=" << y << "\n";
+
+      pathset(&hall_link[0], hall_link[y], j + 1, y);
+      hall_link[y] = j + 1;
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << "hall Interval [" << bounds[y] << "," << bounds[j]
+                  << ") because " << bounds[y] << " - " << bounds[z]
+                  << " == " << diff[z] << " \n";
+        std::cout << "path compression\nhalll:";
+        for (auto q{0}; q <= nb; ++q) {
+          std::cout << std::setw(5) << hall_link[q];
+        }
+        std::cout << std::endl;
+      }
+#endif
+    }
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "var " << (i + 1) << ":\nindex:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << q;
+      }
+      std::cout << "\nbound:";
+      for (auto q{0}; q <= nb + 1; ++q) {
+        std::cout << std::setw(5) << bounds[q];
+      }
+      std::cout << "\ndiffs:";
+      for (auto q{0}; q <= nb; ++q) {
+        std::cout << std::setw(5) << diff[q];
+      }
+      std::cout << "\ntreel:";
+      for (auto q{0}; q <= nb; ++q) {
+        std::cout << std::setw(5) << tree_link[q];
+      }
+      std::cout << "\nhalll:";
+      for (auto q{0}; q <= nb; ++q) {
+        std::cout << std::setw(5) << hall_link[q];
+      }
+      std::cout << std::endl;
+    }
+#endif
+  }
+  if (_changes_)
+    return CHANGES;
+  else
+    return NO_CHANGES;
+}
+
+Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
+
+  // std::cout << "start prop\n";
+
+#ifdef _DEBUG_NOOVERLAP
+
+  // int num_assigned{0};
+  // for (auto x : scope) {
+  //   num_assigned += x.is_ground();
+  // }
+
+  if (_DEBUG_NOOVERLAP) { // and num_assigned >= (scope.size - 1)) {
+    std::cout << "\npropagate[" << this->id << "] " << this << std::endl;
+    for (int i = 0; i < numVars(); ++i)
+      std::cout << scope[i].get_domain() << ".."
+                << scope[i + numVars()].get_domain() << " (" << duration[i]
+                << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
+    // std::cout << std::endl << active << std::endl;
+  }
+#endif
+
+  unsigned int i, a, b;
+
+  int status_lower, status_upper;
+  int l, u;
+
+  a = 0;
+  b = numVars();
+
+  if (lastLevel != ((solver->level) - 1)) {
+    // not incremental
+    status_lower = CHANGES;
+    status_upper = CHANGES;
+    i = 0;
+    while (i < b) {
+      iv[i].min = scope[i].get_min();
+      iv[i].max = scope[i + b].get_max() - 1;
+      i++;
+    }
+  } else {
+    // incremental
+    status_lower = NO_CHANGES;
+    status_upper = NO_CHANGES;
+    for (i = a; i < b; i++) {
+      l = iv[i].min;
+      u = iv[i].max;
+      iv[i].min = scope[i].get_min();
+      iv[i].max = scope[i + b].get_max() - 1;
+      if (l != iv[i].min)
+        status_lower = CHANGES;
+      if (u != iv[i].max)
+        status_upper = CHANGES;
+    }
+  }
+
+  lastLevel = (solver->level);
+
+  if (status_lower == NO_CHANGES && status_upper == NO_CHANGES) {
+
+    // std::cout << "end prop (no change)\n";
+
+    return CONSISTENT;
+  }
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //   std::cout << "SORTIT\n";
+  //   #endif
+
+  sortit();
+
+  // #ifdef _DEBUG_NOOVERLAP
+  // std::cout << "FILTER LOWER\n";
+  // #endif
+
+  status_lower = filterlower();
+
+  // sstd::cout << 33 << std::endl;
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //   std::cout << "FILTER UPPER\n";
+  //   #endif
+
+  if (status_lower != INCONSISTENT)
+    status_upper = filterupper();
+
+  // std::cout << 44 << std::endl;
+
+  // #ifdef _DEBUG_NOOVERLAP
+  // std::cout << "REDUCE DOMAINS\n";
+  // #endif
+
+  if ((status_lower == INCONSISTENT) || (status_upper == INCONSISTENT)) {
+    return FAILURE(changes.back());
+  } else if ((status_lower == CHANGES) || (status_upper == CHANGES)) {
+
+#ifdef _DEBUG_NOOVERLAP
+    if (_DEBUG_NOOVERLAP) {
+      std::cout << "CAHNGES -> PRUNING\n";
+    }
+#endif
+
+    i = 0;
+    auto n{numVars()};
+    while (i < n) {
+
+#ifdef _DEBUG_NOOVERLAP
+      if (_DEBUG_NOOVERLAP) {
+        std::cout << scope[i].get_domain() << ".." << scope[i + n].get_domain()
+                  << " [" << iv[i].min << ".." << iv[i].max << "]\n";
+      }
+#endif
+
+      if (scope[i].set_min(iv[i].min) == FAIL_EVENT) {
+        expl_note = -(i + 1);
+        return FAILURE(i);
+      }
+      if (scope[i + n].set_max(iv[i].max + 1) == FAIL_EVENT) {
+        expl_note = -(i + 1);
+        return FAILURE(i);
+      }
+      i++;
+    }
+  }
+
+#ifdef _DEBUG_NOOVERLAP
+  if (_DEBUG_NOOVERLAP) { // and num_assigned >= (scope.size - 1)) {
+    std::cout << "end propagate[" << this->id << "] " << this << std::endl;
+    for (int i = 0; i < numVars(); ++i)
+      std::cout << scope[i].get_domain() << ".."
+                << scope[i + numVars()].get_domain() << " (" << duration[i]
+                << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
+    // std::cout << std::endl << active << std::endl;
+  }
+#endif
+  // std::cout << "end prop\n";
+
+  return CONSISTENT;
+
+  //   // for(auto i{0}; i<n; ++i) {
+  //   //  auto p{duration[i]}
+  //   //  auto est{st[i].get_min()};
+  //   //  auto ect{et[i].get_min()};
+  //   // }
+
+  //   std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
+  //   b) {
+  //     return scope[a].get_min() <= scope[b].get_min();
+  //   });
+
+  //   auto n{duration.size()};
+  //   std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int
+  //   b) {
+  //     return scope[a + n].get_max() <= scope[b + n].get_max();
+  //   });
+
+  //   auto horizon{scope[*lct_order.rbegin() + n].get_max()};
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //   if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+  //     std::cout << "EST\n";
+  //     for (auto i : est_order) {
+  //       std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+  //                 << std::endl;
+  //     }
+
+  //     std::cout << "\nLCT\n";
+  //     for (auto i : lct_order) {
+  //       std::cout << i << " " << scope[i + n] << ": " << scope[i +
+  //       n].get_domain()
+  //                 << std::endl;
+  //     }
+
+  //     std::cout << std::endl << std::endl << "forward:\n";
+  //   }
+  // #endif
+
+  //   int prev;
+
+  //   prev = -1;
+  //   T.clear();
+  //   for (auto i{0}; i < est_order.size(); ++i) {
+  //     theta_rank[est_order[i]] = i;
+  //   }
+  //   for (auto a : lct_order) {
+
+  //     T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
+
+  //     // auto tight{T.getDuration()}
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //     if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+  //       std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
+  //                 << scope[a + n].get_max() << "] : " << T.getBound() << " ("
+  //                 << scope[a + n].get_min() << ")" << std::endl;
+  //     }
+  // #endif
+
+  //     if (T.getBound() > scope[a + n].get_max()) {
+  //       return FAILURE(a + n);
+  //     } else if (prev < 0 or T.getBound() > scope[prev + n].get_max()) {
+  //       if (FAILED(scope[a + n].set_min(T.getBound()))) {
+  //         return FAILURE(a + n);
+  //       }
+  //     }
+
+  //     prev = a;
+  //   }
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //   if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+  //     std::cout << std::endl << "backward:\n";
+  //   }
+  // #endif
+
+  //   prev = -1;
+  //   T.clear();
+  //   for (auto i{0}; i < lct_order.size(); ++i) {
+  //     theta_rank[lct_order[lct_order.size() - i - 1]] = i;
+  //   }
+  //   for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
+  //     auto a{*ai};
+
+  //     T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
+
+  // #ifdef _DEBUG_NOOVERLAP
+  //     if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
+  //       std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
+  //                 << duration[a] << ".." << (horizon - scope[a].get_min())
+  //                 << "] : " << T.getBound() << " ("
+  //                 << (horizon - scope[a].get_max()) << ")" << std::endl;
+  //     }
+  // #endif
+
+  //     if (T.getBound() > (horizon - scope[a].get_min())) {
+  //       assert(false); // this check is equivalent to the forward pass
+  //       return FAILURE(a);
+  //     } else if (prev < 0 or T.getBound() > (horizon -
+  //     scope[prev].get_min())) {
+  //       if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
+  //         return FAILURE(a);
+  //       }
+  //     }
+
+  //     prev = a;
+  //   }
+
+  //   return CONSISTENT;
+}
+
+int Mistral::ConstraintNoOverlap::check(const int *s) const {
+  // int i = scope.size, j;
+  // while (--i) {
+  //   j = i;
+  //   while (j--)
+  //     if (s[i] == s[j] && s[i] != exception)
+  //       return 1;
+  // }
+  return 0;
+}
+
+std::ostream &Mistral::ConstraintNoOverlap::display(std::ostream & os) const {
+  os << "NoOverlap(" << scope[0] << ".." << scope[duration.size()] << "("
+     << duration[0] << ")";
+  for (unsigned int i = 1; i < duration.size(); ++i)
+    os << ", " << scope[i] << ".." << scope[duration.size() + i] << "("
+       << duration[i] << ")";
+  os << ")";
+  return os;
+}
+
 /*
-*  End of user defined propagator for enforcing bounds consistency
-*=================================================================*/
+ *  End of user defined propagator for enforcing bounds consistency
+ *=================================================================*/

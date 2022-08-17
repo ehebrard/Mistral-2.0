@@ -5078,7 +5078,13 @@ namespace Mistral {
     int min, max;		// start, end of interval
     int minrank, maxrank; // rank of min & max in bounds[] of an adcsp
   } AD_Interval;
-  
+
+  typedef struct {
+    int min, max;         // start, end of interval
+    int minrank, maxrank; // rank of min & max in bounds[] of an adcsp
+    int duration;         // number of unit tasks in this interval
+  } NO_Interval;
+
   /*! \class ConstraintAllDiff
     \brief  AllDifferent Constraint.
 
@@ -5302,6 +5308,23 @@ namespace Mistral {
   class ConstraintNoOverlap : public GlobalConstraint {
 
   public:
+    int lastLevel;
+    std::vector<int> tree_link; // tree links
+    std::vector<int> diff;      // diffs between critical capacities
+    std::vector<int> hall_link; // hall interval links
+    std::vector<NO_Interval> iv;
+    std::vector<NO_Interval *> minsorted;
+    std::vector<NO_Interval *> maxsorted;
+    std::vector<int>
+        bounds; // bounds[1..nb] hold set of min & max in the niv intervals
+                // while bounds[0] and bounds[nb+1] allow sentinels
+    int nb;
+
+    // int min_duration;
+    int max_duration;
+
+    int expl_note;
+
     // Vector<int> assigned;
     std::vector<int> duration;
 
@@ -5324,6 +5347,7 @@ namespace Mistral {
       return Constraint(new ConstraintNoOverlap(scope, duration) // , type
                         );
     }
+    size_t numVars() { return duration.size(); }
     virtual void initialise();
     virtual void mark_domain();
     virtual int idempotent() { return 1; }
@@ -5334,6 +5358,9 @@ namespace Mistral {
 
     /**@name Solving*/
     //@{
+    void sortit();
+    int filterlower();
+    int filterupper();
     virtual int check(const int *sol) const;
     virtual PropagationOutcome propagate();
     // virtual PropagationOutcome propagate(const int changed_idx, const Event

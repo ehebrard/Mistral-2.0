@@ -12500,30 +12500,9 @@ inline void branch_on_mindegree() {
 
 int parent(const int x);
 
-class ThetaElement {
-private:
-  int id;
-  int startMin;
-  int endMin;
-  int endMax;
-  int duration;
-
-public:
-  ThetaElement(int id, int startMin, int endMin, int endMax, int duration);
-  ThetaElement();
-  ~ThetaElement() {}
-
-  void setId(const int i);
-  int getStartMin() const;
-  int getEndMax() const;
-  int getEndMin() const;
-  int getId() const;
-  int getDuration() const;
-  bool operator<(const ThetaElement &rhs) const;
-};
-
 class ThetaNode {
 public:
+  int earliest_start;
   int duration;
   int bound;
   ThetaNode();
@@ -12531,18 +12510,10 @@ public:
   void clear();
 };
 
-struct {
-  bool operator()(ThetaElement a, ThetaElement b) const {
-    return a.getStartMin() < b.getStartMin();
-  }
-} EarliestStartTime;
-
 class ThetaTree {
 private:
-  std::vector<ThetaElement> tasks;
   std::vector<ThetaNode> node;
   int bound;
-  // std::map<ThetaElement, int> index;
   int N;
 
 public:
@@ -12550,20 +12521,12 @@ public:
   ThetaTree();
   ThetaTree(const size_t ntask);
   ~ThetaTree();
-  // void clear();
-  // void reinit();
   void insert(const int i, const int est, const int dur);
-  void insert(ThetaElement &t);
   int getBound();
   void update(int i);
   int leftChild(int x);
   int rightChild(int x);
   void clear();
-  // void deleteTree() {
-  //   tasks.clear();
-  //   node.clear();
-  //   // index.clear();
-  // }
 };
 
 } // namespace Mistral

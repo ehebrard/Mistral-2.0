@@ -450,8 +450,8 @@ int main( int argc, char** argv )
   restart->base = 128;
   heuristic =
       new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
-                       SolutionGuided<MinValue, RandomMinMax>,
-                       SolutionGuided<MinValue, RandomMinMax>, 1>(&solver);
+                       SolutionGuided<MinValue, MinValue>,
+                       SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
   solver.initialise_search(solver.variables, heuristic, restart);
 
