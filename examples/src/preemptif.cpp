@@ -374,7 +374,7 @@ int main( int argc, char** argv )
 
   Solver solver;
 
-  solver.parameters.verbosity = 3;
+  solver.parameters.verbosity = params.Verbose;
 
   VarArray start_time(jsp.nTasks(), 0, ub);
   VarArray end_time(jsp.nTasks(), 0, ub);
@@ -482,6 +482,10 @@ int main( int argc, char** argv )
   };
 
   solver.add(makespan >= LB);
+
+
+  // if(params.print_mod)
+    std::cout << solver << std::endl;
 
   // solver.propagate();
 

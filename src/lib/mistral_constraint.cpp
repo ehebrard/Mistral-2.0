@@ -70,7 +70,8 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_FACTOR (id==23)
 
 #define _DEBUG_ALLDIFF true
-// #define _DEBUG_NOOVERLAP                                                       \
+#define _DEBUG_NOOVERLAP_HALL true
+// (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
 // // (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
 
@@ -16887,11 +16888,11 @@ void pathset(int *t, int start, int end, int to)
   int k, l;
   for (l = start; (k = l) != end; t[k] = to) {
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
-      std::cout << " path[" << k << "] = " << t[k] << " <- " << to << std::endl;
-    }
-#endif
+// #ifdef _DEBUG_NOOVERLAP_HALL
+//     if (_DEBUG_NOOVERLAP_HALL) {
+//       std::cout << " path[" << k << "] = " << t[k] << " <- " << to << std::endl;
+//     }
+// #endif
 
     l = t[k];
   }
@@ -16922,7 +16923,7 @@ int Mistral::ConstraintAllDiff::filterlower()
 
 #ifdef _DEBUG_ALLDIFF
   if (_DEBUG_ALLDIFF) {
-    std::cout << "step 0:\nindex:";
+    std::cout << "\n\nstep 0:\nindex:";
     for (auto q{0}; q <= nb + 1; ++q) {
       std::cout << std::setw(5) << q;
     }
@@ -17092,7 +17093,7 @@ int Mistral::ConstraintAllDiff::filterupper()
 
 #ifdef _DEBUG_ALLDIFF
   if (_DEBUG_ALLDIFF) {
-    std::cout << "step 0:\nindex:";
+    std::cout << "\n\nstep 0:\nindex:";
     for (auto q{0}; q <= nb + 1; ++q) {
       std::cout << std::setw(5) << q;
     }
@@ -21559,8 +21560,8 @@ void Mistral::ConstraintNoOverlap::sortit() {
   // MODIF: to have undominated intervals we need to be a bit more careful
   bounds[nb + 1] = bounds[nb] + 1 + max_duration;
 
-#ifdef _DEBUG_NOOVERLAP
-  if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+  if (_DEBUG_NOOVERLAP_HALL) {
     std::cout << "\nmin:";
     for (auto q{0}; q < minsorted.size(); ++q) {
       std::cout << std::setw(5) << minsorted[q]->min;
@@ -21596,9 +21597,9 @@ int Mistral::ConstraintNoOverlap::filterlower() {
     // get_solver()->statistics.num_propagations
     //           << ")" << std::endl;
 
-#ifdef _DEBUG_NOOVERLAP
-  if (_DEBUG_NOOVERLAP) {
-    std::cout << "step 0:\nindex:";
+#ifdef _DEBUG_NOOVERLAP_HALL
+  if (_DEBUG_NOOVERLAP_HALL) {
+    std::cout << "\n\nstep 0:\nindex:";
     for (auto q{0}; q <= nb + 1; ++q) {
       std::cout << std::setw(5) << q;
     }
@@ -21628,8 +21629,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
     y = maxsorted[i]->maxrank;
     j = tree_link[z = pathmax(&tree_link[0], x + 1)];
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "\nprocess [" << maxsorted[i]->min << ".."
                 << (maxsorted[i]->max + 1) << "] / ["
                 << bounds[maxsorted[i]->minrank] << ".."
@@ -21652,8 +21653,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
       // auto c{z};
       while (load > 0) {
 
-#ifdef _DEBUG_NOOVERLAP
-        if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+        if (_DEBUG_NOOVERLAP_HALL) {
           std::cout << " -> reduce difference of interval [" << bounds[j] << ","
                     << bounds[z] << ") by " << std::min(load, diff[z]) << "\n";
         }
@@ -21683,8 +21684,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
 //       if (diff[z] <= 0) {
 //         //       tree_link[z] = z + 1;
 
-// #ifdef _DEBUG_NOOVERLAP
-//         if (_DEBUG_NOOVERLAP) {
+// #ifdef _DEBUG_NOOVERLAP_HALL
+//         if (_DEBUG_NOOVERLAP_HALL) {
 //           std::cout << " rm interval [" << bounds[j] << ".." << bounds[z]
 //                     << "] tree_link[" << z << "] <- " << z + 1 << ", z <- "
 //                     << pathmax(&tree_link[0], z + 1) << std::endl;
@@ -21695,8 +21696,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
 //       }
 //     }
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "maj\nvar " << (i + 1) << ":\nindex:";
       for (auto q{0}; q <= nb + 1; ++q) {
         std::cout << std::setw(5) << q;
@@ -21723,8 +21724,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
 
     pathset(&tree_link[0], x + 1, z, z); // path compression
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "compression\nvar " << (i + 1) << ":\nindex:";
       for (auto q{0}; q <= nb + 1; ++q) {
         std::cout << std::setw(5) << q;
@@ -21755,8 +21756,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
       // print_structs();
       // std::cout << "MAXSORTED " << i << " " << expl_note << std::endl;
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
 
         std::cout << "z=" << z << ", y=" << y << std::endl;
 
@@ -21771,8 +21772,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
       return INCONSISTENT; // no solution
     }
 
-#ifdef _DEBUG_NOOVERLAP
-    else if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    else if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "no overload on interval [" << bounds[j] << "," << bounds[y]
                 << ") because " << bounds[z] << " - " << bounds[y]
                 << " <= " << diff[z] << " \n";
@@ -21781,16 +21782,16 @@ int Mistral::ConstraintNoOverlap::filterlower() {
 
     if (hall_link[x] > x) {
 
-      // #ifdef _DEBUG_NOOVERLAP
-      //       if (_DEBUG_NOOVERLAP) {
+      // #ifdef _DEBUG_NOOVERLAP_HALL
+      //       if (_DEBUG_NOOVERLAP_HALL) {
       //         std::cout << "merge interval\n";
       //       }
       // #endif
 
       maxsorted[i]->min = bounds[w = pathmax(&hall_link[0], hall_link[x])];
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << "prune lower bound >= " << maxsorted[i]->min << "\n";
       }
 #endif
@@ -21802,8 +21803,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
       pathset(&hall_link[0], hall_link[y], j - 1, y); // mark hall Interval
       hall_link[y] = j - 1;
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << "hall Interval [" << bounds[j] << "," << bounds[y]
                   << ") because " << bounds[z] << " - " << bounds[y]
                   << " == " << diff[z] << " \n";
@@ -21811,8 +21812,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
 #endif
     }
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "var " << (i + 1) << ":\nindex:";
       for (auto q{0}; q <= nb + 1; ++q) {
         std::cout << std::setw(5) << q;
@@ -21842,8 +21843,8 @@ int Mistral::ConstraintNoOverlap::filterlower() {
     //   exit(1);
   }
 
-  // #ifdef _DEBUG_NOOVERLAP
-  //   if (_DEBUG_NOOVERLAP) {
+  // #ifdef _DEBUG_NOOVERLAP_HALL
+  //   if (_DEBUG_NOOVERLAP_HALL) {
   //     exit(1);
   //   }
   // #endif
@@ -21861,9 +21862,9 @@ int Mistral::ConstraintNoOverlap::filterupper() {
   for (i = 0; i <= nb; i++)
     diff[i] = bounds[tree_link[i] = hall_link[i] = i + 1] - bounds[i];
 
-#ifdef _DEBUG_NOOVERLAP
-  if (_DEBUG_NOOVERLAP) {
-    std::cout << "step 0:\nindex:";
+#ifdef _DEBUG_NOOVERLAP_HALL
+  if (_DEBUG_NOOVERLAP_HALL) {
+    std::cout << "\n\nstep 0:\nindex:";
     for (auto q{0}; q <= nb + 1; ++q) {
       std::cout << std::setw(5) << q;
     }
@@ -21892,8 +21893,8 @@ int Mistral::ConstraintNoOverlap::filterupper() {
     y = minsorted[i]->minrank;
     j = tree_link[z = pathmin(&tree_link[0], x - 1)];
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "\nprocess [" << minsorted[i]->min << ".."
                 << (minsorted[i]->max + 1) << "] / ["
                 << bounds[minsorted[i]->minrank] << ".."
@@ -21912,8 +21913,8 @@ int Mistral::ConstraintNoOverlap::filterupper() {
     auto length{0};
     while (load > 0) {
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << " -> reduce difference of interval [" << bounds[j] << ","
                   << bounds[z] << ") by " << std::min(load, diff[z]) << "\n";
       }
@@ -21949,8 +21950,8 @@ int Mistral::ConstraintNoOverlap::filterupper() {
       // print_structs();
       // std::cout << "MINSORTED " << i << " " << expl_note << std::endl;
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << "overload on interval [" << bounds[y] << "," << bounds[j]
                   << ") because " << bounds[y] << " - " << bounds[z] << " > "
                   << diff[z] << " \n";
@@ -21960,8 +21961,8 @@ int Mistral::ConstraintNoOverlap::filterupper() {
       return INCONSISTENT; // no solution
     }
 
-#ifdef _DEBUG_NOOVERLAP
-    else if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    else if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "no overload on interval [" << bounds[y] << "," << bounds[j]
                 << ") because " << bounds[y] << " - " << bounds[z]
                 << " <= " << diff[z] << " \n";
@@ -21972,16 +21973,16 @@ int Mistral::ConstraintNoOverlap::filterupper() {
 
       minsorted[i]->max = bounds[w = pathmin(&hall_link[0], hall_link[x])] - 1;
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << "prune upper bound <= " << minsorted[i]->max << "\n";
       }
 #endif
 
       pathset(&hall_link[0], x, w, w);
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << "path compression\nhalll:";
         for (auto q{0}; q <= nb; ++q) {
           std::cout << std::setw(5) << hall_link[q];
@@ -22000,8 +22001,8 @@ int Mistral::ConstraintNoOverlap::filterupper() {
       pathset(&hall_link[0], hall_link[y], j + 1, y);
       hall_link[y] = j + 1;
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << "hall Interval [" << bounds[y] << "," << bounds[j]
                   << ") because " << bounds[y] << " - " << bounds[z]
                   << " == " << diff[z] << " \n";
@@ -22014,8 +22015,8 @@ int Mistral::ConstraintNoOverlap::filterupper() {
 #endif
     }
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "var " << (i + 1) << ":\nindex:";
       for (auto q{0}; q <= nb + 1; ++q) {
         std::cout << std::setw(5) << q;
@@ -22047,18 +22048,25 @@ int Mistral::ConstraintNoOverlap::filterupper() {
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
+  if(propagate_hall() == CONSISTENT)
+    return propagate_edge();
+  return CONSISTENT
+}
+
+
+Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_hall() {
 
   // std::cout << "start prop\n";
 
-#ifdef _DEBUG_NOOVERLAP
+#ifdef _DEBUG_NOOVERLAP_HALL
 
   // int num_assigned{0};
   // for (auto x : scope) {
   //   num_assigned += x.is_ground();
   // }
 
-  if (_DEBUG_NOOVERLAP) { // and num_assigned >= (scope.size - 1)) {
-    std::cout << "\npropagate[" << this->id << "] " << this << std::endl;
+  if (_DEBUG_NOOVERLAP_HALL) { // and num_assigned >= (scope.size - 1)) {
+    std::cout << "\npropagate[" << this->id << "] " << get_solver()->statistics.num_propagations << std::endl;
     for (int i = 0; i < numVars(); ++i)
       std::cout << scope[i].get_domain() << ".."
                 << scope[i + numVars()].get_domain() << " (" << duration[i]
@@ -22110,13 +22118,13 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
     return CONSISTENT;
   }
 
-  // #ifdef _DEBUG_NOOVERLAP
+  // #ifdef _DEBUG_NOOVERLAP_HALL
   //   std::cout << "SORTIT\n";
   //   #endif
 
   sortit();
 
-  // #ifdef _DEBUG_NOOVERLAP
+  // #ifdef _DEBUG_NOOVERLAP_HALL
   // std::cout << "FILTER LOWER\n";
   // #endif
 
@@ -22124,7 +22132,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
   // sstd::cout << 33 << std::endl;
 
-  // #ifdef _DEBUG_NOOVERLAP
+  // #ifdef _DEBUG_NOOVERLAP_HALL
   //   std::cout << "FILTER UPPER\n";
   //   #endif
 
@@ -22133,7 +22141,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
   // std::cout << 44 << std::endl;
 
-  // #ifdef _DEBUG_NOOVERLAP
+  // #ifdef _DEBUG_NOOVERLAP_HALL
   // std::cout << "REDUCE DOMAINS\n";
   // #endif
 
@@ -22141,8 +22149,8 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
     return FAILURE(changes.back());
   } else if ((status_lower == CHANGES) || (status_upper == CHANGES)) {
 
-#ifdef _DEBUG_NOOVERLAP
-    if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+    if (_DEBUG_NOOVERLAP_HALL) {
       std::cout << "CAHNGES -> PRUNING\n";
     }
 #endif
@@ -22151,8 +22159,8 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
     auto n{numVars()};
     while (i < n) {
 
-#ifdef _DEBUG_NOOVERLAP
-      if (_DEBUG_NOOVERLAP) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << scope[i].get_domain() << ".." << scope[i + n].get_domain()
                   << " [" << iv[i].min << ".." << iv[i].max << "]\n";
       }
@@ -22170,8 +22178,8 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
     }
   }
 
-#ifdef _DEBUG_NOOVERLAP
-  if (_DEBUG_NOOVERLAP) { // and num_assigned >= (scope.size - 1)) {
+#ifdef _DEBUG_NOOVERLAP_HALL
+  if (_DEBUG_NOOVERLAP_HALL) { // and num_assigned >= (scope.size - 1)) {
     std::cout << "end propagate[" << this->id << "] " << this << std::endl;
     for (int i = 0; i < numVars(); ++i)
       std::cout << scope[i].get_domain() << ".."
@@ -22183,117 +22191,142 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
   // std::cout << "end prop\n";
 
   return CONSISTENT;
-
-  //   // for(auto i{0}; i<n; ++i) {
-  //   //  auto p{duration[i]}
-  //   //  auto est{st[i].get_min()};
-  //   //  auto ect{et[i].get_min()};
-  //   // }
-
-  //   std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
-  //   b) {
-  //     return scope[a].get_min() <= scope[b].get_min();
-  //   });
-
-  //   auto n{duration.size()};
-  //   std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int
-  //   b) {
-  //     return scope[a + n].get_max() <= scope[b + n].get_max();
-  //   });
-
-  //   auto horizon{scope[*lct_order.rbegin() + n].get_max()};
-
-  // #ifdef _DEBUG_NOOVERLAP
-  //   if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-  //     std::cout << "EST\n";
-  //     for (auto i : est_order) {
-  //       std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
-  //                 << std::endl;
-  //     }
-
-  //     std::cout << "\nLCT\n";
-  //     for (auto i : lct_order) {
-  //       std::cout << i << " " << scope[i + n] << ": " << scope[i +
-  //       n].get_domain()
-  //                 << std::endl;
-  //     }
-
-  //     std::cout << std::endl << std::endl << "forward:\n";
-  //   }
-  // #endif
-
-  //   int prev;
-
-  //   prev = -1;
-  //   T.clear();
-  //   for (auto i{0}; i < est_order.size(); ++i) {
-  //     theta_rank[est_order[i]] = i;
-  //   }
-  //   for (auto a : lct_order) {
-
-  //     T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
-
-  //     // auto tight{T.getDuration()}
-
-  // #ifdef _DEBUG_NOOVERLAP
-  //     if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-  //       std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
-  //                 << scope[a + n].get_max() << "] : " << T.getBound() << " ("
-  //                 << scope[a + n].get_min() << ")" << std::endl;
-  //     }
-  // #endif
-
-  //     if (T.getBound() > scope[a + n].get_max()) {
-  //       return FAILURE(a + n);
-  //     } else if (prev < 0 or T.getBound() > scope[prev + n].get_max()) {
-  //       if (FAILED(scope[a + n].set_min(T.getBound()))) {
-  //         return FAILURE(a + n);
-  //       }
-  //     }
-
-  //     prev = a;
-  //   }
-
-  // #ifdef _DEBUG_NOOVERLAP
-  //   if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-  //     std::cout << std::endl << "backward:\n";
-  //   }
-  // #endif
-
-  //   prev = -1;
-  //   T.clear();
-  //   for (auto i{0}; i < lct_order.size(); ++i) {
-  //     theta_rank[lct_order[lct_order.size() - i - 1]] = i;
-  //   }
-  //   for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
-  //     auto a{*ai};
-
-  //     T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
-
-  // #ifdef _DEBUG_NOOVERLAP
-  //     if (_DEBUG_NOOVERLAP and num_assigned >= (scope.size - 1)) {
-  //       std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
-  //                 << duration[a] << ".." << (horizon - scope[a].get_min())
-  //                 << "] : " << T.getBound() << " ("
-  //                 << (horizon - scope[a].get_max()) << ")" << std::endl;
-  //     }
-  // #endif
-
-  //     if (T.getBound() > (horizon - scope[a].get_min())) {
-  //       assert(false); // this check is equivalent to the forward pass
-  //       return FAILURE(a);
-  //     } else if (prev < 0 or T.getBound() > (horizon -
-  //     scope[prev].get_min())) {
-  //       if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
-  //         return FAILURE(a);
-  //       }
-  //     }
-
-  //     prev = a;
-  //   }
-
-  //   return CONSISTENT;
 }
+
+
+Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
+
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+
+  // int num_assigned{0};
+  // for (auto x : scope) {
+  //   num_assigned += x.is_ground();
+  // }
+
+  if (_DEBUG_NOOVERLAP_EDGE) { // and num_assigned >= (scope.size - 1)) {
+    std::cout << "\npropagate[" << this->id << "] " << get_solver()->statistics.num_propagations << std::endl;
+    for (int i = 0; i < numVars(); ++i)
+      std::cout << scope[i].get_domain() << ".."
+                << scope[i + numVars()].get_domain() << " (" << duration[i]
+                << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
+    // std::cout << std::endl << active << std::endl;
+  }
+#endif
+
+
+    // for(auto i{0}; i<n; ++i) {
+    //  auto p{duration[i]}
+    //  auto est{st[i].get_min()};
+    //  auto ect{et[i].get_min()};
+    // }
+
+    std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
+    b) {
+      return scope[a].get_min() <= scope[b].get_min();
+    });
+
+    auto n{duration.size()};
+    std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int
+    b) {
+      return scope[a + n].get_max() <= scope[b + n].get_max();
+    });
+
+    auto horizon{scope[*lct_order.rbegin() + n].get_max()};
+
+  #ifdef _DEBUG_NOOVERLAP_EDGE
+    if (_DEBUG_NOOVERLAP_EDGE) {
+      std::cout << "EST\n";
+      for (auto i : est_order) {
+        std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+                  << std::endl;
+      }
+
+      std::cout << "\nLCT\n";
+      for (auto i : lct_order) {
+        std::cout << i << " " << scope[i + n] << ": " << scope[i +
+        n].get_domain()
+                  << std::endl;
+      }
+
+      std::cout << std::endl << std::endl << "forward:\n";
+    }
+  #endif
+
+    int prev;
+
+    prev = -1;
+    T.clear();
+    for (auto i{0}; i < est_order.size(); ++i) {
+      theta_rank[est_order[i]] = i;
+    }
+    for (auto a : lct_order) {
+
+      T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
+
+      // auto tight{T.getDuration()}
+
+  #ifdef _DEBUG_NOOVERLAP_EDGE
+      if (_DEBUG_NOOVERLAP_EDGE) {
+        std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
+                  << scope[a + n].get_max() << "] : " << T.getBound() << " ("
+                  << scope[a + n].get_min() << ")" << std::endl;
+      }
+  #endif
+
+      if (T.getBound() > scope[a + n].get_max()) {
+        return FAILURE(a + n);
+      } else if (prev < 0 or T.getBound() > scope[prev + n].get_max()) {
+        if (FAILED(scope[a + n].set_min(T.getBound()))) {
+          return FAILURE(a + n);
+        }
+      }
+
+      prev = a;
+    }
+
+  #ifdef _DEBUG_NOOVERLAP_EDGE
+    if (_DEBUG_NOOVERLAP_EDGE) {
+      std::cout << std::endl << "backward:\n";
+    }
+  #endif
+
+    prev = -1;
+    T.clear();
+    for (auto i{0}; i < lct_order.size(); ++i) {
+      theta_rank[lct_order[lct_order.size() - i - 1]] = i;
+    }
+    for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
+      auto a{*ai};
+
+      T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
+
+  #ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_EDGE) {
+        std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
+                  << duration[a] << ".." << (horizon - scope[a].get_min())
+                  << "] : " << T.getBound() << " ("
+                  << (horizon - scope[a].get_max()) << ")" << std::endl;
+      }
+  #endif
+
+      if (T.getBound() > (horizon - scope[a].get_min())) {
+        assert(false); // this check is equivalent to the forward pass
+        return FAILURE(a);
+      } else if (prev < 0 or T.getBound() > (horizon -
+      scope[prev].get_min())) {
+        if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
+          return FAILURE(a);
+        }
+      }
+
+      prev = a;
+    }
+
+    return CONSISTENT;
+}
+
+
 
 int Mistral::ConstraintNoOverlap::check(const int *s) const {
   // int i = scope.size, j;
