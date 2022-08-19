@@ -5362,6 +5362,8 @@ namespace Mistral {
     int filterlower();
     int filterupper();
     virtual int check(const int *sol) const;
+    PropagationOutcome propagate_hall();
+    PropagationOutcome propagate_edge();
     virtual PropagationOutcome propagate();
     // virtual PropagationOutcome propagate(const int changed_idx, const Event
     // evt);

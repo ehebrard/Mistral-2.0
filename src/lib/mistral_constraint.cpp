@@ -70,7 +70,8 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_FACTOR (id==23)
 
 #define _DEBUG_ALLDIFF true
-#define _DEBUG_NOOVERLAP_HALL true
+// #define _DEBUG_NOOVERLAP_HALL true
+#define _DEBUG_NOOVERLAP_EDGE true
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
 // // (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
@@ -22050,7 +22051,7 @@ int Mistral::ConstraintNoOverlap::filterupper() {
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
   if(propagate_hall() == CONSISTENT)
     return propagate_edge();
-  return CONSISTENT
+  return CONSISTENT;
 }
 
 
@@ -22255,14 +22256,21 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
 
     int prev;
 
+    std::cout << T << std::endl;
+
     prev = -1;
     T.clear();
+
+    std::cout << T << std::endl;
+
     for (auto i{0}; i < est_order.size(); ++i) {
       theta_rank[est_order[i]] = i;
     }
     for (auto a : lct_order) {
 
       T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
+
+      std::cout << T << std::endl;
 
       // auto tight{T.getDuration()}
 
@@ -22285,42 +22293,76 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
       prev = a;
     }
 
-  #ifdef _DEBUG_NOOVERLAP_EDGE
-    if (_DEBUG_NOOVERLAP_EDGE) {
-      std::cout << std::endl << "backward:\n";
-    }
-  #endif
+    //   #ifdef _DEBUG_NOOVERLAP_EDGE
+    //     if (_DEBUG_NOOVERLAP_EDGE) {
+    //       std::cout << std::endl << "backward:\n";
+    //     }
+    //   #endif
 
-    prev = -1;
-    T.clear();
-    for (auto i{0}; i < lct_order.size(); ++i) {
-      theta_rank[lct_order[lct_order.size() - i - 1]] = i;
-    }
-    for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
+    //     prev = -1;
+    //     T.clear();
+    //     for (auto i{0}; i < lct_order.size(); ++i) {
+    //       theta_rank[lct_order[lct_order.size() - i - 1]] = i;
+    //     }
+    //     for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
+    //       auto a{*ai};
+
+    //       T.insert(theta_rank[a], horizon - scope[a + n].get_max(),
+    //       duration[a]);
+
+    // #ifdef _DEBUG_NOOVERLAP_EDGE
+    //       if (_DEBUG_NOOVERLAP_EDGE) {
+    //         std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
+    //                   << duration[a] << ".." << (horizon -
+    //                   scope[a].get_min())
+    //                   << "] : " << T.getBound() << " ("
+    //                   << (horizon - scope[a].get_max()) << ")" << std::endl;
+    //       }
+    //   #endif
+
+    //       if (T.getBound() > (horizon - scope[a].get_min())) {
+    //         assert(false); // this check is equivalent to the forward pass
+    //         return FAILURE(a);
+    //       } else if (prev < 0 or T.getBound() > (horizon -
+    //       scope[prev].get_min())) {
+    //         if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
+    //           return FAILURE(a);
+    //         }
+    //       }
+
+    //       prev = a;
+    //     }
+
+    std::cout << "by descending lct:\n";
+    for (auto ai{lct_order.rbegin()}; ai != lct_order.rend() + 1; ++ai) {
       auto a{*ai};
+      std::cout << scope[a].get_domain() << ".." << scope[a + n].get_domain()
+                << " (" << duration[a] << ")\n";
 
-      T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
+      auto deadline_omega{scope[n + *(ai + 1)].get_max()};
 
-  #ifdef _DEBUG_NOOVERLAP_HALL
-      if (_DEBUG_NOOVERLAP_EDGE) {
-        std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
-                  << duration[a] << ".." << (horizon - scope[a].get_min())
-                  << "] : " << T.getBound() << " ("
-                  << (horizon - scope[a].get_max()) << ")" << std::endl;
-      }
-  #endif
+      T.insert_gray(theta_rank[a], scope[a].get_min(), duration[a]);
 
-      if (T.getBound() > (horizon - scope[a].get_min())) {
-        assert(false); // this check is equivalent to the forward pass
-        return FAILURE(a);
-      } else if (prev < 0 or T.getBound() > (horizon -
-      scope[prev].get_min())) {
-        if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
-          return FAILURE(a);
+      auto ect{T.grayBound()};
+
+      std::cout << T << std::endl;
+
+      if (ect > deadline_omega) {
+        std::cout << "tasks";
+        for (auto j : lct_order) {
+          std::cout << " " << j;
         }
+        std::cout << " can't end before " << ect << ", but only " << a
+                  << " can go past that time (" 
+                  << ")\n";
       }
 
-      prev = a;
+      T.remove(a);
+      // node[N + a].clear();
+      // update_gray(a);
+
+
+      std::cout << T << std::endl;
     }
 
     return CONSISTENT;

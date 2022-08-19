@@ -468,6 +468,11 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet& x)
   return x.display(os);
 }
 
+std::ostream &Mistral::operator<<(std::ostream &os,
+                                  const Mistral::ThetaTree &x) {
+  return x.display(os);
+}
+
 // std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::VariableQueue& x) {
 //   return x.display(os);
 // }
@@ -489,6 +494,11 @@ std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Queue* x) {
 }
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::MultiSet* x) {
+  return (x ? x->display(os) : os);
+}
+
+std::ostream &Mistral::operator<<(std::ostream &os,
+                                  const Mistral::ThetaTree *x) {
   return (x ? x->display(os) : os);
 }
 
@@ -3138,13 +3148,18 @@ void Mistral::IntervalList::push(const Interval& I) {
 }
 
 int Mistral::parent(const int x) { return x / 2; }
-int infbound = -std::numeric_limits<int>::infinity();
+int infbound = std::numeric_limits<int>::min();
+// -std::numeric_limits<int>::infinity();
 
 Mistral::ThetaNode::ThetaNode() { ThetaNode::clear(); }
 void Mistral::ThetaNode::clear() {
   earliest_start = 0;
   duration = 0;
   bound = infbound;
+  gray_duration = 0;
+  gray_bound = infbound;
+  responsibleDuration = -1;
+  responsibleBound = -1;
 }
 
 Mistral::ThetaNode::~ThetaNode() {}
@@ -3156,8 +3171,24 @@ Mistral::ThetaTree::ThetaTree(const size_t ntasks) {
   }
   int number_of_nodes = N + ntasks;
   node = std::vector<ThetaNode>(number_of_nodes, ThetaNode());
+
+  // for(auto& n : node) {
+  //   std::cout << n.bound << " / " << infbound << std::endl;
+  // }
+
+  // exit(1);
 }
 Mistral::ThetaTree::ThetaTree() {}
+
+void Mistral::ThetaTree::remove(int i) {
+  node[N + i].clear();
+  update(N + i);
+  update_gray(N + i);
+}
+
+int Mistral::ThetaTree::grayBound() const {
+  return node[1].gray_bound;
+}
 
 void Mistral::ThetaTree::update(int i) {
   while (i > 1) {
@@ -3171,12 +3202,60 @@ void Mistral::ThetaTree::update(int i) {
       node[i].bound = node[l].bound + node[r].duration;
   }
 }
+
+void Mistral::ThetaTree::update_gray(int i) {
+  while (i > 1) {
+    i = parent(i);
+    int l = leftChild(i);
+    int r = rightChild(i);
+
+    auto ldrgd{node[l].duration + node[r].gray_duration};
+    auto rdlgd{node[l].gray_duration + node[r].duration};
+
+    auto rge{node[r].gray_bound};
+    auto lergd{node[l].bound + node[r].gray_duration};
+    auto lgerd{node[l].gray_bound + node[r].duration};
+
+    node[i].gray_duration = std::max(ldrgd, rdlgd);
+    node[i].gray_bound = std::max(std::max(rge, lgerd), lergd);
+
+    if (node[i].gray_duration == ldrgd) {
+      node[i].responsibleDuration = node[r].responsibleDuration;
+    } else if (node[i].gray_duration == rdlgd) {
+      node[i].responsibleDuration = node[l].responsibleDuration;
+    }
+
+    if (node[r].responsibleBound >= 0 and node[i].gray_bound == rge) {
+      node[i].responsibleBound = node[r].responsibleBound;
+    } else if (node[l].responsibleBound >= 0 and node[i].gray_bound == lgerd) {
+      node[i].responsibleBound = node[l].responsibleBound;
+    } else if (node[r].responsibleDuration >= 0 and
+               node[i].gray_bound == lergd) {
+      node[i].responsibleBound = node[r].responsibleDuration;
+    }
+  }
+}
+
 void Mistral::ThetaTree::insert(const int i, const int est, const int dur) {
   auto l{i + N};
   node[l].duration = dur;
   node[l].bound = est + dur;
   update(l);
 }
+
+void Mistral::ThetaTree::insert_gray(const int i, const int est,
+                                     const int dur) {
+  auto l{i + N};
+  node[l].duration = 0;
+  node[l].bound = infbound;
+  node[l].gray_duration = dur;
+  node[l].gray_bound = est + dur;
+  node[l].responsibleDuration = i;
+  node[l].responsibleBound = i;
+  update(l);
+  update_gray(l);
+}
+
 // void Mistral::ThetaTree::insert(ThetaElement &task) {
 //   int i = task.getId();
 //   node[i].duration = task.getDuration();
@@ -3198,3 +3277,90 @@ int Mistral::ThetaTree::rightChild(int x) {
 }
 int Mistral::ThetaTree::getBound() { return node[1].bound; }
 Mistral::ThetaTree::~ThetaTree() {}
+
+std::ostream &Mistral::ThetaTree::display(std::ostream &os) const {
+  int gap{2};
+  int skip{1};
+  int first = N;
+  int last = node.size();
+  do {
+    os << std::setw((gap + 8 * (skip - 1)) / 2) << " ";
+    if (node[first].duration == 0) {
+      if (node[first].gray_duration > 0) {
+        os << "gdu=" << std::left << std::setw(4) << node[first].gray_duration;
+      } else {
+        os << "   --   ";
+      }
+    } else if (node[first].gray_duration > 0) {
+      os << std::setfill('.') << std::left << std::setw(4)
+         << node[first].duration << std::right << std::setw(4)
+         << node[first].gray_duration << std::setfill(' ');
+    } else {
+      os << "dur=" << std::left << std::setw(4) << node[first].duration;
+    }
+    for (auto i{first + 1}; i < last; ++i) {
+      os << std::setw(gap + 8 * (skip - 1)) << " ";
+      if (node[i].duration == 0) {
+        if (node[i].gray_duration > 0) {
+          os << "gdu=" << std::left << std::setw(4) << node[i].gray_duration;
+        } else {
+          os << "   --   ";
+        }
+      } else if (node[i].gray_duration > 0) {
+        os << std::setfill('.') << std::left << std::setw(4) << node[i].duration
+           << std::right << std::setw(4) << node[i].gray_duration
+           << std::setfill(' ');
+      } else {
+        os << "dur=" << std::left << std::setw(4) << node[i].duration;
+      }
+      // os << "dur=" << std::left << std::setw(4) << node[i].duration;
+      // << " (" << std::setw(4) << node[i].gray_duration << ") [" <<
+      // std::setw(4) << node[i].responsibleDuration << "]";
+    }
+    os << std::endl << std::setw((gap + 8 * (skip - 1)) / 2) << " ";
+    if (node[first].bound < 0) {
+      if (node[first].gray_bound >= 0) {
+        os << "get=" << std::left << std::setw(4) << node[first].gray_bound;
+      } else {
+        os << "   --   ";
+      }
+    } else if (node[first].gray_bound >= 0) {
+      os << std::setfill('.') << std::left << std::setw(4) << node[first].bound
+         << std::right << std::setw(4) << node[first].gray_bound
+         << std::setfill(' ');
+    } else {
+      os << "ect=" << std::left << std::setw(4) << node[first].bound;
+    }
+    // os << "ect=" << std::left << std::setw(4) << node[first].bound;
+    for (auto i{first + 1}; i < last; ++i) {
+      os << std::setw(gap + 8 * (skip - 1)) << " ";
+      if (node[i].bound < 0) {
+        if (node[i].gray_bound >= 0) {
+          os << "get=" << std::left << std::setw(4) << node[i].gray_bound;
+        } else {
+          os << "   --   ";
+        }
+      } else if (node[i].gray_bound >= 0) {
+        os << std::setfill('.') << std::left << std::setw(4) << node[i].bound
+           << std::right << std::setw(4) << node[i].gray_bound
+           << std::setfill(' ');
+      } else {
+        os << "ect=" << std::left << std::setw(4) << node[i].bound;
+      }
+      // os << "ect=" << std::left << std::setw(4) << node[i].bound;
+      // << " (" << std::setw(4) << node[i].gray_bound << ") [" << std::setw(4)
+      // << node[i].responsibleBound << "]";
+    }
+    os << std::endl;
+    if (first + 1 >= last)
+      break;
+
+    first /= 2;
+    last /= 2;
+    gap *= 2;
+    skip *= 2;
+    // std::cout << first << ".." << last << std::endl;
+  } while (true);
+
+  return os;
+}
