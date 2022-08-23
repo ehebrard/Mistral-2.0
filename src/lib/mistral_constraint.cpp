@@ -69,9 +69,9 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 // #define _DEBUG_FACTOR (id==23)
 
-#define _DEBUG_ALLDIFF true
-// #define _DEBUG_NOOVERLAP_HALL true
-#define _DEBUG_NOOVERLAP_EDGE true
+// #define _DEBUG_ALLDIFF true
+// #define _DEBUG_NOOVERLAP_HALL (id == 72 and get_solver()->statistics.num_propagations >= 13714)
+// #define _DEBUG_NOOVERLAP_EDGE (id == 72 and get_solver()->statistics.num_propagations >= 13714)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
 // // (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
@@ -22049,9 +22049,10 @@ int Mistral::ConstraintNoOverlap::filterupper() {
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
-  if(propagate_hall() == CONSISTENT)
-    return propagate_edge();
-  return CONSISTENT;
+  auto outcome{propagate_hall()};
+  if(outcome == CONSISTENT)
+    outcome = propagate_edge();
+  return outcome;
 }
 
 
@@ -22152,7 +22153,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_hall() {
 
 #ifdef _DEBUG_NOOVERLAP_HALL
     if (_DEBUG_NOOVERLAP_HALL) {
-      std::cout << "CAHNGES -> PRUNING\n";
+      std::cout << "CHANGES -> PRUNING\n";
     }
 #endif
 
@@ -22163,17 +22164,33 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_hall() {
 #ifdef _DEBUG_NOOVERLAP_HALL
       if (_DEBUG_NOOVERLAP_HALL) {
         std::cout << scope[i].get_domain() << ".." << scope[i + n].get_domain()
-                  << " [" << iv[i].min << ".." << iv[i].max << "]\n";
+                  << " <- [" << iv[i].min << ".." << iv[i].max << "]\n";
       }
 #endif
 
       if (scope[i].set_min(iv[i].min) == FAIL_EVENT) {
         expl_note = -(i + 1);
+
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
+        std::cout << " (1) fail on " << scope[i] << " in " 
+        << scope[i].get_domain() << " [" << FAILURE(i) << "]\n";
+      }
+#endif
+
         return FAILURE(i);
       }
       if (scope[i + n].set_max(iv[i].max + 1) == FAIL_EVENT) {
         expl_note = -(i + 1);
-        return FAILURE(i);
+
+#ifdef _DEBUG_NOOVERLAP_HALL
+      if (_DEBUG_NOOVERLAP_HALL) {
+        std::cout << " (2) fail on " << scope[i + n] << " in " 
+        << scope[i + n].get_domain() << " [" << FAILURE(i+n) << "]\n";
+      }
+#endif
+
+        return FAILURE(i+n);
       }
       i++;
     }
@@ -22197,8 +22214,9 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_hall() {
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
 
-
 #ifdef _DEBUG_NOOVERLAP_EDGE
+
+  auto debug_limit{0};
 
   // int num_assigned{0};
   // for (auto x : scope) {
@@ -22237,133 +22255,319 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
 
   #ifdef _DEBUG_NOOVERLAP_EDGE
     if (_DEBUG_NOOVERLAP_EDGE) {
-      std::cout << "EST\n";
+      std::cout << std::endl << "ST\n";
       for (auto i : est_order) {
         std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
                   << std::endl;
       }
 
-      std::cout << "\nLCT\n";
+      std::cout << "\nCT\n";
       for (auto i : lct_order) {
         std::cout << i << " " << scope[i + n] << ": " << scope[i +
         n].get_domain()
                   << std::endl;
       }
 
-      std::cout << std::endl << std::endl << "forward:\n";
+      std::cout << std::endl << "forward:\n";
     }
   #endif
 
-    int prev;
+    // int prev;
 
-    std::cout << T << std::endl;
+    // std::cout << T << std::endl;
 
-    prev = -1;
+    // prev = -1;
     T.clear();
-
-    std::cout << T << std::endl;
 
     for (auto i{0}; i < est_order.size(); ++i) {
       theta_rank[est_order[i]] = i;
     }
+
     for (auto a : lct_order) {
+      // for (auto ai{lct_order.rbegin()}; ai!=lct_order.rend(); ++ai) {
+      //   auto a{*ai};
 
       T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
 
-      std::cout << T << std::endl;
-
-      // auto tight{T.getDuration()}
-
   #ifdef _DEBUG_NOOVERLAP_EDGE
       if (_DEBUG_NOOVERLAP_EDGE) {
-        std::cout << "[" << scope[a].get_min() << ".." << duration[a] << ".."
-                  << scope[a + n].get_max() << "] : " << T.getBound() << " ("
-                  << scope[a + n].get_min() << ")" << std::endl;
+        std::cout << "add " << a << ": [" << scope[a].get_min() << ".."
+                  << duration[a] << ".." << scope[a + n].get_max()
+                  << "] : " << T.getBound() << " (" << scope[a + n].get_min()
+                  << ")" << std::endl;
+        std::cout << T << std::endl;
       }
   #endif
 
       if (T.getBound() > scope[a + n].get_max()) {
         return FAILURE(a + n);
-      } else if (prev < 0 or T.getBound() > scope[prev + n].get_max()) {
-        if (FAILED(scope[a + n].set_min(T.getBound()))) {
-          return FAILURE(a + n);
-        }
       }
-
-      prev = a;
     }
 
-    //   #ifdef _DEBUG_NOOVERLAP_EDGE
-    //     if (_DEBUG_NOOVERLAP_EDGE) {
-    //       std::cout << std::endl << "backward:\n";
-    //     }
-    //   #endif
+#ifdef _DEBUG_NOOVERLAP_EDGE
+    if (_DEBUG_NOOVERLAP_EDGE) {
+      std::cout << std::endl << "ST\n";
+      for (auto i : est_order) {
+        std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+                  << std::endl;
+      }
 
-    //     prev = -1;
-    //     T.clear();
-    //     for (auto i{0}; i < lct_order.size(); ++i) {
-    //       theta_rank[lct_order[lct_order.size() - i - 1]] = i;
-    //     }
-    //     for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
-    //       auto a{*ai};
+      std::cout << "\nCT\n";
+      for (auto i : lct_order) {
+        std::cout << i << " " << scope[i + n] << ": "
+                  << scope[i + n].get_domain() << std::endl;
+      }
 
-    //       T.insert(theta_rank[a], horizon - scope[a + n].get_max(),
-    //       duration[a]);
+      std::cout << " forward edges:\n";
+    }
+#endif
 
-    // #ifdef _DEBUG_NOOVERLAP_EDGE
-    //       if (_DEBUG_NOOVERLAP_EDGE) {
-    //         std::cout << "[" << (horizon - scope[a + n].get_max()) << ".."
-    //                   << duration[a] << ".." << (horizon -
-    //                   scope[a].get_min())
-    //                   << "] : " << T.getBound() << " ("
-    //                   << (horizon - scope[a].get_max()) << ")" << std::endl;
-    //       }
-    //   #endif
-
-    //       if (T.getBound() > (horizon - scope[a].get_min())) {
-    //         assert(false); // this check is equivalent to the forward pass
-    //         return FAILURE(a);
-    //       } else if (prev < 0 or T.getBound() > (horizon -
-    //       scope[prev].get_min())) {
-    //         if (FAILED(scope[a].set_max((horizon - T.getBound())))) {
-    //           return FAILURE(a);
-    //         }
-    //       }
-
-    //       prev = a;
-    //     }
-
-    std::cout << "by descending lct:\n";
-    for (auto ai{lct_order.rbegin()}; ai != lct_order.rend() + 1; ++ai) {
+    // std::cout << "by descending lct:\n";
+    for (auto ai{lct_order.rbegin()}; ai != lct_order.rend() - 1; ++ai) {
       auto a{*ai};
-      std::cout << scope[a].get_domain() << ".." << scope[a + n].get_domain()
-                << " (" << duration[a] << ")\n";
+      // std::cout << scope[a].get_domain() << ".." << scope[a + n].get_domain()
+      //           << " (" << duration[a] << ")\n";
+
+      // assert(scope[n + a].get_max() >= T.bound());
 
       auto deadline_omega{scope[n + *(ai + 1)].get_max()};
 
-      T.insert_gray(theta_rank[a], scope[a].get_min(), duration[a]);
+      T.paint_gray(theta_rank[a], a);
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+      if (_DEBUG_NOOVERLAP_EDGE) {
+        std::cout << "rm " << a << ": [" << scope[a].get_min() << ".."
+                  << duration[a] << ".." << scope[a + n].get_max()
+                  << "] : " << T.getBound() << " (" << scope[a + n].get_min()
+                  << ")" << std::endl;
+        std::cout << T << std::endl;
+      }
+#endif
 
       auto ect{T.grayBound()};
 
-      std::cout << T << std::endl;
+      // std::cout << "Omega can end at the latest at " << deadline_omega
+      //           << ", Omega + {" << T.getResponsible() << "} cannot end before "
+      //           << ect << std::endl << std::endl;
 
-      if (ect > deadline_omega) {
-        std::cout << "tasks";
-        for (auto j : lct_order) {
-          std::cout << " " << j;
+      assert(T.getBound() <= deadline_omega);
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+      debug_limit = scope.size;
+#endif
+
+      while (ect > deadline_omega) {
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+        if (_DEBUG_NOOVERLAP_EDGE) {
+          std::cout << " tasks";
+          for (auto j{lct_order.begin()}; *j != a; ++j)
+            std::cout << " " << *j;
+          std::cout << " + " << T.getResponsible();
         }
-        std::cout << " can't end before " << ect << ", but only " << a
-                  << " can go past that time (" 
-                  << ")\n";
+#endif
+
+        auto r{T.getResponsible()};
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+        if (_DEBUG_NOOVERLAP_EDGE) {
+          std::cout << " can't end before " << ect << ", but only " << r
+                    << " can go past that time\n ==> " << scope[r + n] << " in "
+                    << scope[r + n].get_domain() << " >= " << ect << std::endl;
+        }
+#endif
+
+        if (FAILED(scope[r + n].set_min(ect))) {
+          return FAILURE(r + n);
+        }
+
+
+        // std::cout << "REMOVE " << r << std::endl;
+
+        T.remove(theta_rank[r]);
+
+        ect = T.grayBound();
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+        if (_DEBUG_NOOVERLAP_EDGE) {
+          std::cout << T << std::endl;
+          if (--debug_limit <= 0)
+            exit(1);
+          std::cout << debug_limit << std::endl;
+        }
+#endif
       }
 
-      T.remove(a);
-      // node[N + a].clear();
-      // update_gray(a);
-
-
-      std::cout << T << std::endl;
     }
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+    if (_DEBUG_NOOVERLAP_EDGE) {
+      std::cout << std::endl << "ST\n";
+      for (auto i : est_order) {
+        std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+                  << std::endl;
+      }
+
+      std::cout << "\nCT\n";
+      for (auto i : lct_order) {
+        std::cout << i << " " << scope[i + n] << ": "
+                  << scope[i + n].get_domain() << std::endl;
+      }
+
+      std::cout << "backward:\n";
+    }
+#endif
+
+    // std::cout << T << std::endl;
+
+    // prev = -1;
+    T.clear();
+
+    // std::cout << T << std::endl;
+
+    for (auto i{0}; i < lct_order.size(); ++i) {
+      theta_rank[lct_order[lct_order.size() - i - 1]] = i;
+    }
+
+    // std::cout << "lct order:\n";
+    // for(auto a : lct_order)
+    //   std::cout << " " << a;
+    // std::cout << std::endl;
+    // for(auto i{0}; i<theta_rank.size(); ++i)
+    //   std::cout << "rank[" << i << "]=" << theta_rank[i] << std::endl;
+
+    for (auto ai{est_order.rbegin()}; ai != est_order.rend(); ++ai) {
+      auto a{*ai};
+
+      T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+      if (_DEBUG_NOOVERLAP_EDGE) {
+        std::cout << "add " << a << ": [" << (horizon - scope[a + n].get_max())
+                  << ".." << duration[a] << ".."
+                  << (horizon - scope[a].get_min()) << "] : " << T.getBound()
+                  << " (" << (horizon - scope[a].get_max()) << ")" << std::endl;
+        std::cout << T << std::endl;
+      }
+#endif
+
+      if (T.getBound() > (horizon - scope[a].get_min())) {
+        assert(false); // this check is equivalent to the forward pass
+        return FAILURE(a);
+      }
+    }
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+    if (_DEBUG_NOOVERLAP_EDGE) {
+      std::cout << std::endl << "ST\n";
+      for (auto i : est_order) {
+        std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+                  << std::endl;
+      }
+
+      std::cout << "\nCT\n";
+      for (auto i : lct_order) {
+        std::cout << i << " " << scope[i + n] << ": "
+                  << scope[i + n].get_domain() << std::endl;
+      }
+
+      std::cout << " backward edges:\n";
+    }
+#endif
+
+    // std::cout << "by ascending est:\n";
+    for (auto ai{est_order.begin()}; ai != est_order.end() - 1; ++ai) {
+      auto a{*ai};
+  
+      auto deadline_omega{horizon - scope[*(ai + 1)].get_min()};
+
+      T.paint_gray(theta_rank[a], a);
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+      if (_DEBUG_NOOVERLAP_EDGE) {
+        std::cout << "rm " << a << ": [" << (horizon - scope[a + n].get_max())
+                  << ".." << duration[a] << ".."
+                  << (horizon - scope[a].get_min()) << "] : " << T.getBound()
+                  << " (" << (horizon - scope[a].get_max()) << ")" << std::endl;
+        std::cout << T << std::endl;
+      }
+#endif
+
+      auto ect{T.grayBound()};
+
+      // std::cout << T << std::endl;
+
+      // std::cout << "Omega can start at the earliest at " << (horizon -
+      // deadline_omega)
+      //           << ", Omega + {" << T.getResponsible() << "} cannot start
+      //           after "
+      //           << (horizon - ect) << std::endl;
+
+      assert(T.getBound() <= deadline_omega);
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+      debug_limit = scope.size;
+#endif
+
+      while (ect > deadline_omega) {
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+        if (_DEBUG_NOOVERLAP_EDGE) {
+          std::cout << "tasks";
+          for (auto j{est_order.rbegin()}; *j != a; ++j)
+            std::cout << " " << *j;
+          std::cout << " + " << T.getResponsible();
+        }
+#endif
+
+        auto r{T.getResponsible()};
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+        if (_DEBUG_NOOVERLAP_EDGE) {
+          std::cout << " can't start before " << (horizon - ect)
+                    << ", but only " << r
+                    << " can start before that time\n ==> " << scope[r]
+                    << " in " << scope[r].get_domain() << " < "
+                    << (horizon - ect) << std::endl;
+        }
+#endif
+
+        if (FAILED(scope[r].set_max(horizon - ect - 1))) {
+          return FAILURE(r);
+        }
+
+        T.remove(theta_rank[r]);
+
+        ect = T.grayBound();
+
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+        if (_DEBUG_NOOVERLAP_EDGE) {
+          std::cout << T << std::endl;
+          if (--debug_limit <= 0)
+            exit(1);
+          std::cout << debug_limit << std::endl;
+        }
+#endif
+      }
+
+    }
+
+#ifdef _DEBUG_NOOVERLAP_EDGE
+    if (_DEBUG_NOOVERLAP_EDGE) {
+      std::cout << std::endl << "ST\n";
+      for (auto i : est_order) {
+        std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
+                  << std::endl;
+      }
+
+      std::cout << "\nCT\n";
+      for (auto i : lct_order) {
+        std::cout << i << " " << scope[i + n] << ": "
+                  << scope[i + n].get_domain() << std::endl;
+      }
+    }
+#endif
 
     return CONSISTENT;
 }

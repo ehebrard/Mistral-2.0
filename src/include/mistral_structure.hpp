@@ -12517,7 +12517,6 @@ public:
 class ThetaTree {
 private:
   std::vector<ThetaNode> node;
-  int bound;
   int N;
 
 public:
@@ -12526,16 +12525,21 @@ public:
   ThetaTree(const size_t ntask);
   ~ThetaTree();
   void insert(const int i, const int est, const int dur);
-  void insert_gray(const int i, const int est, const int dur);
-  int getBound();
+  // void insert_gray(const int i, const int est, const int dur);
+  void paint_gray(const int i, const int a);
   void remove(int i);
   void update(int i);
   void update_gray(int i);
   int leftChild(int x);
   int rightChild(int x);
   void clear();
+  // int bound() const;
+  int getBound();
   int grayBound() const;
+  int getResponsible() const;
 
+  void printNodeDuration(std::ostream &os, const int i) const;
+  void printNodeBound(std::ostream &os, const int i) const;
   std::ostream &display(std::ostream &os) const;
 };
 

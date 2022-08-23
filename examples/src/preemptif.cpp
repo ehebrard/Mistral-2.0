@@ -2,7 +2,7 @@
 
 #include "mistral_scheduler.hpp"
 
-#define VERBOSE
+// #define VERBOSE
 
 using namespace Mistral;
 
@@ -52,6 +52,7 @@ std::ostream &operator<<(std::ostream &os, const TaskInfo &x) {
 void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
                                Solver &solver, VarArray &start_time,
                                VarArray &end_time,
+                               // std::vector<int> &trail,
                                std::vector<std::pair<int, int>> &sched) {
 
   // for (auto a : tasks) {
@@ -85,12 +86,14 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
                 end_time[a.index].get_max() < end_time[b.index].get_max());
       });
 
-  // for (auto i : info) {
-  //   auto o{i.index};
-  //   std::cout << " " << o << " in [" << start_time[o].get_min() << ".."
-  //             << end_time[o].get_max() << "] (p=" << jsp.getDuration(o)
-  //             << ")\n";
-  // }
+#ifdef VERBOSE
+  for (auto i : info) {
+    auto o{i.index};
+    std::cout << " " << o << " in [" << start_time[o].get_min() << ".."
+              << end_time[o].get_max() << "] (p=" << jsp.getDuration(o)
+              << ")\n";
+  }
+  #endif
 
   BinaryMinHeap<TaskInfo> H;
 
@@ -197,7 +200,10 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
     //           << " until completion (t=" << (t + a.duration) << ")\n";
     t += a.duration;
 
+#ifdef VERBOSE
     std::cout << "insert <" << a.index << ", " << t << ">\n";
+#endif
+
     if (a.index != sched.back().first) {
       std::pair<int, int> I{a.index, t};
       sched.push_back(I);
@@ -216,7 +222,7 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
                                      VarArray &start_time, VarArray &end_time,
                                      std::vector<std::pair<int, int>> &sched) {
 
-  std::cout << std::endl;
+  // std::cout << std::endl;
   std::vector<TaskInfo> info;
   for (auto a : tasks) {
     info.push_back(
@@ -233,13 +239,16 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
                           end_time[b.index].get_solution_int_value());
             });
 
-  // for (auto i : info) {
-  //   auto o{i.index};
-  //   std::cout << " " << o << " in [" <<
-  //   start_time[o].get_solution_int_value()
-  //             << ".." << end_time[o].get_solution_int_value()
-  //             << "] (p=" << jsp.getDuration(o) << ")\n";
-  // }
+
+#ifdef VERBOSE
+  for (auto i : info) {
+    auto o{i.index};
+    std::cout << " " << o << " in [" <<
+    start_time[o].get_solution_int_value()
+              << ".." << end_time[o].get_solution_int_value()
+              << "] (p=" << jsp.getDuration(o) << ")\n";
+  }
+#endif
 
   BinaryMinHeap<TaskInfo> H;
 
@@ -359,7 +368,7 @@ int main( int argc, char** argv )
 
   Instance jsp(params);
 
-  std::cout << std::endl;
+  // std::cout << std::endl;
 
   // jsp.print(std::cout);
 
@@ -367,6 +376,10 @@ int main( int argc, char** argv )
   // params.print(std::cout);
 
   auto ub{jsp.getMakespanUpperBound(10)};
+
+  if(params.UBinit >= 0)
+    ub = params.UBinit;
+
 
   // std::cout << ub << std::endl;
 
@@ -379,6 +392,9 @@ int main( int argc, char** argv )
   VarArray start_time(jsp.nTasks(), 0, ub);
   VarArray end_time(jsp.nTasks(), 0, ub);
 
+
+  // std::vector<int> trail(jsp.nTasks(), 0);
+
   for (auto i{0}; i < jsp.nTasks(); ++i) {
     solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
   }
@@ -387,6 +403,8 @@ int main( int argc, char** argv )
     for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
       solver.add(start_time[jsp.getJobTask(j, i)] >=
                  end_time[jsp.getJobTask(j, i - 1)]);
+      // for(auto k{i-1}; k<i; ++k)
+      //   trail[jsp.getJobTask(j, k)] += jsp.getDuration(jsp.getJobTask(j,i));
     }
   }
 
@@ -421,6 +439,14 @@ int main( int argc, char** argv )
       p.push_back(jsp.getDuration(o));
     }
 
+    // for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
+    //   for (auto j{0}; j < jsp.nTasksInMachine(k); ++j) {
+    //     if(i != j) {
+    //       solver.add((st[i] <= st[j] && et[i] <= et[j]) <= (et[i] <= st[j]));
+    //     }
+    //   }
+    // }
+
     solver.add(NoOverlap(st, et, p));
   }
 
@@ -431,6 +457,8 @@ int main( int argc, char** argv )
   }
 
   Variable makespan{Max(end_job)};
+
+
 
   solver.minimize(makespan);
 
@@ -464,18 +492,24 @@ int main( int argc, char** argv )
     intervals.clear();
     computePreemptiveSchedule(jsp.getMachineTasks(k), jsp, solver, start_time,
                               end_time, intervals);
+
+    #ifdef VERBOSE
     for (auto p : intervals) {
       if (p.first >= 0)
         std::cout << "run " << p.first << " until " << p.second << std::endl;
       else
         std::cout << "idle until " << p.second << std::endl;
     }
+    #endif
 
     auto trail{ub - end_time[intervals.back().first].get_max()};
+
+#ifdef VERBOSE
     std::cout << "LB = " << intervals.back().second << " + " << trail << " = "
               << (intervals.back().second + trail) << std::endl;
 
     std::cout << std::endl;
+#endif
 
     if (LB < (intervals.back().second + trail))
       LB = (intervals.back().second + trail);
@@ -483,9 +517,11 @@ int main( int argc, char** argv )
 
   solver.add(makespan >= LB);
 
+  std::cout << "c initial bounds: [" << LB << ".." << ub << "]\n";
+
 
   // if(params.print_mod)
-    std::cout << solver << std::endl;
+    // std::cout << solver << std::endl;
 
   // solver.propagate();
 

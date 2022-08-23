@@ -3186,8 +3186,14 @@ void Mistral::ThetaTree::remove(int i) {
   update_gray(N + i);
 }
 
+// int Mistral::ThetaTree::bound() const { return node[1].bound; }
+
 int Mistral::ThetaTree::grayBound() const {
   return node[1].gray_bound;
+}
+
+int Mistral::ThetaTree::getResponsible() const {
+  return node[1].responsibleBound;
 }
 
 void Mistral::ThetaTree::update(int i) {
@@ -3238,20 +3244,42 @@ void Mistral::ThetaTree::update_gray(int i) {
 
 void Mistral::ThetaTree::insert(const int i, const int est, const int dur) {
   auto l{i + N};
-  node[l].duration = dur;
-  node[l].bound = est + dur;
+  node[l].gray_duration = node[l].duration = dur;
+  node[l].gray_bound = node[l].bound = est + dur;
+  // node[l].responsibleDuration = -1;
   update(l);
 }
 
-void Mistral::ThetaTree::insert_gray(const int i, const int est,
-                                     const int dur) {
+// void Mistral::ThetaTree::insert_gray(const int i, const int est,
+//                                      const int dur) {
+
+//   auto l{i + N};
+
+//   assert(dur == node[l].duration);
+//   assert(est+dur == node[l].bound);
+//   //  {
+//   //   std::cout << est << " <> " << node[l].bound << std::endl;
+//   // }
+
+//   node[l].duration = 0;
+//   node[l].bound = infbound;
+//   node[l].gray_duration = dur;
+//   node[l].gray_bound = est + dur;
+//   node[l].responsibleDuration = i;
+//   node[l].responsibleBound = i;
+//   update(l);
+//   update_gray(l);
+// }
+void Mistral::ThetaTree::paint_gray(const int i, const int a) {
   auto l{i + N};
+  assert(node[l].gray_duration == node[l].duration);
+  assert(node[l].gray_bound == node[l].bound);
+
   node[l].duration = 0;
   node[l].bound = infbound;
-  node[l].gray_duration = dur;
-  node[l].gray_bound = est + dur;
-  node[l].responsibleDuration = i;
-  node[l].responsibleBound = i;
+
+  node[l].responsibleDuration = a;
+  node[l].responsibleBound = a;
   update(l);
   update_gray(l);
 }
@@ -3278,81 +3306,65 @@ int Mistral::ThetaTree::rightChild(int x) {
 int Mistral::ThetaTree::getBound() { return node[1].bound; }
 Mistral::ThetaTree::~ThetaTree() {}
 
+void Mistral::ThetaTree::printNodeDuration(std::ostream &os,
+                                           const int i) const {
+  if (node[i].duration == 0) {
+    if (node[i].responsibleDuration >= 0) {
+      os << "gdu=" << std::left << std::setw(4) << node[i].gray_duration;
+    } else {
+      os << "   --   ";
+    }
+  } else if (node[i].responsibleDuration >= 0) {
+    os << std::setfill('.') << std::left << std::setw(4) << node[i].duration
+       << std::right << std::setw(4) << node[i].gray_duration
+       << std::setfill(' ');
+  } else {
+    os << "dur=" << std::left << std::setw(4) << node[i].duration;
+  }
+}
+
+void Mistral::ThetaTree::printNodeBound(std::ostream &os, const int i) const {
+  if (node[i].duration == 0) {
+    if (node[i].responsibleBound >= 0) {
+      os << "get=" << std::left << std::setw(4) << node[i].gray_bound;
+    } else {
+      os << "   --   ";
+    }
+  } else if (node[i].responsibleBound >= 0) {
+    os << std::setfill('.') << std::left << std::setw(4) << node[i].bound
+       << std::right << std::setw(4) << node[i].gray_bound << std::setfill(' ');
+  } else {
+    os << "ect=" << std::left << std::setw(4) << node[i].bound;
+  }
+}
+
 std::ostream &Mistral::ThetaTree::display(std::ostream &os) const {
   int gap{2};
   int skip{1};
   int first = N;
   int last = node.size();
+  int sz = 12;
   do {
-    os << std::setw((gap + 8 * (skip - 1)) / 2) << " ";
-    if (node[first].duration == 0) {
-      if (node[first].gray_duration > 0) {
-        os << "gdu=" << std::left << std::setw(4) << node[first].gray_duration;
-      } else {
-        os << "   --   ";
-      }
-    } else if (node[first].gray_duration > 0) {
-      os << std::setfill('.') << std::left << std::setw(4)
-         << node[first].duration << std::right << std::setw(4)
-         << node[first].gray_duration << std::setfill(' ');
-    } else {
-      os << "dur=" << std::left << std::setw(4) << node[first].duration;
-    }
+    os << std::setw((gap + sz * (skip - 1)) / 2) << " ";
+    printNodeDuration(os, first);
+    std::cout << "(" << std::setw(2) << node[first].responsibleDuration << ")";
     for (auto i{first + 1}; i < last; ++i) {
-      os << std::setw(gap + 8 * (skip - 1)) << " ";
-      if (node[i].duration == 0) {
-        if (node[i].gray_duration > 0) {
-          os << "gdu=" << std::left << std::setw(4) << node[i].gray_duration;
-        } else {
-          os << "   --   ";
-        }
-      } else if (node[i].gray_duration > 0) {
-        os << std::setfill('.') << std::left << std::setw(4) << node[i].duration
-           << std::right << std::setw(4) << node[i].gray_duration
-           << std::setfill(' ');
-      } else {
-        os << "dur=" << std::left << std::setw(4) << node[i].duration;
-      }
-      // os << "dur=" << std::left << std::setw(4) << node[i].duration;
-      // << " (" << std::setw(4) << node[i].gray_duration << ") [" <<
-      // std::setw(4) << node[i].responsibleDuration << "]";
+      os << std::setw(gap + sz * (skip - 1)) << " ";
+      printNodeDuration(os, i);
+      std::cout << "(" << std::setw(2) << node[i].responsibleDuration << ")";
     }
-    os << std::endl << std::setw((gap + 8 * (skip - 1)) / 2) << " ";
-    if (node[first].bound < 0) {
-      if (node[first].gray_bound >= 0) {
-        os << "get=" << std::left << std::setw(4) << node[first].gray_bound;
-      } else {
-        os << "   --   ";
-      }
-    } else if (node[first].gray_bound >= 0) {
-      os << std::setfill('.') << std::left << std::setw(4) << node[first].bound
-         << std::right << std::setw(4) << node[first].gray_bound
-         << std::setfill(' ');
-    } else {
-      os << "ect=" << std::left << std::setw(4) << node[first].bound;
-    }
-    // os << "ect=" << std::left << std::setw(4) << node[first].bound;
+    os << std::endl << std::setw((gap + sz * (skip - 1)) / 2) << " ";
+    printNodeBound(os, first);
+    std::cout << "(" << std::setw(2) << node[first].responsibleBound << ")";
     for (auto i{first + 1}; i < last; ++i) {
-      os << std::setw(gap + 8 * (skip - 1)) << " ";
-      if (node[i].bound < 0) {
-        if (node[i].gray_bound >= 0) {
-          os << "get=" << std::left << std::setw(4) << node[i].gray_bound;
-        } else {
-          os << "   --   ";
-        }
-      } else if (node[i].gray_bound >= 0) {
-        os << std::setfill('.') << std::left << std::setw(4) << node[i].bound
-           << std::right << std::setw(4) << node[i].gray_bound
-           << std::setfill(' ');
-      } else {
-        os << "ect=" << std::left << std::setw(4) << node[i].bound;
-      }
-      // os << "ect=" << std::left << std::setw(4) << node[i].bound;
-      // << " (" << std::setw(4) << node[i].gray_bound << ") [" << std::setw(4)
-      // << node[i].responsibleBound << "]";
+      os << std::setw(gap + sz * (skip - 1)) << " ";
+      printNodeBound(os, i);
+      std::cout << "(" << std::setw(2) << node[i].responsibleBound << ")";
     }
-    os << std::endl;
-    if (first + 1 >= last)
+    os << std::endl ; //<< first << "-" << last << std::endl;
+    // if (first + 1 >= last)
+    //   break;
+    if(first == 1)
       break;
 
     first /= 2;

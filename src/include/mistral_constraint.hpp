@@ -5334,7 +5334,11 @@ namespace Mistral {
 
     std::vector<int> theta_rank;
 
+    // std::vector<int> theta_lct_rank;
+
     ThetaTree T;
+
+    // ThetaTree T_lct;
 
     /**@name Constructors*/
     //@{
