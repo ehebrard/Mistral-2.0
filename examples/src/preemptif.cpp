@@ -366,7 +366,7 @@ int main( int argc, char** argv )
   StatisticList stats;
   stats.start();
 
-  std::cout << "read\n";
+  // std::cout << "read\n";
 
   Instance jsp(params);
 
@@ -395,7 +395,7 @@ int main( int argc, char** argv )
   // jsp.printStats(std::cout);
   // params.print(std::cout);
 
-  std::cout << "ub\n";
+  // std::cout << "ub\n";
 
   auto ub{jsp.getMakespanUpperBound(10)};
 
@@ -414,7 +414,7 @@ int main( int argc, char** argv )
   VarArray start_time(jsp.nTasks(), 0, ub);
   VarArray end_time(jsp.nTasks(), 0, ub);
 
-  std::cout << "model\n";
+  // std::cout << "model\n";
 
   // std::vector<int> trail(jsp.nTasks(), 0);
 
@@ -503,7 +503,7 @@ int main( int argc, char** argv )
 
   // std::cout << solver << std::endl;
 
-  std::cout << "heuristics\n";
+  // std::cout << "heuristics\n";
 
   BranchingHeuristic *heuristic;
   RestartPolicy *restart;
@@ -515,17 +515,17 @@ int main( int argc, char** argv )
                        SolutionGuided<MinValue, MinValue>,
                        SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
-                       std::cout << "init\n";
+                       // std::cout << "init\n";
 
   solver.initialise_search(solver.variables, heuristic, restart);
 
-  std::cout << "prop\n";
+  // std::cout << "prop\n";
 
   solver.propagate();
 
   // exit(1);
 
-  std::cout << "lb\n";
+  // std::cout << "lb\n";
 
   int LB = 0;
   for (auto k{0}; k < jsp.nMachines(); ++k) {

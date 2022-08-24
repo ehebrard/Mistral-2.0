@@ -73,7 +73,7 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_ALLDIFF true
 // #define _DEBUG_NOOVERLAP_SOL true
 // #define _DEBUG_NOOVERLAP_HALL (id == 143 and get_solver()->statistics.num_propagations >= 620)
-#define _DEBUG_NOOVERLAP_EDGE true
+// #define _DEBUG_NOOVERLAP_EDGE true
 // (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
@@ -21472,10 +21472,10 @@ Mistral::ConstraintNoOverlap::ConstraintNoOverlap(Vector<Variable> & scp,
     est_order.push_back(i);
   }
 
-  std::cout << "LCT(" << id << ")";
-  for(auto a : lct_order)
-    std::cout << " " << a;
-  std::cout << std::endl;
+  // std::cout << "LCT(" << id << ")";
+  // for(auto a : lct_order)
+  //   std::cout << " " << a;
+  // std::cout << std::endl;
 
 
   theta_rank.resize(numVars(), 0);
@@ -22089,7 +22089,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
 #endif
 
-  std::cout << "hall\n";
+  // std::cout << "hall\n";
 
   auto outcome{propagate_hall()};
 
@@ -22133,7 +22133,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
   if (outcome == CONSISTENT) {
 
-    std::cout << "egde\n";
+    // std::cout << "egde\n";
 
     outcome = propagate_edge();
   }
@@ -22179,7 +22179,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
 
 #endif
 
-  std::cout << "ok\n";
+  // std::cout << "ok\n";
 
   return outcome;
 }
@@ -22361,35 +22361,43 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
 #endif
 
 
+
     // for(auto i{0}; i<n; ++i) {
     //  auto p{duration[i]}
     //  auto est{st[i].get_min()};
     //  auto ect{et[i].get_min()};
     // }
 
-  std::cout << "sort est\n" ;
+  // std::cout << "sort est\n" ;
 
     std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
     b) {
-      return scope[a].get_min() <= scope[b].get_min();
+      return scope[a].get_min() < scope[b].get_min();
     });
 
-  std::cout << "sort lct\n" ;
-  std::cout << "LCT(" << id << ")";
-  for(auto a : lct_order)
-    std::cout << " " << a;
-  std::cout << std::endl;
+  // std::cout << "sort lct\n" ;
+  // std::cout << "LCT(" << id << ")";
+  // for(auto a : lct_order)
+  //   std::cout << " " << a;
+  // std::cout << std::endl;
+  // std::cout << "LCT(" << id << ")";
+  // for(auto ai{lct_order.begin()}; ai!=lct_order.end(); ++ai) {
+  //   std::cout << " " << *ai;
+  // }
+  // std::cout << std::endl;
 
-    auto n{duration.size()};
+    auto n{numVars()};
+
+
     std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int
-    b) {
-      if(scope.size <= a + n) {
-        std::cout << scope.size << " " << a << " " << n << std::endl;
-      }
-      return scope[a + n].get_max() <= scope[b + n].get_max();
+    b) -> bool {
+      // if(scope.size <= a + n) {
+      //   std::cout << scope.size << " " << a << " " << n << std::endl;
+      // }
+      return scope[a + n].get_max() < scope[b + n].get_max();
     });
 
-    std::cout << "horizon\n" ;
+    // std::cout << "horizon\n" ;
 
     auto horizon{scope[*lct_order.rbegin() + n].get_max()};
 
