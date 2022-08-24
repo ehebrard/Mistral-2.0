@@ -21,10 +21,11 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 #include <cmath>
 
+#include <mistral_constraint.hpp>
 #include <mistral_sat.hpp>
+#include <mistral_scheduler.hpp>
 #include <mistral_solver.hpp>
 #include <mistral_variable.hpp>
-#include <mistral_constraint.hpp>
 
 //#define _DEBUG_AMSC_NOGOOD true
 //#define _DEBUG_AMSC_CHECK_LINEAR_IMPLEMENTATION true
@@ -70,8 +71,10 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_FACTOR (id==23)
 
 // #define _DEBUG_ALLDIFF true
-// #define _DEBUG_NOOVERLAP_HALL (id == 72 and get_solver()->statistics.num_propagations >= 13714)
-// #define _DEBUG_NOOVERLAP_EDGE (id == 72 and get_solver()->statistics.num_propagations >= 13714)
+// #define _DEBUG_NOOVERLAP_SOL true
+// #define _DEBUG_NOOVERLAP_HALL (id == 143 and get_solver()->statistics.num_propagations >= 620)
+#define _DEBUG_NOOVERLAP_EDGE true
+// (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
 // // (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
@@ -21469,6 +21472,12 @@ Mistral::ConstraintNoOverlap::ConstraintNoOverlap(Vector<Variable> & scp,
     est_order.push_back(i);
   }
 
+  std::cout << "LCT(" << id << ")";
+  for(auto a : lct_order)
+    std::cout << " " << a;
+  std::cout << std::endl;
+
+
   theta_rank.resize(numVars(), 0);
 
   priority = 2;
@@ -22049,12 +22058,131 @@ int Mistral::ConstraintNoOverlap::filterupper() {
 }
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate() {
+
+#ifdef _DEBUG_NOOVERLAP_SOL
+  bool sat{true};
+  auto n{numVars()};
+  for (auto i{0}; i < n and sat; ++i) {
+    auto a{jsp->getMachineTask(machine_id, i)};
+
+    if ((scope[i].get_min() > (*sol_start)[a]) or
+        (*sol_start)[a] > scope[i].get_max())
+      sat = false;
+
+    if ((scope[i + n].get_min() > (*sol_end)[a]) or
+        (*sol_end)[a] > scope[i + n].get_max())
+      sat = false;
+
+    std::cout << a << " " << scope[i].get_min() << ".." << (*sol_start)[a]
+              << ".." << scope[i].get_max() << " / " << scope[i + n].get_min()
+              << ".." << (*sol_end)[a] << ".." << scope[i + n].get_max() << " ("
+              << jsp->getDuration(a) << "/" << duration[i] << ")" << std::endl;
+  }
+
+  std::cout << std::endl;
+
+  if (not sat) {
+    std::cout << "?? " << id << " / " << machine_id << "\n"
+              << *this << std::endl;
+    // exit(1);
+  }
+
+#endif
+
+  std::cout << "hall\n";
+
   auto outcome{propagate_hall()};
-  if(outcome == CONSISTENT)
+
+#ifdef _DEBUG_NOOVERLAP_SOL
+  if (sat) {
+
+    if (outcome != CONSISTENT) {
+      std::cout << "bug in hall " << id << " " << get_solver()->statistics.num_propagations
+                << std::endl;
+      exit(1);
+    }
+
+    bool encore_sat{true};
+    for (auto i{0}; i < n and encore_sat; ++i) {
+      auto a{jsp->getMachineTask(machine_id, i)};
+
+      if ((scope[i].get_min() > (*sol_start)[a]) or
+          (*sol_start)[a] > scope[i].get_max())
+        encore_sat = false;
+
+      if ((scope[i + n].get_min() > (*sol_end)[a]) or
+          (*sol_end)[a] > scope[i + n].get_max())
+        encore_sat = false;
+
+      std::cout << a << " " << scope[i].get_min() << ".." << (*sol_start)[a]
+                << ".." << scope[i].get_max() << " / " << scope[i + n].get_min()
+                << ".." << (*sol_end)[a] << ".." << scope[i + n].get_max()
+                << std::endl;
+    }
+
+    if (sat and (!encore_sat)) {
+      std::cout << "pruning bug in hall " << id << " " 
+                << get_solver()->statistics.num_propagations << std::endl;
+      exit(1);
+    }
+
+    std::cout << std::endl << std::endl;
+  }
+
+#endif
+
+  if (outcome == CONSISTENT) {
+
+    std::cout << "egde\n";
+
     outcome = propagate_edge();
+  }
+
+#ifdef _DEBUG_NOOVERLAP_SOL
+
+  if (sat) {
+
+    if (outcome != CONSISTENT) {
+      std::cout << "bug in edge " << id << " " << get_solver()->statistics.num_propagations
+                << std::endl;
+      exit(1);
+    }
+
+    bool encore_sat{true};
+    for (auto i{0}; i < n and encore_sat; ++i) {
+      auto a{jsp->getMachineTask(machine_id, i)};
+
+      if ((scope[i].get_min() > (*sol_start)[a]) or
+          (*sol_start)[a] > scope[i].get_max())
+        encore_sat = false;
+
+      if ((scope[i + n].get_min() > (*sol_end)[a]) or
+          (*sol_end)[a] > scope[i + n].get_max())
+        encore_sat = false;
+
+      std::cout << a << " " << scope[i].get_min() << ".." << (*sol_start)[a]
+                << ".." << scope[i].get_max() << " / " << scope[i + n].get_min()
+                << ".." << (*sol_end)[a] << ".." << scope[i + n].get_max()
+                << std::endl;
+    }
+
+    // std::cout << sat << encore_sat << std::endl;
+
+    if (sat and (!encore_sat)) {
+      std::cout << "pruning bug in edge " << id << " " 
+                << get_solver()->statistics.num_propagations << std::endl;
+      exit(1);
+    }
+
+    std::cout << std::endl << std::endl;
+  }
+
+#endif
+
+  std::cout << "ok\n";
+
   return outcome;
 }
-
 
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_hall() {
 
@@ -22211,7 +22339,6 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_hall() {
   return CONSISTENT;
 }
 
-
 Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
@@ -22226,7 +22353,7 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
   if (_DEBUG_NOOVERLAP_EDGE) { // and num_assigned >= (scope.size - 1)) {
     std::cout << "\npropagate[" << this->id << "] " << get_solver()->statistics.num_propagations << std::endl;
     for (int i = 0; i < numVars(); ++i)
-      std::cout << scope[i].get_domain() << ".."
+      std::cout << i << " " << scope[i].get_domain() << ".."
                 << scope[i + numVars()].get_domain() << " (" << duration[i]
                 << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
     // std::cout << std::endl << active << std::endl;
@@ -22240,16 +22367,29 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
     //  auto ect{et[i].get_min()};
     // }
 
+  std::cout << "sort est\n" ;
+
     std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
     b) {
       return scope[a].get_min() <= scope[b].get_min();
     });
 
+  std::cout << "sort lct\n" ;
+  std::cout << "LCT(" << id << ")";
+  for(auto a : lct_order)
+    std::cout << " " << a;
+  std::cout << std::endl;
+
     auto n{duration.size()};
     std::sort(lct_order.begin(), lct_order.end(), [&](const int a, const int
     b) {
+      if(scope.size <= a + n) {
+        std::cout << scope.size << " " << a << " " << n << std::endl;
+      }
       return scope[a + n].get_max() <= scope[b + n].get_max();
     });
+
+    std::cout << "horizon\n" ;
 
     auto horizon{scope[*lct_order.rbegin() + n].get_max()};
 
@@ -22524,15 +22664,15 @@ Mistral::PropagationOutcome Mistral::ConstraintNoOverlap::propagate_edge() {
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
         if (_DEBUG_NOOVERLAP_EDGE) {
-          std::cout << " can't start before " << (horizon - ect)
+          std::cout << " can't start after " << (horizon - ect)
                     << ", but only " << r
-                    << " can start before that time\n ==> " << scope[r]
-                    << " in " << scope[r].get_domain() << " < "
+                    << " can start at that time\n ==> " << scope[r]
+                    << " in " << scope[r].get_domain() << " <= "
                     << (horizon - ect) << std::endl;
         }
 #endif
 
-        if (FAILED(scope[r].set_max(horizon - ect - 1))) {
+        if (FAILED(scope[r].set_max(horizon - ect))) {
           return FAILURE(r);
         }
 

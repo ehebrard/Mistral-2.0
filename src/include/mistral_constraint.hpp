@@ -5305,9 +5305,15 @@ namespace Mistral {
   /*! \class ConstraintNoOverlap
     \brief  NoOverlap Constraint
   */
+  class Instance;
   class ConstraintNoOverlap : public GlobalConstraint {
 
   public:
+    int machine_id;
+    std::vector<int> *sol_start;
+    std::vector<int> *sol_end;
+    Instance *jsp;
+
     int lastLevel;
     std::vector<int> tree_link; // tree links
     std::vector<int> diff;      // diffs between critical capacities

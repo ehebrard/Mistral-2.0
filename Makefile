@@ -1,11 +1,11 @@
 
 
-COMPILFLAGS = -D_UNIX -D_BIT32 
+COMPILFLAGS = -D_UNIX #-D_BIT32 
 COPTIMIZE = -O3
 
 MAINDIR = .
 
-CCC = g++
+CCC = g++ $(COMPILFLAGS)
 #CCC = g++-5
 
 # BOOSTDIR = /Users/Shared/boost_1_78_0

@@ -335,7 +335,7 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
   while (H.size() > 0) {
     auto a{H.pop_min()};
 
-    assert(start_time[a.index].get_min() <= t);
+    // assert(start_time[a.index].get_min() <= t);
 
 #ifdef VERBOSE
     std::cout << "run " << a.index
@@ -366,7 +366,27 @@ int main( int argc, char** argv )
   StatisticList stats;
   stats.start();
 
+  std::cout << "read\n";
+
   Instance jsp(params);
+
+  // std::vector<int> sol_start;
+  // std::vector<int> sol_end;
+
+  // std::ifstream solfile("sol.txt", std::ios_base::in);
+
+  // int x;
+  // for (auto i{0}; i < jsp.nTasks(); ++i) {
+
+  //   solfile >> x;
+  //   assert(x == i);
+
+  //   solfile >> x;
+  //   sol_start.push_back(x);
+
+  //   solfile >> x;
+  //   sol_end.push_back(x);
+  // }
 
   // std::cout << std::endl;
 
@@ -374,6 +394,8 @@ int main( int argc, char** argv )
 
   // jsp.printStats(std::cout);
   // params.print(std::cout);
+
+  std::cout << "ub\n";
 
   auto ub{jsp.getMakespanUpperBound(10)};
 
@@ -392,11 +414,13 @@ int main( int argc, char** argv )
   VarArray start_time(jsp.nTasks(), 0, ub);
   VarArray end_time(jsp.nTasks(), 0, ub);
 
+  std::cout << "model\n";
 
   // std::vector<int> trail(jsp.nTasks(), 0);
 
   for (auto i{0}; i < jsp.nTasks(); ++i) {
     solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
+    // std::cout <<
   }
 
   for (auto j{0}; j < jsp.nJobs(); ++j) {
@@ -458,7 +482,15 @@ int main( int argc, char** argv )
 
   Variable makespan{Max(end_job)};
 
-
+  // for (auto c{140}; c < 145; ++c) {
+  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->sol_start =
+  //       &sol_start;
+  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->sol_end =
+  //       &sol_end;
+  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->jsp = &jsp;
+  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->machine_id =
+  //       c - 140;
+  // }
 
   solver.minimize(makespan);
 
@@ -471,21 +503,29 @@ int main( int argc, char** argv )
 
   // std::cout << solver << std::endl;
 
+  std::cout << "heuristics\n";
+
   BranchingHeuristic *heuristic;
   RestartPolicy *restart;
 
-  restart = new Luby();
+  restart = new Geometric();
   restart->base = 128;
   heuristic =
       new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
                        SolutionGuided<MinValue, MinValue>,
                        SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
+                       std::cout << "init\n";
+
   solver.initialise_search(solver.variables, heuristic, restart);
+
+  std::cout << "prop\n";
 
   solver.propagate();
 
   // exit(1);
+
+  std::cout << "lb\n";
 
   int LB = 0;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
@@ -521,7 +561,7 @@ int main( int argc, char** argv )
 
 
   // if(params.print_mod)
-    // std::cout << solver << std::endl;
+  // std::cout << solver << std::endl;
 
   // solver.propagate();
 
