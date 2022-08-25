@@ -25,19 +25,20 @@ class TaskInfo {
 
 public:
   int index;
-  int date;
+  int release_date;
+  int due_date;
   int duration;
 
   void setDuration(const int p) { duration = p; }
 
-  TaskInfo() : index(0), date(0), duration(0) {}
+  TaskInfo() : index(0), release_date(0), due_date(0), duration(0) {}
 
-  TaskInfo(const int t, const int d, const int p)
-      : index(t), date(d), duration(p) {}
+  TaskInfo(const int t, const int rd, const int dd, const int p)
+      : index(t), release_date(rd), due_date(dd), duration(p) {}
 
-  bool operator<=(const TaskInfo &lct) const { return date <= lct.date; }
+  bool operator<=(const TaskInfo &lct) const { return due_date <= lct.due_date; }
 
-  bool operator<(const TaskInfo &lct) const { return date < lct.date; }
+  bool operator<(const TaskInfo &lct) const { return due_date < lct.due_date; }
 
   std::ostream &display(std::ostream &os) const {
     os << index;
@@ -49,48 +50,30 @@ std::ostream &operator<<(std::ostream &os, const TaskInfo &x) {
   return x.display(os);
 }
 
-void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
-                               Solver &solver, VarArray &start_time,
-                               VarArray &end_time,
-                               // std::vector<int> &trail,
-                               std::vector<std::pair<int, int>> &sched) {
 
-  // for (auto a : tasks) {
-  //   std::cout << " " << a;
-  // }
-  // std::cout << std::endl;
 
-  // std::vector<ThetaElement> leaves;
-  // int id{0};
-  // for (auto a : tasks) {
-  //   leaves.push_back(ThetaElement(id++, start_time[a].get_min(),
-  //   end_time[a].get_min(), end_time[a].get_max(), jsp.getDuration(a)));
-  // }
 
-  // for (auto i : leaves) {
-  //   std::cout << " t" << i << ": [" << start_time[i].get_min() << ".."
-  //             << end_time[i].get_max() << "]\n";
-  // }
+bool JacksonPreemptiveSchedule(std::vector<TaskInfo>& info, std::vector<std::pair<int, int>> &sched) {
 
-  // std::cout << std::endl;
-  std::vector<TaskInfo> info;
-  for (auto a : tasks) {
-    info.push_back(TaskInfo(a, end_time[a].get_max(), jsp.getDuration(a)));
-  }
+#ifdef VERBOSE
+  std::cout << "JSP: sort\n";
+#endif
 
-  std::sort(
-      info.begin(), info.end(), [&](const TaskInfo &a, const TaskInfo &b) {
-        return start_time[a.index].get_min() < start_time[b.index].get_min() or
-               (start_time[a.index].get_min() ==
-                    start_time[b.index].get_min() and
-                end_time[a.index].get_max() < end_time[b.index].get_max());
-      });
+
+  std::sort(info.begin(), info.end(),
+            [&](const TaskInfo &a, const TaskInfo &b) {
+              return a.release_date <
+                         b.release_date or
+                     (a.release_date ==
+                          b.release_date and
+                      a.due_date <
+                          b.due_date);
+            });
 
 #ifdef VERBOSE
   for (auto i : info) {
-    auto o{i.index};
-    std::cout << " " << o << " in [" << start_time[o].get_min() << ".."
-              << end_time[o].get_max() << "] (p=" << jsp.getDuration(o)
+    std::cout << " " << i.index << " in [" << i.release_date << ".."
+              << i.due_date << "] (p=" << i.duration
               << ")\n";
   }
   #endif
@@ -98,15 +81,9 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
   BinaryMinHeap<TaskInfo> H;
 
   int t{0};
-  // int curdue{std::numeric_limits<int>::infinity()};
   for (auto dd : info) {
 
-    auto next{start_time[dd.index].get_min()};
-
-    // std::cout << t << " -> " << next << "  " << dd.index << ": "
-    //           << start_time[dd.index].get_min() << ".."
-    //           << end_time[dd.index].get_max() << " ("
-    //           << jsp.getDuration(dd.index) << ")" << std::endl;
+    auto next{dd.release_date};
 
     while (next > t) {
 
@@ -122,13 +99,9 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
         sched.push_back(I);
       } else {
 
-        // std::cout << H << std::endl;
-
-        // std::cout << " ==> " << (H.get_min().index) << std::endl;
-
         assert(H.get_min().duration > 0);
 
-        auto r{start_time[H.get_min().index].get_min()};
+        auto r{H.get_min().release_date};
 
         if (r > t) {
 
@@ -157,12 +130,8 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
             t += urgent_task.duration;
             urgent_task.setDuration(0);
 
-            // std::pair<int, int> I{H.get_min().index, t};
-            // sched.push_back(I);
-
             H.pop_min();
           } else {
-            // auto incr{next - t}
             auto p{urgent_task.duration + t - next};
 
 #ifdef VERBOSE
@@ -194,149 +163,6 @@ void computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
   while (H.size() > 0) {
     auto a{H.pop_min()};
 
-    assert(start_time[a.index].get_min() <= t);
-
-    // std::cout << "run " << a.index
-    //           << " until completion (t=" << (t + a.duration) << ")\n";
-    t += a.duration;
-
-#ifdef VERBOSE
-    std::cout << "insert <" << a.index << ", " << t << ">\n";
-#endif
-
-    if (a.index != sched.back().first) {
-      std::pair<int, int> I{a.index, t};
-      sched.push_back(I);
-    } else {
-      sched.back().second = t;
-    }
-
-    // std::pair<int, int> I{a.index, t};
-    // sched.push_back(I);
-    assert(t <= a.date);
-  }
-}
-
-bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
-                                     Instance &jsp, Solver &solver,
-                                     VarArray &start_time, VarArray &end_time,
-                                     std::vector<std::pair<int, int>> &sched) {
-
-  // std::cout << std::endl;
-  std::vector<TaskInfo> info;
-  for (auto a : tasks) {
-    info.push_back(
-        TaskInfo(a, end_time[a].get_solution_int_value(), jsp.getDuration(a)));
-  }
-
-  std::sort(info.begin(), info.end(),
-            [&](const TaskInfo &a, const TaskInfo &b) {
-              return start_time[a.index].get_solution_int_value() <
-                         start_time[b.index].get_solution_int_value() or
-                     (start_time[a.index].get_solution_int_value() ==
-                          start_time[b.index].get_solution_int_value() and
-                      end_time[a.index].get_solution_int_value() <
-                          end_time[b.index].get_solution_int_value());
-            });
-
-
-#ifdef VERBOSE
-  for (auto i : info) {
-    auto o{i.index};
-    std::cout << " " << o << " in [" <<
-    start_time[o].get_solution_int_value()
-              << ".." << end_time[o].get_solution_int_value()
-              << "] (p=" << jsp.getDuration(o) << ")\n";
-  }
-#endif
-
-  BinaryMinHeap<TaskInfo> H;
-
-  int t{0};
-  // int curdue{std::numeric_limits<int>::infinity()};
-  for (auto dd : info) {
-
-    auto next{start_time[dd.index].get_solution_int_value()};
-
-#ifdef VERBOSE
-    std::cout << t << " -> " << next << "  " << dd.index << ": "
-              << start_time[dd.index].get_solution_int_value() << ".."
-              << end_time[dd.index].get_solution_int_value() << " ("
-              << jsp.getDuration(dd.index) << ")" << std::endl;
-#endif
-
-    while (next > t) {
-
-      // there is no task to run
-      if (H.size() == 0) {
-        // std::cout << "idle from " << t << " to " << next << std::endl;
-        t = next;
-      } else {
-
-        // std::cout << H << std::endl;
-
-        // std::cout << " ==> " << (H.get_min().index) << std::endl;
-
-        assert(H.get_min().duration > 0);
-
-        auto r{start_time[H.get_min().index].get_solution_int_value()};
-
-        if (r > t) {
-
-          assert(r <= next);
-
-#ifdef VERBOSE
-          std::cout << "idle from " << t << " to " << r << std::endl;
-#endif
-
-          t = r;
-        } else {
-          if (t + H.get_min().duration <= next) {
-
-#ifdef VERBOSE
-            std::cout << "run " << H.get_min().index
-                      << " until completion (t=" << (t + H.get_min().duration)
-                      << ")\n";
-#endif
-
-            t += H.get_min().duration;
-
-            if (t > H.get_min().date) {
-
-#ifdef VERBOSE
-              std::cout << t << " > " << H.get_min().index << "'s end ("
-                        << H.get_min().date << ")\n";
-#endif
-
-              return false;
-            }
-
-            H.get_min().setDuration(0);
-            H.pop_min();
-          } else {
-            // auto incr{next - t}
-            auto p{H.get_min().duration + t - next};
-
-#ifdef VERBOSE
-            std::cout << "run " << H.get_min().index << " for " << (next - t)
-                      << " unit of time (t=" << next << ", " << p
-                      << " remaining)\n";
-#endif
-
-            H.get_min().setDuration(p);
-            t = next;
-          }
-        }
-      }
-    }
-    H.add(dd);
-  }
-
-  while (H.size() > 0) {
-    auto a{H.pop_min()};
-
-    // assert(start_time[a.index].get_min() <= t);
-
 #ifdef VERBOSE
     std::cout << "run " << a.index
               << " until completion (t=" << (t + a.duration) << ")\n";
@@ -344,112 +170,90 @@ bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
 
     t += a.duration;
 
-    if (t > a.date) {
+    if (t > a.due_date) {
 
 #ifdef VERBOSE
-      std::cout << t << " > " << a.index << "'s end (" << a.date << ")\n";
+      std::cout << t << " > " << a.index << "'s end (" << a.due_date << ")\n";
 #endif
 
       return false;
+    }
+
+    if (a.index != sched.back().first) {
+      std::pair<int, int> I{a.index, t};
+      sched.push_back(I);
+    } else {
+      sched.back().second = t;
     }
   }
 
   return true;
 }
 
-int main( int argc, char** argv )
-{
 
-  ParameterList params(argc, argv);
-  usrand(params.Seed);
+bool computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
+                               Solver &solver, VarArray &start_time,
+                               VarArray &end_time,
+                               // std::vector<int> &trail,
+                               std::vector<std::pair<int, int>> &sched) {
 
-  StatisticList stats;
-  stats.start();
+  std::vector<TaskInfo> info;
+  for (auto a : tasks) {
+    info.push_back(TaskInfo(a, start_time[a].get_min(), end_time[a].get_max(), jsp.getDuration(a)));
+  }
 
-  // std::cout << "read\n";
+  return JacksonPreemptiveSchedule(info, sched);
 
-  Instance jsp(params);
+}
 
-  // std::vector<int> sol_start;
-  // std::vector<int> sol_end;
+bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
+                                     Instance &jsp, Solver &solver,
+                                     VarArray &start_time, VarArray &end_time,
+                                     std::vector<std::pair<int, int>> &sched) {
 
-  // std::ifstream solfile("sol.txt", std::ios_base::in);
+  std::vector<TaskInfo> info;
+  for (auto a : tasks) {
+    info.push_back(TaskInfo(a, start_time[a].get_solution_int_value(), end_time[a].get_solution_int_value(), jsp.getDuration(a)));
+  }
 
-  // int x;
-  // for (auto i{0}; i < jsp.nTasks(); ++i) {
-
-  //   solfile >> x;
-  //   assert(x == i);
-
-  //   solfile >> x;
-  //   sol_start.push_back(x);
-
-  //   solfile >> x;
-  //   sol_end.push_back(x);
-  // }
-
-  // std::cout << std::endl;
-
-  // jsp.print(std::cout);
-
-  // jsp.printStats(std::cout);
-  // params.print(std::cout);
-
-  // std::cout << "ub\n";
-
-  auto ub{jsp.getMakespanUpperBound(10)};
-
-  if(params.UBinit >= 0)
-    ub = params.UBinit;
+  return JacksonPreemptiveSchedule(info, sched);
+}
 
 
-  // std::cout << ub << std::endl;
-
-  // exit(1);
-
-  Solver solver;
-
-  solver.parameters.verbosity = params.Verbose;
-
-  VarArray start_time(jsp.nTasks(), 0, ub);
-  VarArray end_time(jsp.nTasks(), 0, ub);
-
-  // std::cout << "model\n";
-
-  // std::vector<int> trail(jsp.nTasks(), 0);
+void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, Variable& makespan) {
+#ifdef VERBOSE
+  std::cout << "model\n";
+#endif
 
   for (auto i{0}; i < jsp.nTasks(); ++i) {
     solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
-    // std::cout <<
   }
 
   for (auto j{0}; j < jsp.nJobs(); ++j) {
     for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
       solver.add(start_time[jsp.getJobTask(j, i)] >=
                  end_time[jsp.getJobTask(j, i - 1)]);
-      // for(auto k{i-1}; k<i; ++k)
-      //   trail[jsp.getJobTask(j, k)] += jsp.getDuration(jsp.getJobTask(j,i));
     }
   }
 
   // VarArray ordering;
   // for (auto k{0}; k < jsp.nMachines(); ++k) {
-  // 		for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-  // 			for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
-  // 				ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
+  //    for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
+  //      for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
+  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
   // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  // 				ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
+  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
   // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  // 				ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
+  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
   // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  // 				ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
+  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
   // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  // 			}
-  // 		}
+  //      }
+  //    }
   // }
 
   // for(auto &d : ordering)
-  // 	solver.add(Free(d));
+  //  solver.add(Free(d));
 
   std::vector<int> p;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
@@ -471,39 +275,25 @@ int main( int argc, char** argv )
     //   }
     // }
 
-    solver.add(NoOverlap(st, et, p));
+    solver.add(PreemptiveNoOverlap(st, et, p));
   }
 
   VarArray end_job;
   for (auto j{0}; j < jsp.nJobs(); ++j) {
-    // auto i{jsp.nTasksInJob(j)-1};
     end_job.add(end_time[jsp.getLastTaskofJob(j)]);
   }
 
-  Variable makespan{Max(end_job)};
-
-  // for (auto c{140}; c < 145; ++c) {
-  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->sol_start =
-  //       &sol_start;
-  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->sol_end =
-  //       &sol_end;
-  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->jsp = &jsp;
-  //   ((ConstraintNoOverlap *)(solver.constraints[c].propagator))->machine_id =
-  //       c - 140;
-  // }
+  solver.add(makespan == Max(end_job));
+  
 
   solver.minimize(makespan);
 
-  // SchedulingSolver solver(model, &params, &stats);
-  usrand(params.Seed);
-
-  std::vector<std::pair<int, int>> intervals;
-
   solver.consolidate();
 
-  // std::cout << solver << std::endl;
+}
 
-  // std::cout << "heuristics\n";
+
+void set_strategy(Solver& solver) {
 
   BranchingHeuristic *heuristic;
   RestartPolicy *restart;
@@ -515,18 +305,18 @@ int main( int argc, char** argv )
                        SolutionGuided<MinValue, MinValue>,
                        SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
-                       // std::cout << "init\n";
-
   solver.initialise_search(solver.variables, heuristic, restart);
+}
 
-  // std::cout << "prop\n";
+int get_lower_bound(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, const int ub) {
+
+#ifdef VERBOSE
+  std::cout << "lb\n";
+#endif
 
   solver.propagate();
 
-  // exit(1);
-
-  // std::cout << "lb\n";
-
+  std::vector<std::pair<int, int>> intervals;
   int LB = 0;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
     intervals.clear();
@@ -555,60 +345,65 @@ int main( int argc, char** argv )
       LB = (intervals.back().second + trail);
   };
 
-  solver.add(makespan >= LB);
+  return LB;
+}
 
-  std::cout << "c initial bounds: [" << LB << ".." << ub << "]\n";
+
+int main( int argc, char** argv )
+{
+
+  ParameterList params(argc, argv);
+  usrand(params.Seed);
+
+  StatisticList stats;
+  stats.start();
+
+#ifdef VERBOSE
+  std::cout << "read\n";
+#endif
+
+  Instance jsp(params);
 
 
-  // if(params.print_mod)
-  // std::cout << solver << std::endl;
+#ifdef VERBOSE
+  std::cout << "ub\n";
+#endif
 
-  // solver.propagate();
+  auto ub{jsp.getMakespanUpperBound(10)};
 
-  // exit(1);
+  if(params.UBinit >= 0)
+    ub = params.UBinit;
 
-  //
-  // // for (auto k{0}; k < 1; ++k) {
-  // //   for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-  // //     auto o{jsp.getMachineTask(k, i)};
-  // //     std::cout << " " << o << " in [" << start_time[o].get_min() << ".."
-  // //               << end_time[o].get_max() << "]\n";
-  // //   }
-  // //   std::cout << std::endl;
-  // // }
-  //
-  // std::vector<std::pair<int, int>> intervals;
-  //
-  // computePreemptiveSchedule(jsp.getMachineTasks(0), jsp, solver, start_time,
-  //                           end_time, intervals);
+
+  Solver solver;
+  solver.parameters.verbosity = params.Verbose;
+
+  VarArray start_time(jsp.nTasks(), 0, ub);
+  VarArray end_time(jsp.nTasks(), 0, ub);
+
+  Variable makespan(0,ub);
+
+  model(jsp, solver, start_time, end_time, makespan);
+
+  set_strategy(solver);
+
+  auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
+
+  solver.add(makespan >= lb);
+
+  std::cout << " c initial bounds: [" << lb << ".." << ub << "]\n";
 
   solver.depth_first_search();
-  // solver.depth_first_search(solver.variables, heuristic, restart);
-  // solver.depth_first_search(ordering, heuristic, restart);
 
+  std::vector<std::pair<int, int>> intervals;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
     intervals.clear();
     if (not checkPreemptiveScheduleSolution(jsp.getMachineTasks(k), jsp, solver,
                                             start_time, end_time, intervals)) {
-
       std::cout << "Error on machine " << k << std::endl;
       exit(1);
     }
   };
 
-  std::cout << "c solution checked!\n";
-
-  //   for (auto k{0}; k < jsp.nMachines(); ++k) {
-  //     for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-  // 		auto x{jsp.getMachineTask(k, i)};
-  // 		std::cout << "t" << x << ": [" << start_time[x].get_min() <<
-  // ".."
-  // << end_time[x].get_max() << "]\n";
-  // 	}
-  // 	std::cout << std::endl;
-  // }
-
-  // // solver.depth_first_search();
-
-  // print_solution(jsp, solver, start_time, end_time);
+  std::cout << " c solution checked!\n";
 }
