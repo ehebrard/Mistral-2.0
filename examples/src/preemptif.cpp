@@ -50,33 +50,130 @@ std::ostream &operator<<(std::ostream &os, const TaskInfo &x) {
   return x.display(os);
 }
 
+class JacksonPreemptiveScheduler {
+
+public:
+  std::vector<std::pair<int, int>> sched;
+  std::vector<int> sequence;
+
+  JacksonPreemptiveScheduler(Instance &jsp, Solver &solver,
+                             VarArray &start_time, VarArray &end_time)
+      : jsp(jsp), solver(solver), start_time(start_time), end_time(end_time) {
+    started.resize(jsp.nTasks(), false);
+  };
+
+  bool fromDomain(const std::vector<int> &tasks);
+  bool fromSolution(const std::vector<int> &tasks);
+
+  int get_lower_bound(const int ub);
+
+private:
+  Instance &jsp;
+  Solver &solver;
+  VarArray &start_time;
+  VarArray &end_time;
+
+  std::vector<TaskInfo> info;
+  // std::vector<int> tasks;
+
+  std::vector<bool> started;
+
+  bool compute();
+};
+
+int JacksonPreemptiveScheduler::get_lower_bound(const int ub) {
+
+#ifdef VERBOSE
+  std::cout << "lb\n";
+#endif
+
+  solver.propagate();
+
+  int LB = 0;
+  for (auto k{0}; k < jsp.nMachines(); ++k) {
+
+    // for (auto a : jsp.getMachineTasks(k))
+    //   std::cout << " " << a;
+    // std::cout << std::endl;
+
+    fromDomain(jsp.getMachineTasks(k));
+
+#ifdef VERBOSE
+    for (auto p : sched) {
+      if (p.first >= 0)
+        std::cout << "run " << p.first << " until " << p.second << std::endl;
+      else
+        std::cout << "idle until " << p.second << std::endl;
+    }
+#endif
+
+    for (auto a : sequence)
+      std::cout << " " << a;
+    
+
+    auto trail{ub - end_time[sched.back().first].get_max()};
+
+#ifdef VERBOSE
+    std::cout << "LB = " << sched.back().second << " + " << trail << " = "
+              << (sched.back().second + trail) << std::endl;
+
+    std::cout << std::endl;
+#endif
+
+    if (LB < (sched.back().second + trail))
+      LB = (sched.back().second + trail);
 
 
+    std::cout << " => " << LB << std::endl;
+  };
 
-bool JacksonPreemptiveSchedule(std::vector<TaskInfo>& info, std::vector<std::pair<int, int>> &sched) {
+  return LB;
+}
+
+bool JacksonPreemptiveScheduler::fromDomain(const std::vector<int> &tasks) {
+
+  info.clear();
+  for (auto a : tasks) {
+    info.push_back(TaskInfo(a, start_time[a].get_min(), end_time[a].get_max(),
+                            jsp.getDuration(a)));
+  }
+
+  return compute();
+}
+
+bool JacksonPreemptiveScheduler::fromSolution(const std::vector<int> &tasks) {
+
+  info.clear();
+  for (auto a : tasks) {
+    info.push_back(TaskInfo(a, start_time[a].get_solution_int_value(),
+                            end_time[a].get_solution_int_value(),
+                            jsp.getDuration(a)));
+  }
+
+  return compute();
+}
+
+bool JacksonPreemptiveScheduler::compute() {
 
 #ifdef VERBOSE
   std::cout << "JSP: sort\n";
 #endif
 
+  sched.clear();
+  sequence.clear();
 
-  std::sort(info.begin(), info.end(),
-            [&](const TaskInfo &a, const TaskInfo &b) {
-              return a.release_date <
-                         b.release_date or
-                     (a.release_date ==
-                          b.release_date and
-                      a.due_date <
-                          b.due_date);
-            });
+  std::sort(
+      info.begin(), info.end(), [&](const TaskInfo &a, const TaskInfo &b) {
+        return a.release_date < b.release_date or
+               (a.release_date == b.release_date and a.due_date < b.due_date);
+      });
 
 #ifdef VERBOSE
   for (auto i : info) {
     std::cout << " " << i.index << " in [" << i.release_date << ".."
-              << i.due_date << "] (p=" << i.duration
-              << ")\n";
+              << i.due_date << "] (p=" << i.duration << ")\n";
   }
-  #endif
+#endif
 
   BinaryMinHeap<TaskInfo> H;
 
@@ -129,6 +226,7 @@ bool JacksonPreemptiveSchedule(std::vector<TaskInfo>& info, std::vector<std::pai
 
             t += urgent_task.duration;
             urgent_task.setDuration(0);
+            sequence.push_back(idx);
 
             H.pop_min();
           } else {
@@ -154,6 +252,11 @@ bool JacksonPreemptiveSchedule(std::vector<TaskInfo>& info, std::vector<std::pai
           } else {
             sched.back().second = t;
           }
+
+          if (not started[idx]) {
+            sequence.push_back(idx);
+            started[idx] = true;
+          }
         }
       }
     }
@@ -168,19 +271,26 @@ bool JacksonPreemptiveSchedule(std::vector<TaskInfo>& info, std::vector<std::pai
               << " until completion (t=" << (t + a.duration) << ")\n";
 #endif
 
+    auto idx{a.index};
+    if (not started[idx]) {
+      sequence.push_back(idx);
+      started[a.index] = true;
+    }
+    sequence.push_back(idx);
+
     t += a.duration;
 
     if (t > a.due_date) {
 
 #ifdef VERBOSE
-      std::cout << t << " > " << a.index << "'s end (" << a.due_date << ")\n";
+      std::cout << t << " > " << idx << "'s end (" << a.due_date << ")\n";
 #endif
 
       return false;
     }
 
     if (a.index != sched.back().first) {
-      std::pair<int, int> I{a.index, t};
+      std::pair<int, int> I{idx, t};
       sched.push_back(I);
     } else {
       sched.back().second = t;
@@ -189,36 +299,6 @@ bool JacksonPreemptiveSchedule(std::vector<TaskInfo>& info, std::vector<std::pai
 
   return true;
 }
-
-
-bool computePreemptiveSchedule(const std::vector<int> &tasks, Instance &jsp,
-                               Solver &solver, VarArray &start_time,
-                               VarArray &end_time,
-                               // std::vector<int> &trail,
-                               std::vector<std::pair<int, int>> &sched) {
-
-  std::vector<TaskInfo> info;
-  for (auto a : tasks) {
-    info.push_back(TaskInfo(a, start_time[a].get_min(), end_time[a].get_max(), jsp.getDuration(a)));
-  }
-
-  return JacksonPreemptiveSchedule(info, sched);
-
-}
-
-bool checkPreemptiveScheduleSolution(const std::vector<int> &tasks,
-                                     Instance &jsp, Solver &solver,
-                                     VarArray &start_time, VarArray &end_time,
-                                     std::vector<std::pair<int, int>> &sched) {
-
-  std::vector<TaskInfo> info;
-  for (auto a : tasks) {
-    info.push_back(TaskInfo(a, start_time[a].get_solution_int_value(), end_time[a].get_solution_int_value(), jsp.getDuration(a)));
-  }
-
-  return JacksonPreemptiveSchedule(info, sched);
-}
-
 
 void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, Variable& makespan) {
 #ifdef VERBOSE
@@ -308,47 +388,6 @@ void set_strategy(Solver& solver) {
   solver.initialise_search(solver.variables, heuristic, restart);
 }
 
-int get_lower_bound(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, const int ub) {
-
-#ifdef VERBOSE
-  std::cout << "lb\n";
-#endif
-
-  solver.propagate();
-
-  std::vector<std::pair<int, int>> intervals;
-  int LB = 0;
-  for (auto k{0}; k < jsp.nMachines(); ++k) {
-    intervals.clear();
-    computePreemptiveSchedule(jsp.getMachineTasks(k), jsp, solver, start_time,
-                              end_time, intervals);
-
-    #ifdef VERBOSE
-    for (auto p : intervals) {
-      if (p.first >= 0)
-        std::cout << "run " << p.first << " until " << p.second << std::endl;
-      else
-        std::cout << "idle until " << p.second << std::endl;
-    }
-    #endif
-
-    auto trail{ub - end_time[intervals.back().first].get_max()};
-
-#ifdef VERBOSE
-    std::cout << "LB = " << intervals.back().second << " + " << trail << " = "
-              << (intervals.back().second + trail) << std::endl;
-
-    std::cout << std::endl;
-#endif
-
-    if (LB < (intervals.back().second + trail))
-      LB = (intervals.back().second + trail);
-  };
-
-  return LB;
-}
-
-
 int main( int argc, char** argv )
 {
 
@@ -385,9 +424,12 @@ int main( int argc, char** argv )
 
   model(jsp, solver, start_time, end_time, makespan);
 
+  JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
+
   set_strategy(solver);
 
-  auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
+  // auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
+  auto lb{JPS.get_lower_bound(ub)};
 
   solver.add(makespan >= lb);
 
@@ -395,11 +437,20 @@ int main( int argc, char** argv )
 
   solver.depth_first_search();
 
-  std::vector<std::pair<int, int>> intervals;
+  // std::vector<std::pair<int, int>> intervals;
+  // for (auto k{0}; k < jsp.nMachines(); ++k) {
+  //   intervals.clear();
+  //   if (not checkPreemptiveScheduleSolution(jsp.getMachineTasks(k), jsp,
+  //   solver,
+  //                                           start_time, end_time, intervals))
+  //                                           {
+  //     std::cout << "Error on machine " << k << std::endl;
+  //     exit(1);
+  //   }
+  // };
+
   for (auto k{0}; k < jsp.nMachines(); ++k) {
-    intervals.clear();
-    if (not checkPreemptiveScheduleSolution(jsp.getMachineTasks(k), jsp, solver,
-                                            start_time, end_time, intervals)) {
+    if (not JPS.fromSolution(jsp.getMachineTasks(k))) {
       std::cout << "Error on machine " << k << std::endl;
       exit(1);
     }
