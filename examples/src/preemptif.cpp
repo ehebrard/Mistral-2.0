@@ -2,7 +2,7 @@
 
 #include "mistral_scheduler.hpp"
 
-// #define VERBOSE
+#define VERBOSE
 
 using namespace Mistral;
 
@@ -302,12 +302,16 @@ bool JacksonPreemptiveScheduler::compute() {
 
 void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, Variable& makespan, VarArray& search_vars) {
 #ifdef VERBOSE
-  std::cout << "model\n";
+  std::cout << "model\n\ndurations\n";
 #endif
 
   for (auto i{0}; i < jsp.nTasks(); ++i) {
     solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
   }
+
+  #ifdef VERBOSE
+  std::cout << "jobs\n";
+#endif
 
   for (auto j{0}; j < jsp.nJobs(); ++j) {
     for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
@@ -335,6 +339,10 @@ void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_ti
   // for(auto &d : ordering)
   //  solver.add(Free(d));
 
+  #ifdef VERBOSE
+  std::cout << "resources\n";
+#endif
+
   std::vector<int> p;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
     VarArray st;
@@ -358,6 +366,10 @@ void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_ti
     solver.add(PreemptiveNoOverlap(st, et, p));
   }
 
+  #ifdef VERBOSE
+  std::cout << "makespan\n";
+#endif
+
   VarArray end_job;
   for (auto j{0}; j < jsp.nJobs(); ++j) {
     end_job.add(end_time[jsp.getLastTaskofJob(j)]);
@@ -368,12 +380,24 @@ void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_ti
 
   solver.minimize(makespan);
 
+  #ifdef VERBOSE
+  std::cout << "consolidate\n";
+#endif
+
   solver.consolidate();
+
+  #ifdef VERBOSE
+  std::cout << "search vars\n";
+#endif
 
   for( auto s : start_time )
     search_vars.add(s);
   for( auto e : end_time )
     search_vars.add(e);
+
+  #ifdef VERBOSE
+  std::cout << "end model\n";
+#endif
 
 }
 
@@ -473,7 +497,7 @@ void set_strategy(Solver& solver, VarArray& search_vars) {
                        SolutionGuided<MinValue, MinValue>,
                        SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
-  solver.initialise_search(search_vars, heuristic, restart);
+  solver.initialise_search(solver.variables, heuristic, restart);
 }
 
 int main( int argc, char** argv )
@@ -490,6 +514,10 @@ int main( int argc, char** argv )
 #endif
 
   Instance jsp(params);
+
+
+jsp.print(std::cout);
+std::cout << std::endl;
 
 
 #ifdef VERBOSE
@@ -512,7 +540,7 @@ int main( int argc, char** argv )
 
   Variable makespan(0,ub);
 
-  model_order(jsp, solver, start_time, end_time, makespan, search_vars);
+  model(jsp, solver, start_time, end_time, makespan, search_vars);
 
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
 
