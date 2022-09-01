@@ -432,9 +432,13 @@ void model_order(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& 
   }
 
   for(auto &d : ordering) {
-    search_vars.add(Free(d));
-    solver.add(search_vars.back());
+    search_vars.add(d);
+    solver.add(Free(search_vars.back()));
   }
+
+  // std::cout << search_vars << std::endl;
+
+  // exit(1);
 
   std::vector<int> p;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
@@ -534,7 +538,7 @@ int main( int argc, char** argv )
 
   Variable makespan(0,ub);
 
-  model(jsp, solver, start_time, end_time, makespan, search_vars);
+  model_order(jsp, solver, start_time, end_time, makespan, search_vars);
 
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
 
