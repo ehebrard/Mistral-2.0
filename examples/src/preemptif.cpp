@@ -2,7 +2,7 @@
 
 #include "mistral_scheduler.hpp"
 
-#define VERBOSE
+// #define VERBOSE
 
 using namespace Mistral;
 
@@ -106,9 +106,6 @@ int JacksonPreemptiveScheduler::get_lower_bound(const int ub) {
         std::cout << "idle until " << p.second << std::endl;
     }
 #endif
-
-    for (auto a : sequence)
-      std::cout << " " << a;
     
 
     auto trail{ub - end_time[sched.back().first].get_max()};
@@ -124,7 +121,7 @@ int JacksonPreemptiveScheduler::get_lower_bound(const int ub) {
       LB = (sched.back().second + trail);
 
 
-    std::cout << " => " << LB << std::endl;
+    // std::cout << " => " << LB << std::endl;
   };
 
   return LB;
@@ -339,7 +336,7 @@ void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_ti
   // for(auto &d : ordering)
   //  solver.add(Free(d));
 
-  #ifdef VERBOSE
+#ifdef VERBOSE
   std::cout << "resources\n";
 #endif
 
@@ -497,7 +494,7 @@ void set_strategy(Solver& solver, VarArray& search_vars) {
                        SolutionGuided<MinValue, MinValue>,
                        SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
-  solver.initialise_search(solver.variables, heuristic, restart);
+  solver.initialise_search(search_vars, heuristic, restart);
 }
 
 int main( int argc, char** argv )
@@ -515,9 +512,6 @@ int main( int argc, char** argv )
 
   Instance jsp(params);
 
-
-jsp.print(std::cout);
-std::cout << std::endl;
 
 
 #ifdef VERBOSE
