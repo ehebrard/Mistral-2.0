@@ -300,7 +300,7 @@ bool JacksonPreemptiveScheduler::compute() {
   return true;
 }
 
-void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, Variable& makespan) {
+void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, Variable& makespan, VarArray& search_vars) {
 #ifdef VERBOSE
   std::cout << "model\n";
 #endif
@@ -370,10 +370,98 @@ void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_ti
 
   solver.consolidate();
 
+  for( auto s : start_time )
+    search_vars.add(s);
+  for( auto e : end_time )
+    search_vars.add(e);
+
 }
 
 
-void set_strategy(Solver& solver) {
+void model_order(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_time, Variable& makespan, VarArray& search_vars) {
+#ifdef VERBOSE
+  std::cout << "model\n";
+#endif
+
+  for (auto i{0}; i < jsp.nTasks(); ++i) {
+    solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
+  }
+
+  for (auto j{0}; j < jsp.nJobs(); ++j) {
+    for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
+      solver.add(start_time[jsp.getJobTask(j, i)] >=
+                 end_time[jsp.getJobTask(j, i - 1)]);
+    }
+  }
+
+  VarArray ordering;
+  for (auto k{0}; k < jsp.nMachines(); ++k) {
+     for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
+       for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
+  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
+  // start_time[jsp.getMachineTask(k,j)], 1, 1));
+  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
+  // end_time[jsp.getMachineTask(k,j)], 1, 1));
+  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
+  // start_time[jsp.getMachineTask(k,j)], 1, 1));
+         ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
+  end_time[jsp.getMachineTask(k,j)], 1, 1));
+       }
+     }
+  }
+
+  for(auto &d : ordering) {
+    search_vars.add(Free(d));
+    solver.add(search_vars.back());
+  }
+
+  std::vector<int> p;
+  for (auto k{0}; k < jsp.nMachines(); ++k) {
+    VarArray st;
+    VarArray et;
+    p.clear();
+    for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
+      auto o{jsp.getMachineTask(k, i)};
+      st.add(start_time[o]);
+      et.add(end_time[o]);
+      p.push_back(jsp.getDuration(o));
+    }
+
+    // for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
+    //   for (auto j{0}; j < jsp.nTasksInMachine(k); ++j) {
+    //     if(i != j) {
+    //       solver.add((st[i] <= st[j] && et[i] <= et[j]) <= (et[i] <= st[j]));
+    //     }
+    //   }
+    // }
+
+    solver.add(PreemptiveNoOverlap(st, et, p));
+  }
+
+  VarArray end_job;
+  for (auto j{0}; j < jsp.nJobs(); ++j) {
+    end_job.add(end_time[jsp.getLastTaskofJob(j)]);
+  }
+
+  solver.add(makespan == Max(end_job));
+  
+
+  solver.minimize(makespan);
+
+  solver.consolidate();
+
+  // for( auto s : start_time )
+  //   search_vars.add(s);
+  // for( auto e : end_time )
+  //   search_vars.add(e);
+
+  // for( auto e : end_time )
+  //   search_vars.add(e);
+
+}
+
+
+void set_strategy(Solver& solver, VarArray& search_vars) {
 
   BranchingHeuristic *heuristic;
   RestartPolicy *restart;
@@ -385,7 +473,7 @@ void set_strategy(Solver& solver) {
                        SolutionGuided<MinValue, MinValue>,
                        SolutionGuided<MinValue, MinValue>, 1>(&solver);
 
-  solver.initialise_search(solver.variables, heuristic, restart);
+  solver.initialise_search(search_vars, heuristic, restart);
 }
 
 int main( int argc, char** argv )
@@ -417,16 +505,18 @@ int main( int argc, char** argv )
   Solver solver;
   solver.parameters.verbosity = params.Verbose;
 
+  VarArray search_vars;
+
   VarArray start_time(jsp.nTasks(), 0, ub);
   VarArray end_time(jsp.nTasks(), 0, ub);
 
   Variable makespan(0,ub);
 
-  model(jsp, solver, start_time, end_time, makespan);
+  model_order(jsp, solver, start_time, end_time, makespan, search_vars);
 
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
 
-  set_strategy(solver);
+  set_strategy(solver, search_vars);
 
   // auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
   auto lb{JPS.get_lower_bound(ub)};

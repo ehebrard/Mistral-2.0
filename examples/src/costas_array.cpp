@@ -8,6 +8,8 @@ using namespace std;
 using namespace Mistral;
 
 
+
+
 int main(int argc, char *argv[])
 {  
 
@@ -47,12 +49,19 @@ int main(int argc, char *argv[])
 
 #ifdef _MONITOR
   s.monitor_list << X << "\n";
+  // for(i=0; i<N-2; ++i) {
+  //   s.monitor_list << differences[i] << "\n";
+  // }
   for(i=0; i<N-2; ++i) {
-    s.monitor_list << differences[i] << "\n";
+   s.monitor_list << differences[i][0];
+   for(j=0; j<differences[i].size; ++j)
+    s.monitor_list << ", " << differences[i][j];
+  s.monitor_list << "\n";
   }
+
 #endif
 
-  ImpactManager *im = new ImpactManager(&s);
+  // ImpactManager *im = new ImpactManager(&s);
 
 
   

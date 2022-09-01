@@ -136,7 +136,7 @@ namespace Mistral {
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
 // #define _DEBUG_SEARCH true //(parameters.verbosity > 1)
-  //#define _MONITOR true
+  // #define _MONITOR true
   //#define _DEBUG_NOGOOD true
   //(statistics.num_filterings > 640)
   //((statistics.num_filterings == 48212) || (statistics.num_filterings == 46738))
