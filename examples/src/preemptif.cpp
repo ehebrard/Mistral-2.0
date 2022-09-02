@@ -392,6 +392,9 @@ void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& end_ti
   for( auto e : end_time )
     search_vars.add(e);
 
+  // for(auto x : solver.variables)
+  //   search_vars.add(x);
+
   #ifdef VERBOSE
   std::cout << "end model\n";
 #endif
@@ -432,8 +435,7 @@ void set_strategy(Solver& solver, VarArray& search_vars) {
   restart->base = 128;
   heuristic =
       new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
-                       SolutionGuided<MinValue, MinValue>,
-                       SolutionGuided<MinValue, MinValue>, 1>(&solver);
+                        MinValue, MinValue, 1>(&solver);
 
   solver.initialise_search(search_vars, heuristic, restart);
 }
@@ -461,7 +463,8 @@ int main( int argc, char** argv )
   cmd.parse(argc, argv);
   
 
-  usrand(cmd.get_seed());
+  // usrand(cmd.get_seed());
+  usrand(12345);
 
 
   StatisticList stats;
@@ -479,7 +482,7 @@ int main( int argc, char** argv )
   std::cout << "ub\n";
 #endif
 
-  auto ub{jsp.getMakespanUpperBound(10)};
+  auto ub{jsp.getMakespanUpperBound(1)};
 
   if(init_ub.getValue() >= 0)
     ub = init_ub.getValue();
@@ -503,6 +506,8 @@ int main( int argc, char** argv )
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
 
   set_strategy(solver, search_vars);
+
+  usrand(12345);
 
   // auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
   auto lb{JPS.get_lower_bound(ub)};
