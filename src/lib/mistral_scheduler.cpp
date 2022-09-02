@@ -1044,7 +1044,7 @@ std::ostream& ParameterList::print(std::ostream& os) {
 
 Instance::Instance(ParameterList& params) {
 
-	DBG("Build instance %s\n", params.data_file);
+	DBG("Build instance %s\n", data_file);
 
 	dtp_nodes = 0;
   
@@ -1083,6 +1083,49 @@ Instance::Instance(ParameterList& params) {
 	} else if(params.Type == "dtp") {
 		dtp_readData( params.data_file );
 	} 
+}
+
+Instance::Instance(const char* data_file, const char* data_type) {
+
+  DBG("Build instance %s\n", data_file);
+
+  dtp_nodes = 0;
+  
+  setup_time    = NULL;
+  time_lag[0]   = NULL;
+  time_lag[1]   = NULL;
+  jsp_duedate   = NULL;
+  // jsp_latecost  = NULL;
+  // jsp_earlycost = NULL;
+  jsp_floatcost = NULL;
+
+  max_makespan  = INFTY;
+  
+  if(strcmp(data_type, "osp") == 0) {
+    osp_readData( data_file );
+  } else if(strcmp(data_type, "sds") == 0) {
+    sds_readData( data_file );
+  } else if(strcmp(data_type, "jtl") == 0) {
+    jtl_readData( data_file );
+  } else if(strcmp(data_type, "now") == 0 or strcmp(data_type, "now2") == 0) {
+    now_readData( data_file );
+  } else if(strcmp(data_type, "jla") == 0) {
+    jla_readData( data_file );
+  } else if(strcmp(data_type, "tsp") == 0) {
+    tsp_readData( data_file );
+  } else if(strcmp(data_type, "fsp") == 0) {
+    fsp_readData( data_file );
+  } else if(strcmp(data_type, "pfsp") == 0) {
+    fsp_readData( data_file );
+  } else if(strcmp(data_type, "jsp") == 0) {
+    jsp_readData( data_file );
+  } else if(strcmp(data_type, "jet") == 0) {
+    jet_readData( data_file );
+  } else if(strcmp(data_type, "dyn") == 0) {
+    dyn_readData( data_file, 1 );
+  } else if(strcmp(data_type, "dtp") == 0) {
+    dtp_readData( data_file );
+  } 
 }
 
 Instance::~Instance() {

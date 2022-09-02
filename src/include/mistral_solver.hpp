@@ -749,8 +749,8 @@ namespace Mistral {
       Returns an outcome (SAT/UNSAT/OPT/UNKNOWN) and undo all decisions before returning.
     */
     Outcome depth_first_search(Vector< Variable >& seq, 
-			       BranchingHeuristic *heu=NULL, 
-			       RestartPolicy *pol=NULL,
+			       BranchingHeuristic *heu, 
+			       RestartPolicy *pol,
 			       Goal *goal=NULL,
 			       bool _restore_=true);
     /*!
@@ -758,10 +758,15 @@ namespace Mistral {
       with variable ordering 'heu' and restart policy 'pol'.
       Returns an outcome (SAT/UNSAT/OPT/UNKNOWN) and undo all decisions before returning.
     */
-    Outcome depth_first_search(BranchingHeuristic *heu=NULL, 
-			       RestartPolicy *pol=NULL,
+    Outcome depth_first_search(BranchingHeuristic *heu, 
+			       RestartPolicy *pol,
 			       Goal *goal=NULL,
 			       bool _restore_=true);
+
+     /*!
+      Launches a depth first search, requires initialise_search() first
+    */
+    Outcome depth_first_search(bool _restore_=true);
 
     Outcome restart_search(const int root=0, const bool _restore_=true);
 

@@ -404,27 +404,12 @@ void model_order(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& 
   std::cout << "model\n";
 #endif
 
-  for (auto i{0}; i < jsp.nTasks(); ++i) {
-    solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
-  }
-
-  for (auto j{0}; j < jsp.nJobs(); ++j) {
-    for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
-      solver.add(start_time[jsp.getJobTask(j, i)] >=
-                 end_time[jsp.getJobTask(j, i - 1)]);
-    }
-  }
+  search_vars.clear();
 
   VarArray ordering;
   for (auto k{0}; k < jsp.nMachines(); ++k) {
      for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
        for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
-  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-  // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-  // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-  // start_time[jsp.getMachineTask(k,j)], 1, 1));
          ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
   end_time[jsp.getMachineTask(k,j)], 1, 1));
        }
@@ -435,54 +420,6 @@ void model_order(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& 
     search_vars.add(d);
     solver.add(Free(search_vars.back()));
   }
-
-  // std::cout << search_vars << std::endl;
-
-  // exit(1);
-
-  std::vector<int> p;
-  for (auto k{0}; k < jsp.nMachines(); ++k) {
-    VarArray st;
-    VarArray et;
-    p.clear();
-    for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-      auto o{jsp.getMachineTask(k, i)};
-      st.add(start_time[o]);
-      et.add(end_time[o]);
-      p.push_back(jsp.getDuration(o));
-    }
-
-    // for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-    //   for (auto j{0}; j < jsp.nTasksInMachine(k); ++j) {
-    //     if(i != j) {
-    //       solver.add((st[i] <= st[j] && et[i] <= et[j]) <= (et[i] <= st[j]));
-    //     }
-    //   }
-    // }
-
-    solver.add(PreemptiveNoOverlap(st, et, p));
-  }
-
-  VarArray end_job;
-  for (auto j{0}; j < jsp.nJobs(); ++j) {
-    end_job.add(end_time[jsp.getLastTaskofJob(j)]);
-  }
-
-  solver.add(makespan == Max(end_job));
-  
-
-  solver.minimize(makespan);
-
-  solver.consolidate();
-
-  // for( auto s : start_time )
-  //   search_vars.add(s);
-  // for( auto e : end_time )
-  //   search_vars.add(e);
-
-  // for( auto e : end_time )
-  //   search_vars.add(e);
-
 }
 
 
@@ -504,8 +441,27 @@ void set_strategy(Solver& solver, VarArray& search_vars) {
 int main( int argc, char** argv )
 {
 
-  ParameterList params(argc, argv);
-  usrand(params.Seed);
+  std::cout << "c Mistral preemptive jobshop scheduler" << std::endl;
+  SolverCmdLine cmd("Mistral preemptive scheduler", ' ', "0.0"); 
+  
+  TCLAP::SwitchArg order_branching("","order","Branches on the ordering of end times", false);
+  cmd.add( order_branching );
+
+  TCLAP::ValueArg<std::string>  format("","format","Data set format (jsp/jla/osp/dyn/jet/now/sds)", false, "jla", "string");
+  cmd.add( format );
+
+  TCLAP::ValueArg<int>  init_ub("","ub","Sets a manual upper bound (-1 stands for no upper bound)", false, -1, "int");
+  cmd.add( init_ub );
+
+  cmd.parse(argc, argv);
+  
+
+  usrand(cmd.get_seed());
+
+
+
+  // ParameterList params(argc, argv);
+  // usrand(params.Seed);
 
   StatisticList stats;
   stats.start();
@@ -514,7 +470,7 @@ int main( int argc, char** argv )
   std::cout << "read\n";
 #endif
 
-  Instance jsp(params);
+  Instance jsp(cmd.get_filename().c_str(), format.getValue().c_str());
 
 
 
@@ -524,12 +480,12 @@ int main( int argc, char** argv )
 
   auto ub{jsp.getMakespanUpperBound(10)};
 
-  if(params.UBinit >= 0)
-    ub = params.UBinit;
+  if(init_ub.getValue() >= 0)
+    ub = init_ub.getValue();
 
 
   Solver solver;
-  solver.parameters.verbosity = params.Verbose;
+  cmd.set_parameters(solver);
 
   VarArray search_vars;
 
@@ -538,7 +494,10 @@ int main( int argc, char** argv )
 
   Variable makespan(0,ub);
 
-  model_order(jsp, solver, start_time, end_time, makespan, search_vars);
+  model(jsp, solver, start_time, end_time, makespan, search_vars);
+  if(order_branching.getValue())
+    model_order(jsp, solver, start_time, end_time, makespan, search_vars);
+      
 
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
 
@@ -549,7 +508,7 @@ int main( int argc, char** argv )
 
   solver.add(makespan >= lb);
 
-  std::cout << " c initial bounds: [" << lb << ".." << ub << "]\n";
+  std::cout << "c initial bounds: [" << lb << ".." << ub << "]\n";
 
   solver.depth_first_search();
 
@@ -572,5 +531,5 @@ int main( int argc, char** argv )
     }
   };
 
-  std::cout << " c solution checked!\n";
+  std::cout << "c solution checked!\n";
 }

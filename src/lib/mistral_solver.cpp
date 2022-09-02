@@ -1606,7 +1606,7 @@ Mistral::Outcome Mistral::Solver::solve() {
     RandomMinMax 
     > (this); 
   RestartPolicy *pol = new Geometric();
-  return depth_first_search(variables, heu, pol); 
+  return depth_first_search(variables, heu, pol, NULL); 
   //return (search_outcome == SAT || search_outcome == OPT);
 }
 
@@ -1662,10 +1662,24 @@ Mistral::Outcome Mistral::Solver::search_maximize(Variable X) {
   //return (search_outcome == OPT);
 }
 
+Mistral::Outcome Mistral::Solver::depth_first_search(bool _restore_) {
+
+  assert(sequence.size > 0);
+  assert(policy != NULL);
+  assert(objective != NULL);
+  assert(heuristic != NULL);
+
+  statistics.start_time = get_run_time();
+  
+  search_started = true;
+  
+  return restart_search(0, _restore_);
+}
+
 Mistral::Outcome Mistral::Solver::depth_first_search(BranchingHeuristic *heu, 
-						     RestartPolicy *pol,
-						     Goal *goal,
-						     bool _restore_) {
+                 RestartPolicy *pol,
+                 Goal *goal,
+                 bool _restore_) {
   return depth_first_search(variables, heu, pol, goal, _restore_);
 }
 
@@ -1679,12 +1693,7 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
   initialise_search(seq, heu, pol, goal);
 	
 	// std::cout << "SEARCH\n" ;
-
-  statistics.start_time = get_run_time();
-	
-	search_started = true;
-	
-  return restart_search(0, _restore_);
+  return depth_first_search(_restore_);
 }
  
 
@@ -5095,13 +5104,13 @@ Mistral::Outcome Mistral::Solver::branch_right() {
 #endif
   else {
 
-#ifdef _DEBUG_SEARCH
-    if(_DEBUG_SEARCH) {
-      std::cout << parameters.prefix_comment;
-      for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
-      //std::cout << "limit fine: " << statistics.num_failures << " < " << parameters.restart_limit << std::endl;
-    }
-#endif
+// #ifdef _DEBUG_SEARCH
+//     if(_DEBUG_SEARCH) {
+//       std::cout << parameters.prefix_comment;
+//       for(unsigned int k=0; k<=decisions.size; ++k) std::cout << " ";
+//       //std::cout << "limit fine: " << statistics.num_failures << " < " << parameters.restart_limit << std::endl;
+//     }
+// #endif
 
     Mistral::Decision deduction;
 
