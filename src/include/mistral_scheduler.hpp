@@ -299,6 +299,7 @@ private:
 public:
   Instance(ParameterList &params);
   Instance(const char* data_file, const char* data_type);
+  void initialise_from(const char* data_file, const char* data_type);
   virtual ~Instance();
 
   std::ostream &print(std::ostream &os);

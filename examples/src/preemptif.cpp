@@ -447,10 +447,15 @@ int main( int argc, char** argv )
   TCLAP::SwitchArg order_branching("","order","Branches on the ordering of end times", false);
   cmd.add( order_branching );
 
-  TCLAP::ValueArg<std::string>  format("","format","Data set format (jsp/jla/osp/dyn/jet/now/sds)", false, "jla", "string");
+  TCLAP::ValueArg<std::string> format(
+      "", "format",
+      "Instance file format (can be: jsp/jla/osp/dyn/jet/now/sds)", false,
+      "jla", "string");
   cmd.add( format );
 
-  TCLAP::ValueArg<int>  init_ub("","ub","Sets a manual upper bound (-1 stands for no upper bound)", false, -1, "int");
+  TCLAP::ValueArg<int> init_ub(
+      "", "ub", "Sets a manual upper bound (-1 stands for no upper bound)",
+      false, -1, "int");
   cmd.add( init_ub );
 
   cmd.parse(argc, argv);
@@ -458,10 +463,6 @@ int main( int argc, char** argv )
 
   usrand(cmd.get_seed());
 
-
-
-  // ParameterList params(argc, argv);
-  // usrand(params.Seed);
 
   StatisticList stats;
   stats.start();

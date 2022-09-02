@@ -1043,50 +1043,55 @@ std::ostream& ParameterList::print(std::ostream& os) {
 
 
 Instance::Instance(ParameterList& params) {
+  initialise_from(params.data_file, params.Type.c_str());
 
-	DBG("Build instance %s\n", data_file);
 
-	dtp_nodes = 0;
+	// DBG("Build instance %s\n", data_file);
+
+	// dtp_nodes = 0;
   
-	setup_time    = NULL;
-	time_lag[0]   = NULL;
-	time_lag[1]   = NULL;
-	jsp_duedate   = NULL;
-	// jsp_latecost  = NULL;
-	// jsp_earlycost = NULL;
-	jsp_floatcost = NULL;
+	// setup_time    = NULL;
+	// time_lag[0]   = NULL;
+	// time_lag[1]   = NULL;
+	// jsp_duedate   = NULL;
+	// // jsp_latecost  = NULL;
+	// // jsp_earlycost = NULL;
+	// jsp_floatcost = NULL;
 
-	max_makespan  = INFTY;
+	// max_makespan  = INFTY;
   
-	if(params.Type == "osp") {
-		osp_readData( params.data_file );
-	} else if(params.Type == "sds") {
-		sds_readData( params.data_file );
-	} else if(params.Type == "jtl") {
-		jtl_readData( params.data_file );
-	} else if(params.Type == "now" || params.Type == "now2") {
-		now_readData( params.data_file );
-	} else if(params.Type == "jla") {
-		jla_readData( params.data_file );
-	} else if(params.Type == "tsp") {
-		tsp_readData( params.data_file );
-	} else if(params.Type == "fsp") {
-		fsp_readData( params.data_file );
-	} else if(params.Type == "pfsp") {
-		fsp_readData( params.data_file );
-	} else if(params.Type == "jsp") {
-		jsp_readData( params.data_file );
-	} else if(params.Type == "jet") {
-		jet_readData( params.data_file );
-	} else if(params.Type == "dyn") {
-		dyn_readData( params.data_file, params.Precision );
-	} else if(params.Type == "dtp") {
-		dtp_readData( params.data_file );
-	} 
+	// if(params.Type == "osp") {
+	// 	osp_readData( params.data_file );
+	// } else if(params.Type == "sds") {
+	// 	sds_readData( params.data_file );
+	// } else if(params.Type == "jtl") {
+	// 	jtl_readData( params.data_file );
+	// } else if(params.Type == "now" || params.Type == "now2") {
+	// 	now_readData( params.data_file );
+	// } else if(params.Type == "jla") {
+	// 	jla_readData( params.data_file );
+	// } else if(params.Type == "tsp") {
+	// 	tsp_readData( params.data_file );
+	// } else if(params.Type == "fsp") {
+	// 	fsp_readData( params.data_file );
+	// } else if(params.Type == "pfsp") {
+	// 	fsp_readData( params.data_file );
+	// } else if(params.Type == "jsp") {
+	// 	jsp_readData( params.data_file );
+	// } else if(params.Type == "jet") {
+	// 	jet_readData( params.data_file );
+	// } else if(params.Type == "dyn") {
+	// 	dyn_readData( params.data_file, params.Precision );
+	// } else if(params.Type == "dtp") {
+	// 	dtp_readData( params.data_file );
+	// } 
 }
 
 Instance::Instance(const char* data_file, const char* data_type) {
+initialise_from(data_file, data_type);
+}
 
+void Instance::initialise_from(const char* data_file, const char* data_type) {
   DBG("Build instance %s\n", data_file);
 
   dtp_nodes = 0;
