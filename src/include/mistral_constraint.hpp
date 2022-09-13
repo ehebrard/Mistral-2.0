@@ -5527,6 +5527,7 @@ public:
   // }
 };
 
+
 class ConstraintPreemptiveNoOverlapHall : public GlobalConstraint {
 
 public:
@@ -5572,6 +5573,59 @@ public:
   void sortit();
   int filterlower();
   int filterupper();
+  virtual int check(const int *sol) const;
+  virtual PropagationOutcome propagate();
+  //@}
+
+  /**@name Miscellaneous*/
+  //@{
+  virtual std::ostream &display(std::ostream &) const;
+  virtual std::string name() const { return "{=/=}"; }
+  //@}
+  // #ifdef _CNE_WC
+  //     double weight_conflict(double unit, Vector<double>& weights);//  {
+  //     virtual bool conflict_is_explained() {return true;}
+  // #endif
+  //   std::cout << std::endl;
+  //   for(int i=0; i<scope.size; ++i) {
+  //  std::cout << scope[i].get_domain() << std::endl;
+  //  weights[scope[i].id()] += unit;
+  //   }
+  // }
+};
+
+
+
+
+/// 
+class ConstraintPreemptiveNonDelay : public GlobalConstraint {
+
+public:
+  std::vector<int> duration;
+  std::vector<int> est_order;
+  Vector<Variable> et_pred;
+  Vector<Variable> st;
+
+  /**@name Constructors*/
+  //@{
+  ConstraintPreemptiveNonDelay() : GlobalConstraint() { }
+  ConstraintPreemptiveNonDelay(Vector<Variable> &scp, const Vector<Variable> &st, const Vector<Variable> &et_pred,
+                                    const std::vector<int> &duration);
+  virtual Constraint clone() {
+    return Constraint(new ConstraintPreemptiveNonDelay(scope,st, et_pred, duration) 
+    );
+  }
+  size_t numVars() { return duration.size(); }
+  virtual void initialise();
+  virtual void mark_domain();
+  virtual int idempotent() { return 1; }
+  virtual int postponed() { return 1; }
+  virtual int pushed() { return 1; }
+  virtual ~ConstraintPreemptiveNonDelay();
+  //@}
+
+  /**@name Solving*/
+  //@{
   virtual int check(const int *sol) const;
   virtual PropagationOutcome propagate();
   //@}

@@ -74,6 +74,7 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_NOOVERLAP_SOL true
 // #define _DEBUG_NOOVERLAP_HALL (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // #define _DEBUG_NOOVERLAP_EDGE true
+ #define _DEBUG_NONDELAY true
 // (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
@@ -22750,6 +22751,7 @@ std::ostream& ConstraintOccurrences::display(std::ostream& o) const
 //  *=================================================================*/
 
 /// NOOVERLAP BASED ON ALLDIFF
+/// NOOVERLAP BASED ON ALLDIFF
 
 Mistral::ConstraintPreemptiveNoOverlapHall::ConstraintPreemptiveNoOverlapHall(
     Vector<Variable> & scp, const std::vector<int> &d)
@@ -23414,6 +23416,132 @@ std::ostream &Mistral::ConstraintPreemptiveNoOverlapHall::display(std::ostream &
        << duration[i] << ")";
   os << ")";
   return os;
+}
+
+/*
+ *  End of user defined propagator for enforcing bounds consistency
+ *=================================================================*/
+
+Mistral::ConstraintPreemptiveNonDelay::ConstraintPreemptiveNonDelay(
+    Vector<Variable> &scp, const Vector<Variable> &st, const Vector<Variable> &et_pred, const std::vector<int> &d)
+
+    : GlobalConstraint(scp),st(st), duration(d), et_pred(et_pred) {
+
+  for (unsigned int i = 0; i < numVars(); ++i) {
+    est_order.push_back(i);
+  }
+
+  priority = 2;
+
+   assert(numVars() == scope.size);
+
+}
+
+void Mistral::ConstraintPreemptiveNonDelay::initialise() {
+  ConstraintImplementation::initialise();
+
+  auto n{numVars()};
+  for (unsigned int i = 0; i < n; ++i) {
+    trigger_on(_RANGE_, scope[i]);
+  }
+  GlobalConstraint::initialise();
+
+  //  culprit = -1;
+  //  GlobalConstraint::set_idempotent();
+}
+
+void Mistral::ConstraintPreemptiveNonDelay::mark_domain() {
+  // for (unsigned int i = scope.size; i;) {
+  //   // get_solver()->mark_non_convex(scope[i].id());
+  //   get_solver()->forbid(scope[--i].id(), RANGE_VAR);
+  // }
+}
+
+Mistral::ConstraintPreemptiveNonDelay::
+    ~ConstraintPreemptiveNonDelay() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete non delay constraint" << std::endl;
+#endif
+}
+
+
+
+
+
+Mistral::PropagationOutcome
+Mistral::ConstraintPreemptiveNonDelay::propagate() {
+
+// #ifdef _DEBUG_NONDELAY
+
+//   if (_DEBUG_NONDELAY) { // and num_assigned >= (scope.size - 1)) {
+//     std::cout << "\npropagate[ non delay ] "
+//               << get_solver()->statistics.num_propagations << std::endl;
+//     for (int i = 0; i < numVars(); ++i)
+//       std::cout << scope[i].get_domain() << ".."
+//                 //<< scope[i + numVars()].get_domain() 
+//                 << " (" << duration[i]
+//                 << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
+//   }
+// #endif
+
+//   std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
+//     b) {
+//       return st[a].get_min() < st[b].get_min();
+//     });
+
+//   auto n{numVars()};
+
+//   for (auto a : est_order){
+//     if (scope[a].get_max() > scope[a].get_min() && scope[a].get_max() > et_pred[a].get_max() + duration[a])
+//     {
+//       int A = et_pred[a].get_max(); 
+//       int B = A + duration[a]; 
+//       for(auto b : est_order)
+//       {
+//         if(a!=b)
+//         {
+//           if (st[b].get_min() > B) break;
+//           if (scope[b].get_max() > A ) 
+//           {
+//               B += duration[b];
+//           }
+//         }
+//       }
+//       if (  B <scope[a].get_max() )
+//       {
+//         scope[a].set_max(B); 
+//       }
+//   }
+// }
+//   #ifdef _DEBUG_NONDELAY
+
+//   if (_DEBUG_NONDELAY) {
+//     std::cout << "end propagate[ non delay ] "
+//               << get_solver()->statistics.num_propagations << std::endl;
+//     for (int i = 0; i < numVars(); ++i)
+//       std::cout << scope[i].get_domain() << ".."
+//                 << " (" << duration[i]
+//                 << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
+//   }
+// #endif  
+
+//   //this->relax(); 
+  return CONSISTENT;
+}
+
+int Mistral::ConstraintPreemptiveNonDelay::check(const int *s) const {
+  return 0;
+}
+
+std::ostream &Mistral::ConstraintPreemptiveNonDelay::display(std::ostream &
+                                                                  os) const {
+  // os << "Non Delay (" << scope[0] << ".." << scope[duration.size()]
+  //    << "(" << duration[0] << ")";
+  // for (unsigned int i = 1; i < duration.size(); ++i)
+  //   os << ", " << scope[i] << ".." << scope[duration.size() + i] << "("
+  //      << duration[i] << ")";
+  // os << ")";
+  // return os;
 }
 
 /*
