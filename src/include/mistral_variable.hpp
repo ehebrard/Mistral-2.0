@@ -2957,8 +2957,6 @@ public:
 
   PreemptiveNonDelayExpression(Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred,
                                 const std::vector<int> &p);
-  // PreemptiveNonDelayExpression(Vector<Variable> &et,
-  //                               const std::vector<int> &p);
   virtual ~PreemptiveNonDelayExpression();
 
   virtual void extract_constraint(Solver *);
@@ -2966,8 +2964,6 @@ public:
   virtual void extract_predicate(Solver *);
   virtual const char *get_name() const;
 };
-// Variable PreemptiveNonDelay(Vector<Variable> &et, 
-//                              const std::vector<int> &p);
 Variable PreemptiveNonDelay(Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred,
                              const std::vector<int> &p);
 
