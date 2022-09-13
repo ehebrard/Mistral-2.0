@@ -4636,13 +4636,8 @@ Mistral::Variable Mistral::PreemptiveNoOverlap(Vector<Variable> &st,
 // NonDelay
 
 Mistral::PreemptiveNonDelayExpression::PreemptiveNonDelayExpression(
-    // Vector<Variable> &et,  const std::vector<int> &p)
-    // : Expression(et), duration(p) {
     Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred, const std::vector<int> &p)
     : Expression(et), st(st), duration(p), et_pred(et_pred) {
-
-  // for (unsigned int i = 0; i < et.size; ++i)
-  //   children.add(et[i]);
 }
 
 Mistral::PreemptiveNonDelayExpression::~PreemptiveNonDelayExpression() {
@@ -4653,8 +4648,6 @@ Mistral::PreemptiveNonDelayExpression::~PreemptiveNonDelayExpression() {
 
 void Mistral::PreemptiveNonDelayExpression::extract_constraint(Solver *s) {
   s->add(Constraint(new ConstraintPreemptiveNonDelay(children, st, et_pred, duration)));
-  // s->add(Constraint(new ConstraintPreemptiveNonDelay(children, duration)));
-
 }
 
 void Mistral::PreemptiveNonDelayExpression::extract_variable(Solver *s) {
@@ -4679,10 +4672,7 @@ Mistral::Variable Mistral::PreemptiveNonDelay(Vector<Variable> &st,
                                                Vector<Variable> &et,
                                                const Vector<Variable> &et_pred,
                                                const std::vector<int> &p) {
-// Mistral::Variable Mistral::PreemptiveNonDelay(Vector<Variable> &et,
-//                                               const std::vector<int> &p) {
   Variable exp(new PreemptiveNonDelayExpression(st, et, et_pred, p));
-  // Variable exp(new PreemptiveNonDelayExpression(et, p));
   return exp;
 }
 
