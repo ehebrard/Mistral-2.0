@@ -4586,6 +4586,7 @@ Mistral::Variable Mistral::AllDiffExcept(Vector< Variable >& args, const int exc
   return exp;
 }
 
+
 Mistral::PreemptiveNoOverlapExpression::PreemptiveNoOverlapExpression(
     Vector<Variable> &st, Vector<Variable> &et, const std::vector<int> &p)
     : Expression(st), duration(p) {
@@ -4631,6 +4632,62 @@ Mistral::Variable Mistral::PreemptiveNoOverlap(Vector<Variable> &st,
   Variable exp(new PreemptiveNoOverlapExpression(st, et, p));
   return exp;
 }
+
+// NonDelay
+
+Mistral::PreemptiveNonDelayExpression::PreemptiveNonDelayExpression(
+    // Vector<Variable> &et,  const std::vector<int> &p)
+    // : Expression(et), duration(p) {
+    Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred, const std::vector<int> &p)
+    : Expression(et), st(st), duration(p), et_pred(et_pred) {
+
+  // for (unsigned int i = 0; i < et.size; ++i)
+  //   children.add(et[i]);
+}
+
+Mistral::PreemptiveNonDelayExpression::~PreemptiveNonDelayExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete PreemptiveNonDelay expression" << std::endl;
+#endif
+}
+
+void Mistral::PreemptiveNonDelayExpression::extract_constraint(Solver *s) {
+  s->add(Constraint(new ConstraintPreemptiveNonDelay(children, st, et_pred, duration)));
+  // s->add(Constraint(new ConstraintPreemptiveNonDelay(children, duration)));
+
+}
+
+void Mistral::PreemptiveNonDelayExpression::extract_variable(Solver *s) {
+  std::cerr << "Error: PreemptiveNonDelay constraint can't yet be used as a "
+               "predicate"
+            << std::endl;
+  exit(0);
+}
+
+void Mistral::PreemptiveNonDelayExpression::extract_predicate(Solver *s) {
+  std::cerr << "Error: PreemptiveNonDelay constraint can't yet be used as a "
+               "predicate"
+            << std::endl;
+  exit(0);
+}
+
+const char *Mistral::PreemptiveNonDelayExpression::get_name() const {
+  return "PreemptiveNonDelay";
+}
+
+Mistral::Variable Mistral::PreemptiveNonDelay(Vector<Variable> &st,
+                                               Vector<Variable> &et,
+                                               const Vector<Variable> &et_pred,
+                                               const std::vector<int> &p) {
+// Mistral::Variable Mistral::PreemptiveNonDelay(Vector<Variable> &et,
+//                                               const std::vector<int> &p) {
+  Variable exp(new PreemptiveNonDelayExpression(st, et, et_pred, p));
+  // Variable exp(new PreemptiveNonDelayExpression(et, p));
+  return exp;
+}
+
+// NonDelay end
+
 
 Mistral::OccurrencesExpression::OccurrencesExpression(
     Vector<Variable> &args, const int first, const int last, const int *lb,

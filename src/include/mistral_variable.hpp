@@ -2928,6 +2928,7 @@ public:
 Variable AllDiff(Vector<Variable> &args, const int ct = BOUND_CONSISTENCY);
 Variable AllDiffExcept(Vector<Variable> &args, const int exception);
 
+
 class PreemptiveNoOverlapExpression : public Expression {
 
 public:
@@ -2944,6 +2945,30 @@ public:
 };
 
 Variable PreemptiveNoOverlap(Vector<Variable> &st, Vector<Variable> &et,
+                             const std::vector<int> &p);
+
+
+class PreemptiveNonDelayExpression : public Expression {
+
+public:
+  std::vector<int> duration;
+  Vector<Variable> et_pred;
+  Vector<Variable> st;
+
+  PreemptiveNonDelayExpression(Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred,
+                                const std::vector<int> &p);
+  // PreemptiveNonDelayExpression(Vector<Variable> &et,
+  //                               const std::vector<int> &p);
+  virtual ~PreemptiveNonDelayExpression();
+
+  virtual void extract_constraint(Solver *);
+  virtual void extract_variable(Solver *);
+  virtual void extract_predicate(Solver *);
+  virtual const char *get_name() const;
+};
+// Variable PreemptiveNonDelay(Vector<Variable> &et, 
+//                              const std::vector<int> &p);
+Variable PreemptiveNonDelay(Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred,
                              const std::vector<int> &p);
 
 class OccurrencesExpression : public Expression {
