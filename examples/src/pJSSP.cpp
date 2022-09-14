@@ -414,9 +414,10 @@ void set_strategy(Solver& solver, VarArray& search_vars) {
 
   restart = new Geometric();
   restart->base = 128;
-  heuristic =
-      new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
-                        MinValue, MinValue, 1>(&solver);
+  heuristic = new GenericHeuristic< GenericDVO < MinDomain >, MinValue >(&solver),
+
+   // new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
+                        // MinValue, MinValue, 1>(&solver);
 
   solver.initialise_search(search_vars, heuristic, restart);
 }
@@ -429,6 +430,9 @@ int main( int argc, char** argv )
   
   TCLAP::SwitchArg order_branching("","order","Branches on the ordering of end times", false);
   cmd.add( order_branching );
+
+  TCLAP::SwitchArg nodelay("","nodelay","Use the no delay constraint", false);
+  cmd.add( nodelay );
 
   TCLAP::ValueArg<std::string> format(
       "", "format",
@@ -482,6 +486,10 @@ int main( int argc, char** argv )
   model(jsp, solver, start_time, end_time, makespan, search_vars);
   if(order_branching.getValue())
     model_order(jsp, solver, start_time, end_time, makespan, search_vars);
+  if(nodelay.getValue())
+  {
+    std::cout << "hello\n";
+  }
       
 
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
