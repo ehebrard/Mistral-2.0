@@ -322,25 +322,6 @@ VarArray end_time_pred;
     }
   }
 
-  // VarArray ordering;
-  // for (auto k{0}; k < jsp.nMachines(); ++k) {
-  //    for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-  //      for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
-  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-  // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-  // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-  // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-  // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  //      }
-  //    }
-  // }
-
-  // for(auto &d : ordering)
-  //  solver.add(Free(d));
-
 #ifdef VERBOSE
   std::cout << "resources\n";
 #endif
@@ -358,17 +339,6 @@ VarArray end_time_pred;
       p.push_back(jsp.getDuration(o));
       et_pred.add(end_time_pred[o]); 
     }
-
-    // for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-    //   for (auto j{0}; j < jsp.nTasksInMachine(k); ++j) {
-    //     if(i != j) {
-    //       auto o1{jsp.getMachineTask(k, i)};
-    //       auto o2{jsp.getMachineTask(k, j)};
-    //       solver.add(b[o1*jsp.nTasks() + o2] + b[o1 + jsp.nTasks() * o2] >= 1);
-    //       solver.add(end_time[o1] < end_time[o2]+ (b[o1*jsp.nTasks() + o2])*1000 ); 
-    //     }
-    //   }
-    // }
 
     solver.add(PreemptiveNoOverlap(st, et, p));
 
@@ -405,8 +375,6 @@ VarArray end_time_pred;
   for( auto e : end_time )
     search_vars.add(e);
 
-  // for(auto x : solver.variables)
-  //   search_vars.add(x);
 
   #ifdef VERBOSE
   std::cout << "end model\n";
@@ -530,18 +498,6 @@ int main( int argc, char** argv )
   std::cout << "c initial bounds: [" << lb << ".." << ub << "]\n";
 
   solver.depth_first_search();
-
-  // std::vector<std::pair<int, int>> intervals;
-  // for (auto k{0}; k < jsp.nMachines(); ++k) {
-  //   intervals.clear();
-  //   if (not checkPreemptiveScheduleSolution(jsp.getMachineTasks(k), jsp,
-  //   solver,
-  //                                           start_time, end_time, intervals))
-  //                                           {
-  //     std::cout << "Error on machine " << k << std::endl;
-  //     exit(1);
-  //   }
-  // };
 
   for (auto k{0}; k < jsp.nMachines(); ++k) {
     if (not JPS.fromSolution(jsp.getMachineTasks(k))) {

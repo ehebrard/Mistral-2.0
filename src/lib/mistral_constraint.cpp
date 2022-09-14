@@ -23525,7 +23525,7 @@ Mistral::ConstraintPreemptiveNonDelay::propagate() {
 //   }
 // #endif  
 
-//   //this->relax(); 
+  this->relax(); 
   return CONSISTENT;
 }
 
