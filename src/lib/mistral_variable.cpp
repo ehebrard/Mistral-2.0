@@ -4586,13 +4586,13 @@ Mistral::Variable Mistral::AllDiffExcept(Vector< Variable >& args, const int exc
   return exp;
 }
 
-
 Mistral::PreemptiveNoOverlapExpression::PreemptiveNoOverlapExpression(
-    Vector<Variable> &st, Vector<Variable> &et, const std::vector<int> &p)
-    : Expression(st), duration(p) {
+    Vector<Variable> &st, Vector<Variable> &et, const std::vector<int> &p, Variable& e)
+    : Expression(st), starts(st), ends(et), duration(p), the_end(e) {
 
   for (unsigned int i = 0; i < et.size; ++i)
     children.add(et[i]);
+  children.add(the_end);
 }
 
 Mistral::PreemptiveNoOverlapExpression::~PreemptiveNoOverlapExpression() {
@@ -4603,8 +4603,12 @@ Mistral::PreemptiveNoOverlapExpression::~PreemptiveNoOverlapExpression() {
 
 void Mistral::PreemptiveNoOverlapExpression::extract_constraint(Solver *s) {
 
-  // s->add(Constraint(new ConstraintPreemptiveNoOverlap(children, duration)));
-  s->add(Constraint(new ConstraintPreemptiveNoOverlapHall(children, duration)));
+  // s->add(Constraint(new ConstraintPreemptiveNonDelay(children, duration)));
+
+  // s->add(Constraint(new ConstraintAllDiff(starts)));
+  // s->add(Constraint(new ConstraintAllDiff(ends)));
+  // s->add(Constraint(new ConstraintPreemptiveNoOverlapHall(children,
+  // duration)));
   s->add(Constraint(new ConstraintPreemptiveNoOverlapEdge(children, duration)));
 }
 
@@ -4628,17 +4632,18 @@ const char *Mistral::PreemptiveNoOverlapExpression::get_name() const {
 
 Mistral::Variable Mistral::PreemptiveNoOverlap(Vector<Variable> &st,
                                                Vector<Variable> &et,
-                                               const std::vector<int> &p) {
-  Variable exp(new PreemptiveNoOverlapExpression(st, et, p));
+                                               const std::vector<int> &p,
+                                               Variable& e) {
+  Variable exp(new PreemptiveNoOverlapExpression(st, et, p, e));
   return exp;
 }
 
 // NonDelay
 
 Mistral::PreemptiveNonDelayExpression::PreemptiveNonDelayExpression(
-    Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred, const std::vector<int> &p)
-    : Expression(et), st(st), duration(p), et_pred(et_pred) {
-}
+    Vector<Variable> &st, Vector<Variable> &et, const Vector<Variable> &et_pred,
+    const std::vector<int> &p)
+    : Expression(et), duration(p), et_pred(et_pred), st(st) {}
 
 Mistral::PreemptiveNonDelayExpression::~PreemptiveNonDelayExpression() {
 #ifdef _DEBUG_MEMORY

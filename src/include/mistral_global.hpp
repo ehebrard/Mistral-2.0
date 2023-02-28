@@ -135,7 +135,7 @@ namespace Mistral {
   //#define _DEBUG_MAX (get_solver()->parameters.verbosity == -7)
   //#define _DEBUG_MAX ((id==368))
   //#define _DEBUG_MEMORY true
-  // #define _DEBUG_SEARCH true //(parameters.verbosity > 1)
+  // #define _DEBUG_SEARCH (statistics.num_propagations >= 270267854) //(parameters.verbosity > 1)
   // #define _MONITOR true
   //#define _DEBUG_NOGOOD true
   //(statistics.num_filterings > 640)
@@ -152,8 +152,11 @@ namespace Mistral {
   //#define _DEBUG_DIV true  
   //#define _DEBUG_OFFSET ((id==1309))
   //#define _DEBUG_AMSC  ((id==2912))
-  //#define _DEBUG_AC true //((statistics.num_filterings >= 177))
+  // #define _DEBUG_AC (statistics.num_propagations >= 279267854) //true 
+  // #define _DEBUG_NOOVERLAP_EDGE true 
+  // #define _DEBUG_NOOVERLAP_EDGE ((this->id == 315) and (this->get_solver()->statistics.num_propagations >= 279267854))
 
+// (this->id == 314) and
   //gwdeg with active constraints only
   #define _ONLY_ACTIVE true
   

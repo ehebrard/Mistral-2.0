@@ -74,7 +74,8 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_NOOVERLAP_SOL true
 // #define _DEBUG_NOOVERLAP_HALL (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // #define _DEBUG_NOOVERLAP_EDGE true
- #define _DEBUG_NONDELAY true
+#define _DEBUG_NONDELAY true
+// #define SIMPLE true
 // (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
@@ -22792,7 +22793,7 @@ void Mistral::ConstraintPreemptiveNoOverlapHall::initialise() {
   }
   GlobalConstraint::initialise();
   // culprit = -1;
-  GlobalConstraint::set_idempotent();
+  // GlobalConstraint::set_idempotent();
 }
 
 void Mistral::ConstraintPreemptiveNoOverlapHall::mark_domain() {
@@ -23301,7 +23302,7 @@ Mistral::ConstraintPreemptiveNoOverlapHall::propagate() {
   a = 0;
   b = numVars();
 
-  if (lastLevel != ((solver->level) - 1)) {
+  if (solver == NULL or lastLevel != ((solver->level) - 1)) {
     // not incremental
     status_lower = CHANGES;
     status_upper = CHANGES;
@@ -23327,7 +23328,8 @@ Mistral::ConstraintPreemptiveNoOverlapHall::propagate() {
     }
   }
 
-  lastLevel = (solver->level);
+  if (solver)
+    lastLevel = (solver->level);
 
   if (status_lower == NO_CHANGES && status_upper == NO_CHANGES) {
     return CONSISTENT;
@@ -23423,9 +23425,10 @@ std::ostream &Mistral::ConstraintPreemptiveNoOverlapHall::display(std::ostream &
  *=================================================================*/
 
 Mistral::ConstraintPreemptiveNonDelay::ConstraintPreemptiveNonDelay(
-    Vector<Variable> &scp, const Vector<Variable> &st, const Vector<Variable> &et_pred, const std::vector<int> &d)
+    Vector<Variable> & scp, const Vector<Variable> &st,
+    const Vector<Variable> &et_pred, const std::vector<int> &d)
 
-    : GlobalConstraint(scp),st(st), duration(d), et_pred(et_pred) {
+    : GlobalConstraint(scp), duration(d), et_pred(et_pred), st(st) {
 
   for (unsigned int i = 0; i < numVars(); ++i) {
     est_order.push_back(i);
@@ -23433,8 +23436,7 @@ Mistral::ConstraintPreemptiveNonDelay::ConstraintPreemptiveNonDelay(
 
   priority = 2;
 
-   assert(numVars() == scope.size);
-
+  assert(numVars() == scope.size);
 }
 
 void Mistral::ConstraintPreemptiveNonDelay::initialise() {
@@ -23471,59 +23473,56 @@ Mistral::ConstraintPreemptiveNonDelay::
 Mistral::PropagationOutcome
 Mistral::ConstraintPreemptiveNonDelay::propagate() {
 
-// #ifdef _DEBUG_NONDELAY
+#ifdef _DEBUG_NONDELAY
 
-//   if (_DEBUG_NONDELAY) { // and num_assigned >= (scope.size - 1)) {
-//     std::cout << "\npropagate[ non delay ] "
-//               << get_solver()->statistics.num_propagations << std::endl;
-//     for (int i = 0; i < numVars(); ++i)
-//       std::cout << scope[i].get_domain() << ".."
-//                 //<< scope[i + numVars()].get_domain() 
-//                 << " (" << duration[i]
-//                 << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
-//   }
-// #endif
+  if (_DEBUG_NONDELAY) { // and num_assigned >= (scope.size - 1)) {
+    std::cout << "\npropagate[ non delay ] "
+              << get_solver()->statistics.num_propagations << std::endl;
+    for (int i = 0; i < numVars(); ++i)
+      std::cout << scope[i].get_domain()
+                << ".."
+                //<< scope[i + numVars()].get_domain()
+                << " (" << duration[i] << ")"
+                << (changes.contain(i) ? "* " : " ") << std::endl;
+  }
+#endif
 
-//   std::sort(est_order.begin(), est_order.end(), [&](const int a, const int
-//     b) {
-//       return st[a].get_min() < st[b].get_min();
-//     });
+  std::sort(est_order.begin(), est_order.end(), [&](const int a, const int b) {
+    return st[a].get_min() < st[b].get_min();
+  });
 
-//   auto n{numVars()};
+  // auto n{numVars()};
 
-//   for (auto a : est_order){
-//     if (scope[a].get_max() > scope[a].get_min() && scope[a].get_max() > et_pred[a].get_max() + duration[a])
-//     {
-//       int A = et_pred[a].get_max(); 
-//       int B = A + duration[a]; 
-//       for(auto b : est_order)
-//       {
-//         if(a!=b)
-//         {
-//           if (st[b].get_min() > B) break;
-//           if (scope[b].get_max() > A ) 
-//           {
-//               B += duration[b];
-//           }
-//         }
-//       }
-//       if (  B <scope[a].get_max() )
-//       {
-//         scope[a].set_max(B); 
-//       }
-//   }
-// }
-//   #ifdef _DEBUG_NONDELAY
+  for (auto a : est_order) {
+    if (scope[a].get_max() > scope[a].get_min() &&
+        scope[a].get_max() > et_pred[a].get_max() + duration[a]) {
+      int A = et_pred[a].get_max();
+      int B = A + duration[a];
+      for (auto b : est_order) {
+        if (a != b) {
+          if (st[b].get_min() > B)
+            break;
+          if (scope[b].get_max() > A) {
+            B += duration[b];
+          }
+        }
+      }
+      if (B < scope[a].get_max()) {
+        scope[a].set_max(B);
+      }
+    }
+  }
+#ifdef _DEBUG_NONDELAY
 
-//   if (_DEBUG_NONDELAY) {
-//     std::cout << "end propagate[ non delay ] "
-//               << get_solver()->statistics.num_propagations << std::endl;
-//     for (int i = 0; i < numVars(); ++i)
-//       std::cout << scope[i].get_domain() << ".."
-//                 << " (" << duration[i]
-//                 << ")" << (changes.contain(i) ? "* " : " ") << std::endl;
-//   }
-// #endif  
+  if (_DEBUG_NONDELAY) {
+    std::cout << "end propagate[ non delay ] "
+              << get_solver()->statistics.num_propagations << std::endl;
+    for (int i = 0; i < numVars(); ++i)
+      std::cout << scope[i].get_domain() << ".."
+                << " (" << duration[i] << ")"
+                << (changes.contain(i) ? "* " : " ") << std::endl;
+  }
+#endif
 
   this->relax(); 
   return CONSISTENT;
@@ -23535,13 +23534,13 @@ int Mistral::ConstraintPreemptiveNonDelay::check(const int *s) const {
 
 std::ostream &Mistral::ConstraintPreemptiveNonDelay::display(std::ostream &
                                                                   os) const {
-  // os << "Non Delay (" << scope[0] << ".." << scope[duration.size()]
-  //    << "(" << duration[0] << ")";
-  // for (unsigned int i = 1; i < duration.size(); ++i)
-  //   os << ", " << scope[i] << ".." << scope[duration.size() + i] << "("
-  //      << duration[i] << ")";
-  // os << ")";
-  // return os;
+  os << "Non Delay (" << scope[0] << ".." << scope[duration.size()] << "("
+     << duration[0] << ")";
+  for (unsigned int i = 1; i < duration.size(); ++i)
+    os << ", " << scope[i] << ".." << scope[duration.size() + i] << "("
+       << duration[i] << ")";
+  os << ")";
+  return os;
 }
 
 /*
@@ -23564,7 +23563,9 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::ConstraintPreemptiveNoOverlapEdge(
 
   priority = 2;
 
-  assert(2 * numVars() == scope.size);
+  assert(2 * numVars() + 1 == scope.size);
+
+  enforce_nfc1 = false;
 
 }
 
@@ -23591,9 +23592,69 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::~ConstraintPreemptiveNoOverlapEdge()
 #endif
 }
 
+Mistral::PropagationOutcome
+Mistral::ConstraintPreemptiveNoOverlapEdge::one_propagate() {
+  // return one_propagate();
+  std::vector<int> LB;
+  std::vector<int> UB;
 
+  PropagationOutcome dom = propagate();
 
+  int nsize{0};
+  for (auto x : scope) {
+    LB.push_back(x.get_min());
+    UB.push_back(x.get_max());
+    nsize += x.get_size();
+  }
 
+  ConstraintPreemptiveNoOverlapHall *hall =
+      new ConstraintPreemptiveNoOverlapHall(scope, duration);
+
+  hall->propagate();
+
+  for (auto x : scope) {
+    nsize -= x.get_size();
+  }
+
+  if (nsize != 0) {
+    for (auto i{0}; i < numVars(); ++i) {
+      std::cout << "t" << std::left << std::setw(2) << i << std::right << "["
+                << LB[i] << ".." << UB[i] << "]- [" << LB[i + numVars()] << ".."
+                << UB[i + numVars()] << "] -> [" << scope[i].get_min() << ".."
+                << scope[i].get_max() << "] - ["
+                << scope[i + numVars()].get_min() << ".."
+                << scope[i + numVars()].get_max() << "]\n";
+    }
+    exit(1);
+  }
+
+  delete hall;
+
+  return dom;
+
+  // PropagationOutcome dom = CONSISTENT;
+  // int nsize{0};
+  // for(auto x : scope) {
+  //   nsize += x.get_size();
+  // }
+  // int tsize{0};
+  // int count{0};
+  // do {
+  //   ++count;
+  //   tsize = nsize;
+  //   dom = one_propagate();
+  //   nsize = 0;
+  //   for(auto x : scope) {
+  //     nsize += x.get_size();
+  //   }
+  // } while(IS_OK(dom) and nsize < tsize);
+
+  // // if(count > 2) {
+  // //   std::cout << count << std::endl;
+  // // }
+
+  // return dom;
+}
 
 Mistral::PropagationOutcome
 Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
@@ -23601,7 +23662,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
 #ifdef _DEBUG_NOOVERLAP_EDGE
   auto debug_limit{0};
   if (_DEBUG_NOOVERLAP_EDGE) { // and num_assigned >= (scope.size - 1)) {
-    std::cout << "\npropagate[" << this->id << "] " << get_solver()->statistics.num_propagations << std::endl;
+    std::cout << "\npropagate[" << this->id << "/" << get_solver()->statistics.objective_value << "] " << get_solver()->statistics.num_propagations << std::endl;
     for (int i = 0; i < numVars(); ++i)
       std::cout << i << " " << scope[i].get_domain() << ".."
                 << scope[i + numVars()].get_domain() << " (" << duration[i]
@@ -23624,7 +23685,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
     auto horizon{scope[*lct_order.rbegin() + n].get_max()};
 
   #ifdef _DEBUG_NOOVERLAP_EDGE
-    if (_DEBUG_NOOVERLAP_EDGE) {
+    if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
       std::cout << std::endl << "ST\n";
       for (auto i : est_order) {
         std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
@@ -23650,7 +23711,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       T.insert(theta_rank[a], scope[a].get_min(), duration[a]);
 
   #ifdef _DEBUG_NOOVERLAP_EDGE
-      if (_DEBUG_NOOVERLAP_EDGE) {
+      if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
         std::cout << "add " << a << ": [" << scope[a].get_min() << ".."
                   << duration[a] << ".." << scope[a + n].get_max()
                   << "] : " << T.getBound() << " (" << scope[a + n].get_min()
@@ -23664,8 +23725,15 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       }
     }
 
+
+    if (FAILED(scope[2*n].set_min(T.getBound()))) {
+      return FAILURE(2*n);
+    }
+
+
+
 #ifdef _DEBUG_NOOVERLAP_EDGE
-    if (_DEBUG_NOOVERLAP_EDGE) {
+    if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
       std::cout << std::endl << "ST\n";
       for (auto i : est_order) {
         std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
@@ -23686,7 +23754,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       T.paint_gray(theta_rank[a], a);
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-      if (_DEBUG_NOOVERLAP_EDGE) {
+      if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
         std::cout << "rm " << a << ": [" << scope[a].get_min() << ".."
                   << duration[a] << ".." << scope[a + n].get_max()
                   << "] : " << T.getBound() << " (" << scope[a + n].get_min()
@@ -23705,7 +23773,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       while (ect > deadline_omega) {
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-        if (_DEBUG_NOOVERLAP_EDGE) {
+        if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
           std::cout << " tasks";
           for (auto j{lct_order.begin()}; *j != a; ++j)
             std::cout << " " << *j;
@@ -23716,7 +23784,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
         auto r{T.getResponsible()};
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-        if (_DEBUG_NOOVERLAP_EDGE) {
+        if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
           std::cout << " can't end before " << ect << ", but only " << r
                     << " can go past that time\n ==> " << scope[r + n] << " in "
                     << scope[r + n].get_domain() << " >= " << ect << std::endl;
@@ -23732,7 +23800,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
         ect = T.grayBound();
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-        if (_DEBUG_NOOVERLAP_EDGE) {
+        if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
           std::cout << T << std::endl;
           if (--debug_limit <= 0)
             exit(1);
@@ -23744,7 +23812,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
     }
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-    if (_DEBUG_NOOVERLAP_EDGE) {
+    if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
       std::cout << std::endl << "ST\n";
       for (auto i : est_order) {
         std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
@@ -23772,7 +23840,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       T.insert(theta_rank[a], horizon - scope[a + n].get_max(), duration[a]);
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-      if (_DEBUG_NOOVERLAP_EDGE) {
+      if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
         std::cout << "add " << a << ": [" << (horizon - scope[a + n].get_max())
                   << ".." << duration[a] << ".."
                   << (horizon - scope[a].get_min()) << "] : " << T.getBound()
@@ -23788,7 +23856,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
     }
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-    if (_DEBUG_NOOVERLAP_EDGE) {
+    if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
       std::cout << std::endl << "ST\n";
       for (auto i : est_order) {
         std::cout << i << " " << scope[i] << ": " << scope[i].get_domain()
@@ -23813,7 +23881,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       T.paint_gray(theta_rank[a], a);
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-      if (_DEBUG_NOOVERLAP_EDGE) {
+      if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
         std::cout << "rm " << a << ": [" << (horizon - scope[a + n].get_max())
                   << ".." << duration[a] << ".."
                   << (horizon - scope[a].get_min()) << "] : " << T.getBound()
@@ -23832,7 +23900,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
       while (ect > deadline_omega) {
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-        if (_DEBUG_NOOVERLAP_EDGE) {
+        if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
           std::cout << "tasks";
           for (auto j{est_order.rbegin()}; *j != a; ++j)
             std::cout << " " << *j;
@@ -23843,7 +23911,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
         auto r{T.getResponsible()};
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-        if (_DEBUG_NOOVERLAP_EDGE) {
+        if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
           std::cout << " can't start after " << (horizon - ect)
                     << ", but only " << r
                     << " can start at that time\n ==> " << scope[r]
@@ -23862,7 +23930,7 @@ Mistral::ConstraintPreemptiveNoOverlapEdge::propagate() {
 
 
 #ifdef _DEBUG_NOOVERLAP_EDGE
-        if (_DEBUG_NOOVERLAP_EDGE) {
+        if (not SIMPLE and (_DEBUG_NOOVERLAP_EDGE)) {
           std::cout << T << std::endl;
           if (--debug_limit <= 0)
             exit(1);

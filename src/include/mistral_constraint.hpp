@@ -172,7 +172,7 @@ When the solver process a value event on a variable, it notifies it to all its
 constraints.
 
 [notify_assignment]: The variable is removed from the set [active]. If [active]
-is reduced to a signleton, the constraint is relaxed from the last variable in
+is reduced to a singleton, the constraint is relaxed from the last variable in
 [active].
 
 [relax_from($i)]: if the constraint is currently posted on the $ith variable,
@@ -5507,13 +5507,14 @@ public:
   /**@name Solving*/
   //@{
   virtual int check(const int *sol) const;
+  virtual PropagationOutcome one_propagate();
   virtual PropagationOutcome propagate();
   //@}
 
   /**@name Miscellaneous*/
   //@{
   virtual std::ostream &display(std::ostream &) const;
-  virtual std::string name() const { return "{=/=}"; }
+  virtual std::string name() const { return "PreemptiveNoOverlap"; }
   //@}
   // #ifdef _CNE_WC
   //     double weight_conflict(double unit, Vector<double>& weights);//  {

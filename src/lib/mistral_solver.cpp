@@ -5376,6 +5376,7 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   //std::cout << statistics.objective_value << std::endl;
 
 
+
   statistics.best_time =  get_run_time() - statistics.start_time;
   //std::cout << " c best_time  " <<  statistics.best_time << std::endl;
 
@@ -5383,6 +5384,12 @@ Mistral::Outcome Mistral::Solver::satisfied() {
   for(i=0; i<solution_triggers.size; ++i) {
     solution_triggers[i]->notify_solution();
   }
+
+
+  // if(statistics.objective_value == 933)
+  //   exit(1);
+
+
 
 #ifdef _DEBUG_SEARCH
   if(_DEBUG_SEARCH) {
