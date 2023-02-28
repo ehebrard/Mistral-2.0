@@ -537,9 +537,10 @@ void model(Instance &jsp, Solver &solver, VarArray &start_time,
   if (model_choice == 0) {
     for (auto e : end_time)
       search_vars.add(e);
-  } else {
-    search_vars.add(makespan);
-  }
+  } 
+  // else {
+  //   search_vars.add(makespan);
+  // }
 
   // for(auto x : solver.variables)
   //   search_vars.add(x);
@@ -582,7 +583,7 @@ void set_strategy(Solver& solver, VarArray& search_vars) {
   restart->base = 128;
   heuristic =
       new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
-                        MinValue, MinValue, 1>(&solver);
+                        RandomSplit, RandomSplit, 1>(&solver);
 
   //   BranchingHeuristic *heuristic;
   // RestartPolicy *restart;
@@ -622,8 +623,7 @@ int main( int argc, char** argv )
   cmd.parse(argc, argv);
   
 
-  // usrand(cmd.get_seed());
-  usrand(12345);
+  usrand(cmd.get_seed());
 
 
   StatisticList stats;
@@ -671,7 +671,6 @@ int main( int argc, char** argv )
 
   set_strategy(solver, search_vars);
 
-  usrand(12345);
 
   // auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
   auto lb{JPS.get_lower_bound(ub)};
