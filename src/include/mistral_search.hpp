@@ -4172,12 +4172,42 @@ namespace Mistral {
 
   std::ostream& operator<<(std::ostream& os, ReverseSplit* x);
 
+  /*! \class RandomPivotSplit
+    \brief  Class RandomPivotSplit
+
+    Set the upper bound of the variable to be above a random pivot.
+  */
+  class RandomPivotSplit {
+
+  public:
+    RandomPivotSplit() {}
+    RandomPivotSplit(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    void initialise(Solver *s, double **vw, double *bw, WeightMap *wm) {}
+    // RandomSplit(Solver *s, void *a) {}
+    virtual ~RandomPivotSplit(){};
+
+    inline Decision make(Variable x) {
+      int the_min = x.get_min();
+      Decision d(x, Decision::UPPERBOUND,
+                 (the_min + randint(x.get_max() - the_min)));
+      return d;
+    }
+
+    std::ostream &display(std::ostream &os) const {
+      os << "set its upper bound to a random value in [min,max]";
+      return os;
+    }
+  };
+
+  std::ostream &operator<<(std::ostream &os, RandomPivotSplit &x);
+
+  std::ostream &operator<<(std::ostream &os, RandomPivotSplit *x);
 
   /*! \class RandomSplit
-    \brief  Class RandomSplit
+  \brief  Class RandomSplit
 
-    Set the upper bound of the variable to (ub+lb)/2.
-  */
+  Set the upper or lower (choice is random) bound of the variable to (ub+lb)/2.
+*/
   class RandomSplit {
 
   public: 
@@ -4189,13 +4219,15 @@ namespace Mistral {
     virtual ~RandomSplit() {};
     
     inline Decision make(Variable x) {
-      int the_min = x.get_min();
-      Decision d(x, Decision::UPPERBOUND, (the_min+randint(x.get_max()-the_min)));
+      Decision d(x, Decision::UPPERBOUND, (x.get_min() + x.get_max()) / 2);
+      if (randint(2)) {
+        d.invert();
+      }
       return d;
     }
 
      std::ostream& display(std::ostream& os) const {
-       os << "set its upper bound to a random value in [min,max]";
+       os << "half-split with random selection of up or down";
        return os;
      }
 
@@ -4638,23 +4670,34 @@ std::ostream& operator<<(std::ostream& os, SolutionGuided<Init,Default>* x) {
     
 		inline Decision make(Variable x) {
 
-			//std::cout << "(GS) make a decision on " << x << " in " << x.get_domain() << std::endl;
+                  int val = solver->last_solution_lb[x.id()];
 
-			int val = solver->last_solution_lb[x.id()];
-			Decision d;
-			if(val == -INFTY || !x.contain(val)) 
-				d = init_choice.make(x);
-			else {
-				int half = (x.get_min()+x.get_max())/2;
-				if(half < val)
-					d = Decision(x, Decision::LOWERBOUND, half);
-				else
-					d = Decision(x, Decision::UPPERBOUND, half);
-			}
-			return d;
-		}
-    
-		std::ostream& display(std::ostream& os) const {
+                  // std::cout << "(GS) make a decision on " << x << " in
+                  // " << x.get_domain()  << " (prev=" << val << ")" <<
+                  // std::endl;
+
+                  Decision d;
+                  if (val == -INFTY || !x.contain(val)) {
+                    d = init_choice.make(x);
+
+                    // std::cout << " (i)=> " << d << std::endl;
+                  } else {
+                    int half = (x.get_min() + x.get_max()) / 2;
+
+                    // std::cout << x.get_min() << " " << x.get_max() << "
+                    // " << half << std::endl;
+
+                    if (half < val)
+                      d = Decision(x, Decision::LOWERBOUND, half + 1);
+                    else
+                      d = Decision(x, Decision::UPPERBOUND, half);
+
+                    // std::cout << " (g)=> " << d << std::endl;
+                  }
+                  return d;
+                }
+
+                std::ostream& display(std::ostream& os) const {
 			os << "halves the domain so that it keeps the value of this variable in the last solution";
 			return os;
 		}

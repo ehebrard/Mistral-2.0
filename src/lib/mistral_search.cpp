@@ -2339,6 +2339,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::RandomSplit& x) {
   return x.display(os);
 }
 
+std::ostream &operator<<(std::ostream &os, Mistral::RandomPivotSplit &x) {
+  return x.display(os);
+}
+
 std::ostream& operator<<(std::ostream& os, Mistral::RandomMinMax& x) {
   return x.display(os);
 }
@@ -2442,6 +2446,10 @@ std::ostream& operator<<(std::ostream& os, Mistral::HalfSplit* x) {
 }
 
 std::ostream& operator<<(std::ostream& os, Mistral::ReverseSplit* x) {
+  return x->display(os);
+}
+
+std::ostream &operator<<(std::ostream &os, Mistral::RandomPivotSplit *x) {
   return x->display(os);
 }
 

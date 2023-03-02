@@ -11509,6 +11509,10 @@ void Mistral::SolverCmdLine::initialise() {
   boallowed.push_back("minweight");
   boallowed.push_back("maxweight");
   boallowed.push_back("halfsplit");
+  boallowed.push_back("reversesplit");
+  boallowed.push_back("randomsplit");
+  boallowed.push_back("randomspivot");
+  boallowed.push_back("guidedsplit");
   boallowed.push_back("random");
   boallowed.push_back("randminmax");
   boallowed.push_back("guided");

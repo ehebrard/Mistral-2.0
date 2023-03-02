@@ -4,6 +4,17 @@
 
 // #define VERBOSE
 
+enum model { basic = 0, equalities = 1, compact = 2 };
+
+enum branching {
+  minvalue = 0,
+  halfsplit = 1,
+  reversesplit = 2,
+  randomsplit = 3,
+  randompivot = 4,
+  guidedsplit = 5
+};
+
 using namespace Mistral;
 
 void print_solution(Instance &jsp, Solver &solver, VarArray &start_time,
@@ -313,113 +324,38 @@ bool JacksonPreemptiveScheduler::compute() {
   return true;
 }
 
-// void model(Instance& jsp, Solver& solver, VarArray& start_time, VarArray&
-// end_time, Variable& makespan, VarArray& search_vars) { #ifdef VERBOSE
-//   std::cout << "model\n\ndurations\n";
-// #endif
+void build_model(Instance &jsp, Solver &solver, VarArray &start_time,
+                 VarArray &end_time, Variable &origin, Variable &makespan,
+                 VarArray &search_vars, const int ub, const int model_choice) {
 
-//   for (auto i{0}; i < jsp.nTasks(); ++i) {
-//     solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
-//   }
+  if (model_choice == model::compact) {
 
-//   #ifdef VERBOSE
-//   std::cout << "jobs\n";
-// #endif
+#ifdef VERBOSE
+    std::cout << "jobs\n";
+#endif
 
-//   for (auto j{0}; j < jsp.nJobs(); ++j) {
-//     for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
-//       solver.add(start_time[jsp.getJobTask(j, i)] >=
-//                  end_time[jsp.getJobTask(j, i - 1)]);
-//     }
-//   }
+    search_vars.initialise(jsp.nTasks() - jsp.nJobs(), 0, ub);
 
-//   // VarArray ordering;
-//   // for (auto k{0}; k < jsp.nMachines(); ++k) {
-//   //    for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-//   //      for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
-//   // ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-//   // start_time[jsp.getMachineTask(k,j)], 1, 1));
-//   // ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-//   // end_time[jsp.getMachineTask(k,j)], 1, 1));
-//   // ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-//   // start_time[jsp.getMachineTask(k,j)], 1, 1));
-//   // ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-//   // end_time[jsp.getMachineTask(k,j)], 1, 1));
-//   //      }
-//   //    }
-//   // }
+    for (auto i{0}; i < jsp.nTasks(); ++i) {
+      auto j{jsp.getJob(i, 0)};
+      auto r{jsp.getRankInJob(i)};
+      if (r == 0)
+        start_time.add(origin);
+      else
+        start_time.add(search_vars[i - j - 1]);
 
-//   // for(auto &d : ordering)
-//   //  solver.add(Free(d));
+      if (r == jsp.nMachines() - 1)
+        end_time.add(makespan);
+      else
+        end_time.add(search_vars[i - j]);
+    }
 
-// #ifdef VERBOSE
-//   std::cout << "resources\n";
-// #endif
+  } else {
 
-//   std::vector<int> p;
-//   for (auto k{0}; k < jsp.nMachines(); ++k) {
-//     VarArray st;
-//     VarArray et;
-//     p.clear();
-//     for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-//       auto o{jsp.getMachineTask(k, i)};
-//       st.add(start_time[o]);
-//       et.add(end_time[o]);
-//       p.push_back(jsp.getDuration(o));
-//     }
+    start_time.initialise(jsp.nTasks(), 0, ub);
+    end_time.initialise(jsp.nTasks(), 0, ub);
+  }
 
-//     // for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-//     //   for (auto j{0}; j < jsp.nTasksInMachine(k); ++j) {
-//     //     if(i != j) {
-//     //       solver.add((st[i] <= st[j] && et[i] <= et[j]) <= (et[i] <=
-//     st[j]));
-//     //     }
-//     //   }
-//     // }
-
-//     solver.add(PreemptiveNoOverlap(st, et, p));
-//   }
-
-//   #ifdef VERBOSE
-//   std::cout << "makespan\n";
-// #endif
-
-//   VarArray end_job;
-//   for (auto j{0}; j < jsp.nJobs(); ++j) {
-//     end_job.add(end_time[jsp.getLastTaskofJob(j)]);
-//   }
-
-//   solver.add(makespan == Max(end_job));
-
-//   solver.minimize(makespan);
-
-//   #ifdef VERBOSE
-//   std::cout << "consolidate\n";
-// #endif
-
-//   solver.consolidate();
-
-//   #ifdef VERBOSE
-//   std::cout << "search vars\n";
-// #endif
-
-//   for( auto s : start_time )
-//     search_vars.add(s);
-//   for( auto e : end_time )
-//     search_vars.add(e);
-
-//   // for(auto x : solver.variables)
-//   //   search_vars.add(x);
-
-//   #ifdef VERBOSE
-//   std::cout << "end model\n";
-// #endif
-
-// }
-
-void model(Instance &jsp, Solver &solver, VarArray &start_time,
-           VarArray &end_time, Variable &origin, Variable &makespan,
-           VarArray &search_vars, const int model_choice) {
 #ifdef VERBOSE
   std::cout << "model\n\ndurations\n";
 #endif
@@ -428,13 +364,15 @@ void model(Instance &jsp, Solver &solver, VarArray &start_time,
     solver.add(start_time[i] + jsp.getDuration(i) <= end_time[i]);
   }
 
+  if (model_choice != model::compact) {
+
 #ifdef VERBOSE
   std::cout << "jobs\n";
 #endif
 
   for (auto j{0}; j < jsp.nJobs(); ++j) {
 
-    if (model_choice == 1) {
+    if (model_choice == model::equalities) {
       solver.add(start_time[jsp.getJobTask(j, 0)] == origin);
 
       for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
@@ -451,25 +389,7 @@ void model(Instance &jsp, Solver &solver, VarArray &start_time,
       }
     }
   }
-
-  // VarArray ordering;
-  // for (auto k{0}; k < jsp.nMachines(); ++k) {
-  //    for (auto i{0}; i < jsp.nTasksInMachine(k); ++i) {
-  //      for (auto j{i+1}; j < jsp.nTasksInMachine(k); ++j) {
-  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-  // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(start_time[jsp.getMachineTask(k,i)],
-  // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-  // start_time[jsp.getMachineTask(k,j)], 1, 1));
-  //        ordering.add(ReifiedDisjunctive(end_time[jsp.getMachineTask(k,i)],
-  // end_time[jsp.getMachineTask(k,j)], 1, 1));
-  //      }
-  //    }
-  // }
-
-  // for(auto &d : ordering)
-  //  solver.add(Free(d));
+  }
 
 #ifdef VERBOSE
   std::cout << "resources\n";
@@ -510,7 +430,7 @@ void model(Instance &jsp, Solver &solver, VarArray &start_time,
 
   // solver.add(makespan == Max(end_job));
 
-  if (model_choice == 0) {
+  if (model_choice == model::basic) {
     VarArray end_job;
     for (auto j{0}; j < jsp.nJobs(); ++j) {
       end_job.add(end_time[jsp.getLastTaskofJob(j)]);
@@ -527,23 +447,18 @@ void model(Instance &jsp, Solver &solver, VarArray &start_time,
 
   solver.consolidate();
 
-#ifdef VERBOSE
-  std::cout << "search vars\n";
-#endif
+  if (model_choice != model::compact) {
+    for (auto s : start_time)
+      search_vars.add(s);
 
-  for (auto s : start_time)
-    search_vars.add(s);
-
-  if (model_choice == 0) {
-    for (auto e : end_time)
-      search_vars.add(e);
-  } 
+    if (model_choice == model::basic) {
+      for (auto e : end_time)
+        search_vars.add(e);
+    }
+  }
   // else {
   //   search_vars.add(makespan);
   // }
-
-  // for(auto x : solver.variables)
-  //   search_vars.add(x);
 
 #ifdef VERBOSE
   std::cout << "end model\n";
@@ -574,40 +489,77 @@ void model_order(Instance& jsp, Solver& solver, VarArray& start_time, VarArray& 
 }
 
 
-void set_strategy(Solver& solver, VarArray& search_vars) {
+RestartPolicy *restart_factory(std::string rpolicy, const int b, const double f) {
+  RestartPolicy *pol;
+  if(rpolicy == "luby") pol = new Luby(b); 
+  else if(rpolicy == "geom") pol = new Geometric(b,f); 
+  else pol = new NoRestart();
+  return pol;
+}
+
+BranchingHeuristic *heuristic_factory(Solver &solver,
+                                  const std::string &branching_choice) {
 
   BranchingHeuristic *heuristic;
-  RestartPolicy *restart;
 
-  restart = new Geometric();
-  restart->base = 128;
-  heuristic =
-      new LastConflict<GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
-                        RandomSplit, RandomSplit, 1>(&solver);
-
-  //   BranchingHeuristic *heuristic;
-  // RestartPolicy *restart;
-
-  // restart = new NoRestart();
-  // heuristic =
-  //     new GenericHeuristic<Lexicographic, MinValue>(&solver);
-
-  solver.initialise_search(search_vars, heuristic, restart);
+  if (branching_choice == "minvalue")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>, MinValue,
+        MinValue, 1>(&solver);
+  else if (branching_choice == "maxvalue")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>, MaxValue,
+        MaxValue, 1>(&solver);
+  else if (branching_choice == "halfsplit")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>, HalfSplit,
+        HalfSplit, 1>(&solver);
+  else if (branching_choice == "randompivot")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
+        RandomPivotSplit, RandomPivotSplit, 1>(&solver);
+  else if (branching_choice == "randomsplit")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>, RandomSplit,
+        RandomSplit, 1>(&solver);
+  else if (branching_choice == "reversesplit")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>, ReverseSplit,
+        ReverseSplit, 1>(&solver);
+  else if (branching_choice == "guidedsplit")
+    heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>,
+        GuidedSplit<RandomSplit>, GuidedSplit<RandomSplit>, 1>(&solver);
+  else {
+    std::cout << " c Warning: heuristic " << branching_choice << " is not handled, using halfsplit instead\n";
+     heuristic = new LastConflict<
+        GenericDVO<MinDomainOverWeight, 1, ConflictCountManager>, HalfSplit,
+        HalfSplit, 1>(&solver);
+  }
+ 
+  return heuristic;
 }
 
 int main( int argc, char** argv )
 {
 
-  std::cout << "c Mistral preemptive jobshop scheduler" << std::endl;
+  std::cout << " c Mistral preemptive jobshop scheduler" << std::endl;
   SolverCmdLine cmd("Mistral preemptive scheduler", ' ', "0.0");
 
   // TCLAP::SwitchArg order_branching("","order","Branches on the ordering of
   // end times", false); cmd.add( order_branching );
 
   TCLAP::ValueArg<int> model_choice(
-      "", "model", "choice of model O:default 1:compact 2:order", false, 0,
+      "", "model", "choice of model O:default 1:reduced 2:compact", false, 2,
       "int");
   cmd.add(model_choice);
+
+  // TCLAP::ValueArg<int> branching_choice(
+  //     "", "value-order",
+  //     "choice of branching strategy O:minvalue 1:halfsplit 2:reversesplit "
+  //     "3:randomsplit 4:randompivot 5:guidedsplit",
+  //     false, 2, "int");
+  // cmd.add(branching_choice);
 
   TCLAP::ValueArg<std::string> format(
       "", "format",
@@ -620,8 +572,15 @@ int main( int argc, char** argv )
       false, -1, "int");
   cmd.add( init_ub );
 
+  cmd.branchingArg->reset("reversesplit");
+
   cmd.parse(argc, argv);
-  
+
+  std::cout << " c instance=" << cmd.get_filename() << " model="
+            << (model_choice.getValue() == model::basic          ? "basic"
+                : (model_choice.getValue() == model::equalities) ? "reduced"
+                                                                 : "compact")
+            << " branching=" << cmd.get_value_ordering() << std::endl;
 
   usrand(cmd.get_seed());
 
@@ -652,8 +611,10 @@ int main( int argc, char** argv )
 
   VarArray search_vars;
 
-  VarArray start_time(jsp.nTasks(), 0, ub);
-  VarArray end_time(jsp.nTasks(), 0, ub);
+  // VarArray start_time(jsp.nTasks(), 0, ub);
+  // VarArray end_time(jsp.nTasks(), 0, ub);
+  VarArray start_time;
+  VarArray end_time;
 
   Variable makespan(0,ub);
   Variable origin(0, 0);
@@ -661,23 +622,29 @@ int main( int argc, char** argv )
   // if(model.getValue() == 0)
   //   model(jsp, solver, start_time, end_time, makespan, search_vars);
   // else if(model.getValue() == 0)
-  model(jsp, solver, start_time, end_time, origin, makespan, search_vars,
-        model_choice.getValue());
+  build_model(jsp, solver, start_time, end_time, origin, makespan, search_vars,
+              ub, model_choice.getValue());
   // if(order_branching.getValue())
   // else
   // model_order(jsp, solver, start_time, end_time, makespan, search_vars);
 
   JacksonPreemptiveScheduler JPS(jsp, solver, start_time, end_time);
 
-  set_strategy(solver, search_vars);
+  // heuristic = solver.heuristic_factory(cmd.get_variable_ordering(),
+  // cmd.get_value_ordering(), cmd.get_randomization());
+  RestartPolicy *restart = restart_factory(cmd.get_restart_policy(), solver.parameters.restart_base, solver.parameters.restart_factor);
 
+  BranchingHeuristic *heuristic =
+      heuristic_factory(solver, cmd.get_value_ordering());
+
+  solver.initialise_search(search_vars, heuristic, restart);
 
   // auto lb{get_lower_bound(jsp, solver, start_time, end_time, ub)};
   auto lb{JPS.get_lower_bound(ub)};
 
   solver.add(makespan >= lb);
 
-  std::cout << "c initial bounds: [" << lb << ".." << ub << "]\n";
+  std::cout << " c initial bounds: [" << lb << ".." << ub << "]\n";
 
   solver.depth_first_search();
 

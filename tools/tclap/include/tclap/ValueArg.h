@@ -235,6 +235,7 @@ class ValueArg : public Arg
         virtual std::string longID(const std::string& val = "val") const;
         
         virtual void reset() ;
+        virtual void reset(const T& def) ;
 
 private:
        /**
@@ -418,6 +419,13 @@ void ValueArg<T>::reset()
 {
 	Arg::reset();
 	_value = _default;
+}
+
+template<class T>
+void ValueArg<T>::reset(const T& def)
+{
+    Arg::reset();
+    _value = def;
 }
 
 } // namespace TCLAP

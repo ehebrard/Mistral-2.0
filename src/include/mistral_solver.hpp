@@ -866,7 +866,7 @@ namespace Mistral {
 
   class SolverCmdLine : public TCLAP::CmdLine {
 
-  private:
+  public:
     
     TCLAP::ValueArg<std::string> *fileArg;
     TCLAP::ValueArg<int>         *seedArg;
