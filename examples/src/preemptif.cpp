@@ -573,6 +573,7 @@ int main( int argc, char** argv )
   cmd.add( init_ub );
 
   cmd.branchingArg->reset("halfsplit");
+  cmd.verbosityArg->reset(3);
 
   cmd.parse(argc, argv);
 
