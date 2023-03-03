@@ -572,7 +572,7 @@ int main( int argc, char** argv )
       false, -1, "int");
   cmd.add( init_ub );
 
-  cmd.branchingArg->reset("reversesplit");
+  cmd.branchingArg->reset("halfsplit");
 
   cmd.parse(argc, argv);
 
