@@ -17,6 +17,9 @@ enum branching {
 
 using namespace Mistral;
 
+
+
+
 void print_solution(Instance &jsp, Solver &solver, VarArray &start_time,
                     VarArray &end_time) {
 
@@ -54,7 +57,7 @@ public:
   bool operator<(const TaskInfo &lct) const { return due_date < lct.due_date; }
 
   std::ostream &display(std::ostream &os) const {
-    os << index;
+    os << due_date;
     return os;
   }
 };
@@ -68,11 +71,13 @@ class JacksonPreemptiveScheduler {
 public:
   std::vector<std::pair<int, int>> sched;
   std::vector<int> sequence;
+  // std::vector<bool> seen;
 
   JacksonPreemptiveScheduler(Instance &jsp, Solver &solver,
                              VarArray &start_time, VarArray &end_time)
       : jsp(jsp), solver(solver), start_time(start_time), end_time(end_time) {
     started.resize(jsp.nTasks(), false);
+    // seen.reserve(jsp.nTasks());
   };
 
   bool fromDomain(const std::vector<int> &tasks);
@@ -185,6 +190,8 @@ bool JacksonPreemptiveScheduler::compute() {
 
   sched.clear();
   sequence.clear();
+  // seen.clear();
+  // seen.resize(jsp.nTasks(), false);
 
   std::sort(
       info.begin(), info.end(), [&](const TaskInfo &a, const TaskInfo &b) {
@@ -223,6 +230,16 @@ bool JacksonPreemptiveScheduler::compute() {
         assert(H.get_min().duration > 0);
 
         auto r{H.get_min().release_date};
+
+
+        // H.display(std::cout);
+        // std::cout << "seen:";
+        // for(auto i{0}; i<jsp.nTasks(); ++i) {
+        //   if(seen[i])
+        //     std::cout << " " << i;
+        // }
+        // std::cout << std::endl;
+
 
         if (r > t) {
 
@@ -284,10 +301,19 @@ bool JacksonPreemptiveScheduler::compute() {
         }
       }
     }
+    // assert(not seen[dd.index]);
+    // std::cout << "add " << dd.index << " to heap\n";
     H.add(dd);
+    // seen[dd.index] = true;
   }
 
+
+  // std::cout << "here\n"; 
+
   while (H.size() > 0) {
+
+    // H.display(std::cout);
+
     auto a{H.pop_min()};
 
 #ifdef VERBOSE
@@ -594,7 +620,6 @@ int main( int argc, char** argv )
 #endif
 
   Instance jsp(cmd.get_filename().c_str(), format.getValue().c_str());
-
 
 
 #ifdef VERBOSE

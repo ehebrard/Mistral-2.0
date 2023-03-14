@@ -5500,13 +5500,26 @@ private:
     ++num_operations;
 
     unsigned int ascendant = (index - 1) / 2;
+
+    // if(x.index == 57) {
+    //   std::cout << index << " -> " << ascendant << "/ " << x.due_date << " < " << data[ascendant].due_date << std::endl;
+    // }
+
+
     while (index && x < data[ascendant]) {
       ++num_operations;
 
       data[index] = data[ascendant];
       data[ascendant] = x;
       index = ascendant;
-      ascendant /= 2;
+      ascendant = (ascendant - 1) / 2;
+
+      // assert(index >= 0);
+      // assert(ascendant >= 0);
+      // assert(ascendant < data.size);
+    // if(x.index == 57) {
+    //   std::cout << index << " -> " << ascendant << "/ " << x.due_date << " < " << data[ascendant].due_date << std::endl;
+    // }
     }
   }
 
