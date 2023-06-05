@@ -68,8 +68,11 @@ namespace XCSP3Core {
 class XCSP3MistralCallbacks : public XCSP3CoreCallbacks {
 
 protected:
-  void addCondition(Variable X, XCondition &cond);
-  void addSumConstraint(VarArray &scope, vector<int> &coeffs, XCondition &cond);
+  void addCondition(Mistral::Variable X, XCondition &cond);
+  // void addSumConstraint(Mistral::VarArray &scope, vector<int> &coeffs,
+  // XCondition &cond);
+  void addSumConstraint(vector<Mistral::Variable> &scope, vector<int> &coeffs,
+                        XCondition &cond);
 
 public:
   Mistral::Solver &solver;
@@ -175,6 +178,25 @@ public:
   virtual void buildConstraintPrecedence(string id, vector<XVariable *> &list,
                                          vector<int> values,
                                          bool covered) override;
+
+  virtual void buildConstraintBinPacking(string id, vector<XVariable *> &list,
+                                         vector<int> &sizes,
+                                         XCondition &cond) override;
+
+  virtual void buildConstraintBinPacking(string id, vector<XVariable *> &list,
+                                         vector<int> &sizes,
+                                         vector<int> &capacities,
+                                         bool load) override;
+
+  virtual void buildConstraintBinPacking(string id, vector<XVariable *> &list,
+                                         vector<int> &sizes,
+                                         vector<XVariable *> &capacities,
+                                         bool load) override;
+
+  virtual void buildConstraintBinPacking(string id, vector<XVariable *> &list,
+                                         vector<int> &sizes,
+                                         vector<XCondition> &conditions,
+                                         int startindex) override;
 
   virtual void buildConstraintKnapsack(string id, vector<XVariable *> &list,
                                        vector<int> &weights,
@@ -798,7 +820,8 @@ void XCSP3MistralCallbacks::addCondition(Variable X, XCondition &cond) {
   }
 }
 
-void XCSP3MistralCallbacks::addSumConstraint(VarArray &scope,
+void XCSP3MistralCallbacks::addSumConstraint(vector<Variable> &scope,
+                                             // Mistral::VarArray &scope,
                                              vector<int> &coeffs,
                                              XCondition &cond) {
   if (cond.operandType == VARIABLE) {
@@ -1191,11 +1214,11 @@ void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
   for (auto i{0}; i < values.size() - 1; ++i) {
     B.emplace_back(list.size());
     for (auto j{1}; j < list.size(); ++j) {
-      solver.add((variable[list[j - 1]] == values[i]) <= B[i][j]);
+      solver.add((variable[list[j - 1]->id] == values[i]) <= B[i][j]);
       solver.add(B[i][j - 1] <= B[i][j]);
     }
     for (auto j{0}; j < list.size(); ++j) {
-      solver.add(B[i][j] || (variable[list[j]] != value[i + 1]));
+      solver.add(B[i][j] || (variable[list[j]->id] != values[i + 1]));
     }
   }
   // cout << "Prec: TODO!\n";
@@ -1211,12 +1234,24 @@ void XCSP3MistralCallbacks::buildConstraintBinPacking(string id,
                                                       vector<XVariable *> &list,
                                                       vector<int> &sizes,
                                                       XCondition &cond) {
-  vector<VarArray> bin(capacities.size());
-  for (auto b{0}; b < capacities.size(); ++b) {
+
+  int the_min{numeric_limits<int>::max()};
+  int the_max{numeric_limits<int>::min()};
+  for(auto x : list) {
+    auto vmin{variable[x->id].get_min()};
+    auto vmax{variable[x->id].get_max()};
+    if(vmin < the_min)
+      the_min = vmin;
+    if(vmax > the_max)
+      the_max = vmax;
+  }
+
+  vector<vector<Variable>> bin(the_max - the_min + 1);
+  for (auto b{the_min}; b <= the_max; ++b) {
     for (auto x : list) {
-      bin[b].emplace_back(variable[x->id] == (b - startindex));
+      bin[b - the_min].emplace_back(variable[x->id] == b);
     }
-    addSumConstraint(bin[b], cond);
+    addSumConstraint(bin[b-the_min], sizes, cond);
   }
 }
 
@@ -1225,12 +1260,12 @@ void XCSP3MistralCallbacks::buildConstraintBinPacking(string id,
                                                       vector<int> &sizes,
                                                       vector<int> &capacities,
                                                       bool load) {
-  vector<VarArray> bin(capacities.size());
+  vector<vector<Variable>> bin(capacities.size());
   for (auto b{0}; b < capacities.size(); ++b) {
     for (auto x : list) {
       bin[b].emplace_back(variable[x->id] == b);
     }
-    solver.add(Sum(bin[b], -INFTY, capacities[b]));
+    solver.add(Sum(bin[b], sizes, -INFTY, capacities[b]));
   }
 }
 
@@ -1238,12 +1273,12 @@ void XCSP3MistralCallbacks::buildConstraintBinPacking(
     string id, vector<XVariable *> &list, vector<int> &sizes,
     vector<XVariable *> &capacities, bool load) {
 
-  vector<VarArray> bin(capacities.size());
+  vector<vector<Variable>> bin(capacities.size());
   for (auto b{0}; b < capacities.size(); ++b) {
     for (auto x : list) {
       bin[b].emplace_back(variable[x->id] == b);
     }
-    solver.add(Sum(bin[b]) <= variable[capacities[b]->id]);
+    solver.add(Sum(bin[b], sizes) <= variable[capacities[b]->id]);
   }
 }
 
@@ -1251,15 +1286,15 @@ void XCSP3MistralCallbacks::buildConstraintBinPacking(
     string id, vector<XVariable *> &list, vector<int> &sizes,
     vector<XCondition> &conditions, int startindex) {
 
-  vector<VarArray> bin(capacities.size());
-  for (auto b{0}; b < capacities.size(); ++b) {
+  vector<vector<Variable>> bin(conditions.size());
+  for (auto b{0}; b < conditions.size(); ++b) {
     for (auto x : list) {
       bin[b].emplace_back(variable[x->id] == (b + startindex));
     }
-    addSumConstraint(bin[b], conditions[b]);
+    addSumConstraint(bin[b], sizes, conditions[b]);
   }
 }
-}
+
 
 void XCSP3MistralCallbacks::buildConstraintKnapsack(
     string id, vector<XVariable *> &list, vector<int> &weights,
@@ -1289,7 +1324,7 @@ void XCSP3MistralCallbacks::buildConstraintKnapsack(
       solver.add(Sum(scope, weights) > capacity);
     }
 
-  } else if (cond.operandType == INTERVAL) {
+  } else if (weightsCondition.operandType == INTERVAL) {
     if (weightsCondition.op != IN) {
       cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
       exit(1);
@@ -1316,47 +1351,46 @@ void XCSP3MistralCallbacks::buildConstraintKnapsack(
     }
   }
 
-  if (profitsCondition.operandType == VARIABLE) {
-    Variable profit = variable[profitsCondition.var];
+  if (profitCondition.operandType == VARIABLE) {
+    Variable profit = variable[profitCondition.var];
 
-    if (profitsCondition.op == EQ) {
+    if (profitCondition.op == EQ) {
       solver.add(Sum(scope, weights, profit));
-    } else if (profitsCondition.op == NE) {
+    } else if (profitCondition.op == NE) {
       solver.add(Sum(scope, weights) != profit);
-    } else if (profitsCondition.op == LE) {
+    } else if (profitCondition.op == LE) {
       solver.add(Sum(scope, weights) <= profit);
-    } else if (profitsCondition.op == LT) {
+    } else if (profitCondition.op == LT) {
       solver.add(Sum(scope, weights) < profit);
-    } else if (profitsCondition.op == GE) {
+    } else if (profitCondition.op == GE) {
       solver.add(Sum(scope, weights) >= profit);
-    } else if (profitsCondition.op == GT) {
+    } else if (profitCondition.op == GT) {
       solver.add(Sum(scope, weights) > profit);
     }
 
-  } else if (cond.operandType == INTERVAL) {
-    if (profitsCondition.op != IN) {
+  } else if (profitCondition.operandType == INTERVAL) {
+    if (profitCondition.op != IN) {
       cout << "s UNSUPPORTED" << _ID_(": IN non-interval") << "\n";
       exit(1);
     }
 
-    solver.add(Sum(scope, weights, profitsCondition.min, profitsCondition.max));
+    solver.add(Sum(scope, weights, profitCondition.min, profitCondition.max));
 
   } else {
 
-    if (profitsCondition.op == EQ) {
-      solver.add(
-          Sum(scope, weights, profitsCondition.val, profitsCondition.val));
-    } else if (profitsCondition.op == NE) {
-      Variable cst(profitsCondition.val);
+    if (profitCondition.op == EQ) {
+      solver.add(Sum(scope, weights, profitCondition.val, profitCondition.val));
+    } else if (profitCondition.op == NE) {
+      Variable cst(profitCondition.val);
       solver.add(Sum(scope, weights) != cst);
-    } else if (profitsCondition.op == LE) {
-      solver.add(Sum(scope, weights, -INFTY, profitsCondition.val));
-    } else if (profitsCondition.op == LT) {
-      solver.add(Sum(scope, weights, -INFTY, profitsCondition.val - 1));
-    } else if (profitsCondition.op == GE) {
-      solver.add(Sum(scope, weights, profitsCondition.val, INFTY));
-    } else if (profitsCondition.op == GT) {
-      solver.add(Sum(scope, weights, profitsCondition.val + 1, INFTY));
+    } else if (profitCondition.op == LE) {
+      solver.add(Sum(scope, weights, -INFTY, profitCondition.val));
+    } else if (profitCondition.op == LT) {
+      solver.add(Sum(scope, weights, -INFTY, profitCondition.val - 1));
+    } else if (profitCondition.op == GE) {
+      solver.add(Sum(scope, weights, profitCondition.val, INFTY));
+    } else if (profitCondition.op == GT) {
+      solver.add(Sum(scope, weights, profitCondition.val + 1, INFTY));
     }
   }
 }
