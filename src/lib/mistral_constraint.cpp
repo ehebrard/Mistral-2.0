@@ -8121,7 +8121,7 @@ void Mistral::ConstraintGAC4::initialise() {
   ConstraintTable::initialise();
 
   unsigned int arity = scope.size;
-  int n, m;
+  // int n, m;
 
   // for(unsigned int i=0; i<arity; ++i)
   //   trigger_on(_DOMAIN_, scope[i]);
@@ -8135,24 +8135,26 @@ void Mistral::ConstraintGAC4::initialise() {
   support_of = new ReversibleSet *[arity];
 #endif
 
-  n = 0;
+  int m;
+#ifdef _OS_PRUNING
+  int n = 0;
   for (unsigned int i = 0; i < arity; ++i) {
     n += scope[i].get_size();
   }
 
-#ifdef _OS_PRUNING
   support_lists = new ReversibleSet[n];
   var_map = new int[n];
   val_map = new int[n];
   pruned_lists.initialise(0, n - 1, n, false);
   list_pruning = new Vector<int>[n];
-#endif
 
 #ifdef _DEBUG_TABLEGAC4
   init_support_size = new int[n];
 #endif
 
   n = 0;
+#endif
+
   for (unsigned int i = 0; i < arity; ++i) {
 
     m = scope[i].get_initial_max() - scope[i].get_initial_min() + 1;
@@ -8193,7 +8195,10 @@ void Mistral::ConstraintGAC4::initialise() {
 
       values[i].add(val);
 
+#ifdef _OS_PRUNING
       ++n;
+#endif
+
       vnxt = scope[i].next(val);
     } while (val != vnxt);
   }

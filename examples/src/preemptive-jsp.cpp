@@ -82,6 +82,7 @@ public:
 
   bool fromDomain(const std::vector<int> &tasks);
   bool fromSolution(const std::vector<int> &tasks);
+  bool printSolution(const std::vector<int> &tasks);
 
   int get_lower_bound(const int ub);
 
@@ -105,6 +106,7 @@ private:
   std::vector<bool> started;
 
   bool compute();
+  void print();
 };
 
 int JacksonPreemptiveScheduler::get_lower_bound(const int ub) {
@@ -182,7 +184,25 @@ bool JacksonPreemptiveScheduler::fromSolution(const std::vector<int> &tasks) {
   return compute();
 }
 
-bool JacksonPreemptiveScheduler::compute() {
+bool JacksonPreemptiveScheduler::printSolution(const std::vector<int> &tasks) {
+
+  info.clear();
+  // std::cout << std::endl;
+  for (auto a : tasks) {
+
+    // std::cout << a << " " << jsp.getDuration(a) << " "
+    // << start_time[a].get_solution_int_value() << " "
+    // << end_time[a].get_solution_int_value() << std::endl;
+
+    info.push_back(TaskInfo(a, start_time[a].get_solution_int_value(),
+                            end_time[a].get_solution_int_value(),
+                            jsp.getDuration(a)));
+  }
+
+  return print();
+}
+
+bool JacksonPreemptiveScheduler::compute(const bool print_flag) {
 
 #ifdef VERBOSE
   std::cout << "JSP: sort\n";
@@ -695,4 +715,8 @@ int main( int argc, char** argv )
   };
 
   std::cout << "c solution checked!\n";
+
+  if (cmd.printsolArg->getValue()) {
+    print_solution(jsp, solver, start_time, end_time);
+  }
 }

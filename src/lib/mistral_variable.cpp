@@ -4587,8 +4587,9 @@ Mistral::Variable Mistral::AllDiffExcept(Vector< Variable >& args, const int exc
 }
 
 Mistral::PreemptiveNoOverlapExpression::PreemptiveNoOverlapExpression(
-    Vector<Variable> &st, Vector<Variable> &et, const std::vector<int> &p, Variable& e)
-    : Expression(st), starts(st), ends(et), duration(p), the_end(e) {
+    Vector<Variable> &st, Vector<Variable> &et, const std::vector<int> &p,
+    Variable &e)
+    : Expression(st), duration(p), starts(st), ends(et), the_end(e) {
 
   for (unsigned int i = 0; i < et.size; ++i)
     children.add(et[i]);
