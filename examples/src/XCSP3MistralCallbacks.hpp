@@ -5257,12 +5257,16 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n,
 
   if (fn->type == XCSP3Mistral::NT_NE) {
 
+    assert(fn->args.size() == 2);
+
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
     rv = (x1 != x2);
   }
 
   if (fn->type == XCSP3Mistral::NT_GE) {
+
+    assert(fn->args.size() == 2);
 
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
@@ -5271,12 +5275,16 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n,
 
   if (fn->type == XCSP3Mistral::NT_GT) {
 
+    assert(fn->args.size() == 2);
+
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
     rv = (x1 > x2);
   }
 
   if (fn->type == XCSP3Mistral::NT_LE) {
+
+    assert(fn->args.size() == 2);
 
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
@@ -5285,12 +5293,16 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n,
 
   if (fn->type == XCSP3Mistral::NT_LT) {
 
+    assert(fn->args.size() == 2);
+
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
     rv = (x1 < x2);
   }
 
   if (fn->type == XCSP3Mistral::NT_IMP) { // IMP(X,Y) = NOT X OR Y
+
+    assert(fn->args.size() == 2);
 
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
@@ -5334,11 +5346,15 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n,
 
   if (fn->type == XCSP3Mistral::NT_NOT) {
 
+    assert(fn->args.size() == 1);
+
     Variable x1 = postExpression(fn->args[0]);
     rv = (!x1);
   }
 
   if (fn->type == XCSP3Mistral::NT_IFF) {
+
+    assert(fn->args.size() == 2);
 
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
@@ -5363,11 +5379,15 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n,
   // function stuff
   if (fn->type == XCSP3Mistral::NT_NEG) {
 
+    assert(fn->args.size() == 1);
+
     Variable x1 = postExpression(fn->args[0]);
     rv = -x1;
   }
 
   if (fn->type == XCSP3Mistral::NT_ABS) {
+
+    assert(fn->args.size() == 1);
 
     Variable x1 = postExpression(fn->args[0]);
     rv = Abs(x1);
@@ -5375,12 +5395,16 @@ Variable XCSP3MistralCallbacks::postExpression(XCSP3Mistral::Node *n,
 
   if (fn->type == XCSP3Mistral::NT_SUB) {
 
+    assert(fn->args.size() == 2);
+
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
     rv = (x1 - x2);
   }
 
   if (fn->type == XCSP3Mistral::NT_DIST) { // Simulate DIST(X,Y) = ABS(SUB(X,Y))
+
+    assert(fn->args.size() == 2);
 
     Variable x1 = postExpression(fn->args[0]);
     Variable x2 = postExpression(fn->args[1]);
@@ -5538,6 +5562,11 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
   Variable rv;
 
   if (n->type == OVAR) {
+
+#ifdef _VERBOSE_
+    std::cout <<"variable\n";
+#endif
+
     assert(level > 0);
 
     NodeVariable *nv = (NodeVariable *)n;
@@ -5555,6 +5584,10 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
   else if (n->type == ODECIMAL) {
     assert(level > 0);
 
+#ifdef _VERBOSE_
+    std::cout <<"constant\n";
+#endif
+
     NodeConstant *nc = (NodeConstant *)n;
     rv = Variable(nc->val, nc->val);
 
@@ -5567,6 +5600,10 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
   }
 
   else {
+
+#ifdef _VERBOSE_
+    std::cout <<"predicate\n";
+#endif
 
     NodeOperator *fn = (NodeOperator *)n;
 
@@ -5599,6 +5636,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
 
     else if (fn->type == ONE) {
 
+      assert(fn->parameters.size() == 2);
+
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
       rv = (x1 != x2);
@@ -5612,6 +5651,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == OGE) {
+
+      assert(fn->parameters.size() == 2);
 
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
@@ -5627,6 +5668,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
 
     else if (fn->type == OGT) {
 
+      assert(fn->parameters.size() == 2);
+
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
       rv = (x1 > x2);
@@ -5640,6 +5683,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == OLE) {
+
+      assert(fn->parameters.size() == 2);
 
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
@@ -5655,6 +5700,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
 
     else if (fn->type == OLT) {
 
+      assert(fn->parameters.size() == 2);
+
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
       rv = (x1 < x2);
@@ -5668,6 +5715,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == OIMP) { // IMP(X,Y) = NOT X OR Y
+
+      assert(fn->parameters.size() == 2);
 
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
@@ -5732,6 +5781,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
 
     else if (fn->type == ONOT) {
 
+      assert(fn->parameters.size() == 1);
+
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       rv = (!x1);
 
@@ -5744,6 +5795,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == OIFF) {
+
+      assert(fn->parameters.size() == 2);
 
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
@@ -5782,6 +5835,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     // function stuff
     else if (fn->type == ONEG) {
 
+      assert(fn->parameters.size() == 1);
+
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       rv = -x1;
 
@@ -5794,6 +5849,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == OABS) {
+
+      assert(fn->parameters.size() == 1);
 
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       rv = Abs(x1);
@@ -5808,6 +5865,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
 
     else if (fn->type == OSUB) {
 
+      assert(fn->parameters.size() == 2);
+
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
       rv = (x1 - x2);
@@ -5821,6 +5880,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == ODIST) { // Simulate DIST(X,Y) = ABS(SUB(X,Y))
+
+      assert(fn->parameters.size() == 2);
 
       Variable x1 = postExpression(fn->parameters[0], level + 1);
       Variable x2 = postExpression(fn->parameters[1], level + 1);
@@ -5973,6 +6034,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     else if (fn->type == OIF) {
       assert(level > 0);
 
+      assert(fn->parameters.size() == 3);
+
       Variable x = postExpression(fn->parameters[0], level + 1);
       VarArray A;
       A.add(postExpression(fn->parameters[2], level + 1));
@@ -5989,6 +6052,8 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
     }
 
     else if (fn->type == OIN) {
+
+      assert(fn->parameters.size() == 2);
 
       Variable x = postExpression(fn->parameters[0], level + 1);
       Variable y = postExpression(fn->parameters[1], level + 1);

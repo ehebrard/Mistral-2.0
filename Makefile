@@ -112,7 +112,7 @@ DATE := $(shell date '+%y-%m-%d')
 
 clean : 
 	cd fz;	make clean;
- 	# if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
+	# if [ -d "./XCSP3-CPP-Parser/samples" ]; then cd XCSP3-CPP-Parser/samples ; make clean; echo exists; fi
 	rm -rf $(XOBJ)/*.o $(XLIB)/* $(BIN)/testlib $(OBJ)/*.o $(OBJ)/*.a $(SRC)/*~ $(MOD)/obj/*.o $(MOD)/src/*~ $(MOD)/src/*/*~ $(INC)/*~ $(UTI)/*~  *~ $(BIN)/* $(DOC)/*~ ./fzn-mistral fz/mistral-fzn
 
 archive: 
