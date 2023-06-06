@@ -73,12 +73,7 @@ $(BIN)/%: $(MOD)/obj/%.o $(PLIBOBJ)
 $(MOD)/obj/%.o: $(MOD)/src/%.cpp
 	@echo 'compile '$<
 	$(CCC) $(CFLAGS) -c $< -o $@ 
-		
-# Examples, one at a time
-%: $(MOD)/obj/%.o $(PLIBOBJ) 
-	@echo 'link '$<	
-	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
-	
+			
 	
 # xcsp3: $(BIN)/MistralXCSP
 
@@ -89,9 +84,9 @@ testlib: $(XCSP3DIR)/samples/main.cc
 $(XCSP3DIR):
 	git clone https://github.com/xcsp3team/XCSP3-CPP-Parser
 
-$(BIN)/MistralXCSP: $(MOD)/obj/MistralXCSP.o $(PLIBOBJ) $(XLIB)/libparserxcsp3core.a
-	@echo 'link '$<
-	$(CCC) $(COPTIMIZE) $(PLIBOBJ) -L $(XLIB) $(XLIBFLAG) -lparserxcsp3core $< -lm -o $@
+MistralXCSP: $(MOD)/obj/MistralXCSP.o $(PLIBOBJ) $(XLIB)/libxcsp3parser.a $(XLIB)/libSHARED.a
+	@echo 'this link '$<
+	$(CCC) $(COPTIMIZE) $(PLIBOBJ) -L $(XLIB) $(XLIBFLAG) -lxcsp3parser -lSHARED $< -lm -o $(BIN)/$@
 
 $(MOD)/obj/MistralXCSP.o: $(MOD)/src/MistralXCSP.cpp $(MOD)/src/XCSP3MistralCallbacks.hpp 
 	@echo 'compile '$<
@@ -101,9 +96,16 @@ $(XOBJ)/%.o: $(XSRC)/%.cc
 	@mkdir -p $(XOBJ)
 	$(CCC) $(CFLAGS) $(XINCFLAG) -c -o $@ $<
 
-$(XLIB)/libparserxcsp3core.a: $(XOBJ_FILES) 
+$(XLIB)/libxcsp3parser.a: $(XOBJ_FILES) 
 	@mkdir -p $(XLIB)
-	ar rcsv $(XLIB)/libparserxcsp3core.a $(XOBJ_FILES)
+	cd $(XCSP3DIR); ./build.sh
+# 	ar rcsv $(XLIB)/libparserxcsp3core.a $(XOBJ_FILES)
+
+# Examples, one at a time
+%: $(MOD)/obj/%.o $(PLIBOBJ) 
+	@echo 'that link '$<	
+	$(CCC) $(CFLAGS) $(PLIBOBJ) $< -lm -o $(BIN)/$@ 
+
 
 
 DATE := $(shell date '+%y-%m-%d')

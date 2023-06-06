@@ -340,7 +340,7 @@ VarArray end_time_pred;
       et_pred.add(end_time_pred[o]); 
     }
 
-    solver.add(PreemptiveNoOverlap(st, et, p));
+    solver.add(PreemptiveNoOverlap(st, et, p, makespan));
 
    
     solver.add(PreemptiveNonDelay(st, et, et_pred, p));

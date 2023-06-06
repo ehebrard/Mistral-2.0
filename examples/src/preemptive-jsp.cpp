@@ -82,7 +82,7 @@ public:
 
   bool fromDomain(const std::vector<int> &tasks);
   bool fromSolution(const std::vector<int> &tasks);
-  bool printSolution(const std::vector<int> &tasks);
+  void printSolution(const std::vector<int> &tasks);
 
   int get_lower_bound(const int ub);
 
@@ -105,7 +105,7 @@ private:
 
   std::vector<bool> started;
 
-  bool compute();
+  bool compute(const bool print_flag=false);
   void print();
 };
 
@@ -184,7 +184,7 @@ bool JacksonPreemptiveScheduler::fromSolution(const std::vector<int> &tasks) {
   return compute();
 }
 
-bool JacksonPreemptiveScheduler::printSolution(const std::vector<int> &tasks) {
+void JacksonPreemptiveScheduler::printSolution(const std::vector<int> &tasks) {
 
   info.clear();
   // std::cout << std::endl;
@@ -199,7 +199,7 @@ bool JacksonPreemptiveScheduler::printSolution(const std::vector<int> &tasks) {
                             jsp.getDuration(a)));
   }
 
-  return print();
+  print();
 }
 
 bool JacksonPreemptiveScheduler::compute(const bool print_flag) {
