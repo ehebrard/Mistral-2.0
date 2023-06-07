@@ -6,6 +6,10 @@ $ cd build
 $ cmake ..
 $ make MistralXCSP
 
+## RUNNING MistralXCSP
+
+$ ./MistralXCSP <xml file>
+
 
 ## OLD README
 
