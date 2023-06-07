@@ -5522,7 +5522,7 @@ void Mistral::KnapsackExpression::extract_predicate(Solver *s) {
   W.clear();
   for(auto w : weight)
     W.add(w);
-  s->add(Constraint(new ConstraintWeightedSumInterval(
+  s->add(Constraint(new ConstraintWeightedBoolSumInterval(
       args, W, -INFTY, weight_upper_bound)));
 
 }

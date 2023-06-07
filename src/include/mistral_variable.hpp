@@ -1481,7 +1481,7 @@ public:
   virtual ~VariableRange() {}
 
   void get_lb_history(std::vector<int> &lbs, std::vector<int> &lvls) const {
-    for (unsigned k{0}; k < trail_.size; k += 3) {
+    for (int k{0}; k < trail_.size; k += 3) {
       int xmin{trail_[k]};
       // int xmax{trail_[k+1]};
       int xlevel{trail_[k + 2]};
