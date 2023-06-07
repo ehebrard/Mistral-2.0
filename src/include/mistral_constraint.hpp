@@ -4491,6 +4491,66 @@ public:
 };
 
 /**********************************************
+ * Knapsack  Predicate
+ **********************************************/
+//  b1 + ... + bn-1 = xn
+/// predicate on the value of the sum of a set of variables.
+class PredicateKnapsack : public GlobalConstraint {
+
+public:
+  /**@name Parameters*/
+  //@{
+
+  int capacity;
+
+  std::vector<int> weight;
+  std::vector<int> profit;
+
+  BoolDomain *domains;
+
+  Vector<Literal> explanation;
+
+  //@}
+
+  /**@name Constructors*/
+  //@{
+  PredicateKnapsack() : GlobalConstraint() { priority = 0; }
+  PredicateKnapsack(Vector<Variable> &scp, const int capacity,
+                    std::vector<int> &w, std::vector<int> &p);
+  virtual Constraint clone() {
+    return Constraint(new PredicateKnapsack(scope, capacity, weight, profit));
+  }
+  virtual void initialise();
+  virtual void mark_domain();
+  virtual bool explained() { return false; }
+  virtual int idempotent() { return 1; }
+  virtual int postponed() { return 1; }
+  virtual int pushed() { return 1; }
+  // virtual bool absorb_negation(const int var) { return true; }
+  virtual ~PredicateKnapsack();
+  //@}
+
+#ifdef _KNS_WC
+  double weight_conflict(double unit, Vector<double> &weights); //  {
+  virtual bool conflict_is_explained() { return true; }
+#endif
+  // virtual iterator get_reason_for(const Atom a, const int lvl, iterator
+  // &end);
+
+  /**@name Solving*/
+  //@{
+  virtual int check(const int *sol) const;
+  virtual PropagationOutcome propagate();
+  //@}
+
+  /**@name Miscellaneous*/
+  //@{
+  virtual std::ostream &display(std::ostream &) const;
+  virtual std::string name() const { return "knapsack="; }
+  //@}
+};
+
+/**********************************************
  * WeightedSum Constraint
  **********************************************/
 /*! \class ConstraintWeightedSum

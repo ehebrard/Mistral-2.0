@@ -231,7 +231,7 @@ public:
   // }
 
   void get_lb_history(std::vector<int> &lbs, std::vector<int> &lvls) const {
-    for (auto k{0}; k < trail_.size; k += 4) {
+    for (unsigned k{0}; k < trail_.size; k += 4) {
       int xmin{trail_[k]};
       // int xmax{trail_[k+1]};
       // int xsize{trail_[k+2]};
@@ -1481,7 +1481,7 @@ public:
   virtual ~VariableRange() {}
 
   void get_lb_history(std::vector<int> &lbs, std::vector<int> &lvls) const {
-    for (auto k{0}; k < trail_.size; k += 3) {
+    for (unsigned k{0}; k < trail_.size; k += 3) {
       int xmin{trail_[k]};
       // int xmax{trail_[k+1]};
       int xlevel{trail_[k + 2]};
@@ -1491,7 +1491,7 @@ public:
   }
 
   void update_lb_history(std::vector<int> &lbs, std::vector<int> &lvls) const {
-    for (auto i{0}; i + 1 < lbs.size(); ++i) {
+    for (unsigned i{0}; i + 1 < lbs.size(); ++i) {
       assert(lbs[i] == trail_[3 * i]);
       assert(lvls[i] == trail_[3 * i + 2]);
     }
@@ -3235,6 +3235,37 @@ Variable BoolSum(Vector<Variable> &args, const Vector<int> &w, const int l,
                  const int u = -INFTY);
 Variable BoolSum(std::vector<Variable> &args, const std::vector<int> &w,
                  const int l, const int u = -INFTY);
+
+class KnapsackExpression : public Expression {
+
+public:
+  int weight_upper_bound;
+  int profit_upper_bound;
+  int profit_lower_bound;
+  std::vector<int> weight;
+  std::vector<int> profit;
+
+  KnapsackExpression(std::vector<Variable> &args, const int w_bound,
+                     const std::vector<int> &w, const std::vector<int> &p);
+  KnapsackExpression(Vector<Variable> &args, const int w_bound,
+                     const std::vector<int> &w, const std::vector<int> &p);
+  virtual ~KnapsackExpression();
+  void initialise_bounds();
+  void order_vars();
+
+  virtual void extract_constraint(Solver *);
+  virtual void extract_variable(Solver *);
+  virtual void extract_predicate(Solver *);
+  virtual const char *get_name() const;
+};
+
+// Variable Knapsack(Vector<Variable> &args, const Vector<int> &w, const
+// Vector<int> &p, const int w_bound);
+Variable Knapsack(std::vector<Variable> &args, const int w_bound,
+                  const std::vector<int> &w, const std::vector<int> &p);
+
+Variable Knapsack(Vector<Variable> &args, const int w_bound,
+                  const std::vector<int> &w, const std::vector<int> &p);
 
 class LinearExpression : public Expression {
 

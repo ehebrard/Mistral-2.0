@@ -74,12 +74,14 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 // #define _DEBUG_NOOVERLAP_SOL true
 // #define _DEBUG_NOOVERLAP_HALL (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // #define _DEBUG_NOOVERLAP_EDGE true
-#define _DEBUG_NONDELAY true
+// #define _DEBUG_NONDELAY true
 // #define SIMPLE true
 // (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
 // // (id == 281 and (get_solver()->statistics.num_propagations >= 2864504))
+
+#define _DEBUG_KNAPSACK true
 
 std::ostream& Mistral::operator<< (std::ostream& os, const Mistral::Constraint& x) {
   return x.display(os);
@@ -14592,6 +14594,780 @@ Mistral::PredicateWeightedBoolSum::display(std::ostream &os) const {
 
   return os;
 }
+
+Mistral::PredicateKnapsack::PredicateKnapsack(Vector<Variable> &scp,
+                                              const int c, std::vector<int> &w,
+                                              std::vector<int> &p)
+    : GlobalConstraint(scp), capacity(c), weight(w), profit(p) {
+  priority = 0;
+}
+
+void Mistral::PredicateKnapsack::initialise() {
+  ConstraintImplementation::initialise();
+
+  std::vector<int> order;
+  order.reserve(profit.size());
+  std::vector<int> buffer;
+  buffer.reserve(profit.size());
+  VarArray xbuffer;
+
+  for (unsigned i{0}; i < profit.size(); ++i)
+    order.emplace_back(i);
+
+  std::sort(order.begin(), order.end(), [&](const int x, const int y) {
+    return profit[x] * weight[y] > profit[y] * weight[x];
+  });
+
+  for (unsigned i{0}; i < order.size(); ++i) {
+    buffer.emplace_back(weight[order[i]]);
+  }
+  buffer.swap(weight);
+
+  buffer.clear();
+
+  for (unsigned i{0}; i < order.size(); ++i) {
+    buffer.emplace_back(profit[order[i]]);
+  }
+  buffer.swap(profit);
+
+  for (unsigned i{0}; i < order.size(); ++i) {
+    xbuffer.add(scope[order[i]]);
+  }
+  scope.clear();
+  for (auto x : xbuffer)
+    scope.add(x);
+
+  //   for (unsigned i{0}; i < order.size(); ++i) {
+  //   std::cout << profit[i] << " " << weight[i] << " "
+  //     << static_cast<double>(profit[i]) / static_cast<double>(weight[i])
+  //     << " " << scope[i] << std::endl;
+  // }
+  // std::cout << std::endl;
+
+  for (unsigned int i = 0; i < weight.size(); ++i) {
+    trigger_on(_VALUE_, scope[i]);
+  }
+  trigger_on(_RANGE_, scope[weight.size()]);
+
+  GlobalConstraint::initialise();
+
+  domains = new BoolDomain[weight.size()];
+  for (unsigned int i = 0; i < weight.size(); ++i) {
+    Variable var = scope[i].get_var();
+    domains[i] = var.bool_domain;
+  }
+}
+
+void Mistral::PredicateKnapsack::mark_domain() {
+  for (int i = weight.size(); i;)
+    get_solver()->forbid(scope[--i].id(), LIST_VAR | BITSET_VAR | RANGE_VAR);
+}
+
+Mistral::PredicateKnapsack::~PredicateKnapsack() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete knapsack constraint" << std::endl;
+#endif
+  delete[] domains;
+}
+
+// void Mistral::PredicateKnapsack::initialise_activity(double *lact,
+//                                                             double *vact,
+//                                                             double norm) {
+
+//   int n = weight.size();
+
+//   // std::cout << "n: " << n << std::endl;
+
+//   double avg_weight = (double)(bound_[1] - bound_[0] + 1) / (double)n;
+
+//   // std::cout << "aw: " << avg_weight << std::endl;
+
+//   int real_max = std::min((int)(bound_[1]), scope[n].get_max());
+//   int real_min = std::max((int)(bound_[0]), scope[n].get_min());
+
+//   // std::cout << "bound: [" << bound_[0] << ".." << bound_[1] << "]" <<
+//   // std::endl;
+
+//   // std::cout << "reach: [" << real_min << ".." << real_max << "]" <<
+//   // std::endl;
+
+//   double incr_0 = 0;
+//   double incr_1 = 0;
+
+//   // long double sol_0 = 0;
+//   // long double sol_1 = 0;
+
+//   double center = (double)(real_min + real_max) / 2;
+
+//   // std::cout << "center: " << center << std::endl;
+
+//   double skew = (center - (double)((int)(bound_[0])) + 1) /
+//                 (double)(bound_[1] - bound_[0] + 1);
+//   if (skew < 0)
+//     skew = -skew;
+
+//   //  std::cout << "skew: " << skew << std::endl;
+
+//   double exponent = skew;
+//   if (exponent < 1 - exponent)
+//     exponent = 1 - exponent;
+//   exponent = 1 / exponent;
+
+//   // std::cout << "exponent: " << exponent << std::endl;
+
+//   exponent +=
+//       (double)(real_max - real_min + 1) / (double)(bound_[1] - bound_[0] +
+//       1);
+
+//   // std::cout << "exponent: " << exponent << std::endl;
+
+//   double activity_increment = norm / pow(n, exponent);
+
+//   // std::cout << "activity_increment: " << activity_increment << std::endl;
+
+//   incr_0 = skew * activity_increment;
+//   incr_1 = (1 - skew) * activity_increment;
+
+//   int i = n, idx;
+//   while (i--) {
+//     idx = scope[i].id();
+
+//     // std::cout << vact[idx] << " " << lact[2*idx] << " " << lact[2*idx+1]
+//     << "
+//     // => ";
+
+//     double pond = (double)(weight[i]) / avg_weight;
+//     if (pond < 0)
+//       pond = -pond;
+
+//     vact[idx] += (incr_0 + incr_1) * pond;
+
+//     if (weight[i] > 0) {
+//       lact[2 * idx + 1] += incr_1 * pond;
+//       lact[2 * idx] += incr_0 * pond;
+//     } else {
+//       lact[2 * idx + 1] += incr_0 * pond;
+//       lact[2 * idx] += incr_1 * pond;
+//     }
+//   }
+// }
+
+#ifdef _KNS_WC_ALT
+double Mistral::PredicateKnapsack::weight_conflict(double unit,
+                                                   Vector<double> &weights) {
+  int i, idx, arity = weight.size();
+
+  double the_max = 0;
+
+  for (i = 0; i < arity; ++i) {
+    idx = scope[i].id();
+    if (idx >= 0) {
+      weights[idx] += unit *
+                      ((double)(weight[i] > 0 ? weight[i] : -weight[i])) /
+                      ((double)arity);
+#ifdef _ONLY_ACTIVE
+      weight_contributed[i] +=
+          unit * ((double)(weight[i] > 0 ? weight[i] : -weight[i])) /
+          ((double)arity);
+#endif
+      if (the_max < weights[idx])
+        the_max = weights[idx];
+    }
+  }
+  idx = scope[arity].id();
+  if (idx >= 0) {
+    weights[idx] += unit / ((double)arity);
+#ifdef _ONLY_ACTIVE
+    weight_contributed[i] += unit / ((double)arity);
+#endif
+    if (the_max < weights[idx])
+      the_max = weights[idx];
+  }
+
+  return the_max;
+}
+#endif
+
+#ifdef _KNS_WC
+double Mistral::PredicateKnapsack::weight_conflict(double unit,
+                                                   Vector<double> &weights) {
+
+  // GlobalConstraint::weight_conflict(unit, weights);
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+  std::cout << "\nWEIGHT " << this << std::endl;
+  std::cout << "( " << weight[0] << " * " << scope[0] << " in "
+            << scope[0].get_domain() << std::endl;
+  for (unsigned int i = 1; i < scope.size - 1; ++i)
+    std::cout << " + " << weight[i] << " * " << scope[i] << " in "
+              << scope[i].get_domain() << std::endl;
+  if (offset)
+    std::cout << " + " << offset;
+  std::cout << ") = " << scope.back() << " in " << scope.back().get_domain()
+            << " -- " << bound_[0] << ".." << bound_[1] << std::endl;
+#endif
+
+  int i, idx, arity = weight.size();
+
+  double the_max = 0;
+
+  if (bound_[0] > scope[arity].get_max()) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too high: " << bound_[0] << " > " << scope[arity].get_max()
+              << "\n";
+#endif
+
+    // failure because of "big" variables
+    //  - either variables with positive weights and whose lower bound has been
+    //  pruned
+    //  - or variables with negative weights and whose upper bound has been
+    //  pruned
+
+    idx = scope[arity].id();
+    if (idx >= 0 && (scope[arity].get_max() < scope[arity].get_initial_max())) {
+      weights[idx] += unit
+#ifdef _DIV_ARITY
+                      / arity
+#endif
+          ;
+#ifdef _ONLY_ACTIVE
+      weight_contributed[arity] += unit
+#ifdef _DIV_ARITY
+                                   / arity
+#endif
+          ;
+#endif
+      if (the_max < weights[idx])
+        the_max = weights[idx];
+    }
+    for (i = 0; i < arity; ++i) {
+      idx = scope[i].id();
+      if (idx >= 0) {
+        if ((weight[i] > 0 && GET_MIN(domains[i])) ||
+            (weight[i] < 0 && !(GET_MAX(domains[i])))) {
+          weights[idx] += unit
+#ifdef _DIV_ARITY
+                          / arity
+#endif
+              ; // * (double)(weight[i])/(double)(arity);
+#ifdef _ONLY_ACTIVE
+          weight_contributed[i] += unit
+#ifdef _DIV_ARITY
+                                   / arity
+#endif
+              ;
+#endif
+
+          if (the_max < weights[idx])
+            the_max = weights[idx];
+#ifdef _DEBUG_WEIGHT_CONFLICT
+          std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+        }
+      }
+    }
+  } else if (bound_[1] < scope[arity].get_min()) {
+
+#ifdef _DEBUG_WEIGHT_CONFLICT
+    std::cout << " too low: " << bound_[1] << " < " << scope[arity].get_min()
+              << "\n";
+#endif
+
+    // failure because of "small" variables
+    //  - either variables with negative weights and whose lower bound has been
+    //  pruned
+    //  - or variables with positive weights and whose upper bound has been
+    //  pruned
+    idx = scope[arity].id();
+
+    if (idx >= 0 && (scope[arity].get_min() > scope[arity].get_initial_min())) {
+      weights[idx] += unit
+#ifdef _DIV_ARITY
+                      / arity
+#endif
+          ;
+#ifdef _ONLY_ACTIVE
+      weight_contributed[arity] += unit
+#ifdef _DIV_ARITY
+                                   / arity
+#endif
+          ;
+#endif
+      // I added a test on the_max here
+      if (the_max < weights[idx])
+        the_max = weights[idx];
+    }
+    for (i = 0; i < arity; ++i) {
+      idx = scope[i].id();
+      if (idx >= 0) {
+        if ((weight[i] < 0 && GET_MIN(domains[i])) ||
+            (weight[i] > 0 && !(GET_MAX(domains[i])))) {
+          weights[idx] += unit
+#ifdef _DIV_ARITY
+                          / arity
+#endif
+              ; // * (double)(weight[i])/(double)(arity);
+#ifdef _ONLY_ACTIVE
+          weight_contributed[i] += unit
+#ifdef _DIV_ARITY
+                                   / arity
+#endif
+              ;
+#endif
+          if (the_max < weights[idx])
+            the_max = weights[idx];
+#ifdef _DEBUG_WEIGHT_CONFLICT
+          std::cout << " >> weight " << scope[i] << std::endl;
+#endif
+        }
+      }
+    }
+  } else {
+    // failure because of parity
+    for (i = 0; i < arity; ++i)
+      if (weight[i] % 2) {
+        idx = scope[i].id();
+        if (idx >= 0)
+          weights[idx] += unit
+#ifdef _DIV_ARITY
+                          / arity
+#endif
+              ;
+#ifdef _ONLY_ACTIVE
+        weight_contributed[i] += unit
+#ifdef _DIV_ARITY
+                                 / arity
+#endif
+            ;
+#endif
+
+        if (the_max < weights[idx])
+          the_max = weights[idx];
+#ifdef _DEBUG_WEIGHT_CONFLICT
+        std::cout << " >+ weight " << scope[i] << std::endl;
+#endif
+      }
+  }
+
+  return the_max;
+}
+#endif
+
+Mistral::PropagationOutcome Mistral::PredicateKnapsack::propagate() {
+
+
+ #ifdef _DEBUG_KNAPSACK
+      if (_DEBUG_KNAPSACK) {
+        std::cout << "c" << id << " " << this << std::endl;
+        std::cout << " propagate [";
+        for (unsigned int i = 0; i < scope.size; ++i) {
+          std::cout << std::setw(5) << scope[i].get_domain();
+        }
+        std::cout << "]\n";
+      }
+  #endif
+
+
+  PropagationOutcome wiped_idx = CONSISTENT;
+
+  double relaxed_max_profit{0};
+  double relaxed_capacity{static_cast<double>(capacity)};
+
+  // first pass to count already decided objects
+  for (unsigned i{0}; i < profit.size(); ++i) {
+    if (IS_GROUND(domains[i])) {
+      if (GET_VAL(domains[i])) {
+        relaxed_max_profit += static_cast<double>(profit[i]);
+        relaxed_capacity -= static_cast<double>(weight[i]);
+      }
+    }
+  }
+
+  // second pass to count undecided objects (relaxation)
+  for (unsigned i{0}; i < profit.size(); ++i) {
+    if (not IS_GROUND(domains[i])) {
+      double p{static_cast<double>(profit[i])};
+      double w{static_cast<double>(weight[i])};
+
+      if (w <= relaxed_capacity) {
+        relaxed_max_profit += p;
+        relaxed_capacity -= w;
+      } else if (relaxed_capacity > 0) {
+        relaxed_max_profit += p * relaxed_capacity / w;
+        relaxed_capacity = 0;
+      }
+    }
+  }
+
+  #ifdef _DEBUG_KNAPSACK
+      if (_DEBUG_KNAPSACK) {
+  std::cout << "cap = " << relaxed_capacity << std::endl;
+  std::cout << "prof = " << relaxed_max_profit << std::endl;
+       }
+  #endif
+
+  //   int w;
+  //   int i;
+
+  //   if (init_prop) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << "c" << id << " " << this << ": INITIAL PROPAGATE\n";
+  //       std::cout << active << std::endl;
+  //       std::cout << " propagate [";
+  //       for (unsigned int i = 0; i < scope.size; ++i) {
+  //         std::cout << std::setw(5) << scope[i].get_domain();
+  //       }
+  //       std::cout << "]\n";
+  //     }
+  // #endif
+
+  //     int _min_ = offset;
+  //     int _max_ = offset;
+  //     for (unsigned int i = 0; i < weight.size(); ++i) {
+  //       if (scope[i].is_ground()) {
+  //         if (scope[i].get_value()) {
+  //           _min_ += weight[i];
+  //           _max_ += weight[i];
+  //         }
+  //       } else if (weight[i] < 0) {
+  //         _min_ += weight[i];
+  //       } else {
+  //         _max_ += weight[i];
+  //       }
+  //     }
+
+  //     init_prop = false;
+  //     bound_[0] = _min_;
+  //     bound_[1] = _max_;
+
+  //   } else {
+
+  // #ifdef _DEBUG_PKnapsack
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << std::endl << "propagate ";
+  //       for (i = 0; i < weight.size(); ++i) {
+  //         std::cout << " " << weight[i] << scope[i] << ":"
+  //                   << scope[i].get_domain();
+  //       }
+  //       std::cout << " = " << scope.back().get_domain() << std::endl
+  //                 << changes << std::endl;
+  //     }
+  // #endif
+
+  // #ifdef _DEBUG_PKnapsack
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1]
+  //                 << "]" << std::endl;
+  //     }
+  // #endif
+
+  //     while (!changes.empty()) {
+  //       i = changes.pop();
+
+  //       if (i < (int)(weight.size())) {
+
+  //         w = weight[i] < 0;
+
+  // #ifdef _DEBUG_PKnapsack
+  //         if (_DEBUG_PKnapsack) {
+  //           std::cout << "\nprocessing events: " << event2str(event_type[i])
+  //                     << " on " << scope[i] << " in " <<
+  //                     scope[i].get_domain()
+  //                     << std::endl;
+  //         }
+  // #endif
+
+  //         if (LB_CHANGED(event_type[i])) {
+  //           bound_[w] += weight[i];
+  //         } else {
+  //           bound_[1 - w] -= weight[i];
+  //         }
+  //       }
+  //     }
+
+  // #ifdef _DEBUG_PKnapsack
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << "\ncurrent bounds: [" << bound_[0] << ".." << bound_[1]
+  //                 << "]" << std::endl;
+  //     }
+  // #endif
+  //   }
+
+  // #ifdef _DEBUG_PKnapsack
+  //   if (_DEBUG_PKnapsack) {
+  //     int real_min = offset;
+  //     int real_max = offset;
+  //     for (i = 0; i < weight.size(); ++i) {
+  //       if (scope[i].is_ground()) {
+  //         if (scope[i].get_value()) {
+  //           real_min += weight[i];
+  //           real_max += weight[i];
+  //         }
+  //       } else if (weight[i] < 0) {
+  //         real_min += weight[i];
+  //       } else {
+  //         real_max += weight[i];
+  //       }
+  //     }
+
+  //     if (real_min != bound_[0]) {
+  //       std::cout << "(1) mismatch on lower bound: real = " << real_min
+  //                 << ", incremental = " << bound_[0] << std::endl;
+  //       exit(1);
+  //     }
+
+  //     if (real_max != bound_[1]) {
+  //       std::cout << "(1) mismatch on upper bound: real = " << real_max
+  //                 << ", incremental = " << bound_[1] << std::endl;
+  //       exit(1);
+  //     }
+
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << "\ntarget bounds: " << scope.back().get_domain()
+  //                 << std::endl;
+  //     }
+  //   }
+  // #endif
+
+  //   if (bound_[0] > scope.back().get_max() ||
+  //       bound_[1] < scope.back().get_min()) {
+
+  // #ifdef _DEBUG_CARD
+  //     if (_DEBUG_CARD) {
+  //       std::cout << "FAILURE!\n";
+  //     }
+  // #endif
+
+  //     wiped_idx = FAILURE(weight.size());
+  //   } // else if(bound_[0] >= scope.back().get_min() && bound_[1] <=
+  //     // scope.back().get_max()) {
+
+  //   // #ifdef _DEBUG_CARD
+  //   //     if(_DEBUG_CARD) {
+  //   //  std::cout << "ENTAILED!\n";
+  //   //       }
+  //   // #endif
+
+  //   //     relax();
+  //   //   }
+  //   else {
+
+  // #ifdef _DEBUG_PKnapsack
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << "\nprune total: " << scope.back().get_domain() << " =>
+  //       ";
+  //     }
+  // #endif
+
+  //     if (FAILED(scope.back().set_domain(bound_[0], bound_[1])))
+  //       wiped_idx = FAILURE(weight.size());
+
+  // #ifdef _DEBUG_PKnapsack
+  //     if (_DEBUG_PKnapsack) {
+  //       std::cout << scope.back().get_domain() << std::endl;
+  //     }
+  // #endif
+
+  //     if (IS_OK(wiped_idx) && !scope.back().includes(bound_[0], bound_[1])) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //       if (_DEBUG_PKnapsack) {
+  //         std::cout << "[" << bound_[0] << "," << bound_[1]
+  //                   << "] is not a subset of " << scope.back().get_domain()
+  //                   << std::endl;
+  //       }
+  // #endif
+
+  //       i = index_;
+
+  //       while (IS_OK(wiped_idx) && i >= 0) {
+  //         //
+  //         while (i >= 0 && // scope[i].is_ground()
+  //                !active.contain(i))
+  //           --i;
+
+  //         if (i >= 0) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //           if (_DEBUG_PKnapsack) {
+  //             std::cout << "\nnext index: " << i << ": " << scope[i] << " in
+  //             "
+  //                       << scope[i].get_domain() << " * " << weight[i]
+  //                       << std::endl;
+  //           }
+  // #endif
+
+  //           if (weight[i] < 0) {
+  //             // if set to 1, this variable decreases the max by -weight[i]
+  //             if (bound_[1] + weight[i] < scope.back().get_min()) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //               if (_DEBUG_PKnapsack) {
+  //                 std::cout << scope[i] << " cannot be set to 1 because "
+  //                           << bound_[1] << " + " << weight[i] << " < "
+  //                           << scope.back().get_domain() << std::endl;
+  //               }
+  // #endif
+
+  //               if (FAILED(scope[i].set_domain(0))) {
+  //                 wiped_idx = FAILURE(i);
+  //                 // bound_[1] += weight[i];
+  //               } else
+  //                 bound_[0] -= weight[i];
+  //             }
+  //             // if set to 0, this variable increases the min by -weight[i]
+  //             else if (bound_[0] - weight[i] > scope.back().get_max()) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //               if (_DEBUG_PKnapsack) {
+  //                 std::cout << scope[i] << " cannot be set to 0 because "
+  //                           << bound_[0] << " - " << weight[i] << " > "
+  //                           << scope.back().get_domain() << std::endl;
+  //               }
+  // #endif
+
+  //               if (FAILED(scope[i].set_domain(1))) {
+  //                 wiped_idx = FAILURE(i);
+  //                 // bound_[0] -= weight[i];
+  //               } else
+  //                 bound_[1] += weight[i];
+  //             } else
+  //               break;
+  //           } else {
+  //             // if set to 1, this variable increases the min by weight[i]
+  //             if (bound_[0] + weight[i] > scope.back().get_max()) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //               if (_DEBUG_PKnapsack) {
+  //                 std::cout << scope[i] << " cannot be set to 1 because "
+  //                           << bound_[0] << " + " << weight[i] << " > "
+  //                           << scope.back().get_domain() << std::endl;
+  //               }
+  // #endif
+
+  //               if (FAILED(scope[i].set_domain(0))) {
+  //                 wiped_idx = FAILURE(i);
+  //                 // bound_[0] += weight[i];
+  //               } else
+  //                 bound_[1] -= weight[i];
+  //             }
+  //             // if set to 0, this variable decreases the max by weight[i]
+  //             else if (bound_[1] - weight[i] < scope.back().get_min()) {
+
+  // #ifdef _DEBUG_PKnapsack
+  //               if (_DEBUG_PKnapsack) {
+  //                 std::cout << scope[i] << " cannot be set to 0 because "
+  //                           << bound_[1] << " - " << weight[i] << " < "
+  //                           << scope.back().get_domain() << std::endl;
+  //               }
+  // #endif
+
+  //               if (FAILED(scope[i].set_domain(1))) {
+  //                 wiped_idx = FAILURE(i);
+  //                 // bound_[1] -= weight[i];
+  //               } else
+  //                 bound_[0] += weight[i];
+  //             } else
+  //               break;
+  //           }
+  //         }
+
+  // #ifdef _DEBUG_PKnapsack
+  //         if (_DEBUG_PKnapsack) {
+  //           std::cout << "\ncurrent bounds: [" << bound_[0] << ".." <<
+  //           bound_[1]
+  //                     << "]" << std::endl;
+  //           std::cout << "\nprune total: " << scope.back().get_domain() << "
+  //           => ";
+  //         }
+  // #endif
+
+  //         if (FAILED(scope.back().set_domain(bound_[0], bound_[1])))
+  //           wiped_idx = FAILURE(weight.size());
+
+  // #ifdef _DEBUG_PKnapsack
+  //         if (_DEBUG_PKnapsack) {
+  //           std::cout << scope.back().get_domain() << std::endl;
+  //         }
+  // #endif
+
+  //         --i;
+  //       }
+  //       index_ = i;
+  //     }
+
+  // #ifdef _DEBUG_PKnapsack
+  //     else if (_DEBUG_PKnapsack) {
+  //       std::cout << "consistent!" << std::endl;
+  //     }
+  // #endif
+  //   }
+
+  // #ifdef _DEBUG_PKnapsack
+  //   if (_DEBUG_PKnapsack) {
+  //     int real_min = offset;
+  //     int real_max = offset;
+  //     for (i = 0; i < weight.size(); ++i) {
+  //       if (scope[i].is_ground()) {
+  //         if (scope[i].get_value()) {
+  //           real_min += weight[i];
+  //           real_max += weight[i];
+  //         }
+  //       } else if (weight[i] < 0) {
+  //         real_min += weight[i];
+  //       } else {
+  //         real_max += weight[i];
+  //       }
+  //     }
+
+  //     if (real_min != bound_[0]) {
+  //       std::cout << "(2) mismatch on lower bound: real = " << real_min
+  //                 << ", incremental = " << bound_[0] << std::endl;
+  //       exit(1);
+  //     }
+
+  //     if (real_max != bound_[1]) {
+  //       std::cout << "(2) mismatch on upper bound: real = " << real_max
+  //                 << ", incremental = " << bound_[1] << std::endl;
+  //       exit(1);
+  //     }
+  //   }
+  // #endif
+
+  return wiped_idx;
+}
+
+int Mistral::PredicateKnapsack::check(const int *s) const {
+  int i = weight.size(), t = 0, p = 0;
+  while (i--) {
+    t += (weight[i] * s[i]);
+    p += (profit[i] * s[i]);
+  }
+  return p != s[profit.size()] or
+         t > capacity; //(t < s[weight.size()] || t > s[weight.size()]);
+}
+
+std::ostream &Mistral::PredicateKnapsack::display(std::ostream &os) const {
+#ifdef _GET_SUM_NAME
+  os << " knapsack: (" << id << ") ";
+#endif
+
+  os << profit[0] << "*" << scope[0] /*.get_var()*/;
+  for (unsigned int i = 1; i < profit.size(); ++i)
+    os << " + " << profit[i] << "*" << scope[i] /*.get_var()*/;
+  os << " = " << scope[profit.size()];
+  os << " subject to " << weight[0] << "*" << scope[0] /*.get_var()*/;
+  for (unsigned int i = 1; i < weight.size(); ++i)
+    os << " + " << weight[i] << "*" << scope[i] /*.get_var()*/;
+  os << " < " << capacity;
+
+  return os;
+}
+
+/////---END
 
 Mistral::PredicateElement::PredicateElement(Vector<Variable> &scp, const int o)
     : GlobalConstraint(scp) {

@@ -5268,6 +5268,9 @@ Mistral::BoolSumExpression::~BoolSumExpression() {
 #define _INCREMENTAL_WBOOLSUM
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
+
+  assert(false);
+
   if (weight.empty()) {
     // if(lower_bound == upper_bound) {
     //   s->add(new ConstraintBoolSumEqual(children,lower_bound));
@@ -5424,10 +5427,122 @@ Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, const Vector< int >
   return exp;
 }
 
-// Mistral::Variable Mistral::BoolSum(Vector< Variable >& args, Vector< int >& w) {
-//   Variable exp(new BoolSumExpression(args,w,0,args.size));
-//   return exp;
-// }
+Mistral::KnapsackExpression::KnapsackExpression(std::vector<Variable> &args,
+                                                const int w_bound,
+                                                const std::vector<int> &w,
+                                                const std::vector<int> &p)
+    : Expression(args), weight_upper_bound(w_bound), weight(w), profit(p) {}
+
+Mistral::KnapsackExpression::KnapsackExpression(Vector<Variable> &args,
+                                                const int w_bound,
+                                                const std::vector<int> &w,
+                                                const std::vector<int> &p)
+    : Expression(args), weight_upper_bound(w_bound), weight(w), profit(p) {}
+
+void Mistral::KnapsackExpression::order_vars() {
+  // std::vector<int> order(children.size);
+  // std::vector<int> buffer;
+  // buffer.reserve(children.size);
+  // VarArray xbuffer;
+
+  // std::sort(order.begin(), order.end(), [&](const int x, const int y) {
+  //   return profit[x] * weight[y] > profit[y] * weight[x];
+  // });
+  // for (unsigned i{0}; i < order.size(); ++i) {
+  //   buffer.emplace_back(weight[order[i]]);
+  // }
+  // swap(buffer, weight);
+  // for (unsigned i{0}; i < order.size(); ++i) {
+  //   buffer.emplace_back(profit[order[i]]);
+  // }
+  // swap(buffer, profit);
+  // for (unsigned i{0}; i < order.size(); ++i) {
+  //   xbuffer.add(children[order[i]]);
+  // }
+  // children.clear();
+  // for (auto x : xbuffer)
+  //   children.add(x);
+}
+
+Mistral::KnapsackExpression::~KnapsackExpression() {
+#ifdef _DEBUG_MEMORY
+  std::cout << "c delete Knapsack expression" << std::endl;
+#endif
+}
+
+void Mistral::KnapsackExpression::extract_constraint(Solver *s) {
+
+  assert(false);
+}
+
+void Mistral::KnapsackExpression::initialise_bounds() {
+  profit_lower_bound = 0;
+  profit_upper_bound = 0;
+
+  for (unsigned int i = 0; i < children.size; ++i) {
+    int lb = children[i].get_min() * profit[i];
+    int ub = children[i].get_max() * profit[i];
+
+    if (lb < ub) {
+      profit_lower_bound += lb;
+      profit_upper_bound += ub;
+    } else {
+      profit_lower_bound += ub;
+      profit_upper_bound += lb;
+    }
+
+    // std::cout << "[" << profit_lower_bound << ".." << profit_upper_bound <<
+    // "]\n";
+  }
+}
+
+void Mistral::KnapsackExpression::extract_variable(Solver *s) {
+  order_vars();
+  initialise_bounds();
+
+  Variable aux(profit_lower_bound, profit_upper_bound, DYN_VAR);
+  _self = aux;
+
+  _self.initialise(s, 1);
+  _self = _self.get_var();
+  children.add(_self);
+}
+
+void Mistral::KnapsackExpression::extract_predicate(Solver *s) {
+  s->add(Constraint(
+      new PredicateKnapsack(children, weight_upper_bound, weight, profit)));
+
+  Vector<int> W;
+  for(auto w : profit)
+    W.add(w);
+  s->add(Constraint(new PredicateWeightedBoolSum(children, W)));
+
+  auto args{children};
+  args.pop();
+  W.clear();
+  for(auto w : weight)
+    W.add(w);
+  s->add(Constraint(new ConstraintWeightedSumInterval(
+      args, W, -INFTY, weight_upper_bound)));
+
+}
+
+const char *Mistral::KnapsackExpression::get_name() const { return "knapsack"; }
+
+Mistral::Variable Mistral::Knapsack(std::vector<Variable> &args,
+                                    const int w_bound,
+                                    const std::vector<int> &w,
+                                    const std::vector<int> &p) {
+  Variable exp(new KnapsackExpression(args, w_bound, w, p));
+  return exp;
+}
+
+Mistral::Variable Mistral::Knapsack(Vector<Variable> &args, const int w_bound,
+                                    const std::vector<int> &w,
+                                    const std::vector<int> &p) {
+  Variable exp(new KnapsackExpression(args, w_bound, w, p));
+  return exp;
+}
 
 Mistral::ParityExpression::ParityExpression(Vector<Variable> &args, const int p)
     : Expression(args) {
