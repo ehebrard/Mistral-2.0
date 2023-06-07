@@ -1,3 +1,14 @@
+
+## BUILDING instructions for MistralXCSP
+
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make MistralXCSP
+
+
+## OLD README
+
 Mistral is an open source constraint programming library written in C++. It implements a modelling API, however, it can also read instance files in XCSP3 or FlatZinc format. It is also fully interfaced with Numberjack (https://github.com/eomahony/Numberjack) which provides a Python API for modelling and solving combinatorial optimization problems using several back-end solvers.
 
 A number of examples are available in the examples/src folder. To get started, you can have a look at the /examples/src/simple_linear_constraints.cpp file. It provides an simple problem defined by a set of linear constraints.  To compile it, use the following command: 
