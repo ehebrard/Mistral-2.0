@@ -24,6 +24,7 @@
 #include <mistral_structure.hpp>
 #include <mistral_variable.hpp>
 #include <mistral_global.hpp>
+#include <limits>
 
 
 
