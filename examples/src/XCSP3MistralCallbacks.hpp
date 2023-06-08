@@ -171,9 +171,9 @@ public:
   virtual void buildConstraintPrimitive(string id, XVariable *x, bool in,
                                         int min, int max) override;
 
-  // virtual void buildConstraintPrecedence(string id, vector<XVariable *>
-  // &list,
-  //                                        bool covered) override;
+  virtual void buildConstraintPrecedence(string id, vector<XVariable *>
+  &list,
+                                         bool covered) override;
 
   virtual void buildConstraintPrecedence(string id, vector<XVariable *> &list,
                                          vector<int> values,
@@ -236,6 +236,10 @@ public:
                                           vector<XVariable *> &list) override;
 
   virtual void buildConstraintOrdered(string id, vector<XVariable *> &list,
+                                      OrderType order) override;
+
+  virtual void buildConstraintOrdered(string id, vector<XVariable *> &list,
+                                      vector<int> &lengths,
                                       OrderType order) override;
 
   virtual void buildConstraintLex(string id, vector<vector<XVariable *>> &lists,
@@ -512,6 +516,14 @@ public:
 
   virtual void buildObjectiveMaximize(ExpressionObjective type,
                                       vector<XVariable *> &list) override;
+
+  virtual void buildObjectiveMinimize(ExpressionObjective type,
+                                      vector<XVariable *> &list,
+                                      vector<XVariable *> &coefs) override;
+
+  virtual void buildObjectiveMaximize(ExpressionObjective type,
+                                      vector<XVariable *> &list,
+                                      vector<XVariable *> &coefs) override;
 
   void getVariables(vector<XVariable *> &list,
                     Mistral::Vector<Mistral::Variable> &scope);
@@ -1224,11 +1236,42 @@ void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
   // cout << "Prec: TODO!\n";
 }
 
-// void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
-//                                                       vector<XVariable *>
-//                                                       &list, bool covered) {
-//   cout << "Prec: TODO!\n";
-// }
+void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
+                                                      vector<XVariable *>
+                                                      &list, bool covered) {
+
+
+  int the_min{numeric_limits<int>::max()};
+  int the_max{numeric_limits<int>::min()};
+  for (auto x : list) {
+    ++initial_degree[id_map[x->id]];
+    if(the_min > variable[x->id].get_min()) {
+      the_min = variable[x->id].get_min();
+    }
+    if(the_max < variable[x->id].get_max()) {
+      the_max = variable[x->id].get_max();
+    }
+  }
+
+  vector<int> values;
+  values.reserve(the_max - the_min + 1);
+  for(int i=the_min; i<=the_max; ++i) {
+    values.push_back(i);
+  }
+
+
+  vector<VarArray> B;
+  for (auto i{0}; i < values.size() - 1; ++i) {
+    B.emplace_back(list.size());
+    for (auto j{1}; j < list.size(); ++j) {
+      solver.add((variable[list[j - 1]->id] == values[i]) <= B[i][j]);
+      solver.add(B[i][j - 1] <= B[i][j]);
+    }
+    for (auto j{0}; j < list.size(); ++j) {
+      solver.add(B[i][j] || (variable[list[j]->id] != values[i + 1]));
+    }
+  }
+}
 
 void XCSP3MistralCallbacks::buildConstraintBinPacking(string id,
                                                       vector<XVariable *> &list,
@@ -1355,17 +1398,17 @@ void XCSP3MistralCallbacks::buildConstraintKnapsack(
     Variable profit = variable[profitCondition.var];
 
     if (profitCondition.op == EQ) {
-      solver.add(Sum(scope, weights, profit));
+      solver.add(Sum(scope, profits, profit));
     } else if (profitCondition.op == NE) {
-      solver.add(Sum(scope, weights) != profit);
+      solver.add(Sum(scope, profits) != profit);
     } else if (profitCondition.op == LE) {
-      solver.add(Sum(scope, weights) <= profit);
+      solver.add(Sum(scope, profits) <= profit);
     } else if (profitCondition.op == LT) {
-      solver.add(Sum(scope, weights) < profit);
+      solver.add(Sum(scope, profits) < profit);
     } else if (profitCondition.op == GE) {
-      solver.add(Sum(scope, weights) >= profit);
+      solver.add(Sum(scope, profits) >= profit);
     } else if (profitCondition.op == GT) {
-      solver.add(Sum(scope, weights) > profit);
+      solver.add(Sum(scope, profits) > profit);
     }
 
   } else if (profitCondition.operandType == INTERVAL) {
@@ -1374,23 +1417,23 @@ void XCSP3MistralCallbacks::buildConstraintKnapsack(
       exit(1);
     }
 
-    solver.add(Sum(scope, weights, profitCondition.min, profitCondition.max));
+    solver.add(Sum(scope, profits, profitCondition.min, profitCondition.max));
 
   } else {
 
     if (profitCondition.op == EQ) {
-      solver.add(Sum(scope, weights, profitCondition.val, profitCondition.val));
+      solver.add(Sum(scope, profits, profitCondition.val, profitCondition.val));
     } else if (profitCondition.op == NE) {
       Variable cst(profitCondition.val);
-      solver.add(Sum(scope, weights) != cst);
+      solver.add(Sum(scope, profits) != cst);
     } else if (profitCondition.op == LE) {
-      solver.add(Sum(scope, weights, -INFTY, profitCondition.val));
+      solver.add(Sum(scope, profits, -INFTY, profitCondition.val));
     } else if (profitCondition.op == LT) {
-      solver.add(Sum(scope, weights, -INFTY, profitCondition.val - 1));
+      solver.add(Sum(scope, profits, -INFTY, profitCondition.val - 1));
     } else if (profitCondition.op == GE) {
-      solver.add(Sum(scope, weights, profitCondition.val, INFTY));
+      solver.add(Sum(scope, profits, profitCondition.val, INFTY));
     } else if (profitCondition.op == GT) {
-      solver.add(Sum(scope, weights, profitCondition.val + 1, INFTY));
+      solver.add(Sum(scope, profits, profitCondition.val + 1, INFTY));
     }
   }
 }
@@ -1879,6 +1922,40 @@ void XCSP3MistralCallbacks::buildConstraintOrdered(string id,
       solver.add(X[i - 1] > X[i]);
     if (order == GE)
       solver.add(X[i - 1] >= X[i]);
+  }
+}
+
+void XCSP3MistralCallbacks::buildConstraintOrdered(string id,
+                                                   vector<XVariable *> &list,
+                                                   vector<int> &lengths,
+                                                   OrderType order) {
+#ifdef _VERBOSE_
+  cout << "\n    ordered constraint" << endl;
+  string sep;
+  if (order == LT)
+    sep = " < ";
+  if (order == LE)
+    sep = " <= ";
+  if (order == GT)
+    sep = " > ";
+  if (order == GE)
+    sep = " >= ";
+  cout << "        ";
+  displayList(list, sep);
+#endif
+
+  VarArray X;
+  getVariables(list, X);
+
+  for (size_t i = 1; i < X.size; ++i) {
+    if (order == LT)
+      solver.add((X[i - 1] + lengths[i - 1]) < X[i]);
+    if (order == LE)
+      solver.add((X[i - 1] + lengths[i - 1]) <= X[i]);
+    if (order == GT)
+      solver.add((X[i - 1] + lengths[i - 1]) > X[i]);
+    if (order == GE)
+      solver.add((X[i - 1] + lengths[i - 1]) >= X[i]);
   }
 }
 
@@ -5106,6 +5183,112 @@ void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type,
   goal = new Goal(Goal::MAXIMIZATION, objective.get_var());
 
   // XCSP3CoreCallbacks::buildObjectiveMaximize(type, list, coefs);
+}
+
+void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type,
+                                                   vector<XVariable *> &list,
+                                                   vector<XVariable *> &coefs) {
+
+#ifdef _VERBOSE_
+  cout << "\n    objective: minimize "
+       << (type == SUM_O ? "sum" : "unknown constraint") << endl;
+#endif
+
+  VarArray scope;
+  getVariables(list, scope);
+  Variable objective;
+  VarArray coefficient;
+  getVariables(coefs, coefficient);
+
+  VarArray product;
+  for (unsigned i{0}; i < list.size(); ++i) {
+    product.add((scope[i] * coefficient[i]));
+  }
+
+  if (type == EXPRESSION_O) {
+    cout << "s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+    exit(1);
+  } else if (type == SUM_O) {
+
+    objective = Sum(product);
+
+  } else if (type == PRODUCT_O) {
+    cout << "s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+    exit(1);
+  } else if (type == MINIMUM_O) {
+    cout << "s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
+    exit(1);
+  } else if (type == MAXIMUM_O) {
+    cout << "s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
+    exit(1);
+  } else if (type == NVALUES_O) {
+    cout << "s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+    exit(1);
+  } else if (type == LEX_O) {
+    cout << "s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+    exit(1);
+  }
+
+  solver.add(Free(objective));
+
+#ifdef _VERBOSE_
+  std::cout << objective << " in " << objective.get_domain() << std::endl;
+#endif
+
+  goal = new Goal(Goal::MINIMIZATION, objective.get_var());
+}
+
+void XCSP3MistralCallbacks::buildObjectiveMaximize(ExpressionObjective type,
+                                                   vector<XVariable *> &list,
+                                                   vector<XVariable *> &coefs) {
+
+#ifdef _VERBOSE_
+  cout << "\n    objective: maximize "
+       << (type == SUM_O ? "sum" : "unknown constraint") << endl;
+#endif
+
+  VarArray scope;
+  getVariables(list, scope);
+  Variable objective;
+  VarArray coefficient;
+  getVariables(coefs, coefficient);
+
+  VarArray product;
+  for (unsigned i{0}; i < list.size(); ++i) {
+    product.add((scope[i] * coefficient[i]));
+  }
+
+  if (type == EXPRESSION_O) {
+    cout << "s UNSUPPORTED" << _ID_(": EXPRESSION_O") << "\n";
+    exit(1);
+  } else if (type == SUM_O) {
+
+    objective = Sum(product);
+
+  } else if (type == PRODUCT_O) {
+    cout << "s UNSUPPORTED" << _ID_(": PRODUCT_O") << "\n";
+    exit(1);
+  } else if (type == MINIMUM_O) {
+    cout << "s UNSUPPORTED" << _ID_(": MINIMUM_O") << "\n";
+    exit(1);
+  } else if (type == MAXIMUM_O) {
+    cout << "s UNSUPPORTED" << _ID_(": MAXIMUM_O") << "\n";
+    exit(1);
+  } else if (type == NVALUES_O) {
+    cout << "s UNSUPPORTED" << _ID_(": NVALUES_O") << "\n";
+    exit(1);
+  } else if (type == LEX_O) {
+    cout << "s UNSUPPORTED" << _ID_(": LEX_O") << "\n";
+    exit(1);
+  }
+
+  solver.add(Free(objective));
+
+#ifdef _VERBOSE_
+  std::cout << objective << " in " << objective.get_domain() << std::endl;
+#endif
+
+  goal = new Goal(Goal::MAXIMIZATION, objective.get_var());
 }
 
 void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type,

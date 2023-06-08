@@ -2624,8 +2624,17 @@ void Mistral::Solver::consolidate()
     consolidate_manager = new ConsolidateListener(this);
   }
 
+  for (auto con : constraints) {
+    con.propagator->mark_domain();
+  }
+
   for(; initialised_vars<variables.size; ++initialised_vars) {
     variables[initialised_vars] = variables[initialised_vars].get_var();
+
+    // std::cout << variables[initialised_vars].get_var() << " " <<
+    // domain_types[initialised_vars] << " / " <<
+    // variables[initialised_vars].domain_type << " (" << RANGE_VAR << ")\n";
+
     if(!(domain_types[initialised_vars]&RANGE_VAR) 
        && variables[initialised_vars].domain_type == RANGE_VAR
        && !variables[initialised_vars].is_ground() 
