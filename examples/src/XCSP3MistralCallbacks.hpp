@@ -1222,17 +1222,83 @@ void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
     ++initial_degree[id_map[x->id]];
   }
 
+  // std::cout << 11 << std::endl;
+
+  // B[k][i] <=> there's some variable x[j] with j<i which takes value v_{k}
   vector<VarArray> B;
-  for (auto i{0}; i < values.size() - 1; ++i) {
-    B.emplace_back(list.size());
-    for (auto j{1}; j < list.size(); ++j) {
-      solver.add((variable[list[j - 1]->id] == values[i]) <= B[i][j]);
-      solver.add(B[i][j - 1] <= B[i][j]);
-    }
-    for (auto j{0}; j < list.size(); ++j) {
-      solver.add(B[i][j] || (variable[list[j]->id] != values[i + 1]));
+  B.reserve(values.size() - 1);
+  for (auto k{0}; k < values.size() - 1; ++k) {
+    B.emplace_back(list.size() + 1);
+  }
+
+  // X[k][i] <=> x[i]=k
+  vector<VarArray> X(values.size());
+  for (auto k{0}; k < values.size(); ++k) {
+    for (auto i{0}; i < list.size(); ++i) {
+      X[k].add(variable[list[i]->id] == values[k]);
     }
   }
+
+  //
+  for (auto k{0}; k < values.size() - 1; ++k) {
+    solver.add(B[k][0] == 0);
+    for (auto i{0}; i < list.size(); ++i) {
+      // 1. if x[i] takes value k, there's a variable x[j] with j < i+1 that
+      // takes value k
+      solver.add(X[k][i] <= B[k][i + 1]);
+    }
+    for (auto i{0}; i < list.size(); ++i) {
+      // 2. if x[i] does not take value k, then there's a variable x[j] with j <
+      // i+1 that takes value k iff there's a variable x[j] with j < i that
+      // takes value k
+      solver.add(X[k][i] || (B[k][i] == B[k][i + 1]));
+    }
+    for (auto i{0}; i < list.size(); ++i) {
+      // 3. if there is no variable x[j] with j < i that takes value k, then
+      // x[i] cannot take value k+1
+      solver.add(B[k][i] || (X[k + 1][i] == 0));
+    }
+    for (auto i{0}; i < list.size(); ++i) {
+      // redundant constraint [not sure that 1 + 2 propagates that]
+      solver.add(B[k][i] <= B[k][i + 1]);
+    }
+  }
+
+  solver.add(variable[list[0]->id] == values[0]);
+
+  // // x[0] = 0
+  // solver.add(variable[list[0]->id] == values[0]);
+  // for (auto i{1}; i < values.size(); ++i) {
+  //   // x[i] <= i
+  //   if(i < list.size())
+  //     for(auto k{i+1}; k < values.size(); ++k) {
+  //       solver.add(variable[list[i]->id] != values[k])
+  //     }
+
+  //   B.emplace_back(list.size()-1);
+
+  //   for (auto j{1}; j < list.size(); ++j) {
+  //     // x[j]=i -> B[i][j]
+  //     solver.add((variable[list[j]->id] == values[i]) <= B[i][j]);
+
+  //     // B[i][j] -> B[i][j+1]
+  //     if(j < list.size()-2)
+  //       solver.add(B[i][j] <= B[i][j + 1]);
+
+  //     //
+  //     if(j)
+  //       solver.add((variable[list[j]->id] != values[i]) <= (B[i][j] ==
+  //       B[i][j-1]));
+  //     else
+  //       solver.add((variable[list[j]->id] != values[i]) <= (!B[i][j]));
+  //   }
+
+  //   for (auto j{1}; j < list.size(); ++j) {
+  //     // not B[i][j] -> x[j+1] != i+1
+  //     solver.add(B[i][j-1] || (variable[list[j]->id] != values[i + 1]));
+  //   }
+  // }
+
   // cout << "Prec: TODO!\n";
 }
 
@@ -1259,18 +1325,63 @@ void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
     values.push_back(i);
   }
 
+  buildConstraintPrecedence(id, list, values, covered);
 
-  vector<VarArray> B;
-  for (auto i{0}; i < values.size() - 1; ++i) {
-    B.emplace_back(list.size());
-    for (auto j{1}; j < list.size(); ++j) {
-      solver.add((variable[list[j - 1]->id] == values[i]) <= B[i][j]);
-      solver.add(B[i][j - 1] <= B[i][j]);
-    }
-    for (auto j{0}; j < list.size(); ++j) {
-      solver.add(B[i][j] || (variable[list[j]->id] != values[i + 1]));
-    }
-  }
+
+  //   // B[k][i] <=> there's some variable x[j] with j<i which takes value v_{k}
+  // vector<VarArray> B;
+  // B.reserve(values.size() - 1);
+  // for (auto k{0}; k < values.size() - 1; ++k) {
+  //   B.emplace_back(list.size() + 1);
+  // }
+
+  // // X[k][i] <=> x[i]=k
+  // vector<VarArray> X(values.size());
+  // for (auto k{0}; k < values.size(); ++k) {
+  //   for (auto i{0}; i < list.size(); ++i) {
+  //     X[k].add(variable[list[i]->id] == values[k]);
+  //   }
+  // }
+
+  // //
+  // for (auto k{0}; k < values.size() - 1; ++k) {
+  //   solver.add(B[k][0] == 0);
+  //   for (auto i{0}; i < list.size(); ++i) {
+  //     // 1. if x[i] takes value k, there's a variable x[j] with j < i+1 that
+  //     // takes value k
+  //     solver.add(X[k][i] <= B[k][i + 1]);
+  //   }
+  //   for (auto i{0}; i < list.size(); ++i) {
+  //     // 2. if x[i] does not take value k, then there's a variable x[j] with j <
+  //     // i+1 that takes value k iff there's a variable x[j] with j < i that
+  //     // takes value k
+  //     solver.add(X[k][i] || (B[k][i] == B[k][i + 1]));
+  //   }
+  //   for (auto i{0}; i < list.size(); ++i) {
+  //     // 3. if there is no variable x[j] with j < i that takes value k, then
+  //     // x[i] cannot take value k+1
+  //     solver.add(B[k][i] || (X[k + 1][i] == 0));
+  //   }
+  //   for (auto i{0}; i < list.size(); ++i) {
+  //     // redundant constraint [not sure that 1 + 2 propagates that]
+  //     solver.add(B[k][i] <= B[k][i + 1]);
+  //   }
+  // }
+
+  // solver.add(variable[list[0]->id] == values[0]);
+
+
+  // // vector<VarArray> B;
+  // // for (auto i{0}; i < values.size() - 1; ++i) {
+  // //   B.emplace_back(list.size());
+  // //   for (auto j{1}; j < list.size(); ++j) {
+  // //     solver.add((variable[list[j - 1]->id] == values[i]) <= B[i][j]);
+  // //     solver.add(B[i][j - 1] <= B[i][j]);
+  // //   }
+  // //   for (auto j{0}; j < list.size(); ++j) {
+  // //     solver.add(B[i][j] || (variable[list[j]->id] != values[i + 1]));
+  // //   }
+  // // }
 }
 
 void XCSP3MistralCallbacks::buildConstraintBinPacking(string id,
