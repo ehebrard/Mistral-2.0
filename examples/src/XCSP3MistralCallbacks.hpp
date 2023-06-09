@@ -1264,7 +1264,8 @@ void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
     }
   }
 
-  solver.add(variable[list[0]->id] == values[0]);
+
+  // solver.add(variable[list[0]->id] == values[0]);
 
   // // x[0] = 0
   // solver.add(variable[list[0]->id] == values[0]);
@@ -1324,6 +1325,8 @@ void XCSP3MistralCallbacks::buildConstraintPrecedence(string id,
   for(int i=the_min; i<=the_max; ++i) {
     values.push_back(i);
   }
+
+  solver.add(variable[list[0]->id] == values[0]);
 
   buildConstraintPrecedence(id, list, values, covered);
 
