@@ -8,7 +8,11 @@ $ make MistralXCSP
 
 ## RUNNING MistralXCSP
 
-$ ./MistralXCSP <xml file>
+$ ./MistralXCSP <xml file> -t <time limit in seconds>
+
+## COMPETITION CMDLINE
+
+DIR/MistralXCSP BENCHNAME -t TIMELIMIT -s RANDOMSEED
 
 
 ## OLD README
