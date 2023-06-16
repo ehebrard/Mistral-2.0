@@ -165,6 +165,8 @@ int main(int argc,char **argv) {
   Solver solver;
   cmd.set_parameters(solver);
 
+  // cout << "HERE " << solver.parameters.time_limit << endl;
+
   // double cpu_time = get_run_time() ;
 
   XCSP3MistralCallbacks cb(
@@ -299,6 +301,8 @@ int main(int argc,char **argv) {
     cout << num_solutions << endl;
 
   } else {
+
+  	// cout << "THERE " << solver.parameters.time_limit << endl;
 
     if (branchOnaux.getValue() > 0) {
       Vector<Variable> search_sequence;

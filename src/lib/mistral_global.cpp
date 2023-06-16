@@ -279,12 +279,12 @@ double Mistral::randreal()
 double Mistral::get_run_time() {
   double df = 0;
 
-#ifdef _UNIX
+// #ifdef _UNIX
   struct tms usage;
   static int clock_ticks = sysconf(_SC_CLK_TCK);
   times(&usage);
   df=((double)usage.tms_utime+(double)usage.tms_stime)/clock_ticks;
-#endif
+// #endif
 
   return df;
 }

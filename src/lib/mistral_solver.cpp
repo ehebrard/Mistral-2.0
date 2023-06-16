@@ -5450,6 +5450,9 @@ if (*solution_found_elsewhere){
 }
 #endif
 
+  // std::cout << parameters.time_limit << " " << (get_run_time() - statistics.start_time) << " " << parameters.time_limit << std::endl;
+
+
   auto res = (parameters.limit && 
 	  ((parameters.time_limit > 0.0 && (get_run_time() - statistics.start_time) > parameters.time_limit) ||
 	   (parameters.node_limit > 0 && (statistics.num_nodes > parameters.node_limit)) ||
