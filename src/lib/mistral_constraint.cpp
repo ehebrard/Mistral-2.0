@@ -15417,7 +15417,7 @@ void Mistral::PredicateElement::initialise() {
 
 void Mistral::PredicateElement::mark_domain() {
   for (int i = scope.size; i;)
-    get_solver()->forbid(scope[--i].id(), LIST_VAR);
+    get_solver()->forbid(scope[--i].id(), LIST_VAR | RANGE_VAR);
 }
 
 Mistral::PredicateElement::~PredicateElement() {
