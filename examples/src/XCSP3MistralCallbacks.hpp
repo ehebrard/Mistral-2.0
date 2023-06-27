@@ -531,6 +531,8 @@ public:
   Mistral::Variable postExpression(XCSP3Mistral::Node *n, int level = 1);
 
   Mistral::Variable postExpression(Node *n, int level);
+
+  void assign(string& var, int val);
 };
 }
 
@@ -6352,6 +6354,10 @@ Variable XCSP3MistralCallbacks::postExpression(Node *n, int level) {
   }
 
   return rv;
+}
+
+void XCSP3MistralCallbacks::assign(string& var, int val) {
+  solver.add(variable[var] == val);
 }
 
 #endif //COSOCO_XCSP3PRINTCALLBACKS_H

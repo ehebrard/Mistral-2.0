@@ -55,7 +55,7 @@ static void Mistral_SIGINT_handler(int signum) {
   std::cout << active_solver->statistics << std::endl
 	    << " " << active_solver->parameters.prefix_comment << " *************************************** INTERRUPTED ***************************************" 
 	    << std::endl;
-  exit(1);
+  exit(0);
 }
 
 
@@ -1690,9 +1690,9 @@ Mistral::Outcome Mistral::Solver::depth_first_search(Vector< Variable >& seq,
 						     bool _restore_) 
 {
   // std::cout << "\nINIT LEVEL = " << level << std::endl;
-  initialise_search(seq, heu, pol, goal);
-	
-	// std::cout << "SEARCH\n" ;
+  initialise_search(seq, heu, pol, goal, false);
+
+  // std::cout << "SEARCH\n" ;
   return depth_first_search(_restore_);
 }
  
@@ -1753,8 +1753,9 @@ Mistral::Outcome Mistral::Solver::sequence_search(Vector< Vector< Variable > >& 
 
     //initialise with the parameters of the current phase
     //if(phase > max_phase) {
-    initialise_search(copy_sequences[phase], heuristics[phase], policies[phase], goals[phase]);
- 
+    initialise_search(copy_sequences[phase], heuristics[phase], policies[phase],
+                      goals[phase], false);
+
     std::cout << heuristics[phase] << std::endl;
 
 #ifdef _DEBUG_SEARCH
@@ -2075,12 +2076,10 @@ void Mistral::Solver::BooleanMemoryManager::add(Variable *x) {
   //std::cout << "zzz " << *x << ": " << x->domain_type << std::endl;
 }
 
-
-void Mistral::Solver::initialise_search(Vector< Variable >& seq, 
-					BranchingHeuristic *heu, 
-					RestartPolicy *pol,
-					Goal *goal) 
-{
+void Mistral::Solver::initialise_search(Vector<Variable> &seq,
+                                        BranchingHeuristic *heu,
+                                        RestartPolicy *pol, Goal *goal,
+                                        bool interrupted) {
 
 #ifdef _DEBUG_BUILD
   std::cout << "INIT SEARCH!" << std::endl;
@@ -2093,8 +2092,9 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
   if(level < 0) save();
 
   active_solver = this;
-  signal(SIGINT,Mistral_SIGINT_handler);
 
+  if (interrupted)
+    signal(SIGINT, Mistral_SIGINT_handler);
 
   sequence.clear();
   //decisions.clear();
@@ -2132,25 +2132,20 @@ void Mistral::Solver::initialise_search(Vector< Variable >& seq,
     arity = constraints[posted_constraints[i]].arity();
     if(arity > statistics.max_arity) statistics.max_arity = arity;
   }
-
-
-  
 }
 
-
-void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> >& seq, 
-					BranchingHeuristic *heu, 
-					RestartPolicy *pol,
-					Goal *goal) 
-{
+void Mistral::Solver::initialise_search(
+    VarStack<Variable, ReversibleNum<int>> &seq, BranchingHeuristic *heu,
+    RestartPolicy *pol, Goal *goal, bool interrupted) {
 
   //consolidate();
 
   if(level < 0) save();
 
   active_solver = this;
-  signal(SIGINT,Mistral_SIGINT_handler);
 
+  if (interrupted)
+    signal(SIGINT, Mistral_SIGINT_handler);
 
   sequence.point_to(seq);
 
@@ -2200,7 +2195,6 @@ void Mistral::Solver::initialise_search(VarStack < Variable, ReversibleNum<int> 
   // 				      << " " << parameters.prefix_comment << " |   vars |    vals |   cons |    nodes | filterings | propagations | cpu time |           |" << std::endl;
 }
 
-  
 Mistral::Solver::~Solver() {
 #ifdef _DEBUG_MEMORY
   std::cout << "c delete solver" << std::endl;

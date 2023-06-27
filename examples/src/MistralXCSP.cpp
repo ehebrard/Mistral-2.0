@@ -1,3 +1,5 @@
+
+#include <fstream>
 #include <signal.h> 
 
 #include <XCSP3CoreParser.h>
@@ -38,8 +40,68 @@ void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
   // cout << "end parse\n";
 }
 
+void read_solution(XCSP3MistralCallbacks &cb, std::istream &is, vector<string>& vars, map<string, int>& sol) {
 
-void print_outcome(XCSP3MistralCallbacks& cb, std::ostream& os) {
+  string buffer;
+
+  while (is.good()) {
+
+    // get variables
+    is >> buffer;
+    if (buffer == "v") {
+      is >> buffer;
+      if (buffer == "<list>") {
+        while (true) {
+          is >> buffer;
+          if (buffer == "</list>") {
+            // cout << "break\n";
+            // cout << is.good() << endl;
+            break;
+          }
+          vars.push_back(buffer);
+        }
+        break;
+      }
+    }
+
+  }
+
+  // cout << vars.size() << endl;
+
+  // if(not is.good())
+  //   cout << "not good\n" << is.good() << endl;
+
+  while (is.good()) {
+    // get values
+    int v{0};
+    is >> buffer;
+    if (buffer == "v") {
+      is >> buffer;
+      if (buffer == "<values>") {
+        while (true) {
+          is >> buffer;
+          if (buffer == "</values>")
+            break;
+
+          // cout << buffer << " -> " << stoi(buffer) << endl;
+          sol[vars[v]] = stoi(buffer);
+          ++v;
+        }
+        break;
+      } //else cout << buffer << endl;
+    } //else cout << buffer << endl;
+
+    assert(vars.size() == v);
+  } 
+
+  // for (auto x : vars) {
+  //   cout << x << ": " << sol[x] << endl;
+  // }
+
+  // exit(0);
+}
+
+void print_outcome(XCSP3MistralCallbacks &cb, std::ostream &os) {
   Outcome result = cb.solver.statistics.outcome;
 
   switch (result) {
@@ -63,16 +125,15 @@ void print_outcome(XCSP3MistralCallbacks& cb, std::ostream& os) {
   }
 }
 
-
-void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
+void print_solution(XCSP3MistralCallbacks &cb, std::ostream &os, char v = 'v') {
   if (cb.solver.statistics.num_solutions > 0) {
-    os << "v <instantiation type=\"";
+    os << v << " <instantiation type=\"";
     if (cb.solver.statistics.outcome == OPT)
       os << "optimum\" cost=\"" << cb.solver.statistics.objective_value
          << "\">\n";
     else
       os << "solution\">\n";
-    os << "v   <list>";
+    os << v << "   <list>";
     for (auto id : cb.var_ids) {
       os << " " << id;
     }
@@ -81,10 +142,6 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
     for (size_t i = 0; i < cb.variables.size; ++i) {
       Variable var = cb.variables[i];
       int deg = cb.initial_degree[i];
-
-      // std::cerr << var << " " << cb.declared_var_ids[i] << " " << deg <<
-      // std::endl;
-
       if (deg == 0 && var.get_initial_min() < var.get_initial_max()) {
         os << " *";
       } else if (var.id() >= 0)
@@ -93,10 +150,9 @@ void print_solution(XCSP3MistralCallbacks& cb, std::ostream& os, char='v') {
         os << " " << var.get_value();
     }
 
-    os << " </values>\nv </instantiation>\n";
+    os << " </values>\n" << v << " </instantiation>\n";
   }
 }
-
 
 class ObjectivePrinter : public SolutionListener {
 
@@ -110,9 +166,7 @@ public:
   }
 };
 
-
 static void Mistral_SIGTERM_handler(int signum) {
-
   if (cb_ptr->solver.statistics.num_solutions > 0) {
     std::cout << "s SATISFIABLE\n";
     print_solution(*cb_ptr, std::cout);
@@ -121,10 +175,7 @@ static void Mistral_SIGTERM_handler(int signum) {
   exit(0);
 }
 
-
-
-
-int main(int argc,char **argv) {
+int main(int argc, char **argv) {
 
   std::cout << "c Mistral XCSP3" << std::endl;
   SolverCmdLine cmd("Mistral (xcsp3)", ' ', "2.0");
@@ -154,6 +205,10 @@ int main(int argc,char **argv) {
       1, "int");
   cmd.add(recommended_Arg);
 
+  TCLAP::ValueArg<string> solution_Arg("", "solution", "load a solution", false,
+                                       "", "string");
+  cmd.add(solution_Arg);
+
   TCLAP::SwitchArg propagate_and_print_Arg("", "propagate_and_print",
                                            "propagate and print", false);
   cmd.add(propagate_and_print_Arg);
@@ -176,16 +231,30 @@ int main(int argc,char **argv) {
 
   cb_ptr = &cb;
   signal(SIGTERM, Mistral_SIGTERM_handler);
+  signal(SIGINT, Mistral_SIGTERM_handler);
 
   // std::cout << "c parsetime " << (get_run_time() - cpu_time) << std::endl;
 
   if (cmd.print_model())
     std::cout << solver << std::endl;
 
+  if (solution_Arg.getValue() != "") {
+    ifstream is(solution_Arg.getValue().c_str(), std::ios_base::in);
+    
+    vector<string> vars;
+    map<string,int> sol;
+    read_solution(cb, is, vars, sol);
+
+    for(auto x : vars) {
+      cb.assign(x, sol[x]);
+    }
+
+  }
+
   // BranchingHeuristic *heuristic =
   // solver.heuristic_factory(cmd.get_variable_ordering(),
-  // cmd.get_value_ordering(), cmd.get_randomization()); RestartPolicy *restart
-  // = solver.restart_factory(cmd.get_restart_policy());
+  // cmd.get_value_ordering(), cmd.get_randomization()); RestartPolicy
+  // *restart = solver.restart_factory(cmd.get_restart_policy());
 
   if (solver.parameters.time_limit > 0) {
     solver.parameters.time_limit -= get_run_time();
@@ -196,7 +265,6 @@ int main(int argc,char **argv) {
   if (solver.objective && solver.objective->is_optimization())
     if (!minimum_outputArg.getValue())
       solver.add(new ObjectivePrinter(&solver));
-
 
   BranchingHeuristic *heuristic;
   RestartPolicy *restart;
@@ -243,15 +311,14 @@ int main(int argc,char **argv) {
     exit(1);
   }
 
-
-   if (propagate_and_print_Arg.getValue()) {
-   	VarArray sequence;
+  if (propagate_and_print_Arg.getValue()) {
+    VarArray sequence;
     for (auto x : cb.variables) {
       if (x.get_degree() > 0) {
         sequence.add(x);
       }
     }
-  	solver.initialise_search(sequence, heuristic, new NoRestart());
+    solver.initialise_search(sequence, heuristic, new NoRestart(), NULL, false);
     solver.propagate();
     std::cout << solver << std::endl;
     return 0;
@@ -272,7 +339,7 @@ int main(int argc,char **argv) {
       }
     }
 
-    solver.initialise_search(sequence, heuristic, new NoRestart());
+    solver.initialise_search(sequence, heuristic, new NoRestart(), NULL, false);
 
     while ((countArg.getValue() < 1 || countArg.getValue() > num_solutions) &&
            solver.get_next_solution() == SAT) {
@@ -302,7 +369,7 @@ int main(int argc,char **argv) {
 
   } else {
 
-  	// cout << "THERE " << solver.parameters.time_limit << endl;
+    // cout << "THERE " << solver.parameters.time_limit << endl;
 
     if (branchOnaux.getValue() > 0) {
       Vector<Variable> search_sequence;
@@ -349,4 +416,3 @@ int main(int argc,char **argv) {
 
   return 0;
 }
-

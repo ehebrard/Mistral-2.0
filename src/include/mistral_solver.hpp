@@ -700,11 +700,13 @@ public:
 
   // Solution *get_solution(Vector< Variable >& seq);
   void initialise_search(Vector<Variable> &seq, BranchingHeuristic *heu = NULL,
-                         RestartPolicy *pol = NULL, Goal *goal = NULL);
+                         RestartPolicy *pol = NULL, Goal *goal = NULL,
+                         bool interrupted = true);
 
   void initialise_search(VarStack<Variable, ReversibleNum<int>> &seq,
                          BranchingHeuristic *heu = NULL,
-                         RestartPolicy *pol = NULL, Goal *goal = NULL);
+                         RestartPolicy *pol = NULL, Goal *goal = NULL,
+                         bool interrupted = true);
 
   Outcome sequence_search(Vector<Vector<Variable>> &sequences,
                           Vector<BranchingHeuristic *> &heuristics,
