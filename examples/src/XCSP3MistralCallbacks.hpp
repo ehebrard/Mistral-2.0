@@ -3892,14 +3892,14 @@ void XCSP3MistralCallbacks::buildConstraintElement(
     for (auto v : row) {
       scope.add(Variable(v, v));
     }
-    rows.add(Element(scope, variable[rowIndex->id], startRowIndex));
+    rows.add(Element(scope, variable[colIndex->id], startColIndex));
   }
 
   ++initial_degree[id_map[rowIndex->id]];
   ++initial_degree[id_map[colIndex->id]];
   ++initial_degree[id_map[value->id]];
 
-  solver.add(Element(rows, variable[colIndex->id], startColIndex) ==
+  solver.add(Element(rows, variable[rowIndex->id], startRowIndex) ==
              variable[value->id]);
 }
 
@@ -3924,14 +3924,14 @@ void XCSP3MistralCallbacks::buildConstraintElement(
   for (auto &row : matrix) {
     VarArray scope;
     getVariables(row, scope);
-    rows.add(Element(scope, variable[rowIndex->id], startRowIndex));
+    rows.add(Element(scope, variable[colIndex->id], startColIndex));
   }
 
   ++initial_degree[id_map[rowIndex->id]];
   ++initial_degree[id_map[colIndex->id]];
   // ++initial_degree[id_map[value->id]];
 
-  solver.add(Element(rows, variable[colIndex->id], startColIndex) == value);
+  solver.add(Element(rows, variable[rowIndex->id], startRowIndex) == value);
 }
 
 void XCSP3MistralCallbacks::buildConstraintElement(
@@ -3956,14 +3956,14 @@ void XCSP3MistralCallbacks::buildConstraintElement(
   for (auto &row : matrix) {
     VarArray scope;
     getVariables(row, scope);
-    rows.add(Element(scope, variable[rowIndex->id], startRowIndex));
+    rows.add(Element(scope, variable[colIndex->id], startColIndex));
   }
 
   ++initial_degree[id_map[rowIndex->id]];
   ++initial_degree[id_map[colIndex->id]];
   ++initial_degree[id_map[value->id]];
 
-  solver.add(Element(rows, variable[colIndex->id], startColIndex) ==
+  solver.add(Element(rows, variable[rowIndex->id], startRowIndex) ==
              variable[value->id]);
 }
 
