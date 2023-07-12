@@ -1,4 +1,15 @@
 
+## CITING MISTRAL
+
+@article{hebrardmistral,
+  title={Mistral, a Constraint Satisfaction Library},
+  author={Hebrard, Emmanuel},
+  journal={Third International CSP Solver Competition},
+  url={http://www.cril.univ-artois.fr/CPAI08/Competition-08.pdf},
+  pages={31--39}
+}
+
+
 ## BUILDING instructions for MistralXCSP
 
 $ mkdir build
@@ -13,6 +24,11 @@ $ ./MistralXCSP <xml file> -t <time limit in seconds>
 ## COMPETITION CMDLINE
 
 DIR/MistralXCSP BENCHNAME -t TIMELIMIT -s RANDOMSEED
+
+## COMPILATION AND CMDLINE FOR CP2023 PAPER
+
+$ make preemptive-jsp
+bin/preemptive-jsp BENCHNAME -t TIMELIMIT 
 
 
 ## OLD README
