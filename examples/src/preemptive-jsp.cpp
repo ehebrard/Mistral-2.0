@@ -370,6 +370,12 @@ bool JacksonPreemptiveScheduler::compute(const bool print_flag) {
   return true;
 }
 
+
+void JacksonPreemptiveScheduler::print() {
+  
+}
+
+
 void build_model(Instance &jsp, Solver &solver, VarArray &start_time,
                  VarArray &end_time, Variable &origin, Variable &makespan,
                  VarArray &search_vars, const int ub, const int model_choice) {
