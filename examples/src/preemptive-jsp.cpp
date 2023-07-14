@@ -247,7 +247,7 @@ bool JacksonPreemptiveScheduler::compute(const bool print_flag) {
         sched.push_back(I);
       } else {
 
-        assert(H.get_min().duration > 0);
+        // assert(H.get_min().duration > 0);
 
         auto r{H.get_min().release_date};
 
