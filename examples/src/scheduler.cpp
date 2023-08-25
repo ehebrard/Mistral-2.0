@@ -58,17 +58,21 @@ int main( int argc, char** argv )
   solver->consolidate();
 
   //std::cout << solver << std::endl;
-  
-	BranchingHeuristic *heu = new SchedulingWeightedDegree < TaskDomOverBoolWeight, Guided< MinValue >, 2 > (solver, solver->disjunct_map);
-	
-  solver->dichotomic_search(heu);
-  
 
-  if(!stats.solved()) {
-    if(params.Algorithm == "bnb")
+  BranchingHeuristic *heu =
+      new SchedulingWeightedDegree<TaskDomOverBoolWeight, Guided<MinValue>, 2>(
+          solver, solver->disjunct_map);
+
+  // std::cout << solver->get_lb() << std::endl;
+  // exit(1);
+
+  solver->dichotomic_search(heu);
+
+  if (!stats.solved()) {
+    if (params.Algorithm == "bnb")
       solver->branch_and_bound();
-    //else if(params.Algorithm == "lns")
-    //solver.large_neighborhood_search();
+    // else if(params.Algorithm == "lns")
+    // solver.large_neighborhood_search();
   }
 
   stats.print(std::cout, "");  
