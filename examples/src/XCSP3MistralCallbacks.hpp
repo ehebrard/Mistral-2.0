@@ -5187,7 +5187,7 @@ void XCSP3MistralCallbacks::buildObjectiveMaximizeVariable(XVariable *x) {
   cout << "\n    objective: maximize variable " << x->id << endl;
 #endif
 
-  goal = new Goal(Goal::MAXIMIZATION, variable[x->id].get_var());
+  goal = new Goal(Goal::MAXIMIZATION, variable[x->id]);
 }
 
 void XCSP3MistralCallbacks::buildObjectiveMinimize(ExpressionObjective type,

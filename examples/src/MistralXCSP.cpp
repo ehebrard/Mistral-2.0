@@ -33,6 +33,9 @@ void parse(XCSP3MistralCallbacks& cb, const char* instancefile) {
 
   cb.solver.consolidate();
 
+
+  cout << cb.solver << endl;
+
   // cout << "set goal\n";
 
   cb.solver.set_goal(cb.goal);
