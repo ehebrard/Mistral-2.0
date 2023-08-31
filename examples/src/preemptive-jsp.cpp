@@ -375,10 +375,10 @@ void JacksonPreemptiveScheduler::print() {
   
 }
 
-
 void build_model(Instance &jsp, Solver &solver, VarArray &start_time,
                  VarArray &end_time, Variable &origin, Variable &makespan,
-                 VarArray &search_vars, const int ub, const int model_choice) {
+                 VarArray &search_vars, const int ub, const int model_choice,
+                 const bool hall_pruning) {
 
   if (model_choice == model::compact) {
 
@@ -435,8 +435,14 @@ void build_model(Instance &jsp, Solver &solver, VarArray &start_time,
       solver.add(end_time[jsp.getJobTask(j, jsp.nTasksInJob(j) - 1)] ==
                  makespan);
     } else {
+
+      solver.add(start_time[jsp.getJobTask(j, 0)] <= 5);
+
       for (auto i{1}; i < jsp.nTasksInJob(j); ++i) {
         solver.add(start_time[jsp.getJobTask(j, i)] >=
+                   end_time[jsp.getJobTask(j, i - 1)]);
+
+        solver.add((start_time[jsp.getJobTask(j, i)] - 5) <=
                    end_time[jsp.getJobTask(j, i - 1)]);
       }
     }
@@ -468,7 +474,7 @@ void build_model(Instance &jsp, Solver &solver, VarArray &start_time,
     // }
 
     // std::cout << solver.constraints.size << std::endl;
-    solver.add(PreemptiveNoOverlap(st, et, p, makespan));
+    solver.add(PreemptiveNoOverlap(st, et, p, makespan, hall_pruning));
   }
 
 #ifdef VERBOSE
@@ -601,6 +607,10 @@ int main( int argc, char** argv )
   // TCLAP::SwitchArg order_branching("","order","Branches on the ordering of
   // end times", false); cmd.add( order_branching );
 
+  TCLAP::SwitchArg hall_pruning("", "hall",
+                                "Applies Hall Intervals-based Pruning", false);
+  cmd.add(hall_pruning);
+
   TCLAP::ValueArg<int> model_choice(
       "", "model", "choice of model O:default 1:reduced 2:compact", false, 2,
       "int");
@@ -629,8 +639,15 @@ int main( int argc, char** argv )
 
   cmd.parse(argc, argv);
 
+  if (hall_pruning.getValue()) {
+    std::cout << " c hall pruning on (basic model enforced)\n";
+    // model_choice.setValue(model::basic);
+  }
+
   std::cout << " c instance=" << cmd.get_filename() << " model="
-            << (model_choice.getValue() == model::basic          ? "basic"
+            << ((model_choice.getValue() == model::basic or
+                 hall_pruning.getValue())
+                    ? "basic"
                 : (model_choice.getValue() == model::equalities) ? "reduced"
                                                                  : "compact")
             << " branching=" << cmd.get_value_ordering() << std::endl;
@@ -674,8 +691,10 @@ int main( int argc, char** argv )
   // if(model.getValue() == 0)
   //   model(jsp, solver, start_time, end_time, makespan, search_vars);
   // else if(model.getValue() == 0)
-  build_model(jsp, solver, start_time, end_time, origin, makespan, search_vars,
-              ub, model_choice.getValue());
+  build_model(
+      jsp, solver, start_time, end_time, origin, makespan, search_vars, ub,
+      (hall_pruning.getValue() ? model::basic : model_choice.getValue()),
+      hall_pruning.getValue());
   // if(order_branching.getValue())
   // else
   // model_order(jsp, solver, start_time, end_time, makespan, search_vars);
@@ -697,6 +716,8 @@ int main( int argc, char** argv )
   solver.add(makespan >= lb);
 
   std::cout << " c initial bounds: [" << lb << ".." << ub << "]\n";
+
+  std::cout << solver << std::endl;
 
   solver.depth_first_search();
 

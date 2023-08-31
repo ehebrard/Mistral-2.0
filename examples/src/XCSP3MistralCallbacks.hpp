@@ -581,7 +581,7 @@ template <class T> void displayList(vector<T> &list, string separator = " ") {
   }
   for (size_t i = 0; i < list.size(); i++)
     cout << list[i] << separator;
-  cout << endl;
+  // cout << endl;
 }
 
 void displayList(vector<XVariable *> &list, string separator = " ") {
@@ -596,7 +596,7 @@ void displayList(vector<XVariable *> &list, string separator = " ") {
   }
   for (unsigned int i = 0; i < list.size(); i++)
     cout << list[i]->id << separator;
-  cout << endl;
+  // cout << endl;
 }
 
 void XCSP3MistralCallbacks::beginInstance(InstanceType type) {
@@ -685,7 +685,7 @@ void XCSP3MistralCallbacks::beginVariableArray(string id) {
 
 void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int maxValue) {
 #ifdef _VERBOSE_
-  cout << "    var b " << id << " : " << minValue << "..." << maxValue << endl;
+  cout << "    var b " << id << " : " << minValue << "..." << maxValue;
 #endif
 
   Variable X(minValue, maxValue);
@@ -696,6 +696,10 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, int minValue, int ma
   // initial_size.push_back(maxValue-minValue+1);
 
   solver.add(X);
+
+#ifdef _VERBOSE_
+  cout << " -> " << X << endl;
+#endif
 }
 
 
@@ -704,6 +708,7 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, vector<int> &values)
   cout << "    var l " << id << " : ";
   cout << "        ";
   displayList(values);
+  cout << endl;
 #endif
 
   Variable X(values);
@@ -712,6 +717,10 @@ void XCSP3MistralCallbacks::buildVariableInteger(string id, vector<int> &values)
   declared_var_ids.push_back(id);
 
   solver.add(X);
+
+#ifdef _VERBOSE_
+  cout << " -> " << X << endl;
+#endif
 }
 
 
@@ -890,6 +899,7 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
        << " star: " << hasStar << endl;
   cout << "        ";
   displayList(list);
+  cout << endl;
 #endif
 
   VarArray scope;
@@ -905,78 +915,93 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, vector<XVariable
   vector<int> stared;
   vector<int> fact;
   fact.resize(list.size());
+
   for (auto pt = begin(tuples); pt != end(tuples); ++pt) {
-    // for ( auto& t : tuples ) {
-
     for (size_t i = 0; i < pt->size(); ++i) {
-      // cout << " " << (*(pt))[i];
-      if ((*(pt))[i] == 2147483647) {
-        stared.push_back(i);
-        fact[i] = scope[i].get_min();
-      } else {
-        fact[i] = (*(pt))[i];
-      }
+      fact[i] = (*(pt))[i];
     }
-    // cout << endl;
-
-    // int count = 10000;
-    if (stared.size() > 0) {
-
-      int numtuples = 1;
-      for (auto j : stared) {
-        numtuples *= scope[j].get_size();
-        if (numtuples > 1000000000) {
-          cout << "s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
-          exit(1);
-        }
-      }
-
-      int i = stared.size() - 1;
-      bool cont = true;
-      do {
-
-        tab->add(&(fact[0]));
-        numtuples--;
-
-        int j = stared[i];
-        int n = scope[j].next(fact[j]);
-
-        // cout << " ++t[" << j << "]: " << " " << fact[j] << " -> " << n << "
-        // (" << i << ")" << endl;
-
-        while (n == fact[j]) {
-          if (i == 0) {
-            cont = false;
-            break;
-          }
-          for (size_t k = i; k < stared.size(); ++k) {
-            fact[stared[k]] = scope[stared[k]].get_min();
-          }
-          j = stared[--i];
-          n = scope[j].next(fact[j]);
-        }
-
-        i = stared.size() - 1;
-
-        fact[j] = n;
-
-      } while (cont);
-
-      stared.clear();
-
-      assert(numtuples == 0);
-
-      // std::cout << "#tuples = " << numtuples << std::endl;
-
-    } else {
-      tab->add(&((*(pt))[0]));
-    }
+    tab->add(&((*(pt))[0]));
   }
+
+  // for (auto pt = begin(tuples); pt != end(tuples); ++pt) {
+  //   // for ( auto& t : tuples ) {
+
+  //   for (size_t i = 0; i < pt->size(); ++i) {
+  //     // cout << " " << (*(pt))[i];
+  //     if ((*(pt))[i] == WILDCARD) {
+  //       stared.push_back(i);
+  //       fact[i] = scope[i].get_min();
+  //     } else {
+  //       fact[i] = (*(pt))[i];
+  //     }
+  //   }
+  //   // cout << endl;
+
+  //   // int count = 10000;
+  //   if (stared.size() > 0) {
+
+  //     int numtuples = 1;
+  //     for (auto j : stared) {
+  //       numtuples *= scope[j].get_size();
+  //       if (numtuples > 1000000000) {
+  //         cout << "s UNSUPPORTED" << _ID_(": too many tuples") << "\n";
+  //         exit(1);
+  //       }
+  //     }
+
+  //     // std::cout << "num tuples: " << numtuples << std::endl;
+
+  //     int i = stared.size() - 1;
+  //     bool cont = true;
+  //     do {
+
+  //       tab->add(&(fact[0]));
+  //       numtuples--;
+
+  //       int j = stared[i];
+  //       int n = scope[j].next(fact[j]);
+
+  //       // cout << " ++t[" << j << "]: " << " " << fact[j] << " -> " << n <<
+  //       "
+  //       // (" << i << ")" << endl;
+
+  //       while (n == fact[j]) {
+  //         if (i == 0) {
+  //           cont = false;
+  //           break;
+  //         }
+  //         for (size_t k = i; k < stared.size(); ++k) {
+  //           fact[stared[k]] = scope[stared[k]].get_min();
+  //         }
+  //         j = stared[--i];
+  //         n = scope[j].next(fact[j]);
+  //       }
+
+  //       i = stared.size() - 1;
+
+  //       fact[j] = n;
+
+  //     } while (cont);
+
+  //     stared.clear();
+
+  //     assert(numtuples == 0);
+
+  //     // std::cout << "#tuples = " << numtuples << std::endl;
+
+  //   } else {
+  //     tab->add(&((*(pt))[0]));
+  //   }
+  // }
 
   last_table = tab->tuples;
   last_tuple_list = &tuples;
 
   solver.add(Variable(tab));
+
+#ifdef _VERBOSE_
+  cout << "\n --> " << solver.constraints[solver.constraints.size - 1] << endl;
+#endif
 }
 
 void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var,
@@ -1026,6 +1051,10 @@ void XCSP3MistralCallbacks::buildConstraintExtension(string id, XVariable *var,
 
     solver.add(Member(X, *last_domain));
   }
+
+#ifdef _VERBOSE_
+  cout << "\n --> " << solver.constraints[solver.constraints.size - 1] << endl;
+#endif
 }
 
 void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id,
@@ -1038,9 +1067,9 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id,
   cout << ": " << id << endl;
 #endif
 
-  if (hasStar) {
-    buildConstraintExtension(id, list, *last_tuple_list, support, hasStar);
-  } else {
+  // if (hasStar) {
+  //   buildConstraintExtension(id, list, *last_tuple_list, support, hasStar);
+  // } else {
 
     VarArray scope;
     getVariables(list, scope);
@@ -1057,7 +1086,12 @@ void XCSP3MistralCallbacks::buildConstraintExtensionAs(string id,
       ++initial_degree[id_map[list[0]->id]];
       solver.add(Member(scope[0], *last_domain));
     }
-  }
+
+#ifdef _VERBOSE_
+    cout << "\n --> " << solver.constraints[solver.constraints.size - 1]
+         << endl;
+#endif
+  // }
 }
 
 void XCSP3MistralCallbacks::buildConstraintIntension(string id, string expr) {
@@ -1509,7 +1543,7 @@ void XCSP3MistralCallbacks::buildConstraintRegular(
   cout << "\n    regular constraint " << id << endl;
   cout << "        ";
   displayList(list);
-  cout << "        start: " << start << endl;
+  cout << "\n        start: " << start << endl;
   cout << "        final: ";
   displayList(final, ",");
   cout << endl;
@@ -1617,7 +1651,7 @@ void XCSP3MistralCallbacks::buildConstraintMDD(
   cout << "\n    mdd constraint" << endl;
   cout << "        ";
   displayList(list);
-  cout << "        transitions: ";
+  cout << "\n        transitions: ";
   for (unsigned int i = 0;
        i < (transitions.size() > 4 ? 4 : transitions.size()); i++) {
     cout << "(" << transitions[i].from << "," << transitions[i].val << ","
@@ -1837,12 +1871,17 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferent(
   cout << "\n    allDiff constraint" << id << endl;
   cout << "        ";
   displayList(list);
+  cout << endl;
 #endif
 
   VarArray scope;
   getVariables(list, scope);
 
   solver.add(AllDiff(scope));
+
+#ifdef _VERBOSE_
+  cout << "\n --> " << solver.constraints[solver.constraints.size - 1] << endl;
+#endif
 }
 
 void XCSP3MistralCallbacks::buildConstraintAlldifferentExcept(
@@ -1864,6 +1903,10 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentExcept(
   getVariables(list, scope);
 
   solver.add(AllDiffExcept(scope, *begin(except)));
+
+#ifdef _VERBOSE_
+  cout << "\n --> " << solver.constraints[solver.constraints.size - 1] << endl;
+#endif
 }
 
 void XCSP3MistralCallbacks::buildConstraintAlldifferentList(
@@ -1911,6 +1954,11 @@ void XCSP3MistralCallbacks::buildConstraintAlldifferentMatrix(
     }
     solver.add(AllDiff(scope));
     scope.clear();
+
+#ifdef _VERBOSE_
+    cout << "\n --> " << solver.constraints[solver.constraints.size - 1]
+         << endl;
+#endif
   }
 }
 
@@ -1926,6 +1974,11 @@ void XCSP3MistralCallbacks::buildConstraintAllEqual(string id,
   for (size_t i = 1; i < list.size(); ++i) {
     ++initial_degree[id_map[list[i]->id]];
     solver.add(variable[list[i - 1]->id] == variable[list[i]->id]);
+
+#ifdef _VERBOSE_
+    cout << "\n --> " << solver.constraints[solver.constraints.size - 1]
+         << endl;
+#endif
   }
 }
 
@@ -1949,6 +2002,10 @@ void XCSP3MistralCallbacks::buildConstraintNotAllEqual(
   }
 
   solver.add(Sum(differences) > 0);
+
+#ifdef _VERBOSE_
+  cout << "\n --> " << solver.constraints[solver.constraints.size - 1] << endl;
+#endif
 }
 
 void XCSP3MistralCallbacks::buildConstraintOrdered(string id,
@@ -4628,11 +4685,14 @@ void XCSP3MistralCallbacks::p_cumulative_discretization(
           else
             in_process = (Member(start[i], t - process_time + 1, t));
         } else {
-          // TODO: tasks with variable durations
-          cout << "s UNSUPPORTED"
-               << _ID_(": Discretization of Cumulative with variable durations")
-               << "\n";
-          exit(1);
+          // // TODO: tasks with variable durations
+          // cout << "s UNSUPPORTED"
+          //      << _ID_(": Discretization of Cumulative with variable
+          //      durations")
+          //      << "\n";
+          // exit(1);
+
+          in_process = ((start[i] <= t) && (start[i] + dur[i] > t));
         }
         if (req[i].is_ground()) {
           // std::cout << "the demand is fixed: " << req[i].get_min() <<

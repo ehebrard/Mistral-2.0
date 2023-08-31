@@ -105,14 +105,13 @@ namespace Mistral {
 	
 // #define _REF_SOL_ true
 
-
   //#define _DEBUG_ACTIVITY true
-  //#define _DEBUG_LESS (id == 84)
+  // #define _DEBUG_LESS true //(id == 607)
   //#define _DEBUG_PARITY ((id == 2))
   //#define _DEBUG_BUILD true
   //#define _DEBUG_BACKTRACK (id == 84)
   //#define _DEBUG_RESTORE true
-	//#define _DEBUG_RELAX (id == 365 || id==27)
+  //#define _DEBUG_RELAX (id == 365 || id==27)
   //#define _DEBUG_HISTORY true  
   //#define _DEBUG_GENPROPAG (id == 5)
   //#define _DEBUG_MUL (id==7660)
@@ -171,7 +170,9 @@ namespace Mistral {
 #define MININT -NOVAL
 #define MIN_CAPACITY 16
 #define NULL_ATOM 0xffffffff
-  
+
+#define WILDCARD 2147483647
+
 #define BOUND_CONSISTENCY 1
 #define FORWARD_CHECKING 0
 

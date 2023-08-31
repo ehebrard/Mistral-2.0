@@ -2936,9 +2936,11 @@ public:
   Vector<Variable> starts;
   Vector<Variable> ends;
   Variable the_end;
+  bool hall;
 
   PreemptiveNoOverlapExpression(Vector<Variable> &st, Vector<Variable> &et,
-                                const std::vector<int> &p, Variable& e);
+                                const std::vector<int> &p, Variable &e,
+                                const bool hall);
   virtual ~PreemptiveNoOverlapExpression();
 
   virtual void extract_constraint(Solver *);
@@ -2948,8 +2950,8 @@ public:
 };
 
 Variable PreemptiveNoOverlap(Vector<Variable> &st, Vector<Variable> &et,
-                             const std::vector<int> &p, Variable& e);
-
+                             const std::vector<int> &p, Variable &e,
+                             const bool hall = false);
 
 class PreemptiveNonDelayExpression : public Expression {
 

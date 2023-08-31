@@ -72,10 +72,9 @@ The author can be contacted electronically at emmanuel.hebrard@gmail.com.
 
 // #define _DEBUG_ALLDIFF true
 // #define _DEBUG_NOOVERLAP_SOL true
-// #define _DEBUG_NOOVERLAP_HALL (id == 143 and get_solver()->statistics.num_propagations >= 620)
-// #define _DEBUG_NOOVERLAP_EDGE true
-// #define _DEBUG_NONDELAY true
-// #define SIMPLE true
+// #define _DEBUG_NOOVERLAP_HALL true //(id == 143 and
+// get_solver()->statistics.num_propagations >= 620) #define
+// _DEBUG_NOOVERLAP_EDGE true #define _DEBUG_NONDELAY true #define SIMPLE true
 // (id == 143 and get_solver()->statistics.num_propagations >= 620)
 // (id == 72 and get_solver()->statistics.num_propagations >= 150000)
 //   true // (get_solver()->statistics.num_propagations == 25890)
@@ -2073,7 +2072,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate(const int changed
 #ifdef _DEBUG_LESS
   if (_DEBUG_LESS) {
     std::cout << "propagate " << scope[0] << " in " << scope[0].get_domain()
-              << " + " << offset << " < " << scope[1] << " in "
+              << " + " << offset << " <= " << scope[1] << " in "
               << scope[1].get_domain() << " because of " << event2str(evt)
               << " on " << scope[changed_idx] << std::endl;
   }
@@ -2093,7 +2092,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate(const int changed
 #ifdef _DEBUG_LESS
   if (_DEBUG_LESS) {
     std::cout << "propagated " << scope[0] << " in " << scope[0].get_domain()
-              << " + " << offset << " < " << scope[1] << " in "
+              << " + " << offset << " <= " << scope[1] << " in "
               << scope[1].get_domain() << " " << (IS_OK(wiped)) << std::endl;
   }
 #endif
@@ -2102,6 +2101,7 @@ Mistral::PropagationOutcome Mistral::ConstraintLess::propagate(const int changed
 }
 
 std::ostream& Mistral::ConstraintLess::display(std::ostream& os) const {
+  // os << "yes ";
   os << scope[0] /*.get_var()*/;
   if (offset < 0)
     os << " - " << (-offset + 1) << " < ";
@@ -8650,18 +8650,30 @@ void Mistral::ConstraintTable::mark_domain() {
 
 int Mistral::ConstraintTable::check( const int* s ) const 
 {
+
   bool found = false;
   unsigned int arity = scope.size;
   const int *support;
+
+  // std::cout << "check";
+  // for (int i = 0; i < arity; ++i) {
+  //   std::cout << " " << s[i];
+  // }
+  // std::cout << std::endl;
+
   Vector<const int *>::iterator end = table.end();
   for (Vector<const int *>::iterator it = table.begin(); !found && it != end;
        ++it) {
     support = *it;
     found = true;
+
+    // std::cout << ">>";
     for (unsigned int i = 0; found && i < arity; ++i) {
-      if (support[i] != s[i])
+      // std::cout << " " << support[i];
+      if (support[i] != WILDCARD and support[i] != s[i])
         found = false;
     }
+    // std::cout << " -> " << found << std::endl;
   }
 
   return !found;
@@ -8750,17 +8762,29 @@ void Mistral::ConstraintGAC2001::initialise() {
   i = table.size;
   while (i--) {
 
+    // for (j = 0; j < arity; ++j) {
+    //   std::cout << " " << table[i][j] ;
+    // }
+    // std::cout << std::endl;
+
     bool valid = true;
     for (j = 0; j < arity && valid; ++j) {
-      valid = scope[j].contain(table[i][j]);
+      valid = (table[i][j] == WILDCARD || scope[j].contain(table[i][j]));
     }
 
     if (valid) {
       for (j = 0; j < arity; ++j) {
-        supportList[j][table[i][j]].add(table[i]);
+        if (table[i][j] == WILDCARD)
+          for (int v{scope[j].get_min()}; v <= scope[j].get_max(); ++v) {
+            supportList[j][v].add(table[i]);
+          }
+        else
+          supportList[j][table[i][j]].add(table[i]);
       }
     }
   }
+
+  // display_supports(std::cout);
 
   // exit(1);
 }
@@ -8889,7 +8913,8 @@ Mistral::PropagationOutcome Mistral::ConstraintGAC2001::propagate()
             valid = true;
             for (k = 0; valid && k < arity; ++k) {
               ok = order[k];
-              valid = (oi == ok || scope[ok].contain(supports_X[index][ok]));
+              valid = (oi == ok || supports_X[index][ok] == WILDCARD ||
+                       scope[ok].contain(supports_X[index][ok]));
             }
           }
           if (valid)
@@ -8986,7 +9011,7 @@ int Mistral::ConstraintGAC2001::check( const int* s ) const
     // std::cout << "<"
     for (unsigned int i = 0; found && i < arity; ++i) {
       // std::cout << " " << support[i];
-      if (support[i] != s[i])
+      if (support[i] != WILDCARD and support[i] != s[i])
         found = false;
     }
     // if(found)
@@ -9013,9 +9038,18 @@ std::ostream& Mistral::ConstraintGAC2001::display_supports(std::ostream& os) con
       Vector<const int *>::iterator send = supportList[xi][valj].end();
       for (Vector<const int *>::iterator sit = supportList[xi][valj].begin();
            sit != send; ++sit) {
-        os << " <" << (*sit)[0];
-        for (unsigned int xj = 1; xj < arity; ++xj)
-          os << " " << (*sit)[xj];
+        os << " <";
+        if ((*sit)[0] == WILDCARD)
+          os << "*";
+        else
+          os << (*sit)[0];
+        for (unsigned int xj = 1; xj < arity; ++xj) {
+          os << " ";
+          if ((*sit)[xj] == WILDCARD)
+            os << "*";
+          else
+            os << (*sit)[xj];
+        }
         os << ">";
       }
       os << std::endl;
@@ -9072,7 +9106,7 @@ bool Mistral::ConstraintGAC3::isValid(const int *tuple) const
 {
   int i = scope.size, valid = true;
   while (valid && i--)
-    valid = scope[i].contain(tuple[i]);
+    valid = (tuple[i] == WILDCARD || scope[i].contain(tuple[i]));
   return valid;
 }
 
@@ -23541,7 +23575,9 @@ Mistral::ConstraintPreemptiveNoOverlapHall::ConstraintPreemptiveNoOverlapHall(
 
   priority = 2;
 
-  assert(2 * numVars() == scope.size);
+  // std::cout << numVars() << " / " << scope.size << std::endl;
+
+  assert(2 * numVars() + 1 == scope.size);
 
   lastLevel = -2;
   nb = 0;

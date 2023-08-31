@@ -4588,8 +4588,9 @@ Mistral::Variable Mistral::AllDiffExcept(Vector< Variable >& args, const int exc
 
 Mistral::PreemptiveNoOverlapExpression::PreemptiveNoOverlapExpression(
     Vector<Variable> &st, Vector<Variable> &et, const std::vector<int> &p,
-    Variable &e)
-    : Expression(st), duration(p), starts(st), ends(et), the_end(e) {
+    Variable &e, const bool hall)
+    : Expression(st), duration(p), starts(st), ends(et), the_end(e),
+      hall(hall) {
 
   for (unsigned int i = 0; i < et.size; ++i)
     children.add(et[i]);
@@ -4606,10 +4607,12 @@ void Mistral::PreemptiveNoOverlapExpression::extract_constraint(Solver *s) {
 
   // s->add(Constraint(new ConstraintPreemptiveNonDelay(children, duration)));
 
-  // s->add(Constraint(new ConstraintAllDiff(starts)));
-  // s->add(Constraint(new ConstraintAllDiff(ends)));
-  // s->add(Constraint(new ConstraintPreemptiveNoOverlapHall(children,
-  // duration)));
+  if (hall) {
+    s->add(Constraint(new ConstraintAllDiff(starts)));
+    s->add(Constraint(new ConstraintAllDiff(ends)));
+    s->add(
+        Constraint(new ConstraintPreemptiveNoOverlapHall(children, duration)));
+  }
   s->add(Constraint(new ConstraintPreemptiveNoOverlapEdge(children, duration)));
 }
 
@@ -4634,8 +4637,8 @@ const char *Mistral::PreemptiveNoOverlapExpression::get_name() const {
 Mistral::Variable Mistral::PreemptiveNoOverlap(Vector<Variable> &st,
                                                Vector<Variable> &et,
                                                const std::vector<int> &p,
-                                               Variable& e) {
-  Variable exp(new PreemptiveNoOverlapExpression(st, et, p, e));
+                                               Variable &e, const bool hall) {
+  Variable exp(new PreemptiveNoOverlapExpression(st, et, p, e, hall));
   return exp;
 }
 
@@ -5040,7 +5043,7 @@ void Mistral::TableExpression::extract_constraint(Solver *s) {
     for (auto t : *tuples) {
       bool valid = true;
       for (size_t i = 0; valid && i < children.size; ++i) {
-        valid = children[i].contain(t[i]);
+        valid = (t[i] == WILDCARD || children[i].contain(t[i]));
       }
       if (valid)
         tab->table.add(t);
@@ -5122,10 +5125,23 @@ void Mistral::LexExpression::extract_constraint(Solver *s) {
     // s->add(Constraint(new ConstraintLex(scp)));
 
     s->add((children[i + 2 * arity] <= children[i + 2 * arity + 1]));
-    s->add((children[i + 2 * arity] < children[i + 2 * arity + 1]) <=
-           (children[i] < children[i + arity]));
-    s->add((children[i + 2 * arity] >= (children[i] > children[i + arity])));
-    s->add((children[i] != children[i + arity]) <= children[i + 2 * arity + 1]);
+
+    // assert(children[i + 2 * arity].id() != children[i + 2 * arity + 1].id());
+    // assert(children[i].id() != children[i + arity].id());
+
+    if (children[i + 2 * arity].id() != children[i + 2 * arity + 1].id()) {
+      if (children[i].id() != children[i + arity].id())
+        s->add((children[i + 2 * arity] < children[i + 2 * arity + 1]) <=
+               (children[i] < children[i + arity]));
+      else
+        s->add((children[i + 2 * arity] >= children[i + 2 * arity + 1]));
+    }
+
+    if (children[i].id() != children[i + arity].id()) {
+      s->add((children[i + 2 * arity] >= (children[i] > children[i + arity])));
+      s->add((children[i] != children[i + arity]) <= children[i + 2 * arity + 1]);
+    }
+    
   }
 
   if (FAILED(children[2 * arity].set_domain(0))) {
@@ -5269,7 +5285,7 @@ Mistral::BoolSumExpression::~BoolSumExpression() {
 
 void Mistral::BoolSumExpression::extract_constraint(Solver *s) {
 
-  assert(false);
+  // assert(false);
 
   if (weight.empty()) {
     // if(lower_bound == upper_bound) {
