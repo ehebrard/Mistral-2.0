@@ -1,6 +1,7 @@
 
 ## CITING MISTRAL
 
+<pre>
 @article{hebrardmistral,
   title={Mistral, a Constraint Satisfaction Library},
   author={Hebrard, Emmanuel},
@@ -8,6 +9,7 @@
   url={http://www.cril.univ-artois.fr/CPAI08/Competition-08.pdf},
   pages={31--39}
 }
+</pre>
 
 
 ## BUILDING instructions for MistralXCSP
