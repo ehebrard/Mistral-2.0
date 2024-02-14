@@ -159,51 +159,55 @@ public:
   const char *str_param[nsa];
   int int_param[nia];
 
-  char *data_file;
-  char *data_file_name;
+  char *data_file{NULL};
+  char *data_file_name{NULL};
 
-  SchedulingSolver *solver;
+  SchedulingSolver *solver{NULL};
 
-  int UBinit;  // "ub": user defined upper bound (-1 if not)
-  int LBinit;  // "lb": user defined lower bound (-1 if not)
-  int Checked; // "check": whether the solution is checked
-  int Seed;    // "seed": random seed
-  int Cutoff;  // "cutoff": time cutoff of dichotomic steps
-  unsigned long long int NodeCutoff; // "nodes": node cutoff of dichotomic steps
-  int NodeBase;   // "dyncutoff": node cutoff trying to mimic time cutoff
-  int Dichotomy;  // "dichotomy": max number of dichotomic steps
-  int Base;       // "base": base cutoff for restarts
-  int Randomized; // "randomized": level of randomization
-  int Verbose;    // "verbose": level of verbosity
-  int Optimise;   // "optimise": total time cutoff
-  int Rngd;       // "nogood": whether nogood on restart are used
-  int Precision;  // "-": precision when turning float weights into int weights
-  int Hlimit;     // "hlimit": maximum number of variables evaluated by the dvo
-  int InitBound;  // "init": number of iterations when initialising the upper
-  // bound
-  int Neighbor; // "neighbor": number of machines to re-schedule during LNS
-  int InitStep; // "initstep": whether an initial probe with high makespan
-  // should be performed
-  int FixTasks; // Whether tasks' starting time should be fixed (searched)
+  int UBinit{-1};    // "ub": user defined upper bound (-1 if not)
+  int LBinit{-1};    // "lb": user defined lower bound (-1 if not)
+  int Checked{true}; // "check": whether the solution is checked
+  int Seed{12345};   // "seed": random seed
+  int Cutoff{300};   // "cutoff": time cutoff of dichotomic steps
+  unsigned long long int NodeCutoff{
+      0};             // "nodes": node cutoff of dichotomic steps
+  int NodeBase{20};   // "dyncutoff": node cutoff trying to mimic time cutoff
+  int Dichotomy{128}; // "dichotomy": max number of dichotomic steps
+  int Base{256};      // "base": base cutoff for restarts
+  int Randomized{-1}; // "randomized": level of randomization
+  int Verbose{0};     // "verbose": level of verbosity
+  int Optimise{3600}; // "optimise": total time cutoff
+  int Rngd{2};        // "nogood": whether nogood on restart are used
+  int Precision{
+      100}; // "-": precision when turning float weights into int weights
+  int Hlimit{
+      20000}; // "hlimit": maximum number of variables evaluated by the dvo
+  int InitBound{1000}; // "init": number of iterations when initialising the
+                       // upper bound
+  int Neighbor{2}; // "neighbor": number of machines to re-schedule during LNS
+  int InitStep{1}; // "initstep": whether an initial probe with high makespan
+                   // should be performed
+  int FixTasks{0}; // Whether tasks' starting time should be fixed (searched)
   // int MinRank; // Whether the sum of the disjunct should be minimised
-  int OrderTasks; // Whetheer tasks should be ordered within the disjuncts
-  int NgdType;    // nogood type for solution removal
+  int OrderTasks{0}; // Whetheer tasks should be ordered within the disjuncts
+  int NgdType{2};    // nogood type for solution removal
 
-  double Factor;
-  double Decay;
+  double Factor{1.3};
+  double Decay{0.0};
 
-  std::string Policy;
-  std::string Heuristic;
-  std::string Type;
-  std::string Value;
-  std::string DValue;
-  std::string IValue;
-  std::string Objective;
-  std::string Algorithm;
-  std::string Presolve;
+  std::string Policy{"geom"};
+  std::string Heuristic{"osp-b"};
+  std::string Type{"osp"};
+  std::string Value{"guided"};
+  std::string DValue{"guided"};
+  std::string IValue{"promise"};
+  std::string Objective{"makespan"};
+  std::string Algorithm{"bnb"};
+  std::string Presolve{"default"};
 
   int PolicyRestart;
 
+  ParameterList();
   ParameterList(int length, char **commandline);
   // ParameterList();
   // ParameterList(const ParameterList& pl);
@@ -516,6 +520,8 @@ public:
   int ub_Depth;
   int lb_Depth;
 
+  int is_sat{0};
+
   Vector<Vector<Variable>> disjunct_map;
 
   // std::vector< int > first_task_of_disjunct;
@@ -600,6 +606,37 @@ public:
   virtual int set_objective(const int obj);
 
   virtual void setup_objective();
+};
+
+class SAT_Model : public SchedulingSolver {
+public:
+  SAT_Model() : SchedulingSolver() {}
+  SAT_Model(ParameterList *pr, StatisticList *st)
+      : SchedulingSolver(NULL, pr, st) {}
+  virtual ~SAT_Model() {}
+
+  virtual int get_lb();
+  virtual int get_ub();
+  virtual Variable get_objective_var();
+  virtual int get_objective();
+  // virtual double  get_normalized_objective() {return
+  // (double)(get_objective())/data->getNormalizer();}
+  virtual int set_objective(const int obj);
+
+  virtual void setup_objective();
+
+  Outcome run(BranchingHeuristic *heu); // for the satisfaction case
+
+private:
+  std::vector<int> duration;
+
+public:
+  void add_task(const int dur, const int est, const int lct);
+
+  void add_transition(const int i, const int j, const int trans_i_to_j,
+                      const int trans_j_to_i);
+
+  void finalize_setup();
 };
 
 class L_sum_Model : public SchedulingSolver {

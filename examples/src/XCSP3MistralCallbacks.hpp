@@ -44,7 +44,7 @@
 *
 */
 
-// #define _VERBOSE_ true
+#define _VERBOSE_ true
 // #define _DEBUG_CUMULATIVE
 // #define _DEBUG_MDD
 // #define _DEBUG_REG true

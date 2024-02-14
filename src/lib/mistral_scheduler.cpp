@@ -834,9 +834,7 @@ const char* ParameterList::str_ident[ParameterList::nsa] =
 "-value", "-dvalue", "-ivalue", "-objective", 
 "-algo", "-presolve"};
 
-
-// ParameterList::ParameterList() {
-// }
+ParameterList::ParameterList() {}
 
 // ParameterList::ParameterList(const ParameterList& pl) {
 //   initialise(pl);
@@ -2476,6 +2474,41 @@ void C_max_Model::setup_objective() {
 	}
 }
 
+void SAT_Model::add_task(const int dur, const int est, const int lct) {
+  Variable t(est, lct - dur);
+  tasks.add(t);
+  duration.emplace_back(dur);
+}
+
+void SAT_Model::add_transition(const int i, const int j, const int trans_i_to_j,
+                               const int trans_j_to_i) {
+  disjuncts.add(ReifiedDisjunctive(tasks[i], tasks[j],
+                                   duration[i] + trans_i_to_j,
+                                   duration[j] + trans_j_to_i));
+
+  Vector<Variable> tasks_of_d;
+  tasks_of_d.add(disjuncts.back().get_var());
+  tasks_of_d.add(tasks[i].get_var());
+  tasks_of_d.add(tasks[j].get_var());
+  disjunct_map.add(tasks_of_d);
+}
+
+void SAT_Model::finalize_setup() {
+  for (unsigned int i = 0; i < disjuncts.size; ++i)
+    add(Free(disjuncts[i]));
+  //  pool = new SolutionPool();
+  consolidate();
+}
+
+int SAT_Model::get_lb() { return 0; }
+
+int SAT_Model::get_ub() { return 1; }
+
+void SAT_Model::setup_objective() {
+  std::cout << "not supported\n";
+  exit(1);
+}
+
 Variable L_sum_Model::get_objective_var() {
 	return L_sum;
 }
@@ -2490,6 +2523,11 @@ Variable DTP_Model::get_objective_var() {
 
 Variable C_max_Model::get_objective_var() {
 	return C_max;
+}
+
+Variable SAT_Model::get_objective_var() {
+  std::cout << "not supported\n";
+  exit(1);
 }
 
 int L_sum_Model::set_objective(const int obj) {
@@ -2542,6 +2580,11 @@ int C_max_Model::set_objective(const int obj) {
 	return (C_max.set_max(obj) != FAIL_EVENT ? UNKNOWN : UNSAT);
 }
 
+int SAT_Model::set_objective(const int obj) {
+  std::cout << "not supported\n";
+  exit(1);
+}
+
 int L_sum_Model::get_objective() {
 	return L_sum.get_solution_min();
 }
@@ -2563,6 +2606,7 @@ int C_max_Model::get_objective() {
 	return C_max.get_solution_min();
 }
 
+int SAT_Model::get_objective() { return is_sat; }
 
 SchedulingSolution::SchedulingSolution(SchedulingSolver *s) {
 	//model = m;
@@ -2752,7 +2796,25 @@ std::ostream& SchedulingSolution::print(std::ostream& os, std::string type) {
 	return os;
 }
 
+Outcome SAT_Model::run(BranchingHeuristic *heu) {
 
+  finalize_setup();
+  //    for (unsigned int i = 0; i < disjuncts.size; ++i)
+  //      add(Free(disjuncts[i]));
+  ////    pool = new SolutionPool();
+  //    consolidate();
+
+  RestartPolicy *pol = new Geometric();
+
+  initialise_search(disjuncts, heu, pol);
+
+  Outcome result = (propagate() ? UNKNOWN : UNSAT);
+
+  if (result == UNKNOWN)
+    result = restart_search(level);
+
+  return result;
+}
 
 void SchedulingSolver::dichotomic_search(BranchingHeuristic *heu)
 {
